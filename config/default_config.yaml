@@ -1,0 +1,23 @@
+dimension: 10
+multi_level_memory:
+  lambda_l1: 0.5
+  lambda_l2: 0.1
+  lambda_l3: 0.01
+  theta_l1: 1.0
+  theta_l2: 2.0
+  gating12: 0.5
+  gating23: 0.3
+moral_filter:
+  threshold: 0.5
+  adapt_rate: 0.05
+  min_threshold: 0.3
+  max_threshold: 0.9
+ontology_matcher:
+  ontology_vectors:
+    - [1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+    - [0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+  ontology_labels: ["concept1", "concept2"]
+cognitive_rhythm:
+  wake_duration: 5
+  sleep_duration: 2
+strict_mode: false

@@ -1,0 +1,12 @@
+version: "3.8"
+
+services:
+  memory-system:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - API_KEY=your-secret-key
+      - CONFIG_PATH=config/default_config.yaml
