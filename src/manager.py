@@ -1,7 +1,7 @@
 from __future__ import annotations
-import asyncio
 from typing import Dict, Any
 import numpy as np
+from numpy.typing import NDArray
 from src.core.memory import MultiLevelSynapticMemory, MemoryConfig
 from src.core.moral import MoralFilter, MoralConfig
 from src.core.qilm import QILM
@@ -26,7 +26,7 @@ class CognitiveMemoryManager:
             "total": 0, "accepted": 0, "latent": 0
         }
 
-    async def process_event(self, event: np.ndarray, moral_value: float) -> Dict[str, Any]:
+    async def process_event(self, event: NDArray[Any], moral_value: float) -> Dict[str, Any]:
         with tracer.start_as_current_span("process_event"):
             self.metrics["total"] += 1
 

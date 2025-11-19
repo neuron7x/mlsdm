@@ -1,6 +1,7 @@
 from __future__ import annotations
 import numpy as np
-from typing import Tuple
+from numpy.typing import NDArray
+from typing import Tuple, Any
 from pydantic import BaseModel
 
 class MemoryConfig(BaseModel):
@@ -21,7 +22,7 @@ class MultiLevelSynapticMemory:
         self.l3 = np.zeros(self.dim, dtype=np.float32)
         self.cfg = config
 
-    def update(self, event: np.ndarray) -> None:
+    def update(self, event: NDArray[Any]) -> None:
         if event.shape != (self.dim,):
             raise ValueError("Dimension mismatch")
 
@@ -44,7 +45,7 @@ class MultiLevelSynapticMemory:
         self.l2 -= transfer23
         self.l3 += transfer23
 
-    def state(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def state(self) -> Tuple[NDArray[Any], NDArray[Any], NDArray[Any]]:
         return self.l1.copy(), self.l2.copy(), self.l3.copy()
 
     def norms(self) -> Tuple[float, float, float]:
