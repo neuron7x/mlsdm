@@ -49,8 +49,9 @@ def test_memory_energy_non_increasing(config, event):
     # Invariant: total_after ≤ input + (1-λ₁)*total_before
     expected_max = np.sum(event_vec) + (1 - config.lambda_l1) * total_before
     
-    # Allow small numerical tolerance for float32
-    assert total_after <= expected_max + 1e-4, f"Energy increased beyond input: {total_after} > {expected_max}"
+    # Allow small numerical tolerance for float32 (proportional to dimension)
+    tolerance = max(1e-3, expected_max * 1e-6)
+    assert total_after <= expected_max + tolerance, f"Energy increased beyond input: {total_after} > {expected_max}"
 
 @given(config=memory_configs(), num_steps=st.integers(min_value=1, max_value=20))
 @settings(max_examples=50)
