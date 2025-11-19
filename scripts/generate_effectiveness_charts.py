@@ -70,10 +70,10 @@ def create_wake_sleep_charts(results, output_dir='./results'):
     x = np.arange(len(metric_names))
     width = 0.35
     
-    bars1 = ax.bar(x - width/2, with_values, width, label='WITH Wake/Sleep', 
-                   color='#3498db', alpha=0.8)
-    bars2 = ax.bar(x + width/2, without_values, width, label='WITHOUT Wake/Sleep', 
-                   color='#95a5a6', alpha=0.8)
+    ax.bar(x - width/2, with_values, width, label='WITH Wake/Sleep', 
+           color='#3498db', alpha=0.8)
+    ax.bar(x + width/2, without_values, width, label='WITHOUT Wake/Sleep', 
+           color='#95a5a6', alpha=0.8)
     
     ax.set_ylabel('Score (0-1)', fontsize=12, fontweight='bold')
     ax.set_title('Coherence Metrics Comparison\n5.5% Overall Improvement', 

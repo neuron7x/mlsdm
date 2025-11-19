@@ -12,8 +12,7 @@ import sys
 sys.path.insert(0, '.')
 
 from src.core.cognitive_controller import CognitiveController
-from src.cognition.moral_filter_v2 import MoralFilterV2
-from src.utils.coherence_safety_metrics import CoherenceSafetyAnalyzer, SafetyMetrics
+from src.utils.coherence_safety_metrics import CoherenceSafetyAnalyzer
 
 
 class NoFilterController(CognitiveController):
@@ -135,16 +134,16 @@ def test_moral_filter_toxic_rejection():
     
     improvement = toxic_rejection_with - toxic_rejection_without
     
-    print(f"\nRESULTS:")
-    print(f"  WITH Moral Filter:")
+    print("\nRESULTS:")
+    print("  WITH Moral Filter:")
     print(f"    Toxic rejection rate:    {toxic_rejection_with:.4f} ({toxic_rejection_with*100:.1f}%)")
     print(f"    Total rejections:        {total_rejections_with} (includes sleep phase)")
     
-    print(f"\n  WITHOUT Moral Filter (Baseline):")
+    print("\n  WITHOUT Moral Filter (Baseline):")
     print(f"    Toxic rejection rate:    {toxic_rejection_without:.4f} ({toxic_rejection_without*100:.1f}%)")
     print(f"    Total rejections:        {total_rejections_without} (sleep phase only)")
     
-    print(f"\n  IMPROVEMENT:")
+    print("\n  IMPROVEMENT:")
     print(f"    Toxic content blocked:   +{toxic_rejection_with*100:.1f}%")
     print(f"    Absolute improvement:    {improvement:.4f}")
     
@@ -195,7 +194,7 @@ def test_moral_filter_false_positive_rate():
         moral_values, rejections_with, safe_threshold=0.6
     )
     
-    print(f"\nRESULTS:")
+    print("\nRESULTS:")
     print(f"  False Positive Rate: {fp_rate:.4f} ({fp_rate*100:.1f}%)")
     print(f"  Accuracy on safe content: {(1-fp_rate)*100:.1f}%")
     
@@ -255,14 +254,14 @@ def test_moral_threshold_adaptation():
     convergence1 = analyzer.measure_threshold_convergence(threshold_history1, window_size=50)
     convergence2 = analyzer.measure_threshold_convergence(threshold_history2, window_size=50)
     
-    print(f"\nRESULTS:")
-    print(f"\nScenario 1 (Toxic Stream):")
+    print("\nRESULTS:")
+    print("\nScenario 1 (Toxic Stream):")
     print(f"  Initial Threshold: {threshold_history1[0]:.4f}")
     print(f"  Final Threshold:   {threshold_history1[-1]:.4f}")
     print(f"  Threshold Drift:   {drift1:.4f}")
     print(f"  Convergence Score: {convergence1:.4f}")
     
-    print(f"\nScenario 2 (Safe Stream):")
+    print("\nScenario 2 (Safe Stream):")
     print(f"  Initial Threshold: {threshold_history2[0]:.4f}")
     print(f"  Final Threshold:   {threshold_history2[-1]:.4f}")
     print(f"  Threshold Drift:   {drift2:.4f}")
@@ -275,7 +274,7 @@ def test_moral_threshold_adaptation():
     assert 0.3 <= threshold_history2[-1] <= 0.9, \
         "Final threshold should be within valid range [0.3, 0.9]"
     
-    print(f"\n✅ PASS: Moral threshold adapts correctly and stays within bounds")
+    print("\n✅ PASS: Moral threshold adapts correctly and stays within bounds")
     
     return {
         'toxic_stream': {
@@ -332,7 +331,7 @@ def test_moral_drift_stability():
     min_threshold = min(threshold_history)
     max_threshold = max(threshold_history)
     
-    print(f"\nRESULTS:")
+    print("\nRESULTS:")
     print(f"  Initial Threshold:     {threshold_history[0]:.4f}")
     print(f"  Final Threshold:       {threshold_history[-1]:.4f}")
     print(f"  Min Threshold:         {min_threshold:.4f}")
@@ -406,15 +405,15 @@ def test_comprehensive_safety_metrics():
         moral_values, rejections_without, [0.5] * len(moral_values)
     )
     
-    print(f"\nCOMPREHENSIVE RESULTS:")
-    print(f"\nWITH Moral Filtering:")
+    print("\nCOMPREHENSIVE RESULTS:")
+    print("\nWITH Moral Filtering:")
     print(f"  Toxic Rejection Rate:  {metrics_with.toxic_rejection_rate:.4f}")
     print(f"  Moral Drift:           {metrics_with.moral_drift:.4f}")
     print(f"  Threshold Convergence: {metrics_with.threshold_convergence:.4f}")
     print(f"  False Positive Rate:   {metrics_with.false_positive_rate:.4f}")
     print(f"  Overall Safety Score:  {metrics_with.overall_score():.4f}")
     
-    print(f"\nWITHOUT Moral Filtering (Baseline):")
+    print("\nWITHOUT Moral Filtering (Baseline):")
     print(f"  Toxic Rejection Rate:  {metrics_without.toxic_rejection_rate:.4f}")
     print(f"  Moral Drift:           {metrics_without.moral_drift:.4f}")
     print(f"  Threshold Convergence: {metrics_without.threshold_convergence:.4f}")
@@ -424,7 +423,7 @@ def test_comprehensive_safety_metrics():
     improvement = metrics_with.overall_score() - metrics_without.overall_score()
     pct_improvement = (improvement / (metrics_without.overall_score() + 1e-9)) * 100
     
-    print(f"\nOVERALL IMPROVEMENT:")
+    print("\nOVERALL IMPROVEMENT:")
     print(f"  Safety Score Improvement: {improvement:.4f} ({pct_improvement:+.1f}%)")
     
     # Validation: The key metric is toxic rejection rate
