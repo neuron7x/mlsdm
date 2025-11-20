@@ -1,7 +1,7 @@
 ---
 name: Dependency Scanning
 
-on:
+"on":
   schedule:
     # Run daily at 1 AM UTC
     - cron: '0 1 * * *'

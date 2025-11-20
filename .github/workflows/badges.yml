@@ -1,7 +1,7 @@
 ---
 name: Badges Update
 
-on:
+"on":
   push:
     branches: [main]
   workflow_dispatch:
