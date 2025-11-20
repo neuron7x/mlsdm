@@ -1,10 +1,11 @@
+---
 name: CodeQL Security Analysis
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main, develop]
   pull_request:
-    branches: [ main, develop ]
+    branches: [main, develop]
   schedule:
     # Run weekly on Monday at 6 AM UTC
     - cron: '0 6 * * 1'
@@ -39,7 +40,7 @@ jobs:
         with:
           languages: ${{ matrix.language }}
           queries: security-extended,security-and-quality
-          
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
@@ -50,7 +51,7 @@ jobs:
         uses: github/codeql-action/analyze@v3
         with:
           category: "/language:${{matrix.language}}"
-          
+
       - name: Upload SARIF results
         uses: github/codeql-action/upload-sarif@v3
         if: always()

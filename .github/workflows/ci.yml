@@ -1,8 +1,9 @@
+---
 name: Continuous Integration
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main, develop]
   schedule:
     # Run nightly at 2 AM UTC
     - cron: '0 2 * * *'
@@ -13,23 +14,23 @@ jobs:
     name: Full Test Suite
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
           cache: 'pip'
-          
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install pytest-asyncio
-          
+
       - name: Run all tests with coverage
         run: |
           pytest src/tests/ tests/ -v \
@@ -38,7 +39,7 @@ jobs:
             --cov-report=html \
             --cov-report=term-missing \
             --cov-fail-under=90
-            
+
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
         with:
@@ -53,23 +54,23 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
           cache: 'pip'
-          
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install pytest-asyncio
-          
+
       - name: Run chaos smoke tests
         run: |
           # Run tests that simulate failures
@@ -79,28 +80,28 @@ jobs:
     name: Performance Baseline
     runs-on: ubuntu-latest
     timeout-minutes: 25
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
           cache: 'pip'
-          
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install pytest-asyncio pytest-benchmark
-          
+
       - name: Run performance validation tests
         run: |
           python tests/validation/test_wake_sleep_effectiveness.py
           python tests/validation/test_moral_filter_effectiveness.py
-          
+
       - name: Store performance metrics
         uses: actions/upload-artifact@v4
         with:
@@ -115,23 +116,23 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
           cache: 'pip'
-          
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install pytest-asyncio memory-profiler
-          
+
       - name: Run extended memory tests
         run: |
           # Run tests that check for memory leaks
@@ -142,26 +143,26 @@ jobs:
     name: Build & Package Validation
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-          
+
       - name: Install build tools
         run: |
           python -m pip install --upgrade pip
           pip install build twine
-          
+
       - name: Build package
         run: |
           python -m build
         continue-on-error: true
-        
+
       - name: Check package
         run: |
           twine check dist/* || echo "Package check skipped - no dist files"
@@ -172,11 +173,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        
+
       - name: Check for Dockerfile
         id: check_dockerfile
         run: |
@@ -185,11 +186,11 @@ jobs:
           else
             echo "exists=false" >> $GITHUB_OUTPUT
           fi
-          
+
       - name: Set up Docker Buildx
         if: steps.check_dockerfile.outputs.exists == 'true'
         uses: docker/setup-buildx-action@v3
-        
+
       - name: Build Docker image
         if: steps.check_dockerfile.outputs.exists == 'true'
         run: |
@@ -203,27 +204,27 @@ jobs:
     name: Integration Health Check
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
           cache: 'pip'
-          
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install pytest-asyncio
-          
+
       - name: Run integration tests
         run: |
           python tests/integration/test_end_to_end.py
-          
+
       - name: Test API startup
         run: |
           # Start API in background
@@ -238,7 +239,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [full-test-suite, performance-baseline, build-validation]
     if: always() && github.event_name == 'push'
-    
+
     steps:
       - name: Determine status
         id: status
@@ -251,7 +252,7 @@ jobs:
             echo "status=failure" >> $GITHUB_OUTPUT
             echo "emoji=❌" >> $GITHUB_OUTPUT
           fi
-          
+
       - name: Summary
         run: |
           echo "${{ steps.status.outputs.emoji }} CI Build ${{ steps.status.outputs.status }}"
