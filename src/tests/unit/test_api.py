@@ -27,7 +27,7 @@ def test_config_file():
 @pytest.fixture
 def client(test_config_file):
     """Create a test client with mocked config."""
-    with patch.dict(os.environ, {"CONFIG_PATH": test_config_file}):
+    with patch.dict(os.environ, {"CONFIG_PATH": test_config_file, "DISABLE_RATE_LIMIT": "1"}):
         # Import app after setting env variable
         from src.api.app import app
         with TestClient(app) as client:
@@ -111,7 +111,8 @@ class TestAPIEndpoints:
                 headers={"Authorization": "Bearer test_key"}
             )
             assert response.status_code == 400
-            assert "Dimension mismatch" in response.json()["detail"]
+            # Updated to match new validator error message
+            assert "dimension" in response.json()["detail"].lower()
 
     def test_process_event_invalid_moral_value(self, client):
         """Test processing event with various moral values."""
