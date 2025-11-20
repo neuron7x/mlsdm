@@ -12,12 +12,29 @@ Prevents LLM degradation, memory bloat, toxicity, and identity loss.
 """
 
 import numpy as np
+import time
+import logging
 from typing import List, Optional, Dict, Any, Callable
 from threading import Lock
+from enum import Enum
 from ..cognition.moral_filter_v2 import MoralFilterV2
 from ..memory.qilm_v2 import QILM_v2
 from ..rhythm.cognitive_rhythm import CognitiveRhythm
 from ..memory.multi_level_memory import MultiLevelSynapticMemory
+
+logger = logging.getLogger(__name__)
+
+
+class CircuitBreakerError(Exception):
+    """Raised when circuit breaker is open."""
+    pass
+
+
+class CircuitState(Enum):
+    """Circuit breaker states for LLM failure handling."""
+    CLOSED = "closed"  # Normal operation
+    OPEN = "open"      # Failing, reject requests
+    HALF_OPEN = "half_open"  # Testing recovery
 
 
 class LLMWrapper:
@@ -49,6 +66,12 @@ class LLMWrapper:
     
     MAX_WAKE_TOKENS = 2048
     MAX_SLEEP_TOKENS = 150  # Forced short responses during sleep
+    MAX_CONSOLIDATION_BUFFER = 1000  # Maximum items in consolidation buffer
+    
+    # Circuit breaker configuration
+    FAILURE_THRESHOLD = 5  # Number of failures before opening circuit
+    RECOVERY_TIMEOUT = 60.0  # Seconds before attempting recovery
+    HALF_OPEN_MAX_CALLS = 3  # Test calls during half-open state
     
     def __init__(
         self,
@@ -88,6 +111,12 @@ class LLMWrapper:
         self.rejected_count = 0
         self.accepted_count = 0
         self.consolidation_buffer: List[np.ndarray] = []
+        
+        # Circuit breaker state
+        self.circuit_state = CircuitState.CLOSED
+        self.failure_count = 0
+        self.last_failure_time = 0.0
+        self.half_open_calls = 0
         
     def generate(
         self,
@@ -173,10 +202,15 @@ class LLMWrapper:
                 if not is_wake:
                     max_tokens = min(max_tokens, self.MAX_SLEEP_TOKENS)
             
-            # Step 7: Generate response
+            # Step 7: Generate response with circuit breaker protection
             try:
-                response_text = self.llm_generate(enhanced_prompt, max_tokens)
+                response_text = self._generate_with_circuit_breaker(enhanced_prompt, max_tokens)
+            except CircuitBreakerError as e:
+                logger.error(f"Circuit breaker open: {str(e)}")
+                return self._build_error_response(f"service temporarily unavailable: {str(e)}")
             except Exception as e:
+                logger.error(f"LLM generation failed: {str(e)}")
+                self._record_failure()
                 return self._build_error_response(f"generation failed: {str(e)}")
             
             # Step 8: Update memory
@@ -184,8 +218,13 @@ class LLMWrapper:
             self.qilm.entangle(prompt_vector.tolist(), phase=phase_val)
             self.accepted_count += 1
             
-            # Add to consolidation buffer for sleep processing
-            self.consolidation_buffer.append(prompt_vector)
+            # Add to consolidation buffer with bounds checking
+            if len(self.consolidation_buffer) < self.MAX_CONSOLIDATION_BUFFER:
+                self.consolidation_buffer.append(prompt_vector)
+            else:
+                # Buffer full - force early consolidation
+                logger.warning(f"Consolidation buffer full ({self.MAX_CONSOLIDATION_BUFFER}), forcing consolidation")
+                self._consolidate_memories()
             
             # Step 9: Advance cognitive rhythm
             self.rhythm.step()
@@ -310,3 +349,80 @@ class LLMWrapper:
                 sleep_duration=self.rhythm.sleep_duration
             )
             self.synaptic.reset_all()
+            self.circuit_state = CircuitState.CLOSED
+            self.failure_count = 0
+            self.last_failure_time = 0.0
+            self.half_open_calls = 0
+    
+    def _generate_with_circuit_breaker(self, prompt: str, max_tokens: int) -> str:
+        """
+        Generate LLM response with circuit breaker pattern.
+        
+        The circuit breaker prevents cascading failures by:
+        1. Tracking consecutive failures
+        2. Opening circuit after threshold failures
+        3. Attempting recovery after timeout
+        4. Gradually closing circuit on success
+        
+        Args:
+            prompt: Input prompt
+            max_tokens: Maximum tokens to generate
+            
+        Returns:
+            Generated text
+            
+        Raises:
+            CircuitBreakerError: When circuit is open
+            Exception: On generation failure
+        """
+        current_time = time.time()
+        
+        # Check circuit state
+        if self.circuit_state == CircuitState.OPEN:
+            # Check if recovery timeout has elapsed
+            if current_time - self.last_failure_time >= self.RECOVERY_TIMEOUT:
+                logger.info("Circuit breaker entering HALF_OPEN state for recovery test")
+                self.circuit_state = CircuitState.HALF_OPEN
+                self.half_open_calls = 0
+            else:
+                raise CircuitBreakerError("Circuit breaker is OPEN - LLM service unavailable")
+        
+        # Limit calls in HALF_OPEN state
+        if self.circuit_state == CircuitState.HALF_OPEN:
+            if self.half_open_calls >= self.HALF_OPEN_MAX_CALLS:
+                raise CircuitBreakerError("Circuit breaker HALF_OPEN - max test calls exceeded")
+            self.half_open_calls += 1
+        
+        # Attempt generation
+        try:
+            response = self.llm_generate(prompt, max_tokens)
+            
+            # Success - record and potentially close circuit
+            if self.circuit_state == CircuitState.HALF_OPEN:
+                logger.info("Circuit breaker recovery successful - closing circuit")
+                self.circuit_state = CircuitState.CLOSED
+                self.failure_count = 0
+                self.half_open_calls = 0
+            elif self.circuit_state == CircuitState.CLOSED:
+                # Reset failure count on successful call
+                self.failure_count = max(0, self.failure_count - 1)
+            
+            return response
+            
+        except Exception as e:
+            self._record_failure()
+            raise e
+    
+    def _record_failure(self) -> None:
+        """Record LLM generation failure and update circuit breaker state."""
+        self.failure_count += 1
+        self.last_failure_time = time.time()
+        
+        logger.warning(f"LLM failure recorded: {self.failure_count}/{self.FAILURE_THRESHOLD}")
+        
+        if self.failure_count >= self.FAILURE_THRESHOLD:
+            logger.error(f"Circuit breaker OPENING - failure threshold reached")
+            self.circuit_state = CircuitState.OPEN
+        elif self.circuit_state == CircuitState.HALF_OPEN:
+            logger.warning("Circuit breaker reopening - recovery test failed")
+            self.circuit_state = CircuitState.OPEN

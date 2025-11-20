@@ -4,16 +4,23 @@ import logging
 import os
 
 import numpy as np
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, Request
 from fastapi.security import OAuth2PasswordBearer
-from pydantic import BaseModel
+from pydantic import BaseModel, validator, Field
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 
 from src.utils.config_loader import ConfigLoader
 from src.core.memory_manager import MemoryManager
 
 logger = logging.getLogger(__name__)
 
+# Rate limiting configuration (5 RPS per client as per threat model)
+limiter = Limiter(key_func=get_remote_address)
 app = FastAPI(title="mlsdm-governed-cognitive-memory", version="1.0.0")
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
@@ -29,8 +36,29 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> str:
 
 
 class EventInput(BaseModel):
-    event_vector: List[float]
-    moral_value: float
+    event_vector: List[float] = Field(..., min_items=1, max_items=10000)
+    moral_value: float = Field(..., ge=0.0, le=1.0)
+    
+    @validator('event_vector')
+    def validate_vector(cls, v):
+        """Validate vector values for NaN, Inf, and reasonable bounds."""
+        if not v:
+            raise ValueError("event_vector cannot be empty")
+        
+        arr = np.array(v, dtype=float)
+        
+        # Check for NaN or Inf
+        if np.any(np.isnan(arr)):
+            raise ValueError("event_vector contains NaN values")
+        if np.any(np.isinf(arr)):
+            raise ValueError("event_vector contains Inf values")
+        
+        # Check for reasonable magnitude to prevent adversarial inputs
+        max_magnitude = 1000.0
+        if np.any(np.abs(arr) > max_magnitude):
+            raise ValueError(f"event_vector values must be within [-{max_magnitude}, {max_magnitude}]")
+        
+        return v
 
 
 class StateResponse(BaseModel):
@@ -45,7 +73,8 @@ class StateResponse(BaseModel):
 
 
 @app.post("/v1/process_event/", response_model=StateResponse)
-async def process_event(event: EventInput, user: str = Depends(get_current_user)) -> StateResponse:
+@limiter.limit("5/second")
+async def process_event(request: Request, event: EventInput, user: str = Depends(get_current_user)) -> StateResponse:
     vec = np.array(event.event_vector, dtype=float)
     if vec.shape[0] != _manager.dimension:
         raise HTTPException(status_code=400, detail="Dimension mismatch.")
@@ -54,7 +83,8 @@ async def process_event(event: EventInput, user: str = Depends(get_current_user)
 
 
 @app.get("/v1/state/", response_model=StateResponse)
-async def get_state(user: str = Depends(get_current_user)) -> StateResponse:
+@limiter.limit("10/second")
+async def get_state(request: Request, user: str = Depends(get_current_user)) -> StateResponse:
     L1, L2, L3 = _manager.memory.get_state()
     metrics = _manager.metrics_collector.get_metrics()
     return StateResponse(

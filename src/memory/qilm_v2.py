@@ -1,7 +1,10 @@
 import numpy as np
-from typing import List
+import logging
+from typing import List, Optional
 from dataclasses import dataclass
 from threading import Lock
+
+logger = logging.getLogger(__name__)
 
 @dataclass
 class MemoryRetrieval:
@@ -21,8 +24,34 @@ class QILM_v2:
         self.norms = np.zeros(capacity, dtype=np.float32)
 
     def entangle(self, vector: List[float], phase: float) -> int:
+        """
+        Store a vector with phase information in memory.
+        
+        Args:
+            vector: Input vector to store
+            phase: Phase value (0.0-1.0)
+            
+        Returns:
+            Index where vector was stored
+            
+        Raises:
+            ValueError: If inputs are invalid
+        """
+        if not isinstance(vector, (list, np.ndarray)):
+            raise TypeError("vector must be a list or numpy array")
+        
+        if not (0.0 <= phase <= 1.0):
+            raise ValueError(f"phase must be in [0.0, 1.0], got {phase}")
+        
         with self._lock:
             vec_np = np.array(vector, dtype=np.float32)
+            
+            if vec_np.shape[0] != self.dimension:
+                raise ValueError(f"vector dimension mismatch: expected {self.dimension}, got {vec_np.shape[0]}")
+            
+            if np.any(np.isnan(vec_np)) or np.any(np.isinf(vec_np)):
+                raise ValueError("vector contains NaN or Inf values")
+            
             norm = float(np.linalg.norm(vec_np) or 1e-9)
             idx = self.pointer
             self.memory_bank[idx] = vec_np
@@ -33,10 +62,44 @@ class QILM_v2:
             return idx
 
     def retrieve(self, query_vector: List[float], current_phase: float, phase_tolerance: float = 0.15, top_k: int = 5) -> List[MemoryRetrieval]:
+        """
+        Retrieve memories similar to query vector and phase.
+        
+        Args:
+            query_vector: Query vector
+            current_phase: Current phase (0.0-1.0)
+            phase_tolerance: Phase matching tolerance
+            top_k: Number of results to return
+            
+        Returns:
+            List of MemoryRetrieval objects
+            
+        Raises:
+            ValueError: If inputs are invalid
+        """
+        if not isinstance(query_vector, (list, np.ndarray)):
+            raise TypeError("query_vector must be a list or numpy array")
+        
+        if not (0.0 <= current_phase <= 1.0):
+            raise ValueError(f"current_phase must be in [0.0, 1.0], got {current_phase}")
+        
+        if not (0.0 <= phase_tolerance <= 1.0):
+            raise ValueError(f"phase_tolerance must be in [0.0, 1.0], got {phase_tolerance}")
+        
+        if not isinstance(top_k, int) or top_k < 1:
+            raise ValueError(f"top_k must be a positive integer, got {top_k}")
+        
         with self._lock:
             if self.size == 0:
                 return []
             q_vec = np.array(query_vector, dtype=np.float32)
+            
+            if q_vec.shape[0] != self.dimension:
+                raise ValueError(f"query_vector dimension mismatch: expected {self.dimension}, got {q_vec.shape[0]}")
+            
+            if np.any(np.isnan(q_vec)) or np.any(np.isinf(q_vec)):
+                raise ValueError("query_vector contains NaN or Inf values")
+            
             q_norm = float(np.linalg.norm(q_vec))
             if q_norm < 1e-9:
                 q_norm = 1e-9

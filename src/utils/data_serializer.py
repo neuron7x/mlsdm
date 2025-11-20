@@ -26,7 +26,8 @@ def _load_data(filepath: str) -> Dict[str, Any]:
         with open(filepath, "r", encoding="utf-8") as f:
             return json.load(f)
     elif ext == ".npz":
-        arrs = np.load(filepath, allow_pickle=True)
+        # Security: Disable pickle to prevent arbitrary code execution
+        arrs = np.load(filepath, allow_pickle=False)
         return {k: v.tolist() if isinstance(v, np.ndarray) else v for k, v in arrs.items()}
     else:
         raise ValueError(f"Unsupported format: {ext}")

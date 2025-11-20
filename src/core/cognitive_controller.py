@@ -1,9 +1,12 @@
 import numpy as np
+import logging
 from threading import Lock
 from ..cognition.moral_filter_v2 import MoralFilterV2
 from ..memory.qilm_v2 import QILM_v2
 from ..rhythm.cognitive_rhythm import CognitiveRhythm
 from ..memory.multi_level_memory import MultiLevelSynapticMemory
+
+logger = logging.getLogger(__name__)
 
 class CognitiveController:
     def __init__(self, dim=384):
@@ -18,6 +21,19 @@ class CognitiveController:
         self._phase_cache = {"wake": 0.1, "sleep": 0.9}
 
     def process_event(self, vector, moral_value):
+        # Input validation
+        if not isinstance(vector, np.ndarray):
+            raise TypeError("vector must be a numpy.ndarray")
+        
+        if vector.shape[0] != self.dim:
+            raise ValueError(f"vector dimension mismatch: expected {self.dim}, got {vector.shape[0]}")
+        
+        if np.any(np.isnan(vector)) or np.any(np.isinf(vector)):
+            raise ValueError("vector contains NaN or Inf values")
+        
+        if not (0.0 <= moral_value <= 1.0):
+            raise ValueError(f"moral_value must be in [0.0, 1.0], got {moral_value}")
+        
         with self._lock:
             self.step_counter += 1
             accepted = self.moral.evaluate(moral_value)
@@ -34,6 +50,19 @@ class CognitiveController:
             return self._build_state(rejected=False, note="processed")
 
     def retrieve_context(self, query_vector, top_k=5):
+        # Input validation
+        if not isinstance(query_vector, np.ndarray):
+            raise TypeError("query_vector must be a numpy.ndarray")
+        
+        if query_vector.shape[0] != self.dim:
+            raise ValueError(f"query_vector dimension mismatch: expected {self.dim}, got {query_vector.shape[0]}")
+        
+        if np.any(np.isnan(query_vector)) or np.any(np.isinf(query_vector)):
+            raise ValueError("query_vector contains NaN or Inf values")
+        
+        if not isinstance(top_k, int) or top_k < 1:
+            raise ValueError(f"top_k must be a positive integer, got {top_k}")
+        
         with self._lock:
             # Optimize: use cached phase value
             phase_val = self._phase_cache[self.rhythm.phase]
