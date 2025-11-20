@@ -16,6 +16,7 @@ import time
 import logging
 from typing import List, Optional, Dict, Any, Callable
 from threading import Lock
+from contextlib import contextmanager
 from enum import Enum
 from ..cognition.moral_filter_v2 import MoralFilterV2
 from ..memory.qilm_v2 import QILM_v2
@@ -23,6 +24,11 @@ from ..rhythm.cognitive_rhythm import CognitiveRhythm
 from ..memory.multi_level_memory import MultiLevelSynapticMemory
 
 logger = logging.getLogger(__name__)
+
+
+class LockTimeoutError(Exception):
+    """Raised when lock acquisition times out."""
+    pass
 
 
 class CircuitBreakerError(Exception):
@@ -67,6 +73,7 @@ class LLMWrapper:
     MAX_WAKE_TOKENS = 2048
     MAX_SLEEP_TOKENS = 150  # Forced short responses during sleep
     MAX_CONSOLIDATION_BUFFER = 1000  # Maximum items in consolidation buffer
+    LOCK_TIMEOUT = 5.0  # seconds
     
     # Circuit breaker configuration
     FAILURE_THRESHOLD = 5  # Number of failures before opening circuit
@@ -117,6 +124,29 @@ class LLMWrapper:
         self.failure_count = 0
         self.last_failure_time = 0.0
         self.half_open_calls = 0
+    
+    @contextmanager
+    def _acquire_lock(self, timeout: float = None):
+        """
+        Context manager for lock acquisition with timeout.
+        
+        Args:
+            timeout: Lock timeout in seconds (default: LOCK_TIMEOUT)
+            
+        Raises:
+            LockTimeoutError: If lock cannot be acquired within timeout
+        """
+        if timeout is None:
+            timeout = self.LOCK_TIMEOUT
+        
+        acquired = self._lock.acquire(timeout=timeout)
+        if not acquired:
+            raise LockTimeoutError(f"Failed to acquire lock within {timeout}s")
+        
+        try:
+            yield
+        finally:
+            self._lock.release()
         
     def generate(
         self,
@@ -149,7 +179,7 @@ class LLMWrapper:
                 - step: Current step counter
                 - note: Processing note
         """
-        with self._lock:
+        with self._acquire_lock():
             self.step_counter += 1
             
             # Step 1: Moral evaluation
@@ -337,7 +367,7 @@ class LLMWrapper:
     
     def reset(self) -> None:
         """Reset the wrapper to initial state (for testing)."""
-        with self._lock:
+        with self._acquire_lock():
             self.step_counter = 0
             self.rejected_count = 0
             self.accepted_count = 0

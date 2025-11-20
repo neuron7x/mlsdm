@@ -3,8 +3,14 @@ import logging
 from typing import List, Optional
 from dataclasses import dataclass
 from threading import Lock
+from contextlib import contextmanager
 
 logger = logging.getLogger(__name__)
+
+
+class LockTimeoutError(Exception):
+    """Raised when lock acquisition times out."""
+    pass
 
 @dataclass
 class MemoryRetrieval:
@@ -13,6 +19,8 @@ class MemoryRetrieval:
     resonance: float
 
 class QILM_v2:
+    LOCK_TIMEOUT = 5.0  # seconds
+    
     def __init__(self, dimension: int = 384, capacity: int = 20000) -> None:
         self.dimension = dimension
         self.capacity = capacity
@@ -22,6 +30,29 @@ class QILM_v2:
         self.memory_bank = np.zeros((capacity, dimension), dtype=np.float32)
         self.phase_bank = np.zeros(capacity, dtype=np.float32)
         self.norms = np.zeros(capacity, dtype=np.float32)
+    
+    @contextmanager
+    def _acquire_lock(self, timeout: float = None):
+        """
+        Context manager for lock acquisition with timeout.
+        
+        Args:
+            timeout: Lock timeout in seconds (default: LOCK_TIMEOUT)
+            
+        Raises:
+            LockTimeoutError: If lock cannot be acquired within timeout
+        """
+        if timeout is None:
+            timeout = self.LOCK_TIMEOUT
+        
+        acquired = self._lock.acquire(timeout=timeout)
+        if not acquired:
+            raise LockTimeoutError(f"Failed to acquire lock within {timeout}s")
+        
+        try:
+            yield
+        finally:
+            self._lock.release()
 
     def entangle(self, vector: List[float], phase: float) -> int:
         """
@@ -43,7 +74,7 @@ class QILM_v2:
         if not (0.0 <= phase <= 1.0):
             raise ValueError(f"phase must be in [0.0, 1.0], got {phase}")
         
-        with self._lock:
+        with self._acquire_lock():
             vec_np = np.array(vector, dtype=np.float32)
             
             if vec_np.shape[0] != self.dimension:
@@ -89,7 +120,7 @@ class QILM_v2:
         if not isinstance(top_k, int) or top_k < 1:
             raise ValueError(f"top_k must be a positive integer, got {top_k}")
         
-        with self._lock:
+        with self._acquire_lock():
             if self.size == 0:
                 return []
             q_vec = np.array(query_vector, dtype=np.float32)

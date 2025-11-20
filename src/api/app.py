@@ -1,4 +1,5 @@
-from typing import List, Dict
+from typing import List, Dict, Optional
+import uuid
 
 import logging
 import os
@@ -6,6 +7,7 @@ import os
 import numpy as np
 from fastapi import FastAPI, HTTPException, Depends, Request
 from fastapi.security import OAuth2PasswordBearer
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, validator, Field
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
@@ -26,6 +28,79 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 _config_path = os.getenv("CONFIG_PATH", "config/default_config.yaml")
 _manager = MemoryManager(ConfigLoader.load_config(_config_path))
+
+
+# Middleware for request correlation IDs
+@app.middleware("http")
+async def add_correlation_id(request: Request, call_next):
+    """Add correlation ID to all requests for traceability."""
+    correlation_id = request.headers.get("X-Correlation-ID", str(uuid.uuid4()))
+    request.state.correlation_id = correlation_id
+    
+    # Add to logging context
+    logger.info(f"Request started", extra={
+        "correlation_id": correlation_id,
+        "method": request.method,
+        "path": request.url.path
+    })
+    
+    response = await call_next(request)
+    response.headers["X-Correlation-ID"] = correlation_id
+    
+    logger.info(f"Request completed", extra={
+        "correlation_id": correlation_id,
+        "status_code": response.status_code
+    })
+    
+    return response
+
+
+# Enhanced error response model
+class ErrorResponse(BaseModel):
+    """Standardized error response format."""
+    error: str
+    message: str
+    correlation_id: str
+    details: Optional[Dict] = None
+
+
+# Custom exception handler for HTTPException
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    """Handle HTTP exceptions with correlation IDs."""
+    correlation_id = getattr(request.state, "correlation_id", "unknown")
+    
+    return JSONResponse(
+        status_code=exc.status_code,
+        content=ErrorResponse(
+            error=exc.detail,
+            message=str(exc.detail),
+            correlation_id=correlation_id,
+            details={"status_code": exc.status_code}
+        ).dict()
+    )
+
+
+# Generic exception handler
+@app.exception_handler(Exception)
+async def generic_exception_handler(request: Request, exc: Exception):
+    """Handle unexpected exceptions with logging."""
+    correlation_id = getattr(request.state, "correlation_id", "unknown")
+    
+    logger.error(f"Unexpected error: {str(exc)}", extra={
+        "correlation_id": correlation_id,
+        "exception_type": type(exc).__name__
+    })
+    
+    return JSONResponse(
+        status_code=500,
+        content=ErrorResponse(
+            error="internal_server_error",
+            message="An unexpected error occurred",
+            correlation_id=correlation_id,
+            details={"exception_type": type(exc).__name__}
+        ).dict()
+    )
 
 
 async def get_current_user(token: str = Depends(oauth2_scheme)) -> str:
@@ -99,6 +174,83 @@ async def get_state(request: Request, user: str = Depends(get_current_user)) -> 
     )
 
 
-@app.get("/health")
-async def health() -> Dict[str, str]:
-    return {"status": "healthy"}
+class HealthResponse(BaseModel):
+    """Health check response model."""
+    status: str
+    version: str
+    checks: Dict[str, str]
+    correlation_id: str
+
+
+@app.get("/health", response_model=HealthResponse)
+async def health_shallow(request: Request) -> HealthResponse:
+    """
+    Shallow health check - fast response for load balancers.
+    
+    Returns basic service status without checking dependencies.
+    """
+    correlation_id = getattr(request.state, "correlation_id", "unknown")
+    
+    return HealthResponse(
+        status="healthy",
+        version="1.0.0",
+        checks={"api": "ok"},
+        correlation_id=correlation_id
+    )
+
+
+@app.get("/health/deep", response_model=HealthResponse)
+async def health_deep(request: Request) -> HealthResponse:
+    """
+    Deep health check - validates all system components.
+    
+    Checks:
+    - Memory systems operational
+    - Configuration loaded
+    - Moral filter functional
+    - Rhythm system active
+    """
+    correlation_id = getattr(request.state, "correlation_id", "unknown")
+    
+    checks = {
+        "api": "ok",
+        "memory_manager": "ok",
+        "config": "ok"
+    }
+    
+    try:
+        # Check memory system
+        L1, L2, L3 = _manager.memory.get_state()
+        checks["memory_l1"] = "ok" if L1 is not None else "error"
+        checks["memory_l2"] = "ok" if L2 is not None else "error"
+        checks["memory_l3"] = "ok" if L3 is not None else "error"
+        
+        # Check moral filter
+        threshold = _manager.filter.threshold
+        checks["moral_filter"] = "ok" if 0.1 <= threshold <= 0.9 else "error"
+        
+        # Check rhythm
+        phase = _manager.rhythm.get_current_phase()
+        checks["rhythm"] = "ok" if phase in ["wake", "sleep"] else "error"
+        
+        # Determine overall status
+        status = "healthy" if all(v == "ok" for v in checks.values()) else "degraded"
+        
+        return HealthResponse(
+            status=status,
+            version="1.0.0",
+            checks=checks,
+            correlation_id=correlation_id
+        )
+        
+    except Exception as e:
+        logger.error(f"Deep health check failed: {str(e)}", extra={
+            "correlation_id": correlation_id
+        })
+        
+        return HealthResponse(
+            status="unhealthy",
+            version="1.0.0",
+            checks={**checks, "error": str(e)},
+            correlation_id=correlation_id
+        )
