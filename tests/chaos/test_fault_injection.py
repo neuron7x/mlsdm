@@ -6,11 +6,9 @@ Principal-level chaos engineering validation.
 """
 
 import numpy as np
-import pytest
 import sys
 import threading
 import time
-from unittest.mock import patch, MagicMock
 
 sys.path.insert(0, '.')
 from src.core.cognitive_controller import CognitiveController

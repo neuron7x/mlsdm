@@ -9,7 +9,6 @@ import numpy as np
 import time
 import sys
 from dataclasses import dataclass
-from typing import List
 
 sys.path.insert(0, '.')
 from src.core.cognitive_controller import CognitiveController
@@ -49,7 +48,7 @@ class TestPerformanceBenchmarks:
             moral_val = np.random.uniform(0.3, 0.95)
             
             start = time.perf_counter()
-            state = controller.process_event(vec, moral_value=moral_val)
+            controller.process_event(vec, moral_value=moral_val)
             end = time.perf_counter()
             
             latency_ms = (end - start) * 1000
