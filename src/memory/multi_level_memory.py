@@ -49,9 +49,9 @@ class MultiLevelSynapticMemory:
         return self.state()
 
     def reset_all(self) -> None:
-        self.state_L1.fill(0.0)
-        self.state_L2.fill(0.0)
-        self.state_L3.fill(0.0)
+        self.l1.fill(0.0)
+        self.l2.fill(0.0)
+        self.l3.fill(0.0)
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -63,7 +63,7 @@ class MultiLevelSynapticMemory:
             "theta_l2": self.theta_l2,
             "gating12": self.gating12,
             "gating23": self.gating23,
-            "state_L1": self.state_L1.tolist(),
-            "state_L2": self.state_L2.tolist(),
-            "state_L3": self.state_L3.tolist(),
+            "state_L1": self.l1.tolist(),
+            "state_L2": self.l2.tolist(),
+            "state_L3": self.l3.tolist(),
         }
