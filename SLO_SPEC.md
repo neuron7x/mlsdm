@@ -3,7 +3,7 @@
 **Document Version:** 1.0.0  
 **Project Version:** 1.0.0  
 **Last Updated:** November 2025  
-**Framework:** Google SRE SLO/SLI
+**Framework:** Google SRE Book - SLO/SLI/Error Budget Methodology
 
 ## Table of Contents
 

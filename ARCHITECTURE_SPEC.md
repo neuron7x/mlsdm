@@ -451,11 +451,13 @@ Enriched Prompt
 **Total Memory Bound:** 29.37 MB (verified empirically)
 
 **Component Breakdown:**
-- QILM_v2: ~20,000 vectors × 384 dims × 4 bytes = 30.72 MB (pre-allocated)
-- MultiLevelMemory: 3 levels × 384 dims × 4 bytes = 4.6 KB
+- QILM_v2: 20,000 vectors × 384 dims × 4 bytes = 30,720,000 bytes ≈ 29.30 MB (pre-allocated)
+- MultiLevelMemory: 3 levels × 384 dims × 4 bytes = 4,608 bytes ≈ 4.5 KB
 - MoralFilter: ~100 bytes (threshold + EMA state)
 - CognitiveRhythm: ~50 bytes (phase + step counter)
-- Controller metadata: ~1 KB
+- Controller metadata: ~50 KB (overhead and tracking)
+
+**Note:** Total measured footprint is 29.37 MB, which includes Python object overhead and runtime structures.
 
 **Zero-Allocation Property:**
 - All memory pre-allocated at initialization

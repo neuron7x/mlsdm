@@ -3,7 +3,7 @@
 **Document Version:** 1.0.0  
 **Project Version:** 1.0.0  
 **Last Updated:** November 2025  
-**Framework:** STRIDE + Attack Trees
+**Threat Modeling Framework:** STRIDE + Attack Trees
 
 ## Table of Contents
 
@@ -437,7 +437,7 @@ This threat model identifies security threats to MLSDM Governed Cognitive Memory
 ## Review and Updates
 
 **Review Schedule:** Quarterly or after major changes  
-**Last Review:** November 2025  
+**Last Reviewed:** November 2025  
 **Next Review:** February 2026  
 **Owner:** Security Team
 
