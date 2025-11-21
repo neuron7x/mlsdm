@@ -8,6 +8,7 @@ import logging
 import time
 from typing import Any
 
+import numpy as np
 import psutil
 from fastapi import APIRouter, Response, status
 from fastapi.responses import PlainTextResponse
@@ -209,8 +210,6 @@ async def detailed_health(response: Response) -> DetailedHealthStatus:
     manager = get_memory_manager()
     if manager is not None:
         try:
-            import numpy as np
-
             # Get memory layer states
             l1, l2, l3 = manager.memory.get_state()
             memory_state = {

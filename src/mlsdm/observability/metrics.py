@@ -286,11 +286,17 @@ class MetricsExporter:
     def get_current_values(self) -> dict[str, Any]:
         """Get current metric values as a dictionary.
 
+        Note:
+            This is a convenience method for testing and debugging.
+            It accesses internal Prometheus client attributes which may change.
+            For production monitoring, use export_metrics() or get_metrics_text()
+            to get the official Prometheus format.
+
         Returns:
             Dictionary with current metric values
         """
-        # Note: Prometheus client doesn't provide easy access to current values
-        # This is a convenience method that returns what we can track
+        # Accessing internal _value attribute is not part of the public API
+        # but provides convenient access to current values for debugging
         return {
             "events_processed": self.events_processed._value.get(),
             "events_rejected": self.events_rejected._value.get(),
@@ -313,8 +319,15 @@ def get_metrics_exporter(registry: CollectorRegistry | None = None) -> MetricsEx
 
     This function is thread-safe and implements the singleton pattern.
 
+    Note:
+        The registry parameter is only used when creating the singleton instance.
+        Subsequent calls with a different registry parameter will be ignored
+        and the existing singleton will be returned. This ensures consistency
+        across the application but means you cannot change registries after
+        the first initialization.
+
     Args:
-        registry: Optional custom Prometheus registry
+        registry: Optional custom Prometheus registry (only used on first call)
 
     Returns:
         MetricsExporter instance
