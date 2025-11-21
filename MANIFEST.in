@@ -1,0 +1,31 @@
+# Include documentation
+include README.md
+include LICENSE
+include CHANGELOG.md
+include CONTRIBUTING.md
+include SECURITY_POLICY.md
+
+# Include configuration guides
+include API_REFERENCE.md
+include USAGE_GUIDE.md
+include CONFIGURATION_GUIDE.md
+include DEPLOYMENT_GUIDE.md
+include TESTING_GUIDE.md
+include DOCUMENTATION_INDEX.md
+
+# Include examples
+recursive-include examples *.py
+
+# Include configuration templates
+include env.example
+recursive-include config *.yaml *.yml *.json
+
+# Include type information
+include src/py.typed
+
+# Exclude unnecessary files
+global-exclude __pycache__
+global-exclude *.py[cod]
+global-exclude .DS_Store
+global-exclude *.so
+global-exclude .git*
