@@ -1,6 +1,8 @@
 # MLSDM Governed Cognitive Memory – Bibliography v1.0
 
-Цей список джерел (18 позицій + 1 software) підібраний під ключові механізми MLSDM: багаторівнева синаптична пам'ять, гіпокампальний replay, циркадні ритми, квант-інспірована пам'ять, генеративні агенти та етичне/гомеостатичне вирівнювання. Базові нейронаукові роботи покривають багатошкальну консолідацію памʼяті й replay; циркадні джерела фіксують роль SCN та «brain clocks» для ритмічної когніції; квант-інспіровані моделі дають прототипи фазово-ентанглінгової памʼяті; сучасні LLM-архітектури й агенти мотивують довготривалу памʼять та керовану поведінку; стандарти/роботи з AI alignment задають рамку для MoralFilterV2.
+This curated list of sources (18 references + 1 software artifact) is selected to support the key mechanisms of MLSDM: multi-level synaptic memory, hippocampal replay, circadian rhythms, quantum-inspired memory, generative agents, and ethical/homeostatic alignment. Core neuroscience works cover multi-scale memory consolidation and replay; circadian sources establish the role of SCN and "brain clocks" for rhythmic cognition; quantum-inspired models provide prototypes for phase-entangled memory; modern LLM architectures and agents motivate long-term memory and governed behavior; standards and AI alignment work establish the framework for MoralFilterV2.
+
+*Цей список джерел (18 позицій + 1 software) підібраний під ключові механізми MLSDM: багаторівнева синаптична пам'ять, гіпокампальний replay, циркадні ритми, квант-інспірована пам'ять, генеративні агенти та етичне/гомеостатичне вирівнювання. Базові нейронаукові роботи покривають багатошкальну консолідацію памʼяті й replay; циркадні джерела фіксують роль SCN та «brain clocks» для ритмічної когніції; квант-інспіровані моделі дають прототипи фазово-ентанглінгової памʼяті; сучасні LLM-архітектури й агенти мотивують довготривалу памʼять та керовану поведінку; стандарти/роботи з AI alignment задають рамку для MoralFilterV2.*
 
 **Total Sources**: 18 references + 1 software artifact
 
@@ -206,8 +208,7 @@
   pages        = {1450006},
   doi          = {10.1142/S0219843614500066},
   url          = {https://doi.org/10.1142/S0219843614500066},
-  orcid       = {0000-0001-7867-2665},
-  note         = {Presents a quantum-inspired bidirectional associative memory with fuzzy inference; inspires QILM\_v2's phase-based, entangled key--value storage for conversational contexts.}
+  note         = {Presents a quantum-inspired bidirectional associative memory with fuzzy inference; inspires QILM\_v2's phase-based, entangled key--value storage for conversational contexts. First author ORCID: 0000-0001-7867-2665}
 }
 
 @article{masuyama2018_qmam,
@@ -233,8 +234,7 @@
   pages        = {516},
   doi          = {10.3390/biomimetics10080516},
   url          = {https://doi.org/10.3390/biomimetics10080516},
-  orcid        = {0000-0001-9975-7780},
-  note         = {Proposes a quantum-inspired framework for brain emulation using stochastic mechanics; supports the conceptual framing of QILM\_v2 as phase-based, entangled cognitive memory.}
+  note         = {Proposes a quantum-inspired framework for brain emulation using stochastic mechanics; supports the conceptual framing of QILM\_v2 as phase-based, entangled cognitive memory. First author ORCID: 0000-0001-9975-7780}
 }
 ```
 
@@ -282,6 +282,10 @@
 
 ### Summary
 
-* Загалом: 18 джерел + 1 software-артефакт.
-* Покриті секції: moral governance / alignment, circadian control, multi-level synaptic memory, hippocampal replay, quantum-inspired memory, довготривала памʼять LLM/агентів.
-* Формат: BibTeX, з DOI/URL і короткими note-анотаціями, готовий до інтеграції в `README` або окремий `BIBLIOGRAPHY.md` / `refs.bib`.
+**Total**: 18 sources + 1 software artifact.
+
+**Covered Sections**: moral governance/alignment, circadian control, multi-level synaptic memory, hippocampal replay, quantum-inspired memory, long-term LLM/agent memory.
+
+**Format**: BibTeX with DOI/URL and concise note annotations, ready for integration into `README` or separate `BIBLIOGRAPHY.md` / `refs.bib`.
+
+*Загалом: 18 джерел + 1 software-артефакт. Покриті секції: moral governance / alignment, circadian control, multi-level synaptic memory, hippocampal replay, quantum-inspired memory, довготривала памʼять LLM/агентів. Формат: BibTeX, з DOI/URL і короткими note-анотаціями, готовий до інтеграції в `README` або окремий `BIBLIOGRAPHY.md` / `refs.bib`.*
