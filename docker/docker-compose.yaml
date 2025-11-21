@@ -1,3 +1,11 @@
+# Docker Compose for MLSDM Governed Cognitive Memory
+# ====================================================
+# Production-ready compose configuration with best practices
+#
+# Usage:
+#   Development: docker-compose up
+#   Production: docker-compose -f docker-compose.yaml -f docker-compose.prod.yaml up -d
+
 version: "3.8"
 
 services:
@@ -5,8 +13,104 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile
+    image: mlsdm-governed-cognitive-memory:latest
+    container_name: mlsdm-memory-system
+    
+    # Port mapping
     ports:
       - "8000:8000"
+    
+    # Environment configuration
     environment:
-      - API_KEY=your-secret-key
-      - CONFIG_PATH=config/default_config.yaml
+      # API Configuration
+      - API_KEY=${API_KEY:-your-secret-key-change-in-production}
+      - CONFIG_PATH=${CONFIG_PATH:-config/production.yaml}
+      
+      # System Configuration
+      - MLSDM_DIMENSION=${DIMENSION:-384}
+      - MLSDM_STRICT_MODE=${STRICT_MODE:-false}
+      
+      # Moral Filter
+      - MLSDM_MORAL_FILTER__THRESHOLD=${MORAL_THRESHOLD:-0.5}
+      - MLSDM_MORAL_FILTER__MIN_THRESHOLD=${MORAL_MIN_THRESHOLD:-0.3}
+      - MLSDM_MORAL_FILTER__MAX_THRESHOLD=${MORAL_MAX_THRESHOLD:-0.9}
+      
+      # Cognitive Rhythm
+      - MLSDM_COGNITIVE_RHYTHM__WAKE_DURATION=${WAKE_DURATION:-8}
+      - MLSDM_COGNITIVE_RHYTHM__SLEEP_DURATION=${SLEEP_DURATION:-3}
+      
+      # Logging
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - JSON_LOGGING=${JSON_LOGGING:-true}
+    
+    # Environment file (optional, overrides above)
+    env_file:
+      - ../.env
+    
+    # Resource limits (adjust based on your needs)
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4G
+        reservations:
+          cpus: '1.0'
+          memory: 2G
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    
+    # Restart policy
+    restart: unless-stopped
+    
+    # Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    
+    # Security
+    security_opt:
+      - no-new-privileges:true
+    read_only: false  # Set to true if you want immutable filesystem
+    
+    # Networks
+    networks:
+      - mlsdm-network
+
+networks:
+  mlsdm-network:
+    driver: bridge
+
+# ====================================================
+# Production Notes
+# ====================================================
+# 
+# 1. Security:
+#    - Change default API_KEY
+#    - Use secrets management (Docker secrets, AWS Secrets Manager)
+#    - Enable read_only filesystem if possible
+#    - Review and harden security_opt settings
+#
+# 2. Monitoring:
+#    - Add Prometheus/Grafana services
+#    - Configure log aggregation (ELK, Loki)
+#    - Set up alerts for health check failures
+#
+# 3. Scaling:
+#    - Use docker-compose scale or Kubernetes for horizontal scaling
+#    - Configure load balancer for multiple instances
+#    - Ensure stateless design or add persistent storage
+#
+# 4. Configuration:
+#    - Create .env file from env.example
+#    - Review resource limits based on workload
+#    - Adjust health check parameters for your environment
+#
+# See DEPLOYMENT_GUIDE.md for detailed instructions.
