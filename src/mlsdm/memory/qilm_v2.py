@@ -31,13 +31,22 @@ class QILM_v2:  # noqa: N801
         self.norms = np.zeros(capacity, dtype=np.float32)
         self._checksum = self._compute_checksum()
 
+    def _ensure_integrity(self) -> None:
+        """
+        Ensure memory integrity, attempting recovery if corruption detected.
+        Should only be called from within a lock context.
+
+        Raises:
+            RuntimeError: If corruption is detected and recovery fails.
+        """
+        if self._detect_corruption_unsafe():  # noqa: SIM102
+            if not self._auto_recover_unsafe():
+                raise RuntimeError("Memory corruption detected and recovery failed")
+
     def entangle(self, vector: list[float], phase: float) -> int:
         with self._lock:
-            # Validate pointer bounds before use
-            if not self._validate_pointer_bounds():  # noqa: SIM102
-                # Attempt auto-recovery
-                if not self._auto_recover_unsafe():
-                    raise RuntimeError("Memory corruption detected and recovery failed")
+            # Ensure integrity before operation
+            self._ensure_integrity()
 
             vec_np = np.array(vector, dtype=np.float32)
             norm = float(np.linalg.norm(vec_np) or 1e-9)
@@ -61,11 +70,8 @@ class QILM_v2:  # noqa: N801
 
     def retrieve(self, query_vector: list[float], current_phase: float, phase_tolerance: float = 0.15, top_k: int = 5) -> list[MemoryRetrieval]:
         with self._lock:
-            # Check for corruption before retrieval
-            if self._detect_corruption_unsafe():  # noqa: SIM102
-                # Attempt auto-recovery
-                if not self._auto_recover_unsafe():
-                    raise RuntimeError("Memory corruption detected and recovery failed")
+            # Ensure integrity before operation
+            self._ensure_integrity()
 
             if self.size == 0:
                 return []
