@@ -102,12 +102,18 @@ jobs:
         sleep 10
         
         # Check if container is running
-        docker ps | grep mlsdm-test
+        if ! docker ps --filter name=mlsdm-test --format '{{.Names}}' | grep -q mlsdm-test; then
+          echo "Container mlsdm-test is not running!"
+          docker logs mlsdm-test || true
+          exit 1
+        fi
         
         # Try health check (with retries)
+        HEALTH_CHECK_PASSED=false
         for i in {1..10}; do
-          if curl -f http://localhost:8000/health; then
+          if curl -f http://localhost:8000/health 2>/dev/null; then
             echo "Health check passed!"
+            HEALTH_CHECK_PASSED=true
             break
           fi
           echo "Health check attempt $i failed, retrying..."
@@ -115,9 +121,15 @@ jobs:
         done
         
         # Show logs for debugging
+        echo "Container logs:"
         docker logs mlsdm-test
         
         # Clean up
-        docker stop mlsdm-test
-        docker rm mlsdm-test
-      continue-on-error: true  # Don't fail if health check isn't ready yet
+        docker stop mlsdm-test || true
+        docker rm mlsdm-test || true
+        
+        # Fail if health check never passed
+        if [ "$HEALTH_CHECK_PASSED" = "false" ]; then
+          echo "Health check failed after all retries!"
+          exit 1
+        fi
