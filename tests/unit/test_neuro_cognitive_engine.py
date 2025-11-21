@@ -41,8 +41,8 @@ class TestNeuroEngineConfig:
         assert config.association_threshold == 0.65
         assert config.enable_monitoring is True
         assert config.stress_threshold == 0.7
-        assert config.fractal_levels is None
-        assert config.memory_capacity == 2048
+        assert config.fslgs_fractal_levels is None
+        assert config.fslgs_memory_capacity == 0
         assert config.enable_entity_tracking is True
         assert config.enable_temporal_validation is True
         assert config.enable_causal_checking is True

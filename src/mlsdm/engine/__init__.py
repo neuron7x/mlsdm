@@ -6,6 +6,16 @@ Exposes NeuroCognitiveEngine as a single entry point that composes:
 - FSLGSWrapper (dual-stream language, anti-schizophrenia, UG constraints)
 """
 
-from .neuro_cognitive_engine import NeuroCognitiveEngine, NeuroEngineConfig
+from .neuro_cognitive_engine import (
+    EmptyResponseError,
+    MLSDMRejectionError,
+    NeuroCognitiveEngine,
+    NeuroEngineConfig,
+)
 
-__all__ = ["NeuroCognitiveEngine", "NeuroEngineConfig"]
+__all__ = [
+    "NeuroCognitiveEngine",
+    "NeuroEngineConfig",
+    "MLSDMRejectionError",
+    "EmptyResponseError",
+]
