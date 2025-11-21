@@ -13,9 +13,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     g++ \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy and install Python dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir --user -r requirements.txt
+# Copy project files for installation
+COPY pyproject.toml requirements.txt ./
+COPY src/ ./src/
+
+# Install Python dependencies and the package
+RUN pip install --no-cache-dir --user -r requirements.txt && \
+    pip install --no-cache-dir --user -e .
 
 # Runtime stage
 FROM python:3.12-slim
