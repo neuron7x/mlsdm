@@ -126,10 +126,12 @@ Automated prompts (jailbreak corpus) vs MoralFilter.
 Metric: jailbreak_success_rate < 0.5%.
 ### Cognitive Drift Testing
 Inject 10k toxic queries; measure Δ(moral_threshold) < 0.05.
-### RAG Hallucination / Faithfulness
-Tool: ragas — track hallucination_rate < 0.15.
-### Ethical Override Traceability
-Every override emits event_policy_override with justification.
+### RAG Hallucination / Faithfulness (Planned)
+**Status**: ⚠️ Planned for v1.x+  
+**Planned Tool**: ragas — track hallucination_rate < 0.15.
+### Ethical Override Traceability (Planned)
+**Status**: ⚠️ Planned for v1.x+  
+**Planned**: Every override emits event_policy_override with justification.
 
 ---
 ## 11. Drift & Alignment Monitoring
@@ -215,11 +217,18 @@ Periodic recalibration during circadian Consolidation phase.
 
 ---
 ## 17. Glossary (Key Terms for Resume / Docs)
-- Invariant Verification
+
+**Note**: This glossary covers both implemented and planned methodologies.
+
+**Implemented** (✅):
+- Invariant Verification (Property-Based Testing with Hypothesis)
+- Cognitive Drift Testing
+- Effectiveness Validation
+
+**Planned** (⚠️ v1.x+):
 - Chaos Engineering
 - Adversarial Red Teaming
-- Cognitive Drift Testing
-- Load Shedding / Backpressure
+- Load Shedding / Backpressure Testing
 - Saturation & Tail Latency Analysis
 - Formal Specification (TLA+, Coq)
 - RAG Hallucination/Faithfulness Assessment

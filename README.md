@@ -217,15 +217,25 @@ def test_moral_threshold_clamped(t):
 
 **Current State**: The system includes error handling and graceful degradation in code, but automated chaos testing infrastructure is not yet implemented.
 
-### Performance SLO Focus
-- P95 composite memory retrieval < 120ms.
-- P99 policy decision < 60ms.
-- Error budget: ≤ 2% degraded cycles per 24h.
+### Performance SLO Focus (Planned)
+
+**Status**: ⚠️ Target SLOs defined but continuous monitoring not yet implemented
+
+**Planned SLOs**:
+- P95 composite memory retrieval < 120ms
+- P99 policy decision < 60ms
+- Error budget: ≤ 2% degraded cycles per 24h
+
+**Current State**: Performance validated through benchmarks showing P50 ~2ms, P95 ~10ms
 
 ### AI Safety Metrics
-- Drift Δ(moral_threshold) over toxic storm < 0.05 absolute.
-- Hallucination rate (ragas) < 0.15.
-- Successful jailbreak attempts < 0.5% of adversarial batch.
+
+**Current** (✅ Validated):
+- Drift Δ(moral_threshold) over toxic storm < 0.05 absolute (tested and verified)
+
+**Planned** (⚠️ v1.x+):
+- Hallucination rate (ragas) < 0.15 - not yet implemented
+- Successful jailbreak attempts < 0.5% of adversarial batch - not yet implemented
 
 ### Planned Observability Hooks (v1.x+)
 
