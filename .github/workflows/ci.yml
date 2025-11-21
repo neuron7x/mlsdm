@@ -1,0 +1,122 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+jobs:
+  lint-and-test:
+    name: Lint and Test (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+        cache: 'pip'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Run ruff linter
+      run: |
+        ruff check .
+    
+    - name: Run mypy type checker
+      run: |
+        mypy .
+      continue-on-error: true  # Allow mypy to not fail the build initially
+    
+    - name: Run pytest with coverage
+      run: |
+        pytest --cov=src --cov-report=html --cov-report=term-missing --cov-report=xml --cov-fail-under=90
+    
+    - name: Upload coverage to artifacts
+      if: matrix.python-version == '3.12'
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-report
+        path: |
+          htmlcov/
+          coverage.xml
+        retention-days: 7
+
+  security:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.12"
+        cache: 'pip'
+    
+    - name: Install pip-audit
+      run: |
+        python -m pip install --upgrade pip
+        pip install pip-audit
+    
+    - name: Run pip-audit
+      run: |
+        pip-audit -r requirements.txt
+
+  docker-build:
+    name: Docker Build Smoke Test
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+    
+    - name: Build Docker image
+      run: |
+        docker build -f docker/Dockerfile -t mlsdm:test .
+    
+    - name: Run Docker container with health check
+      run: |
+        # Start container in detached mode
+        docker run -d --name mlsdm-test -p 8000:8000 mlsdm:test
+        
+        # Wait for container to start
+        sleep 10
+        
+        # Check if container is running
+        docker ps | grep mlsdm-test
+        
+        # Try health check (with retries)
+        for i in {1..10}; do
+          if curl -f http://localhost:8000/health; then
+            echo "Health check passed!"
+            break
+          fi
+          echo "Health check attempt $i failed, retrying..."
+          sleep 3
+        done
+        
+        # Show logs for debugging
+        docker logs mlsdm-test
+        
+        # Clean up
+        docker stop mlsdm-test
+        docker rm mlsdm-test
+      continue-on-error: true  # Don't fail if health check isn't ready yet

@@ -7,7 +7,8 @@ The MLSDM Governed Cognitive Memory system includes comprehensive security featu
 ✅ **Rate Limiting** - 5 RPS per client  
 ✅ **Input Validation** - Comprehensive validation and sanitization  
 ✅ **Security Logging** - Structured audit logs with correlation IDs  
-✅ **Dependency Scanning** - Automated vulnerability detection  
+✅ **Dependency Scanning** - Automated vulnerability detection via pip-audit in CI  
+✅ **CI/CD Security** - Automated pip-audit runs on every push and pull request  
 ✅ **41 Security Tests** - All passing  
 
 ## Quick Start
@@ -25,7 +26,7 @@ python scripts/test_security_features.py
 ### Run Security Audit
 
 ```bash
-# Scan for vulnerabilities
+# Scan for vulnerabilities locally
 python scripts/security_audit.py
 
 # Scan and attempt fixes
@@ -33,6 +34,10 @@ python scripts/security_audit.py --fix
 
 # Generate report
 python scripts/security_audit.py --report security_report.txt
+
+# CI/CD automated scanning
+# The GitHub Actions CI pipeline automatically runs pip-audit on every push
+# and pull request to detect dependency vulnerabilities.
 ```
 
 ### Configuration
