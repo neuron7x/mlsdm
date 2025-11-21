@@ -4,6 +4,7 @@ This module provides comprehensive input validation to prevent injection attacks
 data corruption, and ensure data integrity as per SECURITY_POLICY.md.
 """
 
+import math
 import re
 from typing import Any
 
@@ -363,7 +364,8 @@ class InputValidator:
             raise ValueError(f"max_tokens must be a positive integer, got {max_tokens}")
         
         # Approximate token count: 1 token per CHARS_PER_TOKEN characters
-        estimated_tokens = len(prompt) // InputValidator.CHARS_PER_TOKEN
+        # Use ceiling division for conservative estimation
+        estimated_tokens = math.ceil(len(prompt) / InputValidator.CHARS_PER_TOKEN)
         
         if estimated_tokens > max_tokens:
             raise ValueError(
