@@ -1,8 +1,8 @@
 import numpy as np
 
-from mlsdm.memory.multi_level_memory import MultiLevelSynapticMemory
 from mlsdm.cognition.moral_filter import MoralFilter
 from mlsdm.cognition.ontology_matcher import OntologyMatcher
+from mlsdm.memory.multi_level_memory import MultiLevelSynapticMemory
 from mlsdm.memory.qilm_module import QILM
 from mlsdm.rhythm.cognitive_rhythm import CognitiveRhythm
 from mlsdm.utils.metrics import MetricsCollector

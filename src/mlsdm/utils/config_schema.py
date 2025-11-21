@@ -5,9 +5,9 @@ type safety and validation. It ensures all configuration parameters are
 properly validated before use.
 """
 
-from typing import List, Optional, Dict, Any
-from pydantic import BaseModel, Field, field_validator, model_validator, ConfigDict
-import numpy as np
+from typing import Any
+
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 class MultiLevelMemoryConfig(BaseModel):
@@ -117,13 +117,13 @@ class MoralFilterConfig(BaseModel):
         min_t = self.min_threshold
         max_t = self.max_threshold
         threshold = self.threshold
-        
+
         if min_t is not None and max_t is not None:
             if min_t >= max_t:
                 raise ValueError(
                     f"min_threshold ({min_t}) must be < max_threshold ({max_t})"
                 )
-        
+
         if threshold is not None:
             if min_t is not None and threshold < min_t:
                 raise ValueError(
@@ -133,17 +133,17 @@ class MoralFilterConfig(BaseModel):
                 raise ValueError(
                     f"threshold ({threshold}) must be <= max_threshold ({max_t})"
                 )
-        
+
         return self
 
 
 class OntologyMatcherConfig(BaseModel):
     """Ontology matcher configuration for semantic categorization."""
-    ontology_vectors: List[List[float]] = Field(
+    ontology_vectors: list[list[float]] = Field(
         default_factory=lambda: [[1.0] + [0.0] * 383, [0.0, 1.0] + [0.0] * 382],
         description="List of ontology category vectors. Must match dimension."
     )
-    ontology_labels: Optional[List[str]] = Field(
+    ontology_labels: list[str] | None = Field(
         default=None,
         description="Human-readable labels for ontology categories."
     )
@@ -154,13 +154,13 @@ class OntologyMatcherConfig(BaseModel):
         """Ensure all vectors have same dimension and are non-empty."""
         if not v:
             raise ValueError("ontology_vectors cannot be empty")
-        
+
         dims = [len(vec) for vec in v]
         if len(set(dims)) > 1:
             raise ValueError(
                 f"All ontology vectors must have same dimension. Found: {set(dims)}"
             )
-        
+
         return v
 
     @model_validator(mode='after')
@@ -168,13 +168,13 @@ class OntologyMatcherConfig(BaseModel):
         """Ensure labels match number of vectors if provided."""
         vectors = self.ontology_vectors
         labels = self.ontology_labels
-        
+
         if labels is not None and len(labels) != len(vectors):
             raise ValueError(
                 f"Number of labels ({len(labels)}) must match "
                 f"number of vectors ({len(vectors)})"
             )
-        
+
         return self
 
 
@@ -201,14 +201,14 @@ class CognitiveRhythmConfig(BaseModel):
         """Warn if unusual wake/sleep ratio."""
         wake = self.wake_duration
         sleep = self.sleep_duration
-        
+
         if wake is not None and sleep is not None:
             ratio = wake / sleep
             if ratio < 1.0 or ratio > 10.0:
                 # Note: This is a warning, not an error
                 # In production, consider logging this
                 pass
-        
+
         return self
 
 
@@ -249,7 +249,7 @@ class SystemConfig(BaseModel):
         """Ensure ontology vectors match system dimension."""
         dim = self.dimension
         onto_cfg = self.ontology_matcher
-        
+
         if dim is not None and onto_cfg is not None:
             vectors = onto_cfg.ontology_vectors
             if vectors:
@@ -259,7 +259,7 @@ class SystemConfig(BaseModel):
                         f"Ontology vector dimension ({vec_dim}) must match "
                         f"system dimension ({dim})"
                     )
-        
+
         return self
 
     model_config = ConfigDict(
@@ -295,7 +295,7 @@ class SystemConfig(BaseModel):
     )
 
 
-def validate_config_dict(config_dict: Dict[str, Any]) -> SystemConfig:
+def validate_config_dict(config_dict: dict[str, Any]) -> SystemConfig:
     """Validate a configuration dictionary against the schema.
     
     Args:

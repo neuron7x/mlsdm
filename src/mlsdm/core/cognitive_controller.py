@@ -1,10 +1,13 @@
-import numpy as np
 from threading import Lock
-from typing import Dict, Any, List
+from typing import Any
+
+import numpy as np
+
 from ..cognition.moral_filter_v2 import MoralFilterV2
-from ..memory.qilm_v2 import QILM_v2, MemoryRetrieval
-from ..rhythm.cognitive_rhythm import CognitiveRhythm
 from ..memory.multi_level_memory import MultiLevelSynapticMemory
+from ..memory.qilm_v2 import MemoryRetrieval, QILM_v2
+from ..rhythm.cognitive_rhythm import CognitiveRhythm
+
 
 class CognitiveController:
     def __init__(self, dim: int = 384) -> None:
@@ -16,17 +19,17 @@ class CognitiveController:
         self.synaptic = MultiLevelSynapticMemory(dimension=dim)
         self.step_counter = 0
         # Optimization: Cache for phase values to avoid repeated computation
-        self._phase_cache: Dict[str, float] = {"wake": 0.1, "sleep": 0.9}
+        self._phase_cache: dict[str, float] = {"wake": 0.1, "sleep": 0.9}
         # Optimization: Cache for frequently accessed state values
-        self._state_cache: Dict[str, Any] = {}
+        self._state_cache: dict[str, Any] = {}
         self._state_cache_valid = False
 
-    def process_event(self, vector: np.ndarray, moral_value: float) -> Dict[str, Any]:
+    def process_event(self, vector: np.ndarray, moral_value: float) -> dict[str, Any]:
         with self._lock:
             self.step_counter += 1
             # Optimization: Invalidate state cache when processing
             self._state_cache_valid = False
-            
+
             accepted = self.moral.evaluate(moral_value)
             self.moral.adapt(accepted)
             if not accepted:
@@ -40,14 +43,14 @@ class CognitiveController:
             self.rhythm.step()
             return self._build_state(rejected=False, note="processed")
 
-    def retrieve_context(self, query_vector: np.ndarray, top_k: int = 5) -> List[MemoryRetrieval]:
+    def retrieve_context(self, query_vector: np.ndarray, top_k: int = 5) -> list[MemoryRetrieval]:
         with self._lock:
             # Optimize: use cached phase value
             phase_val = self._phase_cache[self.rhythm.phase]
-            return self.qilm.retrieve(query_vector.tolist(), current_phase=phase_val, 
+            return self.qilm.retrieve(query_vector.tolist(), current_phase=phase_val,
                                      phase_tolerance=0.15, top_k=top_k)
 
-    def _build_state(self, rejected: bool, note: str) -> Dict[str, Any]:
+    def _build_state(self, rejected: bool, note: str) -> dict[str, Any]:
         # Optimization: Use cached norm calculations when state hasn't changed
         # Only cache when not rejected (rejected responses are cheap anyway)
         if not rejected and self._state_cache_valid and self._state_cache:
@@ -57,10 +60,10 @@ class CognitiveController:
             result["rejected"] = rejected
             result["note"] = note
             return result
-        
+
         # Calculate fresh state
         l1, l2, l3 = self.synaptic.state()
-        
+
         # Optimization: Compute norms in a single pass when possible
         # Pre-allocate result dict to avoid resizing
         result = {
@@ -77,10 +80,10 @@ class CognitiveController:
             "rejected": rejected,
             "note": note
         }
-        
+
         # Cache result for accepted events
         if not rejected:
             self._state_cache = result.copy()
             self._state_cache_valid = True
-        
+
         return result

@@ -1,5 +1,6 @@
+from typing import Any
+
 import numpy as np
-from typing import Dict, Tuple, Any
 
 
 class MultiLevelSynapticMemory:
@@ -31,7 +32,7 @@ class MultiLevelSynapticMemory:
             raise ValueError(f"gating12 must be in [0, 1], got {gating12}")
         if not (0 <= gating23 <= 1.0):
             raise ValueError(f"gating23 must be in [0, 1], got {gating23}")
-        
+
         self.dim = int(dimension)
         self.lambda_l1 = float(lambda_l1)
         self.lambda_l2 = float(lambda_l2)
@@ -53,13 +54,13 @@ class MultiLevelSynapticMemory:
         self.l1 *= (1 - self.lambda_l1)
         self.l2 *= (1 - self.lambda_l2)
         self.l3 *= (1 - self.lambda_l3)
-        
+
         # Optimize: avoid unnecessary astype if already float32
         if event.dtype != np.float32:
             self.l1 += event.astype(np.float32)
         else:
             self.l1 += event
-        
+
         # Transfer logic maintains original behavior but avoids temp array creation
         transfer12 = (self.l1 > self.theta_l1) * self.l1 * self.gating12
         self.l1 -= transfer12
@@ -68,10 +69,10 @@ class MultiLevelSynapticMemory:
         self.l2 -= transfer23
         self.l3 += transfer23
 
-    def state(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def state(self) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         return self.l1.copy(), self.l2.copy(), self.l3.copy()
 
-    def get_state(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def get_state(self) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         return self.state()
 
     def reset_all(self) -> None:
@@ -79,7 +80,7 @@ class MultiLevelSynapticMemory:
         self.l2.fill(0.0)
         self.l3.fill(0.0)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "dimension": self.dim,
             "lambda_l1": self.lambda_l1,

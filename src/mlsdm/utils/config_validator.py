@@ -8,8 +8,8 @@ Author: neuron7x
 License: MIT
 """
 
-from typing import Any, Dict, Optional
 from dataclasses import dataclass
+from typing import Any
 
 
 @dataclass
@@ -19,7 +19,7 @@ class ValidationError(Exception):
     value: Any
     expected: str
     component: str
-    
+
     def __str__(self) -> str:
         return (
             f"Invalid configuration for {self.component}.{self.parameter}: "
@@ -29,7 +29,7 @@ class ValidationError(Exception):
 
 class ConfigValidator:
     """Validates configuration parameters for MLSDM components."""
-    
+
     @staticmethod
     def validate_dimension(dim: Any, component: str = "Component") -> int:
         """Validate embedding dimension parameter.
@@ -51,7 +51,7 @@ class ConfigValidator:
                 expected="positive integer",
                 component=component
             )
-        
+
         if dim <= 0:
             raise ValidationError(
                 parameter="dim",
@@ -59,7 +59,7 @@ class ConfigValidator:
                 expected="positive integer (> 0)",
                 component=component
             )
-        
+
         if dim > 10000:
             raise ValidationError(
                 parameter="dim",
@@ -67,9 +67,9 @@ class ConfigValidator:
                 expected="reasonable integer (<= 10000)",
                 component=component
             )
-        
+
         return dim
-    
+
     @staticmethod
     def validate_capacity(capacity: Any, component: str = "Component") -> int:
         """Validate memory capacity parameter.
@@ -91,7 +91,7 @@ class ConfigValidator:
                 expected="positive integer",
                 component=component
             )
-        
+
         if capacity <= 0:
             raise ValidationError(
                 parameter="capacity",
@@ -99,7 +99,7 @@ class ConfigValidator:
                 expected="positive integer (> 0)",
                 component=component
             )
-        
+
         if capacity > 1_000_000:
             raise ValidationError(
                 parameter="capacity",
@@ -107,9 +107,9 @@ class ConfigValidator:
                 expected="reasonable integer (<= 1,000,000)",
                 component=component
             )
-        
+
         return capacity
-    
+
     @staticmethod
     def validate_threshold(
         threshold: Any,
@@ -138,9 +138,9 @@ class ConfigValidator:
                 expected=f"float in range [{min_val}, {max_val}]",
                 component=component
             )
-        
+
         threshold = float(threshold)
-        
+
         if not (min_val <= threshold <= max_val):
             raise ValidationError(
                 parameter="threshold",
@@ -148,9 +148,9 @@ class ConfigValidator:
                 expected=f"float in range [{min_val}, {max_val}]",
                 component=component
             )
-        
+
         return threshold
-    
+
     @staticmethod
     def validate_duration(
         duration: Any,
@@ -177,7 +177,7 @@ class ConfigValidator:
                 expected="positive integer",
                 component=component
             )
-        
+
         if duration <= 0:
             raise ValidationError(
                 parameter=parameter_name,
@@ -185,7 +185,7 @@ class ConfigValidator:
                 expected="positive integer (> 0)",
                 component=component
             )
-        
+
         if duration > 1000:
             raise ValidationError(
                 parameter=parameter_name,
@@ -193,9 +193,9 @@ class ConfigValidator:
                 expected="reasonable integer (<= 1000)",
                 component=component
             )
-        
+
         return duration
-    
+
     @staticmethod
     def validate_rate(
         rate: Any,
@@ -222,9 +222,9 @@ class ConfigValidator:
                 expected="float in range (0, 1]",
                 component=component
             )
-        
+
         rate = float(rate)
-        
+
         if not (0 < rate <= 1.0):
             raise ValidationError(
                 parameter=parameter_name,
@@ -232,15 +232,15 @@ class ConfigValidator:
                 expected="float in range (0, 1]",
                 component=component
             )
-        
+
         return rate
-    
+
     @staticmethod
     def validate_positive_int(
         value: Any,
         parameter_name: str,
         component: str = "Component",
-        max_val: Optional[int] = None
+        max_val: int | None = None
     ) -> int:
         """Validate positive integer parameter.
         
@@ -266,7 +266,7 @@ class ConfigValidator:
                 expected=expected,
                 component=component
             )
-        
+
         if value <= 0:
             expected = "positive integer (> 0)"
             if max_val is not None:
@@ -277,7 +277,7 @@ class ConfigValidator:
                 expected=expected,
                 component=component
             )
-        
+
         if max_val is not None and value > max_val:
             raise ValidationError(
                 parameter=parameter_name,
@@ -285,9 +285,9 @@ class ConfigValidator:
                 expected=f"positive integer (<= {max_val})",
                 component=component
             )
-        
+
         return value
-    
+
     @staticmethod
     def validate_float_range(
         value: Any,
@@ -318,9 +318,9 @@ class ConfigValidator:
                 expected=f"float in range [{min_val}, {max_val}]",
                 component=component
             )
-        
+
         value = float(value)
-        
+
         if not (min_val <= value <= max_val):
             raise ValidationError(
                 parameter=parameter_name,
@@ -328,11 +328,11 @@ class ConfigValidator:
                 expected=f"float in range [{min_val}, {max_val}]",
                 component=component
             )
-        
+
         return value
-    
+
     @classmethod
-    def validate_llm_wrapper_config(cls, config: Dict[str, Any]) -> Dict[str, Any]:
+    def validate_llm_wrapper_config(cls, config: dict[str, Any]) -> dict[str, Any]:
         """Validate LLMWrapper configuration.
         
         Args:
@@ -346,7 +346,7 @@ class ConfigValidator:
         """
         validated = {}
         component = "LLMWrapper"
-        
+
         # Required parameters
         if 'llm_generate_fn' not in config:
             raise ValidationError(
@@ -363,7 +363,7 @@ class ConfigValidator:
                 component=component
             )
         validated['llm_generate_fn'] = config['llm_generate_fn']
-        
+
         if 'embedding_fn' not in config:
             raise ValidationError(
                 parameter="embedding_fn",
@@ -379,41 +379,41 @@ class ConfigValidator:
                 component=component
             )
         validated['embedding_fn'] = config['embedding_fn']
-        
+
         # Optional parameters with defaults
         validated['dim'] = cls.validate_dimension(
             config.get('dim', 384),
             component
         )
-        
+
         validated['capacity'] = cls.validate_capacity(
             config.get('capacity', 20000),
             component
         )
-        
+
         validated['wake_duration'] = cls.validate_duration(
             config.get('wake_duration', 8),
             'wake_duration',
             component
         )
-        
+
         validated['sleep_duration'] = cls.validate_duration(
             config.get('sleep_duration', 3),
             'sleep_duration',
             component
         )
-        
+
         validated['initial_moral_threshold'] = cls.validate_threshold(
             config.get('initial_moral_threshold', 0.50),
             min_val=0.30,
             max_val=0.90,
             component=component
         )
-        
+
         return validated
-    
+
     @classmethod
-    def validate_moral_filter_config(cls, config: Dict[str, Any]) -> Dict[str, Any]:
+    def validate_moral_filter_config(cls, config: dict[str, Any]) -> dict[str, Any]:
         """Validate MoralFilter configuration.
         
         Args:
@@ -427,30 +427,30 @@ class ConfigValidator:
         """
         validated = {}
         component = "MoralFilter"
-        
+
         validated['initial_threshold'] = cls.validate_threshold(
             config.get('initial_threshold', 0.50),
             min_val=0.30,
             max_val=0.90,
             component=component
         )
-        
+
         validated['adapt_rate'] = cls.validate_rate(
             config.get('adapt_rate', 0.05),
             'adapt_rate',
             component
         )
-        
+
         validated['ema_alpha'] = cls.validate_rate(
             config.get('ema_alpha', 0.1),
             'ema_alpha',
             component
         )
-        
+
         return validated
-    
+
     @classmethod
-    def validate_qilm_config(cls, config: Dict[str, Any]) -> Dict[str, Any]:
+    def validate_qilm_config(cls, config: dict[str, Any]) -> dict[str, Any]:
         """Validate QILM configuration.
         
         Args:
@@ -464,24 +464,24 @@ class ConfigValidator:
         """
         validated = {}
         component = "QILM"
-        
+
         validated['dim'] = cls.validate_dimension(
             config.get('dim', 384),
             component
         )
-        
+
         validated['capacity'] = cls.validate_capacity(
             config.get('capacity', 20000),
             component
         )
-        
+
         return validated
 
 
 def validate_config(
-    config: Dict[str, Any],
+    config: dict[str, Any],
     component_type: str
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Validate configuration for a component.
     
     Args:
@@ -500,11 +500,11 @@ def validate_config(
         'moral_filter': ConfigValidator.validate_moral_filter_config,
         'qilm': ConfigValidator.validate_qilm_config,
     }
-    
+
     if component_type not in validators:
         raise ValueError(
             f"Unknown component type: {component_type}. "
             f"Valid types: {list(validators.keys())}"
         )
-    
+
     return validators[component_type](config)

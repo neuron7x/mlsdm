@@ -1,22 +1,23 @@
-from typing import Dict, Any, Iterator, Tuple, Optional
-
 import asyncio
 import logging
+from collections.abc import Iterator
+from typing import Any
+
 import numpy as np
 
-from mlsdm.memory.multi_level_memory import MultiLevelSynapticMemory
 from mlsdm.cognition.moral_filter import MoralFilter
 from mlsdm.cognition.ontology_matcher import OntologyMatcher
+from mlsdm.memory.multi_level_memory import MultiLevelSynapticMemory
 from mlsdm.memory.qilm_module import QILM
 from mlsdm.rhythm.cognitive_rhythm import CognitiveRhythm
-from mlsdm.utils.metrics import MetricsCollector
 from mlsdm.utils.data_serializer import DataSerializer
+from mlsdm.utils.metrics import MetricsCollector
 
 logger = logging.getLogger(__name__)
 
 
 class MemoryManager:
-    def __init__(self, config: Dict[str, Any]) -> None:
+    def __init__(self, config: dict[str, Any]) -> None:
         self.dimension = int(config.get("dimension", 10))
 
         mem_cfg = config.get("multi_level_memory", {})
@@ -85,7 +86,7 @@ class MemoryManager:
         self.metrics_collector.add_accepted_event()
         self.metrics_collector.stop_event_timer_and_record_latency()
 
-    async def simulate(self, num_steps: int, event_gen: Iterator[Tuple[np.ndarray, float]]) -> None:
+    async def simulate(self, num_steps: int, event_gen: Iterator[tuple[np.ndarray, float]]) -> None:
         for step, (ev, mv) in enumerate(event_gen):
             if ev.shape[0] != self.dimension:
                 raise ValueError("Event dimension mismatch.")
@@ -99,9 +100,9 @@ class MemoryManager:
             self.rhythm.step()
             await asyncio.sleep(0)
 
-    def run_simulation(self, num_steps: int, event_gen: Optional[Iterator[Tuple[np.ndarray, float]]] = None) -> None:
+    def run_simulation(self, num_steps: int, event_gen: Iterator[tuple[np.ndarray, float]] | None = None) -> None:
         if event_gen is None:
-            def default_gen() -> Iterator[Tuple[np.ndarray, float]]:
+            def default_gen() -> Iterator[tuple[np.ndarray, float]]:
                 for _ in range(num_steps):
                     ev = np.random.randn(self.dimension)
                     mv = float(np.clip(np.random.rand(), 0.0, 1.0))

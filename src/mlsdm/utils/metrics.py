@@ -1,14 +1,14 @@
 from __future__ import annotations
 
 import time
-from typing import Dict, Any
+from typing import Any
 
 import numpy as np
 
 
 class MetricsCollector:
     def __init__(self) -> None:
-        self.metrics: Dict[str, Any] = {
+        self.metrics: dict[str, Any] = {
             "time": [],
             "phase": [],
             "L1_norm": [],
@@ -87,5 +87,5 @@ class MetricsCollector:
         }
         self._event_start = None
 
-    def get_metrics(self) -> Dict[str, Any]:
+    def get_metrics(self) -> dict[str, Any]:
         return self.metrics

@@ -1,5 +1,6 @@
 import numpy as np
 
+
 class MoralFilterV2:
     MIN_THRESHOLD = 0.30
     MAX_THRESHOLD = 0.90
@@ -10,7 +11,7 @@ class MoralFilterV2:
         # Validate input
         if not isinstance(initial_threshold, (int, float)):
             raise TypeError(f"initial_threshold must be a number, got {type(initial_threshold).__name__}")
-        
+
         self.threshold = np.clip(initial_threshold, self.MIN_THRESHOLD, self.MAX_THRESHOLD)
         self.ema_accept_rate = 0.5
 

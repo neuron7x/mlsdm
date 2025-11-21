@@ -1,10 +1,10 @@
-from typing import List, Any, Tuple, Optional, Dict
+from typing import Any
 
 import numpy as np
 
 
 class OntologyMatcher:
-    def __init__(self, ontology_vectors: np.ndarray, labels: Optional[List[Any]] = None) -> None:
+    def __init__(self, ontology_vectors: np.ndarray, labels: list[Any] | None = None) -> None:
         if not isinstance(ontology_vectors, np.ndarray) or ontology_vectors.ndim != 2:
             raise ValueError("ontology_vectors must be a 2D NumPy array.")
         if labels is not None and len(labels) != len(ontology_vectors):
@@ -14,7 +14,7 @@ class OntologyMatcher:
         self.labels = labels or list(range(len(ontology_vectors)))
         self.dimension = self.ontology.shape[1]
 
-    def match(self, event_vector: np.ndarray, metric: str = "cosine") -> Tuple[Optional[Any], float]:
+    def match(self, event_vector: np.ndarray, metric: str = "cosine") -> tuple[Any | None, float]:
         if not isinstance(event_vector, np.ndarray) or event_vector.shape[0] != self.dimension:
             raise ValueError(f"Event vector must be a NumPy array of dimension {self.dimension}.")
         if metric not in ("cosine", "euclidean"):
@@ -38,5 +38,5 @@ class OntologyMatcher:
         idx = int(np.argmax(sims))
         return self.labels[idx], float(sims[idx])
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {"ontology_vectors": self.ontology.tolist(), "labels": self.labels}

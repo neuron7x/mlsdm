@@ -1,4 +1,3 @@
-from typing import Dict
 
 
 class MoralFilter:
@@ -29,7 +28,7 @@ class MoralFilter:
         else:
             self.threshold = min(self.max_threshold, self.threshold + self.adapt_rate)
 
-    def to_dict(self) -> Dict[str, float]:
+    def to_dict(self) -> dict[str, float]:
         return {
             "threshold": self.threshold,
             "adapt_rate": self.adapt_rate,

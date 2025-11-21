@@ -11,13 +11,16 @@ This module provides a production-ready wrapper around any LLM that enforces:
 Prevents LLM degradation, memory bloat, toxicity, and identity loss.
 """
 
-import numpy as np
-from typing import List, Optional, Dict, Any, Callable
+from collections.abc import Callable
 from threading import Lock
+from typing import Any
+
+import numpy as np
+
 from ..cognition.moral_filter_v2 import MoralFilterV2
+from ..memory.multi_level_memory import MultiLevelSynapticMemory
 from ..memory.qilm_v2 import QILM_v2
 from ..rhythm.cognitive_rhythm import CognitiveRhythm
-from ..memory.multi_level_memory import MultiLevelSynapticMemory
 
 
 class LLMWrapper:
@@ -46,10 +49,10 @@ class LLMWrapper:
             moral_value=0.8
         )
     """
-    
+
     MAX_WAKE_TOKENS = 2048
     MAX_SLEEP_TOKENS = 150  # Forced short responses during sleep
-    
+
     def __init__(
         self,
         llm_generate_fn: Callable[[str, int], str],
@@ -74,7 +77,7 @@ class LLMWrapper:
         """
         self.dim = dim
         self._lock = Lock()
-        
+
         # Core components
         self.llm_generate = llm_generate_fn
         self.embed = embedding_fn
@@ -82,20 +85,20 @@ class LLMWrapper:
         self.qilm = QILM_v2(dimension=dim, capacity=capacity)
         self.rhythm = CognitiveRhythm(wake_duration=wake_duration, sleep_duration=sleep_duration)
         self.synaptic = MultiLevelSynapticMemory(dimension=dim)
-        
+
         # State tracking
         self.step_counter = 0
         self.rejected_count = 0
         self.accepted_count = 0
-        self.consolidation_buffer: List[np.ndarray] = []
-        
+        self.consolidation_buffer: list[np.ndarray] = []
+
     def generate(
         self,
         prompt: str,
         moral_value: float,
-        max_tokens: Optional[int] = None,
+        max_tokens: int | None = None,
         context_top_k: int = 5
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Generate LLM response with cognitive governance.
         
@@ -122,36 +125,36 @@ class LLMWrapper:
         """
         with self._lock:
             self.step_counter += 1
-            
+
             # Step 1: Moral evaluation
             accepted = self.moral.evaluate(moral_value)
             self.moral.adapt(accepted)
-            
+
             if not accepted:
                 self.rejected_count += 1
                 return self._build_rejection_response("morally rejected")
-            
+
             # Step 2: Check cognitive phase
             is_wake = self.rhythm.is_wake()
             if not is_wake:
                 # During sleep, reject new processing but allow consolidation
                 return self._build_rejection_response("sleep phase - consolidating")
-            
+
             # Step 3: Embed prompt
             try:
                 prompt_vector = self.embed(prompt)
                 if not isinstance(prompt_vector, np.ndarray):
                     prompt_vector = np.array(prompt_vector, dtype=np.float32)
                 prompt_vector = prompt_vector.astype(np.float32)
-                
+
                 # Normalize
                 norm = np.linalg.norm(prompt_vector)
                 if norm > 1e-9:
                     prompt_vector = prompt_vector / norm
-                    
+
             except Exception as e:
                 return self._build_error_response(f"embedding failed: {str(e)}")
-            
+
             # Step 4: Retrieve context from memory
             phase_val = 0.1 if is_wake else 0.9
             memories = self.qilm.retrieve(
@@ -160,11 +163,11 @@ class LLMWrapper:
                 phase_tolerance=0.15,
                 top_k=context_top_k
             )
-            
+
             # Step 5: Build context-aware prompt
             context_text = self._build_context_from_memories(memories)
             enhanced_prompt = self._enhance_prompt(prompt, context_text)
-            
+
             # Step 6: Determine max tokens based on phase
             if max_tokens is None:
                 max_tokens = self.MAX_WAKE_TOKENS if is_wake else self.MAX_SLEEP_TOKENS
@@ -172,28 +175,28 @@ class LLMWrapper:
                 # During sleep, enforce short responses
                 if not is_wake:
                     max_tokens = min(max_tokens, self.MAX_SLEEP_TOKENS)
-            
+
             # Step 7: Generate response
             try:
                 response_text = self.llm_generate(enhanced_prompt, max_tokens)
             except Exception as e:
                 return self._build_error_response(f"generation failed: {str(e)}")
-            
+
             # Step 8: Update memory
             self.synaptic.update(prompt_vector)
             self.qilm.entangle(prompt_vector.tolist(), phase=phase_val)
             self.accepted_count += 1
-            
+
             # Add to consolidation buffer for sleep processing
             self.consolidation_buffer.append(prompt_vector)
-            
+
             # Step 9: Advance cognitive rhythm
             self.rhythm.step()
-            
+
             # Step 10: Perform consolidation if entering sleep
             if self.rhythm.is_sleep() and len(self.consolidation_buffer) > 0:
                 self._consolidate_memories()
-            
+
             return {
                 "response": response_text,
                 "accepted": True,
@@ -204,7 +207,7 @@ class LLMWrapper:
                 "context_items": len(memories),
                 "max_tokens_used": max_tokens
             }
-    
+
     def _consolidate_memories(self) -> None:
         """
         Consolidate buffered memories during sleep phase.
@@ -214,37 +217,37 @@ class LLMWrapper:
         """
         if len(self.consolidation_buffer) == 0:
             return
-        
+
         # During sleep, re-encode memories with sleep phase (0.9)
         sleep_phase = 0.9
         for vector in self.consolidation_buffer:
             # Re-entangle with sleep phase for long-term storage
             self.qilm.entangle(vector.tolist(), phase=sleep_phase)
-        
+
         # Clear buffer
         self.consolidation_buffer.clear()
-    
-    def _build_context_from_memories(self, memories: List[Any]) -> str:
+
+    def _build_context_from_memories(self, memories: list[Any]) -> str:
         """Build context text from retrieved memories."""
         if not memories:
             return ""
-        
+
         # Simple context building - could be enhanced with more sophisticated approaches
         context_parts = []
         for i, mem in enumerate(memories[:3]):  # Use top 3
             resonance = getattr(mem, 'resonance', 0.0)
             context_parts.append(f"[Context {i+1}, relevance: {resonance:.2f}]")
-        
+
         return " ".join(context_parts) if context_parts else ""
-    
+
     def _enhance_prompt(self, prompt: str, context: str) -> str:
         """Enhance prompt with memory context."""
         if not context:
             return prompt
-        
+
         return f"{context}\n\nUser: {prompt}"
-    
-    def _build_rejection_response(self, reason: str) -> Dict[str, Any]:
+
+    def _build_rejection_response(self, reason: str) -> dict[str, Any]:
         """Build response for rejected requests."""
         return {
             "response": "",
@@ -256,8 +259,8 @@ class LLMWrapper:
             "context_items": 0,
             "max_tokens_used": 0
         }
-    
-    def _build_error_response(self, error: str) -> Dict[str, Any]:
+
+    def _build_error_response(self, error: str) -> dict[str, Any]:
         """Build response for errors."""
         return {
             "response": "",
@@ -269,8 +272,8 @@ class LLMWrapper:
             "context_items": 0,
             "max_tokens_used": 0
         }
-    
-    def get_state(self) -> Dict[str, Any]:
+
+    def get_state(self) -> dict[str, Any]:
         """
         Get current cognitive state.
         
@@ -295,7 +298,7 @@ class LLMWrapper:
                 "qilm_stats": self.qilm.get_state_stats(),
                 "consolidation_buffer_size": len(self.consolidation_buffer)
             }
-    
+
     def reset(self) -> None:
         """Reset the wrapper to initial state (for testing)."""
         with self._lock:

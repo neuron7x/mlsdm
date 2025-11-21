@@ -4,24 +4,25 @@ This module provides utilities for loading and validating configuration files
 with comprehensive error messages and type safety.
 """
 
-import yaml
 import configparser
 import os
-from typing import Dict, Any, Optional
 from pathlib import Path
+from typing import Any
+
+import yaml
 
 from mlsdm.utils.config_schema import SystemConfig, validate_config_dict
 
 
 class ConfigLoader:
     """Load and validate configuration files with schema validation."""
-    
+
     @staticmethod
     def load_config(
         path: str,
         validate: bool = True,
         env_override: bool = True
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Load configuration from file with optional validation.
         
         Args:
@@ -50,7 +51,7 @@ class ConfigLoader:
                 "Only YAML (.yaml, .yml) and INI (.ini) are supported."
             )
 
-        config: Dict[str, Any] = {}
+        config: dict[str, Any] = {}
 
         # Load from file
         if path.endswith((".yaml", ".yml")):
@@ -78,10 +79,10 @@ class ConfigLoader:
         return config
 
     @staticmethod
-    def _load_yaml(path: str) -> Dict[str, Any]:
+    def _load_yaml(path: str) -> dict[str, Any]:
         """Load YAML configuration file."""
         try:
-            with open(path, "r", encoding="utf-8") as f:
+            with open(path, encoding="utf-8") as f:
                 config = yaml.safe_load(f) or {}
             return config
         except yaml.YAMLError as e:
@@ -90,13 +91,13 @@ class ConfigLoader:
             raise ValueError(f"Error reading YAML file '{path}': {str(e)}")
 
     @staticmethod
-    def _load_ini(path: str) -> Dict[str, Any]:
+    def _load_ini(path: str) -> dict[str, Any]:
         """Load INI configuration file."""
         try:
-            config: Dict[str, Any] = {}
+            config: dict[str, Any] = {}
             parser = configparser.ConfigParser()
             parser.read(path, encoding="utf-8")
-            
+
             for section in parser.sections():
                 for key, value in parser[section].items():
                     lower = value.lower()
@@ -110,13 +111,13 @@ class ConfigLoader:
                                 config[key] = float(value)
                             except ValueError:
                                 config[key] = value
-            
+
             return config
         except Exception as e:
             raise ValueError(f"Error reading INI file '{path}': {str(e)}")
 
     @staticmethod
-    def _apply_env_overrides(config: Dict[str, Any]) -> Dict[str, Any]:
+    def _apply_env_overrides(config: dict[str, Any]) -> dict[str, Any]:
         """Apply environment variable overrides to configuration.
         
         Environment variables should be prefixed with MLSDM_ and use
@@ -126,14 +127,14 @@ class ConfigLoader:
         - MLSDM_COGNITIVE_RHYTHM__WAKE_DURATION=10
         """
         prefix = "MLSDM_"
-        
+
         for env_key, env_value in os.environ.items():
             if not env_key.startswith(prefix):
                 continue
-            
+
             # Remove prefix and convert to lowercase
             config_key = env_key[len(prefix):].lower()
-            
+
             # Handle nested keys (e.g., MORAL_FILTER__THRESHOLD)
             if "__" in config_key:
                 parts = config_key.split("__")
@@ -145,7 +146,7 @@ class ConfigLoader:
             else:
                 # Top-level key
                 config[config_key] = ConfigLoader._parse_env_value(env_value)
-        
+
         return config
 
     @staticmethod
@@ -156,19 +157,19 @@ class ConfigLoader:
             return True
         if value.lower() in ("false", "0", "no", "off"):
             return False
-        
+
         # Try integer
         try:
             return int(value)
         except ValueError:
             pass
-        
+
         # Try float
         try:
             return float(value)
         except ValueError:
             pass
-        
+
         # Return as string
         return value
 

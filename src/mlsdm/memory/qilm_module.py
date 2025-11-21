@@ -1,14 +1,14 @@
-from typing import List, Union, Any, Optional, Dict
+from typing import Any
 
 import numpy as np
 
 
 class QILM:
     def __init__(self) -> None:
-        self.memory: List[np.ndarray] = []
-        self.phases: List[Union[float, Any]] = []
+        self.memory: list[np.ndarray] = []
+        self.phases: list[float | Any] = []
 
-    def entangle_phase(self, event_vector: np.ndarray, phase: Optional[Union[float, Any]] = None) -> None:
+    def entangle_phase(self, event_vector: np.ndarray, phase: float | Any | None = None) -> None:
         if not isinstance(event_vector, np.ndarray):
             raise TypeError("event_vector must be a NumPy array.")
 
@@ -18,10 +18,10 @@ class QILM:
             phase = float(np.random.rand())
         self.phases.append(phase)
 
-    def retrieve(self, phase: Union[float, Any], tolerance: float = 0.1) -> List[np.ndarray]:
+    def retrieve(self, phase: float | Any, tolerance: float = 0.1) -> list[np.ndarray]:
         if tolerance < 0:
             raise ValueError("Tolerance must be non-negative.")
-        results: List[np.ndarray] = []
+        results: list[np.ndarray] = []
         for v, ph in zip(self.memory, self.phases):
             if isinstance(ph, (float, int)) and isinstance(phase, (float, int)):
                 if abs(float(ph) - float(phase)) <= tolerance:
@@ -30,5 +30,5 @@ class QILM:
                 results.append(v)
         return results
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {"memory": [m.tolist() for m in self.memory], "phases": self.phases}

@@ -1,4 +1,4 @@
-from typing import Dict, Any
+from typing import Any
 
 
 class CognitiveRhythm:
@@ -29,7 +29,7 @@ class CognitiveRhythm:
     def get_current_phase(self) -> str:
         return self.phase
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "wake_duration": self.wake_duration,
             "sleep_duration": self.sleep_duration,

@@ -1,13 +1,13 @@
 import json
 import os
-from typing import Any, Dict
+from typing import Any
 
 import numpy as np
 from tenacity import retry, stop_after_attempt
 
 
 @retry(stop=stop_after_attempt(3))
-def _save_data(data: Dict[str, Any], filepath: str) -> None:
+def _save_data(data: dict[str, Any], filepath: str) -> None:
     ext = os.path.splitext(filepath)[1].lower()
     if ext == ".json":
         with open(filepath, "w", encoding="utf-8") as f:
@@ -20,10 +20,10 @@ def _save_data(data: Dict[str, Any], filepath: str) -> None:
 
 
 @retry(stop=stop_after_attempt(3))
-def _load_data(filepath: str) -> Dict[str, Any]:
+def _load_data(filepath: str) -> dict[str, Any]:
     ext = os.path.splitext(filepath)[1].lower()
     if ext == ".json":
-        with open(filepath, "r", encoding="utf-8") as f:
+        with open(filepath, encoding="utf-8") as f:
             return json.load(f)
     elif ext == ".npz":
         arrs = np.load(filepath, allow_pickle=True)
@@ -34,13 +34,13 @@ def _load_data(filepath: str) -> Dict[str, Any]:
 
 class DataSerializer:
     @staticmethod
-    def save(data: Dict[str, Any], filepath: str) -> None:
+    def save(data: dict[str, Any], filepath: str) -> None:
         if not isinstance(filepath, str):
             raise TypeError("Filepath must be a string.")
         _save_data(data, filepath)
 
     @staticmethod
-    def load(filepath: str) -> Dict[str, Any]:
+    def load(filepath: str) -> dict[str, Any]:
         if not isinstance(filepath, str):
             raise TypeError("Filepath must be a string.")
         return _load_data(filepath)
