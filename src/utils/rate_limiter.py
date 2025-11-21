@@ -63,11 +63,9 @@ class RateLimiter:
             # Optimization: Avoid min() when we know tokens won't exceed capacity
             if leaked >= self.capacity - tokens:
                 # Bucket is full or will be full
-                tokens = self.capacity - 1.0  # Take one token
-                self.buckets[client_id] = (tokens, current_time)
-                return True
-            
-            tokens += leaked
+                tokens = self.capacity
+            else:
+                tokens += leaked
             
             # Check if we can serve this request
             if tokens >= 1.0:

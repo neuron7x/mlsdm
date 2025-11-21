@@ -71,8 +71,12 @@ class InputValidator:
                 norm = np.linalg.norm(arr)
                 if norm < 1e-10:
                     raise ValueError("Cannot normalize zero vector")
-                # In-place normalization to avoid allocation
-                arr = arr / norm
+                # True in-place normalization to avoid allocation
+                # Create a copy if needed to avoid modifying input
+                if arr is not vector:
+                    arr /= norm
+                else:
+                    arr = arr / norm
             
             return arr
         
@@ -108,7 +112,8 @@ class InputValidator:
             norm = np.linalg.norm(arr)
             if norm < 1e-10:
                 raise ValueError("Cannot normalize zero vector")
-            arr = arr / norm
+            # In-place normalization
+            arr /= norm
         
         return arr
     

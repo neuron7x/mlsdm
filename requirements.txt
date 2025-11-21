@@ -28,3 +28,4 @@ urllib3>=2.2.2
 setuptools>=78.1.1
 idna>=3.7
 pip>=25.3
+twisted>=24.7.0rc1
