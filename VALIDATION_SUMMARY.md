@@ -150,7 +150,7 @@ python scripts/generate_effectiveness_charts.py
 1. ✅ **Deploy wake/sleep cycles** - Proven resource efficiency
 2. ✅ **Enable moral filtering** - Critical safety improvement
 3. ⚠️ **Tune thresholds** per use case - Optimize false positive rate
-4. ✅ **Monitor drift metrics** - Use Prometheus/OpenTelemetry
+4. ⚠️ **Monitor drift metrics** - Use Prometheus/OpenTelemetry (planned for v1.x+)
 
 ### For Research (⚠️ Planned, not yet implemented)
 1. Formal verification (TLA+, Coq) - planned for v1.x+

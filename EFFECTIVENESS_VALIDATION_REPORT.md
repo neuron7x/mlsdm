@@ -453,7 +453,7 @@ This validation demonstrates **Principal System Architect level** contributions:
 2. ✅ Enable moral filtering for safety-critical applications
 3. ⚠️ Tune thresholds based on domain-specific requirements
 4. ⚠️ Implement user feedback loops to reduce false positives
-5. ✅ Monitor drift metrics in production (Prometheus/OpenTelemetry)
+5. ⚠️ Monitor drift metrics in production (Prometheus/OpenTelemetry - planned for v1.x+)
 
 **For Research Extension** (⚠️ Planned, not yet implemented):
 1. Formal verification (TLA+, Coq) - planned for v1.x+
