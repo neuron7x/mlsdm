@@ -10,7 +10,7 @@ import time
 from threading import Thread
 from typing import List
 
-from src.memory.qilm_v2 import QILM_v2
+from src.memory.qilm_v2 import QilmV2
 from src.memory.multi_level_memory import MultiLevelSynapticMemory
 from src.cognition.moral_filter_v2 import MoralFilterV2
 from src.core.cognitive_controller import CognitiveController
@@ -21,7 +21,7 @@ class TestQILM_v2Performance:
 
     def test_retrieve_performance_with_large_memory(self) -> None:
         """Test retrieval performance with near-capacity memory."""
-        qilm = QILM_v2(dimension=384, capacity=1000)
+        qilm = QilmV2(dimension=384, capacity=1000)
 
         # Fill memory to 90% capacity
         for i in range(900):
@@ -45,7 +45,7 @@ class TestQILM_v2Performance:
 
     def test_retrieve_with_varying_candidate_sizes(self) -> None:
         """Test retrieval optimization with different candidate set sizes."""
-        qilm = QILM_v2(dimension=384, capacity=500)
+        qilm = QilmV2(dimension=384, capacity=500)
 
         # Add vectors with same phase
         phase = 0.1
@@ -68,7 +68,7 @@ class TestQILM_v2Performance:
 
     def test_entangle_performance_batch(self) -> None:
         """Test entangle performance with batch operations."""
-        qilm = QILM_v2(dimension=384, capacity=10000)
+        qilm = QilmV2(dimension=384, capacity=10000)
 
         # Batch entangle
         start = time.perf_counter()
@@ -234,7 +234,7 @@ class TestConcurrentPerformance:
 
     def test_qilm_concurrent_retrieval(self) -> None:
         """Test retrieval performance with concurrent threads."""
-        qilm = QILM_v2(dimension=384, capacity=1000)
+        qilm = QilmV2(dimension=384, capacity=1000)
 
         # Populate memory
         for i in range(500):
@@ -293,7 +293,7 @@ class TestMemoryEfficiency:
 
     def test_qilm_memory_footprint(self) -> None:
         """Test that QILM maintains expected memory footprint."""
-        qilm = QILM_v2(dimension=384, capacity=20000)
+        qilm = QilmV2(dimension=384, capacity=20000)
 
         stats = qilm.get_state_stats()
         memory_mb = stats["memory_mb"]

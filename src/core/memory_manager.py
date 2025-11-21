@@ -52,7 +52,9 @@ class MemoryManager:
         )
 
         onto_cfg = config.get("ontology_matcher", {})
-        ontology_vectors = np.array(onto_cfg.get("ontology_vectors", np.eye(self.dimension).tolist()))
+        ontology_vectors = np.array(
+            onto_cfg.get("ontology_vectors", np.eye(self.dimension).tolist())
+        )
         ontology_labels = onto_cfg.get("ontology_labels")
         self.matcher = OntologyMatcher(ontology_vectors, labels=ontology_labels)
 
@@ -115,8 +117,10 @@ class MemoryManager:
         for step, (ev, mv) in enumerate(event_gen):
             if ev.shape[0] != self.dimension:
                 raise ValueError("Event dimension mismatch.")
-            L1, L2, L3 = self.memory.get_state()
-            self.metrics_collector.record_memory_state(step, L1, L2, L3, self.rhythm.get_current_phase())
+            l1, l2, l3 = self.memory.get_state()
+            self.metrics_collector.record_memory_state(
+                step, l1, l2, l3, self.rhythm.get_current_phase()
+            )
             self.metrics_collector.record_moral_threshold(self.filter.threshold)
 
             if self.rhythm.is_wake():
@@ -151,7 +155,6 @@ class MemoryManager:
         Args:
             filepath: Path to save state file.
         """
-        l1, l2, l3 = self.memory.get_state()
         data = {
             "memory_state": self.memory.to_dict(),
             "qilm": self.qilm.to_dict(),

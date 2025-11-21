@@ -13,7 +13,7 @@ from dataclasses import dataclass
 
 
 @dataclass
-class ValidationError(Exception:
+class ValidationError(Exception):
     """Configuration validation error with context."""
     parameter: str
     value: Any
@@ -44,7 +44,7 @@ class ConfigValidator:
         Raises:
             ValidationError: If dimension is invalid
         """
-        if not isinstance(dim, int:
+        if not isinstance(dim, int):
             raise ValidationError(
                 parameter="dim",
                 value=dim,
@@ -84,7 +84,7 @@ class ConfigValidator:
         Raises:
             ValidationError: If capacity is invalid
         """
-        if not isinstance(capacity, int:
+        if not isinstance(capacity, int):
             raise ValidationError(
                 parameter="capacity",
                 value=capacity,
@@ -131,7 +131,7 @@ class ConfigValidator:
         Raises:
             ValidationError: If threshold is invalid
         """
-        if not isinstance(threshold, (int, float):
+        if not isinstance(threshold, (int, float)):
             raise ValidationError(
                 parameter="threshold",
                 value=threshold,
@@ -170,7 +170,7 @@ class ConfigValidator:
         Raises:
             ValidationError: If duration is invalid
         """
-        if not isinstance(duration, int:
+        if not isinstance(duration, int):
             raise ValidationError(
                 parameter=parameter_name,
                 value=duration,
@@ -215,7 +215,7 @@ class ConfigValidator:
         Raises:
             ValidationError: If rate is invalid
         """
-        if not isinstance(rate, (int, float):
+        if not isinstance(rate, (int, float)):
             raise ValidationError(
                 parameter=parameter_name,
                 value=rate,
@@ -256,7 +256,7 @@ class ConfigValidator:
         Raises:
             ValidationError: If value is invalid
         """
-        if not isinstance(value, int:
+        if not isinstance(value, int):
             expected = "positive integer"
             if max_val is not None:
                 expected += f" (<= {max_val})"
@@ -311,7 +311,7 @@ class ConfigValidator:
         Raises:
             ValidationError: If value is invalid
         """
-        if not isinstance(value, (int, float):
+        if not isinstance(value, (int, float)):
             raise ValidationError(
                 parameter=parameter_name,
                 value=value,
@@ -355,7 +355,7 @@ class ConfigValidator:
                 expected="callable function",
                 component=component
             )
-        if not callable(config['llm_generate_fn']:
+        if not callable(config['llm_generate_fn']):
             raise ValidationError(
                 parameter="llm_generate_fn",
                 value=config['llm_generate_fn'],
@@ -371,7 +371,7 @@ class ConfigValidator:
                 expected="callable function",
                 component=component
             )
-        if not callable(config['embedding_fn']:
+        if not callable(config['embedding_fn']):
             raise ValidationError(
                 parameter="embedding_fn",
                 value=config['embedding_fn'],

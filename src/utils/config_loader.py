@@ -12,7 +12,9 @@ class ConfigLoader:
             raise TypeError("Path must be a string.")
 
         if not path.endswith((".yaml", ".yml", ".ini")):
-            raise ValueError("Unsupported configuration file format. Only YAML and INI are supported.")
+            raise ValueError(
+                "Unsupported configuration file format. Only YAML and INI are supported."
+            )
 
         config: Dict[str, Any] = {}
 

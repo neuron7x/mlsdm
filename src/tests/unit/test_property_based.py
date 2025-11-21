@@ -3,7 +3,7 @@ import numpy as np
 from hypothesis import given, strategies as st, settings
 from src.cognition.moral_filter_v2 import MoralFilterV2
 from src.cognition.moral_filter import MoralFilter
-from src.memory.qilm_v2 import QILM_v2
+from src.memory.qilm_v2 import QilmV2
 from src.rhythm.cognitive_rhythm import CognitiveRhythm
 from src.memory.multi_level_memory import MultiLevelSynapticMemory
 
@@ -59,7 +59,7 @@ class TestPropertyBasedInvariants:
     @settings(max_examples=20)
     def test_qilm_v2_size_never_exceeds_capacity(self, dimension, capacity):
         """Property: QILM_v2 size never exceeds capacity."""
-        qilm = QILM_v2(dimension=dimension, capacity=capacity)
+        qilm = QilmV2(dimension=dimension, capacity=capacity)
 
         # Add more items than capacity
         for i in range(capacity + 50):
@@ -77,7 +77,7 @@ class TestPropertyBasedInvariants:
     @settings(max_examples=20)
     def test_qilm_v2_retrieve_returns_valid_results(self, dimension, num_items):
         """Property: Retrieved items have valid structure and values."""
-        qilm = QILM_v2(dimension=dimension, capacity=100)
+        qilm = QilmV2(dimension=dimension, capacity=100)
 
         # Add items
         for i in range(num_items):
@@ -186,7 +186,7 @@ class TestPropertyBasedInvariants:
     @settings(max_examples=30)
     def test_qilm_v2_phase_storage(self, phase):
         """Property: QILM_v2 stores phase values correctly."""
-        qilm = QILM_v2(dimension=10, capacity=100)
+        qilm = QilmV2(dimension=10, capacity=100)
         vec = [1.0] * 10
 
         idx = qilm.entangle(vec, phase=phase)
@@ -237,7 +237,7 @@ class TestPropertyBasedInvariants:
     @settings(max_examples=20)
     def test_qilm_v2_top_k_constraint(self, dimension, top_k):
         """Property: Retrieve returns at most top_k results."""
-        qilm = QILM_v2(dimension=dimension, capacity=100)
+        qilm = QilmV2(dimension=dimension, capacity=100)
 
         # Add many items
         for i in range(50):

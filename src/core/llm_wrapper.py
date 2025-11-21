@@ -306,7 +306,7 @@ class LLMWrapper:
             self.accepted_count = 0
             self.consolidation_buffer.clear()
             self.moral = MoralFilterV2(initial_threshold=0.50)
-            self.qilm = QILM_v2(dimension=self.dim, capacity=self.qilm.capacity)
+            self.qilm = QilmV2(dimension=self.dim, capacity=self.qilm.capacity)
             self.rhythm = CognitiveRhythm(
                 wake_duration=self.rhythm.wake_duration,
                 sleep_duration=self.rhythm.sleep_duration
