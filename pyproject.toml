@@ -1,6 +1,192 @@
+# ====================================================
+# MLSDM Governed Cognitive Memory - Project Configuration
+# ====================================================
+
+[project]
+name = "mlsdm-governed-cognitive-memory"
+version = "1.0.0"
+description = "Production-ready neurobiologically-grounded cognitive architecture with moral governance"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "neuron7x", email = "neuron7x@users.noreply.github.com"}
+]
+maintainers = [
+    {name = "neuron7x", email = "neuron7x@users.noreply.github.com"}
+]
+keywords = [
+    "cognitive-architecture",
+    "neuromorphic",
+    "moral-governance",
+    "memory-systems",
+    "ai-safety",
+    "llm-wrapper",
+    "circadian-rhythm",
+    "quantum-inspired"
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+requires-python = ">=3.10"
+dependencies = [
+    "numpy>=2.0.0",
+    "sentence-transformers>=3.0.0",
+    "fastapi>=0.110.0",
+    "uvicorn>=0.29.0",
+    "pyyaml>=6.0.1",
+    "pydantic>=2.0.0",
+    "prometheus-client>=0.20.0",
+    "opentelemetry-api>=1.24.0",
+    "opentelemetry-sdk>=1.24.0",
+    "tenacity>=8.2.3",
+    "requests>=2.32.3",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.0",
+    "pytest-cov>=4.1.0",
+    "hypothesis>=6.98.3",
+    "ruff>=0.4.10",
+    "mypy>=1.10.0",
+    "locust>=2.29.1",
+]
+docs = [
+    "sphinx>=7.0.0",
+    "sphinx-rtd-theme>=2.0.0",
+]
+test = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.0",
+    "pytest-cov>=4.1.0",
+    "hypothesis>=6.98.3",
+]
+visualization = [
+    "matplotlib>=3.8.4",
+    "jupyter>=1.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/neuron7x/mlsdm-governed-cognitive-memory"
+Repository = "https://github.com/neuron7x/mlsdm-governed-cognitive-memory"
+Documentation = "https://github.com/neuron7x/mlsdm-governed-cognitive-memory/blob/main/DOCUMENTATION_INDEX.md"
+"Bug Tracker" = "https://github.com/neuron7x/mlsdm-governed-cognitive-memory/issues"
+
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+# ====================================================
+# Tool Configuration
+# ====================================================
+
 [tool.mypy]
+python_version = "3.10"
 strict = true
 ignore_missing_imports = true
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_any_generics = true
+check_untyped_defs = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+no_implicit_optional = true
 
 [tool.pytest.ini_options]
-addopts = "--cov=src --cov-report=html --cov-fail-under=90"
+minversion = "8.0"
+addopts = [
+    "--cov=src",
+    "--cov-report=html",
+    "--cov-report=term-missing",
+    "--cov-fail-under=90",
+    "--strict-markers",
+    "--strict-config",
+    "-v",
+]
+testpaths = ["tests", "src/tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+    "unit: marks tests as unit tests",
+    "property: marks property-based tests",
+    "security: marks security-related tests",
+]
+
+[tool.coverage.run]
+source = ["src"]
+omit = [
+    "*/tests/*",
+    "*/test_*.py",
+    "*/__pycache__/*",
+    "*/site-packages/*",
+]
+branch = true
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "@abstractmethod",
+]
+precision = 2
+show_missing = true
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+indent-width = 4
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # isort
+    "N",    # pep8-naming
+    "UP",   # pyupgrade
+    "B",    # flake8-bugbear
+    "C4",   # flake8-comprehensions
+    "SIM",  # flake8-simplify
+    "TCH",  # flake8-type-checking
+]
+ignore = [
+    "E501",  # line too long (handled by formatter)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]  # unused imports
+"tests/**/*.py" = ["N802", "N803"]  # test function naming
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+
+# ====================================================
+# Package Configuration
+# ====================================================
+
+[tool.setuptools]
+packages = ["src"]
+
+[tool.setuptools.package-data]
+src = ["py.typed"]
