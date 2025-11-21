@@ -371,6 +371,11 @@ class TestCoherenceSafetyAnalyzer:
 class TestEdgeCases:
     """Test edge cases for QILM and other components"""
     
+    @pytest.fixture(autouse=True)
+    def set_random_seed(self):
+        """Set random seed for reproducible tests"""
+        np.random.seed(42)
+    
     def test_coherence_metrics_extreme_values(self):
         """Test coherence metrics with extreme values"""
         metrics = CoherenceMetrics(
@@ -412,7 +417,6 @@ class TestEdgeCases:
         analyzer = CoherenceSafetyAnalyzer()
         
         # Large retrieval sequence
-        np.random.seed(42)  # Set seed for reproducibility
         retrieval_sequence = [
             [np.random.randn(128) for _ in range(5)]
             for _ in range(100)
