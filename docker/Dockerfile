@@ -17,9 +17,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY pyproject.toml requirements.txt ./
 COPY src/ ./src/
 
-# Install Python dependencies and the package
+# Install the package with all dependencies
+# Note: Installing with requirements.txt first to ensure all pinned versions are respected
 RUN pip install --no-cache-dir --user -r requirements.txt && \
-    pip install --no-cache-dir --user -e .
+    pip install --no-cache-dir --user --no-deps -e .
 
 # Runtime stage
 FROM python:3.12-slim
