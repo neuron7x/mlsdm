@@ -114,8 +114,10 @@ class MetricsCollector:
                 rps_by_window.append(avg_rps)
                 
                 # Get latencies in this window
+                # Zip up to minimum length to ensure alignment
+                min_len = min(len(self.latencies), len(self.timestamps))
                 window_latencies = [
-                    lat for lat, ts in zip(self.latencies[:len(self.timestamps)], self.timestamps)
+                    lat for lat, ts in zip(self.latencies[:min_len], self.timestamps[:min_len])
                     if window_start <= ts < window_end
                 ]
                 if window_latencies:
@@ -394,8 +396,8 @@ def start_memory_monitor(environment: Any, **kwargs: Any) -> None:
             metrics.record_memory()
             time.sleep(5)  # Sample every 5 seconds
     
-    # Only run on master or standalone
-    if isinstance(environment.runner, (MasterRunner, type(None))):
+    # Only run on master or standalone (not on workers)
+    if environment.runner is None or isinstance(environment.runner, MasterRunner):
         import threading
         monitor_thread = threading.Thread(target=sample_memory, daemon=True)
         monitor_thread.start()

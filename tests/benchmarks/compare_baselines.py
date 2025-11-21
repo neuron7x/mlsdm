@@ -201,7 +201,8 @@ class FullMLSDM:
         llm_generate_fn: Callable[[str, int], str],
         embedding_fn: Callable[[str], np.ndarray]
     ):
-        # Import here to avoid circular dependencies
+        # Import here to ensure baseline classes are defined first
+        # and to avoid importing mlsdm when comparing non-MLSDM baselines only
         from mlsdm.core.llm_wrapper import LLMWrapper
         
         self.wrapper = LLMWrapper(
