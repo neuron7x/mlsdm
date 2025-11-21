@@ -1,11 +1,11 @@
 import numpy as np
 
-from src.memory.multi_level_memory import MultiLevelSynapticMemory
-from src.cognition.moral_filter import MoralFilter
-from src.cognition.ontology_matcher import OntologyMatcher
-from src.memory.qilm_module import QILM
-from src.rhythm.cognitive_rhythm import CognitiveRhythm
-from src.utils.metrics import MetricsCollector
+from mlsdm.memory.multi_level_memory import MultiLevelSynapticMemory
+from mlsdm.cognition.moral_filter import MoralFilter
+from mlsdm.cognition.ontology_matcher import OntologyMatcher
+from mlsdm.memory.qilm_module import QILM
+from mlsdm.rhythm.cognitive_rhythm import CognitiveRhythm
+from mlsdm.utils.metrics import MetricsCollector
 
 
 def test_memory_update_and_get_state() -> None:

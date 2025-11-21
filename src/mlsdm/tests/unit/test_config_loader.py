@@ -2,7 +2,7 @@
 import pytest
 import tempfile
 import os
-from src.utils.config_loader import ConfigLoader
+from mlsdm.utils.config_loader import ConfigLoader
 
 
 class TestConfigLoader:

@@ -29,7 +29,7 @@ def client(test_config_file):
     """Create a test client with mocked config."""
     with patch.dict(os.environ, {"CONFIG_PATH": test_config_file, "DISABLE_RATE_LIMIT": "1"}):
         # Import app after setting env variable
-        from src.api.app import app
+        from mlsdm.api.app import app
         with TestClient(app) as client:
             yield client
 

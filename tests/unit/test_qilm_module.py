@@ -6,7 +6,7 @@ Tests phase-entangled memory storage and retrieval.
 
 import pytest
 import numpy as np
-from src.memory.qilm_module import QILM
+from mlsdm.memory.qilm_module import QILM
 
 
 class TestQILMInitialization:

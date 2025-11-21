@@ -11,8 +11,8 @@ import numpy as np
 import sys
 sys.path.insert(0, '.')
 
-from src.core.cognitive_controller import CognitiveController
-from src.utils.coherence_safety_metrics import CoherenceSafetyAnalyzer
+from mlsdm.core.cognitive_controller import CognitiveController
+from mlsdm.utils.coherence_safety_metrics import CoherenceSafetyAnalyzer
 
 
 def generate_test_vectors(n_vectors: int, dim: int = 384, 

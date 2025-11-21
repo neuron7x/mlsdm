@@ -9,11 +9,11 @@ from fastapi import FastAPI, HTTPException, Depends, Request
 from fastapi.security import OAuth2PasswordBearer
 from pydantic import BaseModel
 
-from src.utils.config_loader import ConfigLoader
-from src.core.memory_manager import MemoryManager
-from src.utils.rate_limiter import RateLimiter
-from src.utils.input_validator import InputValidator
-from src.utils.security_logger import get_security_logger, SecurityEventType
+from mlsdm.utils.config_loader import ConfigLoader
+from mlsdm.core.memory_manager import MemoryManager
+from mlsdm.utils.rate_limiter import RateLimiter
+from mlsdm.utils.input_validator import InputValidator
+from mlsdm.utils.security_logger import get_security_logger, SecurityEventType
 
 logger = logging.getLogger(__name__)
 security_logger = get_security_logger()

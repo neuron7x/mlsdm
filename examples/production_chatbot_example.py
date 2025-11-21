@@ -21,7 +21,7 @@ from dataclasses import dataclass
 from datetime import datetime
 
 try:
-    from src.core.llm_wrapper import LLMWrapper
+    from mlsdm.core.llm_wrapper import LLMWrapper
 except ImportError:
     print("Error: Cannot import LLMWrapper. Make sure you're running from the project root.")
     exit(1)

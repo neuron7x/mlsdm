@@ -7,7 +7,7 @@ Tests leaky bucket rate limiting implementation.
 import time
 import threading
 import pytest
-from src.utils.rate_limiter import RateLimiter
+from mlsdm.utils.rate_limiter import RateLimiter
 
 
 class TestRateLimiterBasic:

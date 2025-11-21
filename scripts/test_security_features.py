@@ -133,13 +133,13 @@ def main():
         # Add project root to path for imports
         sys_module.path.insert(0, str(PathLib.cwd()))
         
-        from src.utils.rate_limiter import RateLimiter
+        from mlsdm.utils.rate_limiter import RateLimiter
         print("✓ RateLimiter can be imported")
         
-        from src.utils.input_validator import InputValidator
+        from mlsdm.utils.input_validator import InputValidator
         print("✓ InputValidator can be imported")
         
-        from src.utils.security_logger import get_security_logger
+        from mlsdm.utils.security_logger import get_security_logger
         print("✓ SecurityLogger can be imported")
         
         results.append(("Security Imports", True))

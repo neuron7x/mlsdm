@@ -11,7 +11,7 @@ Tests cover:
 import pytest
 from pydantic import ValidationError
 
-from src.utils.config_schema import (
+from mlsdm.utils.config_schema import (
     SystemConfig,
     MultiLevelMemoryConfig,
     MoralFilterConfig,

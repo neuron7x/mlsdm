@@ -10,7 +10,7 @@ import os
 from typing import Dict, Any, Optional
 from pathlib import Path
 
-from src.utils.config_schema import SystemConfig, validate_config_dict
+from mlsdm.utils.config_schema import SystemConfig, validate_config_dict
 
 
 class ConfigLoader:

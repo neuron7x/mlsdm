@@ -3,7 +3,7 @@ import pytest
 import tempfile
 import os
 import numpy as np
-from src.utils.data_serializer import DataSerializer
+from mlsdm.utils.data_serializer import DataSerializer
 
 
 class TestDataSerializer:

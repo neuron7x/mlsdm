@@ -1,12 +1,12 @@
 """Additional tests to improve coverage for remaining components."""
 import pytest
 import numpy as np
-from src.cognition.moral_filter import MoralFilter
-from src.cognition.ontology_matcher import OntologyMatcher
-from src.memory.qilm_module import QILM
-from src.memory.multi_level_memory import MultiLevelSynapticMemory
-from src.rhythm.cognitive_rhythm import CognitiveRhythm
-from src.utils.metrics import MetricsCollector
+from mlsdm.cognition.moral_filter import MoralFilter
+from mlsdm.cognition.ontology_matcher import OntologyMatcher
+from mlsdm.memory.qilm_module import QILM
+from mlsdm.memory.multi_level_memory import MultiLevelSynapticMemory
+from mlsdm.rhythm.cognitive_rhythm import CognitiveRhythm
+from mlsdm.utils.metrics import MetricsCollector
 
 
 class TestMoralFilterAdditional:

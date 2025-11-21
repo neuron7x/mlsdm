@@ -6,7 +6,7 @@ Tests structured security audit logging with PII protection.
 
 import json
 import pytest
-from src.utils.security_logger import (
+from mlsdm.utils.security_logger import (
     SecurityLogger, SecurityEventType, get_security_logger
 )
 

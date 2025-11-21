@@ -186,7 +186,7 @@ line-ending = "auto"
 # ====================================================
 
 [tool.setuptools]
-packages = ["src"]
+packages = ["mlsdm"]
 
-[tool.setuptools.package-data]
-src = ["py.typed"]
+[tool.setuptools.package-dir]
+mlsdm = "src/mlsdm"

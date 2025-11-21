@@ -2,7 +2,7 @@
 
 import pytest
 import numpy as np
-from src.utils.input_validator import InputValidator
+from mlsdm.utils.input_validator import InputValidator
 
 
 class TestInputValidatorEdgeCases:

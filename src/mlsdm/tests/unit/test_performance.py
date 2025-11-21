@@ -10,10 +10,10 @@ import time
 from threading import Thread
 from typing import List
 
-from src.memory.qilm_v2 import QILM_v2
-from src.memory.multi_level_memory import MultiLevelSynapticMemory
-from src.cognition.moral_filter_v2 import MoralFilterV2
-from src.core.cognitive_controller import CognitiveController
+from mlsdm.memory.qilm_v2 import QILM_v2
+from mlsdm.memory.multi_level_memory import MultiLevelSynapticMemory
+from mlsdm.cognition.moral_filter_v2 import MoralFilterV2
+from mlsdm.core.cognitive_controller import CognitiveController
 
 
 class TestQILM_v2Performance:

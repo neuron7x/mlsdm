@@ -13,7 +13,7 @@ import pytest
 import tempfile
 from pathlib import Path
 
-from src.utils.config_loader import ConfigLoader
+from mlsdm.utils.config_loader import ConfigLoader
 from pydantic import ValidationError
 
 

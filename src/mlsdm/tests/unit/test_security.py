@@ -10,9 +10,9 @@ Tests cover:
 import pytest
 import time
 import numpy as np
-from src.utils.rate_limiter import RateLimiter
-from src.utils.input_validator import InputValidator
-from src.utils.security_logger import SecurityLogger, SecurityEventType
+from mlsdm.utils.rate_limiter import RateLimiter
+from mlsdm.utils.input_validator import InputValidator
+from mlsdm.utils.security_logger import SecurityLogger, SecurityEventType
 
 
 class TestRateLimiter:

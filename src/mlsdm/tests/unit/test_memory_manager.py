@@ -1,7 +1,7 @@
 """Comprehensive unit tests for MemoryManager."""
 import pytest
 import numpy as np
-from src.core.memory_manager import MemoryManager
+from mlsdm.core.memory_manager import MemoryManager
 
 pytest_plugins = ('pytest_asyncio',)
 

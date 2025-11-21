@@ -6,7 +6,7 @@ License: MIT
 """
 
 import pytest
-from src.utils.config_validator import (
+from mlsdm.utils.config_validator import (
     ConfigValidator,
     ValidationError,
     validate_config

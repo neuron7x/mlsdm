@@ -7,7 +7,7 @@ requiring actual LLM or embedding models.
 
 import numpy as np
 
-from src.core.llm_wrapper import LLMWrapper
+from mlsdm.core.llm_wrapper import LLMWrapper
 
 
 class MockLLM:

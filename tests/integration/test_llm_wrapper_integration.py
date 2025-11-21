@@ -3,7 +3,7 @@ Integration tests for LLMWrapper with realistic usage scenarios.
 """
 
 import numpy as np
-from src.core.llm_wrapper import LLMWrapper
+from mlsdm.core.llm_wrapper import LLMWrapper
 
 
 def mock_llm_generate(prompt: str, max_tokens: int) -> str:

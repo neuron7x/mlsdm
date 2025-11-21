@@ -5,7 +5,7 @@ Tests edge cases and uncovered functionality to achieve ≥85% coverage.
 
 import pytest
 import numpy as np
-from src.utils.coherence_safety_metrics import (
+from mlsdm.utils.coherence_safety_metrics import (
     CoherenceMetrics,
     SafetyMetrics,
     CoherenceSafetyAnalyzer

@@ -1,7 +1,7 @@
 """Comprehensive unit tests for CognitiveController."""
 import numpy as np
 from threading import Thread
-from src.core.cognitive_controller import CognitiveController
+from mlsdm.core.cognitive_controller import CognitiveController
 
 
 class TestCognitiveController:

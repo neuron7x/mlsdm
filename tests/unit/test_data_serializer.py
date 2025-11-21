@@ -9,7 +9,7 @@ import json
 import tempfile
 import pytest
 import numpy as np
-from src.utils.data_serializer import DataSerializer
+from mlsdm.utils.data_serializer import DataSerializer
 
 
 class TestDataSerializerJSON:
