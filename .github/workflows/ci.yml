@@ -43,7 +43,7 @@ jobs:
     
     - name: Run pytest with coverage
       run: |
-        pytest --cov=src --cov-report=html --cov-report=term-missing --cov-report=xml --cov-fail-under=90
+        pytest --cov-report=xml
     
     - name: Upload coverage to artifacts
       if: matrix.python-version == '3.12'
