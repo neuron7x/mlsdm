@@ -7,6 +7,7 @@ from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.security import OAuth2PasswordBearer
 from pydantic import BaseModel
 
+from mlsdm.api import health
 from mlsdm.core.memory_manager import MemoryManager
 from mlsdm.utils.config_loader import ConfigLoader
 from mlsdm.utils.input_validator import InputValidator
@@ -18,10 +19,16 @@ security_logger = get_security_logger()
 
 app = FastAPI(title="mlsdm-governed-cognitive-memory", version="1.0.0")
 
+# Include health check router
+app.include_router(health.router)
+
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 _config_path = os.getenv("CONFIG_PATH", "config/default_config.yaml")
 _manager = MemoryManager(ConfigLoader.load_config(_config_path))
+
+# Set memory manager for health checks
+health.set_memory_manager(_manager)
 
 # Initialize rate limiter (5 RPS per client as per SECURITY_POLICY.md)
 # Can be disabled in testing with DISABLE_RATE_LIMIT=1
