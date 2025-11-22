@@ -12,7 +12,6 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
 
 from mlsdm.extensions.neuro_lang_extension import AphasiaBrocaDetector
 
@@ -43,6 +42,11 @@ class AphasiaEvalSuite:
         tele = corpus["telegraphic"]
         norm = corpus["normal"]
 
+        if not tele:
+            raise ValueError("Corpus must contain at least one telegraphic sample")
+        if not norm:
+            raise ValueError("Corpus must contain at least one normal sample")
+
         tp = 0
         tn = 0
         sev_sum = 0.0
@@ -58,13 +62,10 @@ class AphasiaEvalSuite:
             if not report["is_aphasic"]:
                 tn += 1
 
-        tele_n = max(len(tele), 1)
-        norm_n = max(len(norm), 1)
-
         return AphasiaEvalResult(
-            true_positive_rate=tp / tele_n,
-            true_negative_rate=tn / norm_n,
-            mean_severity_telegraphic=sev_sum / tele_n,
+            true_positive_rate=tp / len(tele),
+            true_negative_rate=tn / len(norm),
+            mean_severity_telegraphic=sev_sum / len(tele),
             telegraphic_samples=len(tele),
             normal_samples=len(norm),
         )
