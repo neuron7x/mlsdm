@@ -22,7 +22,7 @@ class QILM:
         if tolerance < 0:
             raise ValueError("Tolerance must be non-negative.")
         results: list[np.ndarray] = []
-        for v, ph in zip(self.memory, self.phases):
+        for v, ph in zip(self.memory, self.phases, strict=False):
             if isinstance(ph, (float, int)) and isinstance(phase, (float, int)):
                 if abs(float(ph) - float(phase)) <= tolerance:
                     results.append(v)

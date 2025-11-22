@@ -41,7 +41,7 @@ _validator = InputValidator()
 
 def _get_client_id(request: Request) -> str:
     """Get pseudonymized client identifier from request.
-    
+
     Uses SHA256 hash of IP + User-Agent to create a unique but
     non-PII identifier for rate limiting and audit logging.
     """
@@ -92,7 +92,7 @@ async def process_event(
     user: str = Depends(get_current_user)
 ) -> StateResponse:
     """Process event with comprehensive security validation.
-    
+
     Implements rate limiting, input validation, and audit logging
     as specified in SECURITY_POLICY.md.
     """
@@ -114,7 +114,7 @@ async def process_event(
             client_id=client_id,
             error_message=str(e)
         )
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
     # Validate and convert vector
     try:
@@ -128,7 +128,7 @@ async def process_event(
             client_id=client_id,
             error_message=str(e)
         )
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
     # Process the event
     await _manager.process_event(vec, moral_value)
