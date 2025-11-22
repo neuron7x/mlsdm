@@ -186,7 +186,10 @@ class NeuroCognitiveEngine:
         # Опційна система метрик
         self._metrics: Any | None = None
         if self.config.enable_metrics:
+            # Import lazily to avoid circular dependencies
+            # This is safe as metrics module has no dependencies on engine
             from mlsdm.observability.metrics import MetricsRegistry
+            
             self._metrics = MetricsRegistry()
 
     # ------------------------------------------------------------------ #
@@ -519,9 +522,9 @@ class NeuroCognitiveEngine:
         }
 
     def get_metrics(self) -> Any | None:
-        """Повертає інстанс MetricsRegistry якщо метрики увімкнені.
+        """Get MetricsRegistry instance if metrics are enabled.
         
         Returns:
-            MetricsRegistry instance або None якщо метрики вимкнені
+            MetricsRegistry instance or None if metrics are disabled
         """
         return self._metrics

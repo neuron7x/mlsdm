@@ -218,7 +218,8 @@ def test_benchmark_pre_flight_latency():
     
     stats = benchmark_pre_flight_latency()
     
-    print(f"\nResults (based on {1000} measurements):")
+    # Note: Actual measurement count may be less if moral_precheck timing not available
+    print(f"\nResults (up to 1000 measurements with moral_precheck timing):")
     print(f"  P50 (median): {stats['p50']:.3f}ms")
     print(f"  P95:          {stats['p95']:.3f}ms")
     print(f"  P99:          {stats['p99']:.3f}ms")
