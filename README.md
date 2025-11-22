@@ -44,10 +44,10 @@ python tests/integration/test_end_to_end.py
 
 Wrap any LLM with cognitive governance and Aphasia-Broca speech pathology detection:
 
-> **Note:** The NeuroLang extension implementation (`src/extensions/neuro_lang_extension.py`) is currently in development and will be added in an upcoming PR. This documentation reflects the planned API.
+> **Note:** The NeuroLang extension implementation (`src/mlsdm/extensions/neuro_lang_extension.py`) is currently in development and will be added in an upcoming PR. This documentation reflects the planned API.
 
 ```python
-from src.extensions.neuro_lang_extension import NeuroLangWrapper
+from mlsdm.extensions.neuro_lang_extension import NeuroLangWrapper
 import numpy as np
 
 # Your LLM function (OpenAI, Anthropic, local model, etc.)
@@ -158,7 +158,7 @@ python scripts/generate_effectiveness_charts.py
 
 # Aphasia-Broca detection (quick test - available after implementation PR)
 # python -c "
-# from src.extensions.neuro_lang_extension import AphasiaBrocaDetector
+# from mlsdm.extensions.neuro_lang_extension import AphasiaBrocaDetector
 # detector = AphasiaBrocaDetector()
 # report = detector.analyze('This short. No connect. Bad.')
 # assert report['is_aphasic'] == True
@@ -333,7 +333,7 @@ The Aphasia-Broca model in MLSDM consists of three levels:
 
 ### Integration with MLSDM / NeuroLang
 
-At the code level, the Aphasia-Broca model is implemented in module `src/extensions/neuro_lang_extension.py`:
+At the code level, the Aphasia-Broca model is implemented in module `src/mlsdm/extensions/neuro_lang_extension.py`:
 
 - `AphasiaBrocaDetector`:
   - Pure-functional text analyzer

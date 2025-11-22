@@ -89,7 +89,7 @@ MLSDM (Multi-Level Synaptic Dynamic Memory) Governed Cognitive Memory is a neuro
    - **Memory System**: Multi-level storage with phase entanglement
    - **Ontology Matcher**: Semantic classification and matching
 
-4. **Language Processing Extensions** (`src/extensions/neuro_lang_extension.py` - in development)
+4. **Language Processing Extensions** (`src/mlsdm/extensions/neuro_lang_extension.py` - in development)
    - **NeuroLang Modules**: Bio-inspired language processing
    - **Aphasia-Broca Detector**: Speech pathology detection and correction
    
@@ -360,7 +360,7 @@ class OntologyMatcher:
 
 ### 8. NeuroLangWrapper
 
-**Location:** `src/extensions/neuro_lang_extension.py` (planned implementation)  
+**Location:** `src/mlsdm/extensions/neuro_lang_extension.py` (planned implementation)  
 **Purpose:** Enhanced LLM wrapper with NeuroLang language processing and Aphasia-Broca detection
 
 > **Implementation Note:** This component specification reflects the planned API. Implementation will be added in a subsequent PR.
@@ -404,7 +404,7 @@ class NeuroLangWrapper(LLMWrapper):
 
 ### 9. AphasiaBrocaDetector
 
-**Location:** `src/extensions/neuro_lang_extension.py` (planned implementation)  
+**Location:** `src/mlsdm/extensions/neuro_lang_extension.py` (planned implementation)  
 **Purpose:** Detect and quantify telegraphic speech patterns in LLM outputs
 
 > **Implementation Note:** This component specification reflects the planned API. Implementation will be added in a subsequent PR.
