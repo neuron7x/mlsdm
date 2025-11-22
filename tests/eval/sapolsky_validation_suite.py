@@ -59,7 +59,7 @@ class SapolskyValidationSuite:
 
         # Load test prompts
         prompts_path = Path(__file__).parent / "prompts_sapolsky.json"
-        with open(prompts_path) as f:
+        with open(prompts_path, encoding="utf-8") as f:
             self.prompts = json.load(f)
 
     def _split_into_segments(self, text: str, min_words: int = 10) -> list[str]:

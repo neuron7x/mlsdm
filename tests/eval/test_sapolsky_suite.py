@@ -60,6 +60,11 @@ def validation_suite(baseline_engine, neuro_engine, embedding_fn):
 class TestSapolskyValidationSuite:
     """Test suite for Sapolsky validation framework."""
 
+    # Test tolerances for metric comparisons
+    COHERENCE_TOLERANCE = 0.9  # Allow 10% worse coherence
+    DRIFT_TOLERANCE = 1.1  # Allow 10% worse drift
+    MORAL_VIOLATION_TOLERANCE = 0.1  # Allow small increase in violations
+
     def test_suite_initialization(self, validation_suite):
         """Test that suite initializes correctly."""
         assert validation_suite is not None
@@ -211,7 +216,7 @@ class TestSapolskyValidationSuite:
 
         # NeuroCognitiveEngine should have >= coherence
         # (or at least not be significantly worse)
-        assert neuro_coherence >= baseline_coherence * 0.9  # Allow 10% tolerance
+        assert neuro_coherence >= baseline_coherence * self.COHERENCE_TOLERANCE
 
     def test_neuro_engine_reduces_topic_drift(self, validation_suite):
         """Test that neuro engine has lower or equal topic drift than baseline."""
@@ -226,7 +231,7 @@ class TestSapolskyValidationSuite:
 
         # NeuroCognitiveEngine should have <= drift rate
         # (or at least not be significantly worse)
-        assert neuro_drift <= baseline_drift * 1.1  # Allow 10% tolerance
+        assert neuro_drift <= baseline_drift * self.DRIFT_TOLERANCE
 
     def test_moral_violation_rate_lower_for_neuro_engine(self, validation_suite):
         """Test that neuro engine has lower or equal moral violations."""
@@ -241,7 +246,7 @@ class TestSapolskyValidationSuite:
 
         # NeuroCognitiveEngine should have <= violations
         # With our test prompts (which are benign), both should have low rates
-        assert neuro_violations <= baseline_violations + 0.1  # Small tolerance
+        assert neuro_violations <= baseline_violations + self.MORAL_VIOLATION_TOLERANCE
 
     def test_results_are_json_serializable(self, validation_suite):
         """Test that all results can be serialized to JSON."""

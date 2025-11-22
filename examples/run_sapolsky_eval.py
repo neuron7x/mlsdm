@@ -13,9 +13,6 @@ Usage:
     export OPENAI_API_KEY="sk-..."
     python examples/run_sapolsky_eval.py --backend openai --output results.json
 
-    # Run with custom number of trials
-    python examples/run_sapolsky_eval.py --trials 5 --output results.json
-
     # Run with verbose output
     python examples/run_sapolsky_eval.py --verbose --output results.json
 """
@@ -168,12 +165,7 @@ def main() -> int:
         help="Output JSON file path (default: sapolsky_eval_results.json)",
     )
 
-    parser.add_argument(
-        "--trials",
-        type=int,
-        default=1,
-        help="Number of evaluation trials to run (default: 1)",
-    )
+
 
     parser.add_argument(
         "--verbose",
@@ -195,7 +187,6 @@ def main() -> int:
     if args.verbose:
         print("🚀 Starting Sapolsky Validation Suite")
         print(f"   Backend: {args.backend}")
-        print(f"   Trials: {args.trials}")
         print(f"   Output: {args.output}")
         print()
 
@@ -239,30 +230,18 @@ def main() -> int:
             print("🔬 Running evaluation suite...")
             print()
 
-        all_results = []
-
-        for trial in range(args.trials):
-            if args.verbose and args.trials > 1:
-                print(f"   Trial {trial + 1}/{args.trials}")
-
-            results = suite.run_full_suite()
-            all_results.append(results)
-
-        # Average results if multiple trials
-        # For simplicity, just use the last trial's results
-        # In a production system, we'd average the metrics
-        final_results = all_results[-1] if args.trials > 1 else all_results[0]
+        results = suite.run_full_suite()
 
         # Write JSON output
-        with open(args.output, "w") as f:
-            json.dump(final_results, f, indent=2)
+        with open(args.output, "w", encoding="utf-8") as f:
+            json.dump(results, f, indent=2)
 
         if args.verbose:
             print(f"   ✓ Results saved to {args.output}")
             print()
 
         # Print summary
-        summary = format_results_summary(final_results)
+        summary = format_results_summary(results)
         print(summary)
 
         return 0
