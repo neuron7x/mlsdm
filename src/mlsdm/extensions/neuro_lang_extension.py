@@ -6,8 +6,8 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader, Dataset, Sampler
 
-from ..core.cognitive_controller import CognitiveController
-from ..core.llm_wrapper import LLMWrapper
+from mlsdm.core.cognitive_controller import CognitiveController
+from mlsdm.core.llm_wrapper import LLMWrapper
 
 simple_sentences = [
     "The cat ran.",
