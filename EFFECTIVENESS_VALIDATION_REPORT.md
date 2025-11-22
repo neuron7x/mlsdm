@@ -500,13 +500,13 @@ python tests/validation/test_moral_filter_effectiveness.py
 
 ## Aphasia-Broca Model (Telegraphic Speech Detection)
 
-На основі AphasiaEvalSuite (tests/eval/aphasia_eval_suite.py) та корпусу tests/eval/aphasia_corpus.json:
+Based on AphasiaEvalSuite (tests/eval/aphasia_eval_suite.py) and corpus tests/eval/aphasia_corpus.json:
 
-- True Positive Rate (телеграфна мова): **1.00**
-- True Negative Rate (нормальна мова): **0.80**
-- Середня severity для телеграфної мови: **0.89**
+- True Positive Rate (telegraphic speech): **1.00**
+- True Negative Rate (normal speech): **0.80**
+- Mean Severity (telegraphic speech): **0.89**
 
-Ці метрики підтверджують, що AphasiaBrocaDetector надійно виявляє телеграфний стиль відповіді LLM, не руйнуючи при цьому звичайну зв'язну мову.
+These metrics confirm that AphasiaBrocaDetector reliably detects telegraphic speech patterns in LLM outputs without incorrectly flagging coherent, normal language.
 
 ### Interpretation
 

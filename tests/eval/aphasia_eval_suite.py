@@ -1,10 +1,10 @@
 """
 Aphasia-Broca Evaluation Suite.
 
-Використовує AphasiaBrocaDetector для оцінки:
-- true_positive_rate для телеграфної мови
-- true_negative_rate для нормальної мови
-- середньої severity для телеграфних випадків
+Uses AphasiaBrocaDetector to evaluate:
+- true_positive_rate for telegraphic speech
+- true_negative_rate for normal speech
+- mean severity for telegraphic cases
 """
 
 from __future__ import annotations

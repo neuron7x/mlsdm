@@ -10,9 +10,9 @@ def test_aphasia_eval_suite_basic_metrics() -> None:
     suite = AphasiaEvalSuite(corpus_path=corpus_path)
     result = suite.run()
 
-    # Має впевнено детектити телеграфну мову
+    # Should confidently detect telegraphic speech
     assert result.true_positive_rate >= 0.8
-    # Не має масово ламати нормальну мову
+    # Should not incorrectly flag normal speech
     assert result.true_negative_rate >= 0.8
-    # Severity для телеграфних випадків має бути помітною
+    # Severity for telegraphic cases should be noticeable
     assert result.mean_severity_telegraphic >= 0.3
