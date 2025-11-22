@@ -375,7 +375,7 @@ class NeuroCognitiveEngine:
             
             return {
                 "response": "",
-                "governance": {},
+                "governance": None,
                 "mlsdm": {},
                 "timing": timing if timing else {},
                 "validation_steps": validation_steps if validation_steps else [],
@@ -487,7 +487,7 @@ class NeuroCognitiveEngine:
                         
                         return {
                             "response": "",
-                            "governance": {},
+                            "governance": None,
                             "mlsdm": {},
                             "timing": timing,
                             "validation_steps": validation_steps,
@@ -538,7 +538,7 @@ class NeuroCognitiveEngine:
                             
                             return {
                                 "response": "",
-                                "governance": {},
+                                "governance": None,
                                 "mlsdm": {},
                                 "timing": timing,
                                 "validation_steps": validation_steps,
@@ -633,7 +633,7 @@ class NeuroCognitiveEngine:
                         
                         return {
                             "response": "",
-                            "governance": fslgs_result if fslgs_result is not None else {},
+                            "governance": fslgs_result if fslgs_result is not None else None,
                             "mlsdm": mlsdm_state if mlsdm_state is not None else {},
                             "timing": timing,
                             "validation_steps": validation_steps,
@@ -677,7 +677,7 @@ class NeuroCognitiveEngine:
                 
                 return {
                     "response": "",
-                    "governance": {},
+                    "governance": fslgs_result if fslgs_result is not None else None,
                     "mlsdm": mlsdm_state if mlsdm_state is not None else {},
                     "timing": timing,
                     "validation_steps": validation_steps,
@@ -711,7 +711,7 @@ class NeuroCognitiveEngine:
                 
                 return {
                     "response": "",
-                    "governance": fslgs_result if fslgs_result is not None else {},
+                    "governance": fslgs_result if fslgs_result is not None else None,
                     "mlsdm": mlsdm_state if mlsdm_state is not None else {},
                     "timing": timing,
                     "validation_steps": validation_steps,
@@ -754,7 +754,7 @@ class NeuroCognitiveEngine:
         
         return {
             "response": response_text,
-            "governance": fslgs_result if fslgs_result is not None else {},
+            "governance": fslgs_result if fslgs_result is not None else None,
             "mlsdm": mlsdm_state if mlsdm_state is not None else {},
             "timing": timing,
             "validation_steps": validation_steps,

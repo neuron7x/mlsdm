@@ -150,7 +150,8 @@ def test_response_schema_completeness(prompt):
             f"Missing required keys. Got: {set(response.keys())}, Required: {required_keys}"
         
         # Check nested structures exist
-        assert isinstance(response["governance"], dict)
+        # governance can be None (when FSLGS disabled) or dict (when FSLGS enabled)
+        assert response["governance"] is None or isinstance(response["governance"], dict)
         assert isinstance(response["mlsdm"], dict)
         assert isinstance(response["timing"], dict)
         assert isinstance(response["validation_steps"], list)
