@@ -12,6 +12,11 @@ from dataclasses import dataclass
 from typing import Any
 
 
+# Token estimation multiplier - empirically derived for English text
+# Accounts for subword tokenization in modern LLM tokenizers
+TOKENS_PER_WORD_MULTIPLIER = 1.3
+
+
 def estimate_tokens(text: str) -> int:
     """Estimate token count for a given text.
 
@@ -37,9 +42,8 @@ def estimate_tokens(text: str) -> int:
     # Split on whitespace and filter empty strings
     words = [w for w in text.split() if w.strip()]
 
-    # Use 1.3 as multiplier (empirically derived for English)
-    # This accounts for subword tokenization
-    estimated = int(len(words) * 1.3)
+    # Use multiplier to account for subword tokenization
+    estimated = int(len(words) * TOKENS_PER_WORD_MULTIPLIER)
 
     return max(1, estimated) if words else 0
 

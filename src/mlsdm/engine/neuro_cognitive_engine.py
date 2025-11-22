@@ -291,12 +291,8 @@ class NeuroCognitiveEngine:
             enable_causal_checking=self.config.enable_causal_checking,
         )
 
-    def _adapt_context_parameters(
-        self,
-        timing: dict[str, float],
-        cognitive_load: float
-    ) -> int:
-        """Adapt context_top_k based on recent latency and cognitive load.
+    def _compute_adaptive_context(self, cognitive_load: float) -> int:
+        """Compute optimal context_top_k based on recent latency and cognitive load.
 
         Phase 7: Adaptive context management
         - If recent requests are slow (> target_latency_ms), reduce context_top_k
@@ -304,16 +300,11 @@ class NeuroCognitiveEngine:
         - Never go below min_context_top_k
 
         Args:
-            timing: Timing dict from recent request
             cognitive_load: Current cognitive load (0.0-1.0)
 
         Returns:
-            Adapted context_top_k value
+            Optimal context_top_k value
         """
-        # Track recent latency
-        if "total" in timing:
-            self._recent_latencies.append(timing["total"])
-
         # Calculate average recent latency
         if not self._recent_latencies:
             return self.config.default_context_top_k
@@ -343,6 +334,15 @@ class NeuroCognitiveEngine:
             new_k = current_k
 
         return new_k
+
+    def _update_latency_tracking(self, timing: dict[str, float]) -> None:
+        """Update latency tracking with timing from completed request.
+
+        Args:
+            timing: Timing dict from completed request
+        """
+        if "total" in timing:
+            self._recent_latencies.append(timing["total"])
 
     # ------------------------------------------------------------------ #
     # Public API                                                          #
@@ -390,7 +390,15 @@ class NeuroCognitiveEngine:
             if moral_value is not None
             else self.config.default_moral_value
         )
-        context_top_k = context_top_k or self.config.default_context_top_k
+
+        # Phase 7: Apply adaptive context only if context_top_k not explicitly provided
+        explicit_context_k = context_top_k
+        if context_top_k is None:
+            # Compute adaptive context_top_k based on recent performance
+            context_top_k = self._compute_adaptive_context(cognitive_load)
+        else:
+            # User provided explicit value, use it
+            context_top_k = context_top_k
 
         mlsdm_state: dict[str, Any] | None = None
         fslgs_result: dict[str, Any] | None = None
@@ -407,11 +415,12 @@ class NeuroCognitiveEngine:
                 limit_tokens = self.config.degradation_policy.get("limit_max_tokens", 256)
                 effective_max_tokens = min(max_tokens, limit_tokens)
                 min_k = self.config.degradation_policy.get("min_context_top_k_under_load", 2)
+                # Apply QoS minimum, which overrides adaptive context
                 context_top_k = max(min_k, self.config.min_context_top_k)
             elif self.config.priority_tier == "normal":
-                # Normal priority: moderate degradation
+                # Normal priority: moderate degradation (reduce by 1)
                 context_top_k = max(self.config.min_context_top_k, context_top_k - 1)
-            # High priority: no degradation, but log over_budget
+            # High priority: no degradation, use adaptive context as-is
 
         with TimingContext(timing, "total"):
             # Phase 7: Semantic cache lookup
@@ -681,9 +690,10 @@ class NeuroCognitiveEngine:
                 # Cache store failure shouldn't break the response
                 pass
 
-        # Phase 7: Adaptive context management
-        new_context_k = self._adapt_context_parameters(timing, cognitive_load)
-        self._runtime_context_top_k = new_context_k
+        # Phase 7: Update latency tracking for next request's adaptive context
+        self._update_latency_tracking(timing)
+        # Update runtime context_top_k with the value we computed at request start
+        self._runtime_context_top_k = context_top_k
 
         return {
             "response": response_text,

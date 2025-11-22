@@ -8,6 +8,7 @@ unnecessary LLM calls for semantically similar queries.
 
 from __future__ import annotations
 
+import hashlib
 from collections import OrderedDict
 from dataclasses import dataclass
 from typing import Any
@@ -113,9 +114,11 @@ class SemanticResponseCache:
 
         Note: This is used for exact matching in the OrderedDict.
         Semantic matching is done via similarity computation.
+        Uses MD5 hash for deterministic, session-independent keys.
         """
-        # Use hash of embedding + moral + intent as key
-        emb_hash = hash(query_embedding.tobytes())
+        # Use deterministic hash of embedding + moral + intent as key
+        emb_bytes = query_embedding.tobytes()
+        emb_hash = hashlib.md5(emb_bytes).hexdigest()[:16]  # Use first 16 hex chars
         return f"{emb_hash}_{moral_value:.3f}_{user_intent}"
 
     def lookup(

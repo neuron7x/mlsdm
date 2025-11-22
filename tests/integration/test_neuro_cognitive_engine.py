@@ -52,7 +52,10 @@ class TestNeuroCognitiveEngineArchitecture:
         llm_mock = Mock(return_value="Test response")
         embedding_mock = Mock(return_value=np.random.randn(384))
 
-        config = NeuroEngineConfig(enable_fslgs=False)
+        config = NeuroEngineConfig(
+            enable_fslgs=False,
+            enable_semantic_cache=False  # Disable cache for cleaner test
+        )
         engine = NeuroCognitiveEngine(
             llm_generate_fn=llm_mock,
             embedding_fn=embedding_mock,
@@ -63,6 +66,8 @@ class TestNeuroCognitiveEngineArchitecture:
         engine.generate("Test", moral_value=0.8, context_top_k=10)
 
         assert engine._runtime_moral_value == 0.8
+        # context_top_k may be adjusted by adaptive context management
+        # but should be set to the value we requested (or close to it)
         assert engine._runtime_context_top_k == 10
 
     def test_explicit_error_handling(self):
