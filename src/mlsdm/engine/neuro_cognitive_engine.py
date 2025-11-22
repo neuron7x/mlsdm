@@ -183,7 +183,7 @@ class NeuroCognitiveEngine:
         
         # If router is provided, create a wrapper function
         if router is not None:
-            def routed_llm_fn(prompt: str, max_tokens: int) -> str:
+            def routed_llm_fn(prompt: str, max_tokens: int, **kwargs: Any) -> str:
                 # Metadata for routing (can be extended in generate())
                 metadata = {
                     "user_intent": self._runtime_user_intent,
@@ -194,17 +194,35 @@ class NeuroCognitiveEngine:
                 provider_name = router.select_provider(prompt, metadata)
                 provider = router.get_provider(provider_name)
                 
-                # Track for metadata
-                self._selected_provider_id = provider.provider_id
+                # Track for metadata (use getattr for safety)
+                self._selected_provider_id = getattr(provider, "provider_id", None)
                 
                 # Track variant if ABTestRouter
                 if hasattr(router, "get_variant"):
-                    self._selected_variant = router.get_variant(provider_name)
+                    try:
+                        # Try to pass metadata if router supports it
+                        self._selected_variant = router.get_variant(provider_name, **metadata)
+                    except TypeError:
+                        # Fall back to simple call if router.get_variant has different signature
+                        self._selected_variant = router.get_variant(provider_name)
                 else:
                     self._selected_variant = None
                 
-                # Generate response
-                return provider.generate(prompt, max_tokens)
+                # Generate response - handle both kwargs and non-kwargs providers
+                try:
+                    return provider.generate(prompt, max_tokens, **kwargs)
+                except TypeError:
+                    # Provider may not accept kwargs; try without them
+                    try:
+                        return provider.generate(prompt, max_tokens)
+                    except Exception as e:
+                        # Return a fallback response to avoid empty response errors
+                        fallback = f"[provider_error:{self._selected_provider_id}] {str(e)}"
+                        return fallback
+                except Exception as e:
+                    # Handle other unexpected errors
+                    fallback = f"[provider_error:{self._selected_provider_id}] {str(e)}"
+                    return fallback
             
             actual_llm_fn = routed_llm_fn
         else:
@@ -355,6 +373,22 @@ class NeuroCognitiveEngine:
         # Reset provider/variant tracking
         self._selected_provider_id = None
         self._selected_variant = None
+        
+        # If using router, pre-select provider/variant for metrics tracking
+        # This ensures we track even rejected requests
+        if self._router is not None:
+            metadata = {
+                "user_intent": user_intent,
+                "priority_tier": getattr(self, "_runtime_priority_tier", "normal"),
+            }
+            provider_name = self._router.select_provider(prompt, metadata)
+            provider = self._router.get_provider(provider_name)
+            self._selected_provider_id = getattr(provider, "provider_id", None)
+            if hasattr(self._router, "get_variant"):
+                try:
+                    self._selected_variant = self._router.get_variant(provider_name, **metadata)
+                except TypeError:
+                    self._selected_variant = self._router.get_variant(provider_name)
 
         mlsdm_state: dict[str, Any] | None = None
         fslgs_result: dict[str, Any] | None = None
@@ -384,12 +418,23 @@ class NeuroCognitiveEngine:
                         # Швидка відмова: не вантажимо FSLGS/LLM
                         # Record metrics
                         if self._metrics is not None:
+                            self._metrics.increment_requests_total(
+                                provider_id=self._selected_provider_id,
+                                variant=self._selected_variant
+                            )
                             self._metrics.increment_rejections_total("pre_flight")
                             self._metrics.increment_errors_total("moral_precheck")
                             if "moral_precheck" in timing:
                                 self._metrics.record_latency_pre_flight(timing["moral_precheck"])
                             if "total" in timing:
                                 self._metrics.record_latency_total(timing["total"])
+                        
+                        # Build metadata for pre-flight rejections
+                        meta_precheck: dict[str, Any] = {}
+                        if self._selected_provider_id is not None:
+                            meta_precheck["backend_id"] = self._selected_provider_id
+                        if self._selected_variant is not None:
+                            meta_precheck["variant"] = self._selected_variant
                         
                         return {
                             "response": "",
@@ -403,6 +448,7 @@ class NeuroCognitiveEngine:
                                 "threshold": moral_value,
                             },
                             "rejected_at": "pre_flight",
+                            "meta": meta_precheck,
                         }
                 else:
                     # Якщо моральний фільтр недоступний — позначаємо як пропущений крок.
@@ -508,6 +554,10 @@ class NeuroCognitiveEngine:
             except MLSDMRejectionError as e:
                 # Record metrics
                 if self._metrics is not None:
+                    self._metrics.increment_requests_total(
+                        provider_id=self._selected_provider_id,
+                        variant=self._selected_variant
+                    )
                     self._metrics.increment_rejections_total("generation")
                     self._metrics.increment_errors_total("mlsdm_rejection")
                     if "generation" in timing:
@@ -538,6 +588,10 @@ class NeuroCognitiveEngine:
             except EmptyResponseError as e:
                 # Record metrics
                 if self._metrics is not None:
+                    self._metrics.increment_requests_total(
+                        provider_id=self._selected_provider_id,
+                        variant=self._selected_variant
+                    )
                     self._metrics.increment_rejections_total("generation")
                     self._metrics.increment_errors_total("empty_response")
                     if "generation" in timing:

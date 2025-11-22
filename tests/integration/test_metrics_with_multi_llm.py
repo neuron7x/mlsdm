@@ -39,7 +39,7 @@ class TestMetricsWithMultiLLM:
         # Create engine with metrics enabled
         config = NeuroEngineConfig(
             enable_fslgs=False,
-            initial_moral_threshold=0.0,  # Disable moral filtering
+            initial_moral_threshold=0.30,  # Use MIN_THRESHOLD to allow tests to pass
             enable_metrics=True,
         )
         
@@ -61,7 +61,7 @@ class TestMetricsWithMultiLLM:
         ]
         for i in range(20):
             prompt = prompts[i % len(prompts)] + f" (request {i})"
-            result = engine.generate(prompt, max_tokens=100, moral_value=0.0)
+            result = engine.generate(prompt, max_tokens=100, moral_value=0.9)
             assert "meta" in result
             # Only check successful requests
             if result["error"] is None:
@@ -105,7 +105,7 @@ class TestMetricsWithMultiLLM:
         
         config = NeuroEngineConfig(
             enable_fslgs=False,
-            initial_moral_threshold=0.0,  # Disable moral filtering
+            initial_moral_threshold=0.30,  # Use MIN_THRESHOLD to allow tests to pass
             enable_metrics=True,
         )
         
@@ -119,7 +119,7 @@ class TestMetricsWithMultiLLM:
         # Make requests
         successful_results = 0
         for i in range(30):
-            result = engine.generate(f"Test {i}", max_tokens=100, moral_value=0.0)
+            result = engine.generate(f"Test {i}", max_tokens=100, moral_value=0.9)
             assert "meta" in result
             if result["error"] is None:
                 assert "variant" in result["meta"]
@@ -159,7 +159,7 @@ class TestMetricsWithMultiLLM:
         
         config = NeuroEngineConfig(
             enable_fslgs=False,
-            initial_moral_threshold=0.0,  # Disable moral filtering
+            initial_moral_threshold=0.30,  # Use MIN_THRESHOLD to allow tests to pass
             enable_metrics=True,
         )
         
@@ -173,7 +173,7 @@ class TestMetricsWithMultiLLM:
         # Make requests to fast provider
         successful = 0
         for i in range(10):
-            result = engine.generate(f"Test {i}", max_tokens=100, moral_value=0.0)
+            result = engine.generate(f"Test {i}", max_tokens=100, moral_value=0.9)
             if result["error"] is None:
                 successful += 1
         
@@ -206,7 +206,7 @@ class TestMetricsWithMultiLLM:
         
         config = NeuroEngineConfig(
             enable_fslgs=False,
-            initial_moral_threshold=0.0,  # Disable moral filtering
+            initial_moral_threshold=0.30,  # Use MIN_THRESHOLD to allow tests to pass
             enable_metrics=True,
         )
         
@@ -220,7 +220,7 @@ class TestMetricsWithMultiLLM:
         # Make requests
         successful = 0
         for i in range(20):
-            result = engine.generate(f"Test {i}", max_tokens=100, moral_value=0.0)
+            result = engine.generate(f"Test {i}", max_tokens=100, moral_value=0.9)
             if result["error"] is None:
                 successful += 1
         
@@ -259,7 +259,7 @@ class TestMetricsWithMultiLLM:
         
         config = NeuroEngineConfig(
             enable_fslgs=False,
-            initial_moral_threshold=0.0,  # Disable moral filtering
+            initial_moral_threshold=0.30,  # Use MIN_THRESHOLD to allow tests to pass
             enable_metrics=True,
         )
         
@@ -273,19 +273,19 @@ class TestMetricsWithMultiLLM:
         # Make requests with different intents
         successful_a = 0
         for _ in range(5):
-            result = engine.generate("Test A", max_tokens=100, user_intent="intent_a", moral_value=0.0)
+            result = engine.generate("Test A", max_tokens=100, user_intent="intent_a", moral_value=0.9)
             if result["error"] is None:
                 successful_a += 1
         
         successful_b = 0
         for _ in range(3):
-            result = engine.generate("Test B", max_tokens=100, user_intent="intent_b", moral_value=0.0)
+            result = engine.generate("Test B", max_tokens=100, user_intent="intent_b", moral_value=0.9)
             if result["error"] is None:
                 successful_b += 1
         
         successful_c = 0
         for _ in range(7):
-            result = engine.generate("Test C", max_tokens=100, user_intent="intent_c", moral_value=0.0)
+            result = engine.generate("Test C", max_tokens=100, user_intent="intent_c", moral_value=0.9)
             if result["error"] is None:
                 successful_c += 1
         

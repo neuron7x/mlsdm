@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import os
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     pass
@@ -23,12 +23,13 @@ class LLMProvider(ABC):
     """
 
     @abstractmethod
-    def generate(self, prompt: str, max_tokens: int) -> str:
+    def generate(self, prompt: str, max_tokens: int, **kwargs: Any) -> str:
         """Generate text response from prompt.
         
         Args:
             prompt: Input text prompt
             max_tokens: Maximum number of tokens to generate
+            **kwargs: Additional provider-specific parameters (e.g., moral_value, user_intent)
             
         Returns:
             Generated text response
@@ -81,12 +82,13 @@ class OpenAIProvider(LLMProvider):
         
         self.client = openai.OpenAI(api_key=self.api_key)
     
-    def generate(self, prompt: str, max_tokens: int) -> str:
+    def generate(self, prompt: str, max_tokens: int, **kwargs: Any) -> str:
         """Generate text using OpenAI API.
         
         Args:
             prompt: Input text prompt
             max_tokens: Maximum number of tokens to generate
+            **kwargs: Additional parameters (currently ignored for OpenAI)
             
         Returns:
             Generated text response
@@ -148,12 +150,13 @@ class AnthropicProvider(LLMProvider):
         
         self.client = anthropic.Anthropic(api_key=self.api_key)
     
-    def generate(self, prompt: str, max_tokens: int) -> str:
+    def generate(self, prompt: str, max_tokens: int, **kwargs: Any) -> str:
         """Generate text using Anthropic API.
         
         Args:
             prompt: Input text prompt
             max_tokens: Maximum number of tokens to generate
+            **kwargs: Additional parameters (currently ignored for Anthropic)
             
         Returns:
             Generated text response
@@ -192,12 +195,13 @@ class LocalStubProvider(LLMProvider):
         """
         self._provider_id = provider_id
     
-    def generate(self, prompt: str, max_tokens: int) -> str:
+    def generate(self, prompt: str, max_tokens: int, **kwargs: Any) -> str:
         """Generate deterministic stub response.
         
         Args:
             prompt: Input text prompt
             max_tokens: Maximum number of tokens to generate
+            **kwargs: Additional parameters (accepted for compatibility, currently ignored)
             
         Returns:
             Deterministic stub response based on prompt
