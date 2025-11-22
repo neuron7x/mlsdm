@@ -60,7 +60,7 @@ class InputValidator:
                     f"Vector size {vector.shape[0]} exceeds maximum {InputValidator.MAX_VECTOR_SIZE}"
                 )
 
-            # Ensure float32 dtype (avoid copy if already float32)
+            # Ensure float32 dtype (avoid unnecessary copy if already float32)
             arr = vector.astype(np.float32) if vector.dtype != np.float32 else vector
 
             # Check for invalid values (NaN, Inf)

@@ -108,6 +108,8 @@ class CoherenceSafetyAnalyzer:
         if not query_vectors or not retrieved_vectors:
             return 0.0
 
+        # Note: Using strict=False because query and retrieval lists may differ in length
+        # This is intentional - we process available pairs
         coherence_scores = []
         for query, retrieved in zip(query_vectors, retrieved_vectors, strict=False):
             if len(retrieved) == 0:
