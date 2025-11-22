@@ -8,6 +8,8 @@ from fastapi.security import OAuth2PasswordBearer
 from pydantic import BaseModel
 
 from mlsdm.api import health
+from mlsdm.api.lifecycle import cleanup_memory_manager, get_lifecycle_manager
+from mlsdm.api.middleware import RequestIDMiddleware, SecurityHeadersMiddleware
 from mlsdm.core.memory_manager import MemoryManager
 from mlsdm.utils.config_loader import ConfigLoader
 from mlsdm.utils.input_validator import InputValidator
@@ -17,7 +19,18 @@ from mlsdm.utils.security_logger import SecurityEventType, get_security_logger
 logger = logging.getLogger(__name__)
 security_logger = get_security_logger()
 
-app = FastAPI(title="mlsdm-governed-cognitive-memory", version="1.0.0")
+# Initialize FastAPI with production-ready settings
+app = FastAPI(
+    title="mlsdm-governed-cognitive-memory",
+    version="1.0.0",
+    description="Production-ready neurobiologically-grounded cognitive architecture",
+    docs_url="/docs",
+    redoc_url="/redoc",
+)
+
+# Add production middleware
+app.add_middleware(RequestIDMiddleware)
+app.add_middleware(SecurityHeadersMiddleware)
 
 # Include health check router
 app.include_router(health.router)
@@ -168,7 +181,15 @@ async def get_state(
 
 @app.on_event("startup")
 async def startup_event():
-    """Log system startup."""
+    """Initialize application on startup."""
+    # Initialize lifecycle manager
+    lifecycle = get_lifecycle_manager()
+    await lifecycle.startup()
+
+    # Register cleanup tasks
+    lifecycle.register_cleanup(lambda: cleanup_memory_manager(_manager))
+
+    # Log system startup
     security_logger.log_system_event(
         SecurityEventType.STARTUP,
         "MLSDM Governed Cognitive Memory API started",
@@ -181,11 +202,16 @@ async def startup_event():
 
 @app.on_event("shutdown")
 async def shutdown_event():
-    """Log system shutdown."""
+    """Clean up resources on shutdown."""
+    # Log system shutdown
     security_logger.log_system_event(
         SecurityEventType.SHUTDOWN,
         "MLSDM Governed Cognitive Memory API shutting down"
     )
+
+    # Execute graceful shutdown
+    lifecycle = get_lifecycle_manager()
+    await lifecycle.shutdown()
 
 
 @app.get("/health")
