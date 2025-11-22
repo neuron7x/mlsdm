@@ -181,13 +181,15 @@ class TestCanaryManagerRollback:
         for _ in range(100):
             manager.report_outcome("v1", success=True, latency_ms=50.0)
         
-        # Report slow requests for candidate (avg 100ms, within 1.5x threshold)
+        # Report slow requests for candidate (avg 60ms, within 1.5x threshold)
+        # 60ms < 50ms * 1.5 = 75ms, so should NOT trigger rollback
         for _ in range(10):
-            manager.report_outcome("v2", success=True, latency_ms=100.0)
+            manager.report_outcome("v2", success=True, latency_ms=60.0)
         
-        # Should NOT trigger rollback (100ms < 50ms * 1.5 = 75ms is false, but 100 > 75)
-        # Actually, let me fix this test - 100ms > 75ms, so it SHOULD rollback
+        # Should NOT trigger rollback (60ms < 75ms threshold)
+        assert not manager.is_rollback_triggered()
         
+        # Create second manager to test rollback case
         # Report slow requests for candidate (avg 150ms, exceeds 1.5x threshold)
         manager2 = CanaryManager(
             current_version="v1",

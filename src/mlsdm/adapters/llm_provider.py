@@ -217,7 +217,8 @@ class LocalStubProvider(LLMProvider):
             )
         
         # Ensure response doesn't exceed rough token limit
-        # (4 chars per token is approximate)
+        # Note: 4 chars per token is a rough approximation and varies by language
+        # and tokenization scheme. This is acceptable for a test stub.
         max_chars = max_tokens * 4
         if len(base_response) > max_chars:
             base_response = base_response[:max_chars]
