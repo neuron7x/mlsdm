@@ -127,7 +127,7 @@ def test_thread_safety():
     """Test that AphasiaBrocaDetector is thread-safe (stateless)."""
     detector = AphasiaBrocaDetector()
 
-    text1 = "The system is working correctly."
+    text1 = "The system is working correctly and efficiently."
     text2 = "Bad. Short."
 
     result1 = detector.analyze(text1)
