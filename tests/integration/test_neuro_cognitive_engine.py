@@ -322,7 +322,10 @@ class TestNeuroCognitiveEngineIntegration:
         llm_mock = Mock(return_value="Response")
         embedding_mock = Mock(return_value=np.random.randn(384))
 
-        config = NeuroEngineConfig(enable_fslgs=False)
+        config = NeuroEngineConfig(
+            enable_fslgs=False,
+            enable_semantic_cache=False  # Disable cache to test state persistence
+        )
         engine = NeuroCognitiveEngine(
             llm_generate_fn=llm_mock,
             embedding_fn=embedding_mock,
