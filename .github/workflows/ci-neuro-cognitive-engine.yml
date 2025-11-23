@@ -12,9 +12,11 @@ on:
 
 permissions:
   contents: read
+  security-events: write  # For Trivy SARIF upload
 
 jobs:
-  test:
+  tests-core:
+    name: Core Tests (unit + integration + eval)
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -28,20 +30,24 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
+          cache: 'pip'
       
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install -e .
+          pip install -e .[dev]
       
-      - name: Run tests
+      - name: Run core test suite
         run: |
-          pytest -q --ignore=tests/load
+          pytest -q --ignore=tests/load --ignore=benchmarks
+        env:
+          PYTHONHASHSEED: "0"
   
-  benchmarks:
+  tests-benchmarks:
     name: Performance Benchmarks
     runs-on: ubuntu-latest
+    needs: tests-core
     
     steps:
       - name: Checkout code
@@ -51,17 +57,20 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+          cache: 'pip'
       
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install -e .
+          pip install -e .[dev]
       
       - name: Run benchmarks
         run: |
           pytest benchmarks/test_neuro_engine_performance.py -v -s --tb=short
         continue-on-error: true
+        env:
+          PYTHONHASHSEED: "0"
       
       - name: Upload benchmark results
         if: always()
@@ -72,9 +81,10 @@ jobs:
             .pytest_cache/
           retention-days: 30
   
-  neuro-engine-eval:
-    name: Cognitive Safety Evaluation
+  tests-eval-sapolsky:
+    name: Sapolsky Cognitive Safety Evaluation
     runs-on: ubuntu-latest
+    needs: tests-core
     continue-on-error: true
     
     steps:
@@ -85,16 +95,19 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+          cache: 'pip'
       
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install -e .
+          pip install -e .[dev]
       
       - name: Run Sapolsky Validation Suite tests
         run: |
           pytest tests/eval/test_sapolsky_suite.py -v
+        env:
+          PYTHONHASHSEED: "0"
       
       - name: Run Sapolsky Validation Suite evaluation
         run: |
@@ -108,4 +121,49 @@ jobs:
           name: sapolsky-eval-results
           path: |
             sapolsky_eval_results.json
+          retention-days: 90
+  
+  security-trivy:
+    name: Security Scan (Trivy)
+    runs-on: ubuntu-latest
+    needs: tests-core
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile.neuro-engine-service
+          push: false
+          tags: mlsdm-neuro-engine:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          load: true
+      
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: mlsdm-neuro-engine:test
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+        continue-on-error: true
+      
+      - name: Upload Trivy results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: 'trivy-results.sarif'
+        continue-on-error: true
+      
+      - name: Upload Trivy results as artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-security-scan
+          path: trivy-results.sarif
           retention-days: 90

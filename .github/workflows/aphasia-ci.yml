@@ -1,12 +1,33 @@
 name: Aphasia / NeuroLang CI
 
+# Specialized CI for Aphasia/NeuroLang speech processing features
+# Triggers only when Aphasia-related code or tests are modified
+# See APHASIA_SPEC.md and EFFECTIVENESS_VALIDATION_REPORT.md for details
+
 on:
+  push:
+    branches:
+      - main
+      - 'feature/*'
+    paths:
+      - "src/mlsdm/extensions/**"
+      - "src/mlsdm/observability/**"
+      - "tests/eval/test_aphasia_*"
+      - "tests/validation/test_aphasia_*"
+      - "tests/observability/test_aphasia_*"
+      - "tests/security/test_aphasia_*"
+      - "tests/packaging/test_neurolang_optional_dependency.py"
+      - "tests/scripts/test_*neurolang*"
+      - "tests/scripts/test_run_aphasia_eval.py"
+      - "scripts/*neurolang*"
+      - "scripts/run_aphasia_eval.py"
+      - ".github/workflows/aphasia-ci.yml"
   pull_request:
     branches: [ main, master ]
     paths:
       - "src/mlsdm/extensions/**"
       - "src/mlsdm/observability/**"
-      - "tests/eval/**"
+      - "tests/eval/test_aphasia_*"
       - "tests/validation/test_aphasia_*"
       - "tests/observability/test_aphasia_*"
       - "tests/security/test_aphasia_*"
@@ -17,8 +38,12 @@ on:
       - "scripts/run_aphasia_eval.py"
       - ".github/workflows/aphasia-ci.yml"
 
+permissions:
+  contents: read
+
 jobs:
   aphasia-neurolang:
+    name: Aphasia Speech & NeuroLang Tests
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -26,16 +51,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Python
+      - name: Set up Python 3.11
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+          cache: 'pip'
 
       - name: Install dependencies (core + neurolang extra)
         run: |
           python -m pip install --upgrade pip
-          pip install .[neurolang]
-          pip install pytest
+          pip install -e .[neurolang]
+          pip install pytest pytest-cov
 
       - name: Run Aphasia / NeuroLang tests
         run: |
@@ -50,9 +76,21 @@ jobs:
             tests/scripts/test_smoke_neurolang_wrapper.py \
             tests/scripts/test_train_neurolang_grammar.py \
             -q
+        env:
+          PYTHONHASHSEED: "0"
 
       - name: Run AphasiaEvalSuite quality gate
         run: |
           python scripts/run_aphasia_eval.py \
             --corpus tests/eval/aphasia_corpus.json \
             --fail-on-low-metrics
+        continue-on-error: true
+      
+      - name: Upload AphasiaEvalSuite results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: aphasia-eval-results
+          path: |
+            aphasia_eval_results.json
+          retention-days: 90

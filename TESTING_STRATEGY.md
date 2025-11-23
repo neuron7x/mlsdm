@@ -124,7 +124,223 @@ Example counterexample entry:
 ```
 
 ---
-## 4. Formal Verification (Roadmap)
+## 4. Continuous Integration Test Pipelines
+
+**Status**: ✅ **Fully Implemented and Structured**
+
+### Overview
+
+The project uses GitHub Actions for automated testing on every PR and push to main. The CI is structured into three specialized workflows plus a comprehensive release pipeline.
+
+### CI Workflows
+
+#### 4.1. CI - Neuro Cognitive Engine (`.github/workflows/ci-neuro-cognitive-engine.yml`)
+
+**Purpose**: Primary CI workflow for core functionality testing.
+
+**Triggers**: 
+- Push to `main` or `feature/*` branches
+- Pull requests to `main` or `feature/*` branches
+
+**Jobs**:
+
+1. **tests-core** (Python 3.10, 3.11)
+   - Runs all unit, integration, and evaluation tests
+   - Command: `pytest -q --ignore=tests/load --ignore=benchmarks`
+   - Environment: `PYTHONHASHSEED=0` for determinism
+   - Uses pip caching for faster builds
+
+2. **tests-benchmarks** (Python 3.11, needs: tests-core)
+   - Runs performance benchmarks
+   - Command: `pytest benchmarks/test_neuro_engine_performance.py -v -s --tb=short`
+   - Marked as `continue-on-error: true` (not blocking)
+   - Uploads artifacts for analysis
+
+3. **tests-eval-sapolsky** (Python 3.11, needs: tests-core)
+   - Runs Sapolsky Validation Suite for cognitive safety
+   - Commands:
+     - `pytest tests/eval/test_sapolsky_suite.py -v`
+     - `python examples/run_sapolsky_eval.py --output sapolsky_eval_results.json --verbose`
+   - Marked as `continue-on-error: true` for eval script
+   - Uploads JSON results as artifacts
+
+4. **security-trivy** (needs: tests-core)
+   - Builds Docker image and scans for vulnerabilities
+   - Uses Trivy scanner with SARIF output
+   - Uploads results to GitHub Security tab
+   - Marked as `continue-on-error: true` (advisory only)
+
+**Status Signals**: `tests-core` for both Python versions must pass for PR to be mergeable. Benchmarks, eval, and security are advisory.
+
+#### 4.2. Property-Based Tests (`.github/workflows/property-tests.yml`)
+
+**Purpose**: Verify formal invariants using Hypothesis property-based testing.
+
+**Triggers**:
+- Push/PR to `main` or `feature/*` branches
+- Only when these paths change:
+  - `src/mlsdm/**`
+  - `tests/property/**`
+  - `docs/FORMAL_INVARIANTS.md`
+  - The workflow file itself
+
+**Jobs**:
+
+1. **property-tests** (Python 3.10, 3.11)
+   - Runs all property-based invariant tests
+   - Command: `pytest tests/property/ -q --maxfail=5`
+   - Environment: 
+     - `PYTHONHASHSEED=0` for hash consistency
+     - `HYPOTHESIS_PROFILE=ci` for deterministic Hypothesis behavior
+   - Hypothesis CI profile (configured in `tests/conftest.py`):
+     - `max_examples=50` (balanced coverage vs. speed)
+     - `deadline=200` ms per example
+     - `derandomize=True` for reproducibility
+   - Uploads test reports as artifacts
+
+2. **counterexamples-regression** (Python 3.11, needs: property-tests)
+   - Runs regression tests on known counterexamples
+   - Command: `pytest tests/property/test_counterexamples_regression.py -v -s`
+   - Ensures previously found bugs stay fixed
+   - Uploads counterexample statistics
+
+3. **invariant-coverage** (needs: property-tests)
+   - Validates invariant documentation exists
+   - Counts documented invariants by category (Safety, Liveness, Metamorphic)
+   - Checks counterexample files are present
+   - Generates coverage report (not code coverage - invariant documentation coverage)
+
+**Status Signals**: `property-tests` must pass for both Python versions. The other jobs are validation/reporting.
+
+#### 4.3. Aphasia / NeuroLang CI (`.github/workflows/aphasia-ci.yml`)
+
+**Purpose**: Specialized testing for speech processing and NeuroLang features.
+
+**Triggers**:
+- Push/PR to main branches
+- Only when Aphasia/NeuroLang related code changes:
+  - `src/mlsdm/extensions/**`
+  - `src/mlsdm/observability/**`
+  - Aphasia test files
+  - NeuroLang scripts
+
+**Jobs**:
+
+1. **aphasia-neurolang** (Python 3.11)
+   - Installs optional NeuroLang dependencies: `pip install -e .[neurolang]`
+   - Runs focused test suite:
+     - Aphasia detection validation
+     - AphasiaEvalSuite tests
+     - Aphasia logging and privacy tests
+     - NeuroLang security tests
+     - Packaging tests for optional dependency
+     - Script smoke tests
+   - Runs AphasiaEvalSuite quality gate:
+     - Command: `python scripts/run_aphasia_eval.py --corpus tests/eval/aphasia_corpus.json --fail-on-low-metrics`
+     - Marked as `continue-on-error: true`
+     - Uploads results for threshold analysis
+   - Timeout: 20 minutes
+
+**Status Signals**: Core Aphasia tests must pass. Quality gate is advisory with artifact upload for review.
+
+#### 4.4. Release Pipeline (`.github/workflows/release.yml`)
+
+**Purpose**: Comprehensive validation and deployment for tagged releases.
+
+**Triggers**: Push of version tags (e.g., `v1.2.0`)
+
+**Jobs**:
+
+1. **test** (Python 3.10, 3.11)
+   - Full test suite with coverage
+   - Command: `pytest --cov=src --cov-report=term-missing -v --ignore=tests/load`
+   - Must pass for both Python versions
+
+2. **test-benchmarks** (Python 3.11, needs: test)
+   - Runs performance benchmarks
+   - Same as CI but with longer artifact retention (90 days)
+
+3. **test-sapolsky-eval** (Python 3.11, needs: test)
+   - Runs Sapolsky cognitive safety evaluation
+   - Must pass (not marked continue-on-error)
+
+4. **build-and-push-docker** (needs: all test jobs)
+   - Builds and pushes Docker image to ghcr.io
+   - Tags: version-specific and `latest`
+   - Creates GitHub Release with notes from CHANGELOG.md
+
+5. **publish-to-testpypi** (needs: test)
+   - Builds Python package
+   - Publishes to TestPyPI (if token configured)
+
+6. **security-scan** (needs: build-and-push-docker)
+   - Runs Trivy on published image
+   - Uploads results to GitHub Security
+
+**Status Signals**: All test jobs must pass before Docker build/push. Release cannot proceed without passing tests.
+
+### Running CI Commands Locally
+
+To replicate CI behavior locally:
+
+```bash
+# Core tests (matches tests-core job)
+export PYTHONHASHSEED=0
+pytest -q --ignore=tests/load --ignore=benchmarks
+
+# Property tests (matches property-tests job)
+export PYTHONHASHSEED=0
+export HYPOTHESIS_PROFILE=ci
+pytest tests/property/ -q --maxfail=5
+
+# Benchmarks (matches tests-benchmarks job)
+export PYTHONHASHSEED=0
+pytest benchmarks/test_neuro_engine_performance.py -v -s --tb=short
+
+# Aphasia tests (matches aphasia-neurolang job)
+pip install -e .[neurolang]
+export PYTHONHASHSEED=0
+pytest tests/validation/test_aphasia_detection.py \
+       tests/eval/test_aphasia_eval_suite.py \
+       tests/observability/test_aphasia_logging.py \
+       tests/security/test_aphasia_logging_privacy.py \
+       tests/security/test_neurolang_checkpoint_security.py \
+       tests/packaging/test_neurolang_optional_dependency.py \
+       tests/scripts/test_run_aphasia_eval.py \
+       tests/scripts/test_smoke_neurolang_wrapper.py \
+       tests/scripts/test_train_neurolang_grammar.py \
+       -q
+```
+
+### Branch Protection Configuration
+
+**Recommended required checks for `main` branch**:
+
+- `tests-core (3.10)` from ci-neuro-cognitive-engine.yml
+- `tests-core (3.11)` from ci-neuro-cognitive-engine.yml
+- `property-tests (3.10)` from property-tests.yml
+- `property-tests (3.11)` from property-tests.yml
+- `aphasia-neurolang` from aphasia-ci.yml (if Aphasia is critical)
+
+**Optional checks** (informational only):
+- `tests-benchmarks`
+- `tests-eval-sapolsky`
+- `security-trivy`
+- `counterexamples-regression`
+- `invariant-coverage`
+
+### CI Design Principles
+
+1. **No Duplication**: Each test runs in exactly one workflow. No redundant test execution.
+2. **Clear Signals**: Each job has a clear purpose. Failure means specific type of issue.
+3. **Determinism**: All tests use fixed seeds (`PYTHONHASHSEED=0`) and Hypothesis CI profile.
+4. **Fast Feedback**: Core tests run first. Heavy jobs (benchmarks, eval) run in parallel after core passes.
+5. **Path Filtering**: Specialized workflows (property-tests, aphasia-ci) only trigger on relevant changes.
+6. **Artifact Preservation**: All evaluation results, benchmarks, and security scans preserved as artifacts.
+7. **Consistent Commands**: CI commands match documented local commands exactly.
+
+---
+## 5. Formal Verification (Roadmap)
 
 **Status**: ⚠️ **Not yet implemented** - Planned for future versions (v1.x+)
 

@@ -194,12 +194,76 @@ src/utils/input_validator.py    87     12    86%   42, 59-60, 95-96, 131, 168, 2
 
 ## Continuous Integration
 
+### GitHub Actions Workflows
+
+The project uses three specialized CI workflows plus a comprehensive release pipeline:
+
+#### 1. **CI - Neuro Cognitive Engine** (`.github/workflows/ci-neuro-cognitive-engine.yml`)
+- **When it runs**: Every push/PR to `main` or `feature/*` branches
+- **What it tests**:
+  - `tests-core`: All unit, integration, and eval tests (Python 3.10 & 3.11)
+  - `tests-benchmarks`: Performance benchmarks (advisory)
+  - `tests-eval-sapolsky`: Cognitive safety evaluation (advisory)
+  - `security-trivy`: Docker vulnerability scanning (advisory)
+- **Required for PR merge**: `tests-core` for both Python versions
+- **Status badge**: Shows overall health of core functionality
+
+#### 2. **Property-Based Tests** (`.github/workflows/property-tests.yml`)
+- **When it runs**: Push/PR when property tests or invariants change
+- **What it tests**:
+  - `property-tests`: Hypothesis-based invariant verification (Python 3.10 & 3.11)
+  - `counterexamples-regression`: Known issue regression tests
+  - `invariant-coverage`: Invariant documentation validation
+- **Required for PR merge**: `property-tests` for both Python versions
+- **Determinism**: Uses `PYTHONHASHSEED=0` and `HYPOTHESIS_PROFILE=ci`
+
+#### 3. **Aphasia / NeuroLang CI** (`.github/workflows/aphasia-ci.yml`)
+- **When it runs**: Push/PR when Aphasia/NeuroLang code changes
+- **What it tests**:
+  - Aphasia detection and speech processing tests
+  - NeuroLang optional dependency packaging
+  - AphasiaEvalSuite quality gate
+- **Required for PR merge**: Core tests (quality gate is advisory)
+- **Specialized**: Only runs when related paths change
+
+#### 4. **Release Pipeline** (`.github/workflows/release.yml`)
+- **When it runs**: Push of version tags (e.g., `v1.2.0`)
+- **What it does**:
+  - Runs comprehensive test suite with coverage
+  - Validates benchmarks and cognitive safety
+  - Builds and pushes Docker image
+  - Publishes to TestPyPI
+  - Creates GitHub release with changelog
+- **Required**: All tests must pass before release artifacts are built
+
 ### Pre-commit Checks
 
+Run the same commands that CI uses to catch issues early:
+
 ```bash
-# Run before committing
-pytest --cov=src --cov-fail-under=90 tests/ src/tests/unit/
+# Core tests (same as CI tests-core job)
+export PYTHONHASHSEED=0
+pytest -q --ignore=tests/load --ignore=benchmarks
+
+# Property tests (same as CI property-tests job)
+export PYTHONHASHSEED=0
+export HYPOTHESIS_PROFILE=ci
+pytest tests/property/ -q --maxfail=5
+
+# Full suite with coverage
+pytest --cov=src --cov-fail-under=90 --cov-report=term-missing -v --ignore=tests/load
 ```
+
+### CI Status Checks
+
+Each PR shows status checks for:
+- ✅ `tests-core (3.10)` - Core tests on Python 3.10 (required)
+- ✅ `tests-core (3.11)` - Core tests on Python 3.11 (required)
+- ✅ `property-tests (3.10)` - Property tests on Python 3.10 (required)
+- ✅ `property-tests (3.11)` - Property tests on Python 3.11 (required)
+- ℹ️ `tests-benchmarks` - Performance validation (informational)
+- ℹ️ `tests-eval-sapolsky` - Cognitive safety (informational)
+- ℹ️ `security-trivy` - Security scan (informational)
 
 ### Coverage Threshold
 
@@ -209,6 +273,15 @@ The coverage threshold is configured in `pyproject.toml`:
 [tool.pytest.ini_options]
 addopts = "--cov=src --cov-report=html --cov-fail-under=90"
 ```
+
+### Viewing CI Results
+
+1. **In Pull Requests**: Check the "Checks" tab to see all workflow runs
+2. **Artifacts**: Download test reports, benchmark results, and evaluation outputs
+3. **Security**: View Trivy scan results in the "Security" tab
+4. **Logs**: Click on failed jobs to see detailed test output
+
+For detailed CI architecture and design principles, see [TESTING_STRATEGY.md](TESTING_STRATEGY.md#4-continuous-integration-test-pipelines).
 
 ## Troubleshooting
 
