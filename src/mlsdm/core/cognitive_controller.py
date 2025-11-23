@@ -7,7 +7,7 @@ import psutil
 
 from ..cognition.moral_filter_v2 import MoralFilterV2
 from ..memory.multi_level_memory import MultiLevelSynapticMemory
-from ..memory.qilm_v2 import MemoryRetrieval, QILM_v2
+from ..memory.phase_entangled_lattice_memory import MemoryRetrieval, PhaseEntangledLatticeMemory
 from ..rhythm.cognitive_rhythm import CognitiveRhythm
 
 
@@ -21,7 +21,7 @@ class CognitiveController:
         self.dim = dim
         self._lock = Lock()
         self.moral = MoralFilterV2(initial_threshold=0.50)
-        self.qilm = QILM_v2(dimension=dim, capacity=20_000)
+        self.pelm = PhaseEntangledLatticeMemory(dimension=dim, capacity=20_000)
         self.rhythm = CognitiveRhythm(wake_duration=8, sleep_duration=3)
         self.synaptic = MultiLevelSynapticMemory(dimension=dim)
         self.step_counter = 0
@@ -35,6 +35,14 @@ class CognitiveController:
         self.max_processing_time_ms = max_processing_time_ms
         self.emergency_shutdown = False
         self._process = psutil.Process()
+
+    @property
+    def qilm(self):
+        """Backward compatibility alias for pelm (deprecated, use self.pelm instead).
+        
+        This property will be removed in v2.0.0. Migrate to using self.pelm directly.
+        """
+        return self.pelm
 
     def process_event(self, vector: np.ndarray, moral_value: float) -> dict[str, Any]:
         with self._lock:
@@ -63,7 +71,7 @@ class CognitiveController:
             self.synaptic.update(vector)
             # Optimization: use cached phase value
             phase_val = self._phase_cache[self.rhythm.phase]
-            self.qilm.entangle(vector.tolist(), phase=phase_val)
+            self.pelm.entangle(vector.tolist(), phase=phase_val)
             self.rhythm.step()
 
             # Check processing time
@@ -77,7 +85,7 @@ class CognitiveController:
         with self._lock:
             # Optimize: use cached phase value
             phase_val = self._phase_cache[self.rhythm.phase]
-            return self.qilm.retrieve(query_vector.tolist(), current_phase=phase_val,
+            return self.pelm.retrieve(query_vector.tolist(), current_phase=phase_val,
                                      phase_tolerance=0.15, top_k=top_k)
 
     def _check_memory_usage(self) -> float:
@@ -120,7 +128,9 @@ class CognitiveController:
                 "L2": float(np.linalg.norm(l2)),
                 "L3": float(np.linalg.norm(l3))
             },
-            "qilm_used": self.qilm.get_state_stats()["used"],
+            "pelm_used": self.pelm.get_state_stats()["used"],
+            # Backward compatibility (deprecated)
+            "qilm_used": self.pelm.get_state_stats()["used"],
             "rejected": rejected,
             "accepted": not rejected,
             "note": note
