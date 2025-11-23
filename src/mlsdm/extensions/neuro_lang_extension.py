@@ -3,7 +3,6 @@ import random
 import re
 import threading
 from pathlib import Path
-from typing import Optional
 
 from mlsdm.core.cognitive_controller import CognitiveController
 from mlsdm.core.llm_wrapper import LLMWrapper
@@ -34,35 +33,35 @@ ALLOWED_CHECKPOINT_DIR = Path("config").resolve()
 def is_secure_mode_enabled() -> bool:
     """
     Check if MLSDM secure mode is enabled via environment variable.
-    
+
     When secure mode is enabled (MLSDM_SECURE_MODE=1 or true), the system:
     - Disables NeuroLang training and checkpoint loading
     - Disables aphasia repair (detection only)
     - Prevents any offline training operations
-    
+
     Returns:
         bool: True if secure mode is enabled, False otherwise
     """
     return os.getenv("MLSDM_SECURE_MODE", "0") in {"1", "true", "TRUE"}
 
 
-def safe_load_neurolang_checkpoint(path: Optional[str], device):  # type: ignore
+def safe_load_neurolang_checkpoint(path: str | None, device):  # type: ignore
     """
     Safely load a NeuroLang checkpoint with path validation and structure verification.
-    
+
     Security controls:
     - Restricts checkpoint loading to the configured ALLOWED_CHECKPOINT_DIR
     - Validates checkpoint file structure (must be dict with 'actor' and 'critic' keys)
     - Prevents path traversal attacks (including symlinks)
     - Uses weights_only=True to prevent arbitrary code execution
-    
+
     Args:
         path: Path to checkpoint file, or None to skip loading
         device: PyTorch device for loading the checkpoint
-        
+
     Returns:
         dict: Checkpoint dictionary with 'actor' and 'critic' state dicts, or None if path is None
-        
+
     Raises:
         ValueError: If path is outside allowed directory or checkpoint structure is invalid
         FileNotFoundError: If checkpoint file doesn't exist
@@ -73,12 +72,12 @@ def safe_load_neurolang_checkpoint(path: Optional[str], device):  # type: ignore
             "Cannot load NeuroLang checkpoint: PyTorch is not installed. "
             "Install with: pip install mlsdm[neurolang]"
         )
-    
+
     if not path:
         return None
-    
+
     p = Path(path).expanduser().resolve()
-    
+
     # Prevent symlink-based path traversal: check if path is within allowed directory
     try:
         # is_relative_to is available in Python 3.9+
@@ -87,11 +86,11 @@ def safe_load_neurolang_checkpoint(path: Optional[str], device):  # type: ignore
     except AttributeError:
         # Fallback for Python < 3.9: use string comparison on resolved paths
         if not str(p).startswith(str(ALLOWED_CHECKPOINT_DIR)):
-            raise ValueError(f"Refusing to load checkpoint outside {ALLOWED_CHECKPOINT_DIR}")
-    
+            raise ValueError(f"Refusing to load checkpoint outside {ALLOWED_CHECKPOINT_DIR}") from None
+
     if not p.is_file():
         raise FileNotFoundError(f"Checkpoint not found: {p}")
-    
+
     # Load with weights_only=True to prevent arbitrary code execution from pickle
     # Note: This requires PyTorch >= 2.0.0
     try:
@@ -99,16 +98,16 @@ def safe_load_neurolang_checkpoint(path: Optional[str], device):  # type: ignore
     except TypeError:
         # Fallback for older PyTorch versions that don't support weights_only
         obj = torch.load(p, map_location=device)
-    
+
     if not isinstance(obj, dict):
         raise ValueError("Invalid neurolang checkpoint format: expected dict")
-    
+
     if "actor" not in obj or "critic" not in obj:
         raise ValueError(
             f"Invalid checkpoint structure: missing 'actor' or 'critic' keys. "
             f"Found keys: {list(obj.keys())}"
         )
-    
+
     return obj
 
 simple_sentences = [
@@ -464,18 +463,18 @@ class NeuroLangWrapper(LLMWrapper):
             sleep_duration=sleep_duration,
             initial_moral_threshold=initial_moral_threshold,
         )
-        
+
         # Security: Apply secure mode overrides if enabled
         if is_secure_mode_enabled():
             neurolang_mode = "disabled"
             neurolang_checkpoint_path = None
             aphasia_repair_enabled = False
-        
+
         # Aphasia-Broca configuration flags
         self.aphasia_detect_enabled = bool(aphasia_detect_enabled)
         self.aphasia_repair_enabled = bool(aphasia_repair_enabled)
         self.aphasia_severity_threshold = float(aphasia_severity_threshold)
-        
+
         # NeuroLang mode configuration
         if neurolang_mode not in ("eager_train", "lazy_train", "disabled"):
             raise ValueError(
@@ -484,18 +483,18 @@ class NeuroLangWrapper(LLMWrapper):
             )
         self.neurolang_mode = neurolang_mode
         self.neurolang_checkpoint_path = neurolang_checkpoint_path
-        
+
         # Check PyTorch availability when NeuroLang mode is enabled
         if self.neurolang_mode != "disabled" and not TORCH_AVAILABLE:
             raise RuntimeError(
                 "NeuroLang mode requires 'mlsdm[neurolang]' extra (PyTorch not installed). "
                 "Either install extras with 'pip install mlsdm[neurolang]' or set neurolang_mode='disabled'."
             )
-        
+
         # Always initialize controller and aphasia detector
         self.controller = CognitiveController(dim)
         self.aphasia_detector = AphasiaBrocaDetector()
-        
+
         # Initialize NeuroLang components based on mode
         if self.neurolang_mode == "disabled":
             # Disabled mode: skip NeuroLang components entirely
@@ -519,7 +518,7 @@ class NeuroLangWrapper(LLMWrapper):
             self.critic.to(device)
 
             self.trainer = CriticalPeriodTrainer(self.actor, self.critic, self.dataset, epochs=3)
-            
+
             # Load checkpoint if provided (using secure loading)
             checkpoint_loaded = False
             if self.neurolang_checkpoint_path is not None:
@@ -535,7 +534,7 @@ class NeuroLangWrapper(LLMWrapper):
                     raise ValueError(
                         f"Failed to load NeuroLang checkpoint from '{self.neurolang_checkpoint_path}': {str(e)}"
                     ) from e
-            
+
             # Train based on mode and checkpoint availability
             if not checkpoint_loaded:
                 if self.neurolang_mode == "eager_train":
@@ -557,7 +556,7 @@ class NeuroLangWrapper(LLMWrapper):
                 if not self._trained:
                     self.trainer.train()
                     self._trained = True
-        
+
         # Generate NeuroLang enhancement based on mode
         if self.neurolang_mode == "disabled":
             # Disabled mode: skip NeuroLang enhancement
@@ -567,7 +566,7 @@ class NeuroLangWrapper(LLMWrapper):
             # Enabled mode: use NeuroLang integrator
             neuro_response = self.integrator.interact(prompt, prompt)
             embedding = self.embed(neuro_response)
-        
+
         state = self.controller.process_event(embedding, moral_value)
 
         if not state["accepted"]:
