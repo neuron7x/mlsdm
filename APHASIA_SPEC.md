@@ -1,10 +1,10 @@
 # Aphasia-Broca Model Specification
 
-**Version:** 1.2.0  
+**Version:** 1.3.0  
 **Status:** Implemented  
 **Last Updated:** November 23, 2025
 
-> **Implementation Note:** As of v1.2.0, the Aphasia-Broca detection and repair functionality is now implemented as a pluggable **Speech Governor** (`AphasiaSpeechGovernor`) that integrates with the universal Speech Governance framework in `LLMWrapper`. See the [Speech Governance](#speech-governance-integration) section for details.
+> **Implementation Note:** As of v1.2.0, the Aphasia-Broca detection and repair functionality is now implemented as a pluggable **Speech Governor** (`AphasiaSpeechGovernor`) that integrates with the universal Speech Governance framework in `LLMWrapper`. As of v1.3.0, the system uses `PipelineSpeechGovernor` for composable, deterministic governance pipelines with failure isolation. See the [Speech Governance](#speech-governance-integration) section for details.
 
 ## Table of Contents
 
@@ -606,15 +606,101 @@ wrapper = LLMWrapper(
 ### Benefits of Governance Approach
 
 1. **Pluggability**: Can swap aphasia detection for other policies
-2. **Composability**: Multiple governors can be chained
+2. **Composability**: Multiple governors can be chained via `PipelineSpeechGovernor`
 3. **Transparency**: Full metadata about detection and repair
 4. **Reusability**: Same governor works with any `LLMWrapper` instance
 5. **Testability**: Governor can be unit tested in isolation
 6. **Backward Compatibility**: Existing code without governor works unchanged
+7. **Failure Isolation**: Failing governors don't break the entire pipeline
+
+### Pipeline Composition
+
+**As of MLSDM v1.3.0**, multiple speech governors can be composed into a deterministic pipeline using `PipelineSpeechGovernor`:
+
+```python
+from mlsdm.speech.governance import PipelineSpeechGovernor
+from mlsdm.extensions.neuro_lang_extension import AphasiaSpeechGovernor
+
+# Create individual governors
+aphasia_governor = AphasiaSpeechGovernor(
+    detector=detector,
+    repair_enabled=True,
+    severity_threshold=0.3,
+    llm_generate_fn=my_llm_function
+)
+
+# Compose into pipeline
+pipeline = PipelineSpeechGovernor(
+    governors=[
+        ("aphasia_broca", aphasia_governor),
+        ("style_normalizer", StyleGovernor(...)),
+        ("length_control", LengthGovernor(...)),
+    ]
+)
+
+# Use with LLMWrapper
+wrapper = LLMWrapper(
+    llm_generate_fn=my_llm_function,
+    embedding_fn=my_embed_function,
+    speech_governor=pipeline
+)
+```
+
+The pipeline:
+- Executes governors in the specified order
+- Each governor receives the output of the previous one
+- Failures are isolated: a failing governor is skipped with error logging
+- All intermediate results are recorded in metadata
+- Returns deterministic `speech_governance` structure
+
+#### Pipeline Metadata Structure
+
+When using `PipelineSpeechGovernor`, the response includes:
+
+```json
+{
+  "response": "final processed text",
+  "speech_governance": {
+    "raw_text": "original LLM draft",
+    "metadata": {
+      "pipeline": [
+        {
+          "name": "aphasia_broca",
+          "status": "ok",
+          "raw_text": "text before this governor",
+          "final_text": "text after this governor",
+          "metadata": {
+            "aphasia_report": {...},
+            "repaired": true
+          }
+        },
+        {
+          "name": "style_normalizer",
+          "status": "ok",
+          "raw_text": "text from previous step",
+          "final_text": "normalized text",
+          "metadata": {"style": "formal"}
+        }
+      ]
+    }
+  }
+}
+```
+
+If a governor fails:
+
+```json
+{
+  "name": "failing_governor",
+  "status": "error",
+  "error_type": "RuntimeError",
+  "error_message": "description of error"
+}
+```
 
 ### Migration from NeuroLangWrapper
 
-For users of `NeuroLangWrapper`, the aphasia functionality is automatically configured via the governor pattern. The existing parameters work as before:
+For users of `NeuroLangWrapper`, the aphasia functionality is automatically configured via the pipeline pattern. The existing parameters work as before:
 
 ```python
 wrapper = NeuroLangWrapper(
@@ -626,7 +712,7 @@ wrapper = NeuroLangWrapper(
 )
 ```
 
-Internally, `NeuroLangWrapper` creates an `AphasiaSpeechGovernor` and passes it to the parent `LLMWrapper` constructor.
+Internally, `NeuroLangWrapper` creates a `PipelineSpeechGovernor` with the "aphasia_broca" step and passes it to the parent `LLMWrapper` constructor. This enables future addition of other governance steps without code changes.
 
 ### Custom Speech Policies
 
