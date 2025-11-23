@@ -40,7 +40,8 @@ def safe_load_neurolang_checkpoint(path: Optional[str], device: torch.device):
     Security controls:
     - Restricts checkpoint loading to the configured ALLOWED_CHECKPOINT_DIR
     - Validates checkpoint file structure (must be dict with 'actor' and 'critic' keys)
-    - Prevents path traversal attacks
+    - Prevents path traversal attacks (including symlinks)
+    - Uses weights_only=True to prevent arbitrary code execution
     
     Args:
         path: Path to checkpoint file, or None to skip loading
@@ -57,13 +58,28 @@ def safe_load_neurolang_checkpoint(path: Optional[str], device: torch.device):
         return None
     
     p = Path(path).expanduser().resolve()
-    if not str(p).startswith(str(ALLOWED_CHECKPOINT_DIR)):
-        raise ValueError(f"Refusing to load checkpoint outside {ALLOWED_CHECKPOINT_DIR}")
+    
+    # Prevent symlink-based path traversal: check if path is within allowed directory
+    try:
+        # is_relative_to is available in Python 3.9+
+        if not p.is_relative_to(ALLOWED_CHECKPOINT_DIR):
+            raise ValueError(f"Refusing to load checkpoint outside {ALLOWED_CHECKPOINT_DIR}")
+    except AttributeError:
+        # Fallback for Python < 3.9: use string comparison on resolved paths
+        if not str(p).startswith(str(ALLOWED_CHECKPOINT_DIR)):
+            raise ValueError(f"Refusing to load checkpoint outside {ALLOWED_CHECKPOINT_DIR}")
     
     if not p.is_file():
         raise FileNotFoundError(f"Checkpoint not found: {p}")
     
-    obj = torch.load(p, map_location=device)
+    # Load with weights_only=True to prevent arbitrary code execution from pickle
+    # Note: This requires PyTorch >= 2.0.0
+    try:
+        obj = torch.load(p, map_location=device, weights_only=True)
+    except TypeError:
+        # Fallback for older PyTorch versions that don't support weights_only
+        obj = torch.load(p, map_location=device)
+    
     if not isinstance(obj, dict):
         raise ValueError("Invalid neurolang checkpoint format: expected dict")
     
