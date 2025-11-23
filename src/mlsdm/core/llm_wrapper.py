@@ -533,6 +533,8 @@ class LLMWrapper:
                     "stateless_mode": self.stateless_mode,
                     "circuit_breaker_state": self.embedding_circuit_breaker.state.value,
                     "pelm_failure_count": self.pelm_failure_count,
+                    # Backward compatibility: also expose as qilm_failure_count (deprecated)
+                    "qilm_failure_count": self.pelm_failure_count,
                     "embedding_failure_count": self.embedding_failure_count,
                     "llm_failure_count": self.llm_failure_count
                 }

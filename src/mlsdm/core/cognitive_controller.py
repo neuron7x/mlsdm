@@ -36,6 +36,11 @@ class CognitiveController:
         self.emergency_shutdown = False
         self._process = psutil.Process()
 
+    @property
+    def qilm(self):
+        """Backward compatibility alias for pelm (deprecated, will be removed in v2.0.0)."""
+        return self.pelm
+
     def process_event(self, vector: np.ndarray, moral_value: float) -> dict[str, Any]:
         with self._lock:
             # Check emergency shutdown
