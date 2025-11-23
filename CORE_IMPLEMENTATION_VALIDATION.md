@@ -577,6 +577,8 @@ Evidence:
 
 Evidence:
 - 577/577 tests passing
+  - *Verification command:* `python -m pytest tests/unit/ tests/core/ tests/property/ -v`
+  - *Test count verification:* `python -m pytest tests/unit/ tests/core/ tests/property/ --co -q`
 - No flaky tests observed (3+ consecutive runs: all pass)
 - Deterministic with fixed seeds for property tests
 

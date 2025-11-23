@@ -479,6 +479,12 @@ class AphasiaSpeechGovernor:
 | E2E Tests | ~27 | Full system validation |
 | **Total** | **577** | **Complete coverage** |
 
+**Verification Command:**
+```bash
+python -m pytest tests/unit/ tests/core/ tests/property/ --co -q
+# Output: "577 tests collected"
+```
+
 ---
 
 ## 8. Gaps and Future Work
