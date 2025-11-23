@@ -570,7 +570,7 @@ class NeuroLangWrapper(LLMWrapper):
                 governors=[
                     ("aphasia_broca", aphasia_governor),
                     # Future: add other governors here, e.g.:
-                    # ("style_normalizer", StyleGovernor(...))
+                    # ("toxicity_filter", custom_toxicity_governor)
                 ]
             )
 

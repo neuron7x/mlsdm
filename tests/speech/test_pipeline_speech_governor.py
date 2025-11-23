@@ -72,7 +72,7 @@ def test_pipeline_isolates_failing_governor(caplog):
     assert history[1]["status"] == "error"
     assert history[2]["status"] == "ok"
 
-    # перевір, що лог помилки був
+    # Verify that error was logged
     messages = " ".join(r.getMessage() for r in caplog.records)
     assert "governor=fail failed" in messages
 

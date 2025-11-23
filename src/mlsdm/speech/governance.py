@@ -80,6 +80,18 @@ class PipelineSpeechGovernor:
         self._governors: list[tuple[str, SpeechGovernor]] = list(governors)
 
     def __call__(self, *, prompt: str, draft: str, max_tokens: int) -> SpeechGovernanceResult:
+        """
+        Execute all governors in sequence with failure isolation.
+
+        Each governor receives the output of the previous one. If a governor
+        raises any exception, it is logged and skipped, and the pipeline
+        continues with the unchanged text from before that governor.
+
+        Note: Catches all exceptions (including BaseException subclasses) for
+        maximum failure isolation - this is intentional to ensure one failing
+        governor doesn't break the entire pipeline. All exceptions are logged
+        with full stack traces for debugging.
+        """
         current_text = draft
         history: list[dict[str, Any]] = []
 
@@ -90,7 +102,7 @@ class PipelineSpeechGovernor:
                     draft=current_text,
                     max_tokens=max_tokens,
                 )
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001 - intentional for failure isolation
                 pipeline_logger.exception(
                     "[SPEECH_PIPELINE] governor=%s failed: %s",
                     name,
