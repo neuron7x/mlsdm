@@ -305,13 +305,124 @@ wrapper = LLMWrapper(
   - `flags` (list): Specific issues detected
 - `repaired` (bool): Whether text was repaired
 
+### PipelineSpeechGovernor
+
+**New in v1.3.0**: Compose multiple speech governors into a deterministic pipeline with failure isolation.
+
+```python
+from mlsdm.speech.governance import PipelineSpeechGovernor
+from mlsdm.extensions.neuro_lang_extension import AphasiaSpeechGovernor
+
+# Create individual governors
+aphasia_governor = AphasiaSpeechGovernor(...)
+style_governor = FormalStyleGovernor()
+length_governor = LengthControlGovernor(max_length=500)
+
+# Compose into pipeline
+pipeline = PipelineSpeechGovernor(
+    governors=[
+        ("aphasia_broca", aphasia_governor),
+        ("style_normalizer", style_governor),
+        ("length_control", length_governor),
+    ]
+)
+
+# Use with LLMWrapper
+wrapper = LLMWrapper(
+    llm_generate_fn=my_llm,
+    embedding_fn=my_embed,
+    speech_governor=pipeline
+)
+```
+
+#### Pipeline Behavior
+
+1. **Deterministic Execution**: Governors execute in the specified order
+2. **Chained Processing**: Each governor receives the output of the previous one
+3. **Failure Isolation**: If a governor raises an exception:
+   - Error is logged to `mlsdm.speech.pipeline` logger
+   - Governor is skipped
+   - Pipeline continues with unchanged text
+   - Error details recorded in metadata
+4. **Metadata Preservation**: All intermediate results are recorded
+
+#### Response Format
+
+When using `PipelineSpeechGovernor`, the `speech_governance` key contains:
+
+```json
+{
+  "speech_governance": {
+    "raw_text": "original LLM draft",
+    "metadata": {
+      "pipeline": [
+        {
+          "name": "aphasia_broca",
+          "status": "ok",
+          "raw_text": "text before this step",
+          "final_text": "text after this step",
+          "metadata": {
+            "aphasia_report": {...},
+            "repaired": true
+          }
+        },
+        {
+          "name": "style_normalizer",
+          "status": "ok",
+          "raw_text": "text from previous step",
+          "final_text": "normalized text",
+          "metadata": {"style": "formal"}
+        },
+        {
+          "name": "failing_governor",
+          "status": "error",
+          "error_type": "RuntimeError",
+          "error_message": "error details"
+        }
+      ]
+    }
+  }
+}
+```
+
+#### Adding New Governors to Pipeline
+
+To extend the pipeline without modifying core code:
+
+```python
+# Define custom governor
+class ToxicityGovernor:
+    def __call__(self, *, prompt: str, draft: str, max_tokens: int):
+        score = self.check_toxicity(draft)
+        if score > 0.7:
+            clean_text = self.detoxify(draft)
+        else:
+            clean_text = draft
+        
+        return SpeechGovernanceResult(
+            final_text=clean_text,
+            raw_text=draft,
+            metadata={"toxicity_score": score}
+        )
+
+# Add to pipeline
+pipeline = PipelineSpeechGovernor(
+    governors=[
+        ("aphasia_broca", aphasia_governor),
+        ("toxicity_filter", ToxicityGovernor()),
+        ("style_normalizer", style_governor),
+    ]
+)
+```
+
 ### Design Principles
 
 1. **Single Responsibility**: Each governor implements one policy
-2. **Composability**: Multiple policies can be chained (implement a `CompositeGovernor`)
-3. **Observable**: Metadata provides transparency
+2. **Composability**: Multiple policies can be chained via `PipelineSpeechGovernor`
+3. **Observable**: Metadata provides transparency for each step
 4. **Non-Invasive**: Governor is optional; LLMWrapper works without it
 5. **Testable**: Pure functions enable isolated testing
+6. **Failure Isolation**: Pipeline continues even if individual governors fail
 
 ---
 
