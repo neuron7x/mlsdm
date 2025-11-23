@@ -27,7 +27,7 @@ from tenacity import (
 
 from ..cognition.moral_filter_v2 import MoralFilterV2
 from ..memory.multi_level_memory import MultiLevelSynapticMemory
-from ..memory.qilm_v2 import QILM_v2
+from ..memory.phase_entangled_lattice_memory import PhaseEntangledLatticeMemory
 from ..rhythm.cognitive_rhythm import CognitiveRhythm
 from ..speech.governance import SpeechGovernanceResult, SpeechGovernor
 
@@ -166,7 +166,7 @@ class LLMWrapper:
         self.llm_generate = llm_generate_fn
         self.embed = embedding_fn
         self.moral = MoralFilterV2(initial_threshold=initial_moral_threshold)
-        self.qilm = QILM_v2(dimension=dim, capacity=capacity)
+        self.pelm = PhaseEntangledLatticeMemory(dimension=dim, capacity=capacity)
         self.rhythm = CognitiveRhythm(wake_duration=wake_duration, sleep_duration=sleep_duration)
         self.synaptic = MultiLevelSynapticMemory(dimension=dim)
 
@@ -186,7 +186,7 @@ class LLMWrapper:
         self.rejected_count = 0
         self.accepted_count = 0
         self.consolidation_buffer: list[np.ndarray] = []
-        self.qilm_failure_count = 0
+        self.pelm_failure_count = 0
         self.embedding_failure_count = 0
         self.llm_failure_count = 0
 
@@ -239,16 +239,16 @@ class LLMWrapper:
             self.embedding_failure_count += 1
             raise e
 
-    def _safe_qilm_operation(
+    def _safe_pelm_operation(
         self,
         operation: str,
         *args: Any,
         **kwargs: Any
     ) -> Any:
         """
-        Execute QILM operation with graceful degradation.
+        Execute PELM operation with graceful degradation.
 
-        If QILM fails repeatedly, switches to stateless mode.
+        If PELM fails repeatedly, switches to stateless mode.
         Returns empty/default values in stateless mode to allow processing to continue.
         """
         # Sentinel value for failed entangle operations
@@ -264,14 +264,14 @@ class LLMWrapper:
 
         try:
             if operation == "retrieve":
-                return self.qilm.retrieve(*args, **kwargs)
+                return self.pelm.retrieve(*args, **kwargs)
             elif operation == "entangle":
-                return self.qilm.entangle(*args, **kwargs)
+                return self.pelm.entangle(*args, **kwargs)
             else:
-                raise ValueError(f"Unknown QILM operation: {operation}")
+                raise ValueError(f"Unknown PELM operation: {operation}")
         except (MemoryError, RuntimeError) as e:
-            self.qilm_failure_count += 1
-            if self.qilm_failure_count >= 3:
+            self.pelm_failure_count += 1
+            if self.pelm_failure_count >= 3:
                 # Switch to stateless mode after repeated failures
                 self.stateless_mode = True
             raise e
@@ -352,7 +352,7 @@ class LLMWrapper:
             phase_val = 0.1 if is_wake else 0.9
             memories = []
             try:
-                memories = self._safe_qilm_operation(
+                memories = self._safe_pelm_operation(
                     "retrieve",
                     query_vector=prompt_vector.tolist(),
                     current_phase=phase_val,
@@ -360,7 +360,7 @@ class LLMWrapper:
                     top_k=context_top_k
                 )
             except Exception:
-                # Continue in stateless mode if QILM fails
+                # Continue in stateless mode if PELM fails
                 if not self.stateless_mode:
                     memories = []
 
@@ -402,7 +402,7 @@ class LLMWrapper:
             if not self.stateless_mode:
                 try:
                     self.synaptic.update(prompt_vector)
-                    self._safe_qilm_operation("entangle", prompt_vector.tolist(), phase=phase_val)
+                    self._safe_pelm_operation("entangle", prompt_vector.tolist(), phase=phase_val)
                     self.consolidation_buffer.append(prompt_vector)
                 except Exception:
                     # Continue even if memory update fails
@@ -452,7 +452,7 @@ class LLMWrapper:
         sleep_phase = 0.9
         for vector in self.consolidation_buffer:
             # Re-entangle with sleep phase for long-term storage
-            self.qilm.entangle(vector.tolist(), phase=sleep_phase)
+            self.pelm.entangle(vector.tolist(), phase=sleep_phase)
 
         # Clear buffer
         self.consolidation_buffer.clear()
@@ -525,12 +525,14 @@ class LLMWrapper:
                     "L2": float(np.linalg.norm(l2)),
                     "L3": float(np.linalg.norm(l3))
                 },
-                "qilm_stats": self.qilm.get_state_stats(),
+                "pelm_stats": self.pelm.get_state_stats(),
+                # Backward compatibility: also expose as qilm_stats (deprecated)
+                "qilm_stats": self.pelm.get_state_stats(),
                 "consolidation_buffer_size": len(self.consolidation_buffer),
                 "reliability": {
                     "stateless_mode": self.stateless_mode,
                     "circuit_breaker_state": self.embedding_circuit_breaker.state.value,
-                    "qilm_failure_count": self.qilm_failure_count,
+                    "pelm_failure_count": self.pelm_failure_count,
                     "embedding_failure_count": self.embedding_failure_count,
                     "llm_failure_count": self.llm_failure_count
                 }
@@ -544,7 +546,7 @@ class LLMWrapper:
             self.accepted_count = 0
             self.consolidation_buffer.clear()
             self.moral = MoralFilterV2(initial_threshold=0.50)
-            self.qilm = QILM_v2(dimension=self.dim, capacity=self.qilm.capacity)
+            self.pelm = PhaseEntangledLatticeMemory(dimension=self.dim, capacity=self.pelm.capacity)
             self.rhythm = CognitiveRhythm(
                 wake_duration=self.rhythm.wake_duration,
                 sleep_duration=self.rhythm.sleep_duration
@@ -554,6 +556,6 @@ class LLMWrapper:
             # Reset reliability components
             self.embedding_circuit_breaker.reset()
             self.stateless_mode = False
-            self.qilm_failure_count = 0
+            self.pelm_failure_count = 0
             self.embedding_failure_count = 0
             self.llm_failure_count = 0
