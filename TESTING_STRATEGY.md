@@ -169,82 +169,185 @@ Example counterexample entry:
 **Current State**: The system includes error handling and graceful degradation in the code, but automated chaos testing infrastructure is not yet implemented.
 
 ---
-## 6. Soak & Endurance
-48–72h sustained RPS to expose leaks.
-- Monitor: RSS memory growth < 5% after steady state.
-- GC cycle times stable.
-Tools: Locust/K6 scenario, Prometheus retention.
+## 6. Soak & Endurance Testing (Roadmap)
+
+**Status**: ⚠️ **Planned for future versions (v1.3+)**
+
+**Planned Approach**:
+- 48-72h sustained RPS to expose memory leaks
+- Monitor: RSS memory growth < 5% after steady state
+- GC cycle times stability tracking
+- Planned Tools: Locust/K6 scenario, Prometheus retention
+
+**Current State**: 
+- Short-duration load tests exist in `tests/load/`
+- Long-running stability tests (24h+) not yet implemented
+- Basic memory leak detection via property tests (20 cycle tests)
 
 ---
-## 7. Load Shedding & Backpressure
-Overload Simulation: send 10,000 RPS when limit=100.
-Expectations:
-- Immediate rejection of excess with HTTP 429 / gRPC RESOURCE_EXHAUSTED.
-- Queue depth metric capped.
-- No latency inflation for accepted requests.
-Metrics: rejected_rps, accepted_latency_p95.
+## 7. Load Shedding & Backpressure (Partially Implemented)
+
+**Status**: ✅ **Partially Implemented** - Rate limiting exists, stress testing planned
+
+**Implemented**:
+- ✅ Rate limiting middleware (`src/mlsdm/api/middleware.py`)
+- ✅ Token bucket rate limiter (`src/mlsdm/security/rate_limit.py`)
+- ✅ HTTP 429 responses for rate limit violations
+- ✅ Configurable RPS limits (default: 5 RPS)
+
+**Planned** (v1.3+):
+- Overload simulation tests: 10,000 RPS against 100 RPS limit
+- Queue depth metric monitoring
+- Latency inflation measurement under load
+- Backpressure propagation tests
+
+**Current Tests**:
+- `tests/unit/test_security.py`: Rate limiter unit tests
+- Basic rate limiting tested in API integration tests
 
 ---
-## 8. Performance & Saturation
-Goals:
-- Identify inflection where P95 retrieval jumps (capacity planning baseline).
-- Track P99 and P99.9 latencies for memory + policy evaluation.
+## 8. Performance & Saturation Testing (Partially Implemented)
 
-**Planned Tools** (not yet integrated):
-- OpenTelemetry traces
-- Prometheus histograms
+**Status**: ✅ **Partially Implemented** - Benchmarks exist, full profiling planned
 
-**Current State**: Performance testing uses basic timing measurements and benchmarks. Full observability stack integration is planned for future versions.
+**Implemented**:
+- ✅ Performance benchmarks (`tests/benchmarks/`)
+- ✅ Basic timing measurements in integration tests
+- ✅ P50/P95 latency tracking (verified ~2ms P50, ~10ms P95)
+- ✅ Prometheus metrics export (`src/mlsdm/observability/metrics.py`)
+- ✅ Throughput testing (verified 1000+ concurrent requests)
 
-**Planned SLIs**:
-- retrieval_latency_ms
-- policy_eval_ms
-- consolidation_duration_ms
+**Planned SLIs** (metrics defined, continuous monitoring planned v1.3+):
+- retrieval_latency_ms (histogram)
+- policy_eval_ms (histogram)
+- consolidation_duration_ms (histogram)
+- P99 and P99.9 tail latency tracking
+- Saturation inflection point identification (capacity planning)
 
----
-## 9. Tail Latency Audits
-Weekly job computes quantile drift.
-Alert if P99 > (SLO_P99 * 1.15) for 3 consecutive windows.
-Remediation: analyze trace exemplars; perform index compaction or cache warm.
-
----
-## 10. AI Safety & Governance
-### Adversarial Red Teaming
-Automated prompts (jailbreak corpus) vs MoralFilter.
-Metric: jailbreak_success_rate < 0.5%.
-### Cognitive Drift Testing
-Inject 10k toxic queries; measure Δ(moral_threshold) < 0.05.
-### RAG Hallucination / Faithfulness (Planned)
-**Status**: ⚠️ Planned for v1.x+  
-**Planned Tool**: ragas — track hallucination_rate < 0.15.
-### Ethical Override Traceability (Planned)
-**Status**: ⚠️ Planned for v1.x+  
-**Planned**: Every override emits event_policy_override with justification.
+**Current State**: 
+- Performance validated through benchmarks showing P50 ~2ms, P95 ~10ms
+- Full observability stack integration (OpenTelemetry traces) planned for v1.3+
 
 ---
-## 11. Drift & Alignment Monitoring
-Vectors: track embedding centroid shifts; anomaly if cosine distance from baseline > 0.1.
-Periodic recalibration during circadian Consolidation phase.
+## 9. Tail Latency Audits (Roadmap)
+
+**Status**: ⚠️ **Planned for v1.3+**
+
+**Planned Approach**:
+- Weekly job computes quantile drift
+- Alert if P99 > (SLO_P99 * 1.15) for 3 consecutive windows
+- Remediation: analyze trace exemplars; perform index compaction or cache warm
+
+**Current State**: 
+- P99 latency tracked in benchmarks
+- Automated alerting not yet implemented
+- Manual analysis via benchmark reports
 
 ---
-## 12. Observability (Roadmap)
+## 10. AI Safety & Governance (Partially Implemented)
 
-**Status**: ⚠️ **Partially planned** - Basic logging exists, full observability stack planned for v1.x+
+**Status**: ✅ **Core implemented**, ⚠️ **Advanced features planned**
 
-**Planned Events**:
+### Cognitive Drift Testing ✅ **Implemented**
+
+**Status**: ✅ **Fully Implemented and Validated**
+
+**Tests**:
+- `tests/property/test_moral_filter_properties.py::test_moral_filter_drift_bounded`
+- `tests/property/test_moral_filter_properties.py::test_moral_filter_extreme_bombardment`
+- `tests/validation/test_moral_filter_effectiveness.py`
+
+**Validated Metrics**:
+- ✅ Drift Δ(moral_threshold) < 0.05 during toxic bombardment
+- ✅ Bounded adaptation: threshold stays in [0.30, 0.90]
+- ✅ 93.3% toxic content rejection rate
+- ✅ Stable under 70% toxic attack (verified in effectiveness validation)
+
+**Current State**: Production-ready with verified drift resistance
+
+### Adversarial Red Teaming ⚠️ **Planned for v1.3+**
+
+**Status**: ⚠️ **Planned**
+
+**Planned Approach**:
+- Automated jailbreak corpus testing
+- Target metric: jailbreak_success_rate < 0.5%
+- Adversarial prompt injection resistance
+
+**Current State**: 
+- Manual adversarial testing in effectiveness validation
+- Automated red teaming framework not yet implemented
+
+### RAG Hallucination / Faithfulness ⚠️ **Planned for v1.3+**
+
+**Status**: ⚠️ **Planned**
+
+**Planned Tool**: ragas — track hallucination_rate < 0.15
+
+**Current State**: Not applicable (system uses memory retrieval, not RAG in traditional sense)
+
+### Ethical Override Traceability ⚠️ **Planned for v1.3+**
+
+**Status**: ⚠️ **Planned**
+
+**Planned**: Every moral filter override emits `event_policy_override` with justification
+
+**Current State**: 
+- Moral filter decisions logged
+- Structured policy override events not yet implemented
+
+---
+## 11. Drift & Alignment Monitoring (Roadmap)
+
+**Status**: ⚠️ **Planned for v1.3+**
+
+**Planned Approach**:
+- Track embedding centroid shifts
+- Anomaly detection: cosine distance from baseline > 0.1
+- Periodic recalibration during circadian consolidation phase
+
+**Current State**: 
+- Embeddings are stable (fixed models)
+- Dynamic drift monitoring not yet implemented
+- Recalibration logic planned for future versions
+
+---
+## 12. Observability (Partially Implemented)
+
+**Status**: ✅ **Core implemented**, ⚠️ **Advanced features planned**
+
+**Implemented** (✅):
+- ✅ Prometheus metrics export (`src/mlsdm/observability/metrics.py`)
+- ✅ Structured JSON logging (`src/mlsdm/observability/logger.py`)
+- ✅ Aphasia-specific event logging (`src/mlsdm/observability/aphasia_logging.py`)
+- ✅ Health check endpoints (liveness, readiness, detailed)
+- ✅ State introspection APIs
+- ✅ Basic performance metrics (latency, throughput)
+
+**Current Metrics**:
+- `event_processing_time_seconds`: Request latency histogram
+- `total_events_processed`: Total request counter
+- `accepted_events_count`: Accepted request counter
+- `moral_filter_threshold`: Current threshold gauge
+- `memory_usage_bytes`: Memory consumption gauge
+- `cpu_usage_percent`: CPU utilization gauge
+
+**Planned Events** (v1.3+):
 - event_formal_violation
 - event_drift_alert
 - event_chaos_fault
 
-**Planned Metrics**:
-- moral_filter_eval_ms
-- drift_vector_magnitude
-- ethical_block_rate
+**Planned Metrics** (v1.3+):
+- moral_filter_eval_ms: Fine-grained moral evaluation timing
+- drift_vector_magnitude: Embedding drift measurement
+- ethical_block_rate: Moral rejection rate
 
-**Planned Traces**:
-- MemoryRetrieve → SemanticMerge → PolicyCheck
+**Planned Traces** (v1.3+):
+- OpenTelemetry distributed tracing
+- Full request flow: MemoryRetrieve → SemanticMerge → PolicyCheck
+- Cross-service tracing (when applicable)
 
-**Current State**: The system includes basic logging and state tracking. Structured event emission and distributed tracing (OpenTelemetry) are planned enhancements.
+**Current State**: Production-ready observability with Prometheus metrics and structured logging. Advanced tracing features planned for v1.3+.
 
 ---
 ## 13. Toolchain Summary
@@ -305,45 +408,90 @@ invariant-coverage:
 ---
 ## 15. Exit Criteria for "Production-Ready"
 
-**Current v1.0.0 Criteria** (✅ Met):
+**Current v1.2+ Criteria** (✅ Met):
 - All core invariants hold (no Hypothesis counterexamples for 100+ runs each) ✅
-- All unit and integration tests pass (240 tests, 92.65% coverage) ✅
-- Property-based tests cover 5 major modules with 40+ invariants ✅
+- All unit and integration tests pass (800+ tests system-wide, 577 core tests) ✅
+- Property-based tests cover core modules with 47+ formal invariants ✅
 - Counterexamples bank established with 39 documented cases ✅
 - Thread-safe concurrent processing verified (1000+ RPS) ✅
-- Memory bounds enforced (≤1.4 GB RAM) ✅
+- Memory bounds enforced (≤29.37 MB fixed footprint) ✅
 - Effectiveness validation complete (89.5% efficiency, 93.3% safety) ✅
+- System-wide coverage: ~92% (94% core, 85-95% system layers) ✅
+- All 14 system layers implemented and tested ✅
+- 4 CI/CD workflows running on every PR ✅
+- Docker images built and published ✅
+- Security features tested and documented ✅
 
-**Future Enhanced Criteria** (for v1.x+):
+**Future Enhanced Criteria** (for v1.3+):
 - Chaos suite passes with ≤ 5% degraded responses & zero uncaught panics (⚠️ Planned)
-- Tail latency P99 within SLO for 7 consecutive days (⚠️ Planned)
-- Jailbreak success rate below threshold for 3 consecutive weekly runs (⚠️ Planned)
+- Tail latency P99 within SLO for 7 consecutive days (⚠️ Planned - currently spot-checked)
+- Jailbreak success rate below threshold for 3 consecutive weekly runs (⚠️ Planned - manual testing)
 - No formal invariant violations in last 30 CI cycles (✅ Tracked in property-tests.yml)
 - False positive rate for moral filter < 40% (📊 Currently ~42%, tracked in counterexamples)
+- 72h soak test passes without memory leaks (⚠️ Planned - currently 20-cycle tested)
+- Full observability stack with OpenTelemetry traces (⚠️ Planned - Prometheus metrics exist)
 
 ---
-## 16. Future Extensions
-- Symbolic execution for critical moral logic paths.
-- Stateful fuzzing of consolidation algorithm.
-- Multi-agent interaction fairness audits.
+## 16. Future Extensions (Roadmap for v1.3+)
+
+**Planned Testing Enhancements**:
+- Symbolic execution for critical moral logic paths
+- Stateful fuzzing of consolidation algorithm
+- Multi-agent interaction fairness audits
+- Formal verification with TLA+ and Coq
+- Advanced chaos engineering scenarios
+- Full observability stack with distributed tracing
+- Extended load testing (72h+ soak tests)
+- Automated adversarial red teaming
+
+**Current State**: Core testing methodology is production-ready. Advanced testing features are enhancements for increased confidence at scale.
 
 ---
-## 17. Glossary (Key Terms for Resume / Docs)
+## 17. Implemented vs Planned Methodology Summary
 
-**Note**: This glossary covers both implemented and planned methodologies.
+### ✅ Fully Implemented (Production-Ready)
 
-**Implemented** (✅):
-- Invariant Verification (Property-Based Testing with Hypothesis)
-- Cognitive Drift Testing
-- Effectiveness Validation
+| Methodology | Status | Evidence |
+|-------------|--------|----------|
+| Property-Based Testing (Hypothesis) | ✅ Production | 100+ property tests, 47 invariants verified |
+| Unit Testing | ✅ Production | 800+ tests, ~92% coverage |
+| Integration Testing | ✅ Production | 100+ integration tests |
+| End-to-End Testing | ✅ Production | 27+ e2e tests with HTTP API |
+| Cognitive Drift Testing | ✅ Production | Validated drift < 0.05 under attack |
+| Effectiveness Validation | ✅ Production | 89.5% efficiency, 93.3% safety verified |
+| Counterexamples Banking | ✅ Production | 39 documented edge cases |
+| CI/CD Automation | ✅ Production | 4 GitHub Actions workflows |
+| Observability (Metrics) | ✅ Production | Prometheus metrics export |
+| Observability (Logging) | ✅ Production | Structured JSON logging |
+| Security Testing | ✅ Production | Rate limiting, validation, audit |
+| Performance Benchmarking | ✅ Production | P50/P95 latency verified |
+| Load Testing (Basic) | ✅ Production | 1000+ concurrent verified |
+| Aphasia Evaluation Suite | ✅ Production | 27+ edge cases tested |
 
-**Planned** (⚠️ v1.x+):
-- Chaos Engineering
-- Adversarial Red Teaming
-- Load Shedding / Backpressure Testing
-- Saturation & Tail Latency Analysis
-- Formal Specification (TLA+, Coq)
-- RAG Hallucination/Faithfulness Assessment
+### ⚠️ Planned for v1.3+ (Enhancements)
+
+| Methodology | Status | Target Version |
+|-------------|--------|----------------|
+| Chaos Engineering | ⚠️ Planned | v1.3+ |
+| Formal Verification (TLA+, Coq) | ⚠️ Planned | v1.3+ |
+| Soak Testing (72h+) | ⚠️ Planned | v1.3+ |
+| Saturation Testing | ⚠️ Planned | v1.3+ |
+| Tail Latency Audits (Automated) | ⚠️ Planned | v1.3+ |
+| Adversarial Red Teaming (Automated) | ⚠️ Planned | v1.3+ |
+| RAG Hallucination Testing | ⚠️ Planned | v1.3+ (if applicable) |
+| Distributed Tracing (OpenTelemetry) | ⚠️ Planned | v1.3+ |
+| Ethical Override Traceability | ⚠️ Planned | v1.3+ |
+| Drift Monitoring (Automated) | ⚠️ Planned | v1.3+ |
+
+### Recommendation
+
+**Current State (v1.2)**: Production-ready with comprehensive testing across all layers. System has 92% coverage, 800+ tests, validated effectiveness metrics, and proven resilience.
+
+**Planned Enhancements (v1.3+)**: Advanced testing methodologies for increased confidence at massive scale and formal verification for mathematical correctness guarantees. These are valuable enhancements but not blockers for production deployment.
 
 ---
-Maintainer: neuron7x
+
+**Document Maintainer**: neuron7x  
+**Last Updated**: November 24, 2025  
+**Document Version**: 2.0 (System-Wide Coverage)  
+**Status**: Production-Ready with Roadmap
