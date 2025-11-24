@@ -24,6 +24,11 @@ class PhaseEntangledLatticeMemory:
     by quantum concepts but operates entirely in classical embedding space.
     """
     
+    # Performance optimization: checksum interval
+    # Set to 1 for maximum safety (check every operation)
+    # Set to 100 for better performance (check every 100 operations)
+    CHECKSUM_INTERVAL = 100
+    
     def __init__(self, dimension: int = 384, capacity: int = 20000) -> None:
         # Validate inputs
         if dimension <= 0:
@@ -81,8 +86,9 @@ class PhaseEntangledLatticeMemory:
             self.size = min(self.size + 1, self.capacity)
 
             # Optimize: compute checksum periodically instead of every operation
-            # Update every 100 operations or when size changes significantly
-            if self.size % 100 == 0 or self.size < 100:
+            # For maximum safety, set CHECKSUM_INTERVAL = 1 at class level
+            # For better performance, use CHECKSUM_INTERVAL = 100 (default)
+            if self.size % self.CHECKSUM_INTERVAL == 0 or self.size < self.CHECKSUM_INTERVAL:
                 self._checksum = self._compute_checksum()
 
             return idx

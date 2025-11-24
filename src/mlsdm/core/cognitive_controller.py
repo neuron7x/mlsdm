@@ -12,6 +12,11 @@ from ..rhythm.cognitive_rhythm import CognitiveRhythm
 
 
 class CognitiveController:
+    # Performance optimization: memory check interval
+    # Set to 1 for maximum safety (check every operation)
+    # Set to 100 for better performance (check every 100 operations)
+    MEMORY_CHECK_INTERVAL = 100
+    
     def __init__(
         self,
         dim: int = 384,
@@ -37,9 +42,7 @@ class CognitiveController:
         self._process = psutil.Process()
         # Optimize: check memory only periodically (every N operations)
         # Start at interval to force check on first operation for safety
-        self._memory_check_interval = 100
-        self._memory_check_counter = 100  # Force check on first operation
-        self._last_memory_mb = 0.0
+        self._memory_check_counter = self.MEMORY_CHECK_INTERVAL  # Force check on first operation
 
     @property
     def qilm(self):
@@ -62,10 +65,9 @@ class CognitiveController:
 
             # Optimize: check memory usage periodically instead of every request
             self._memory_check_counter += 1
-            if self._memory_check_counter >= self._memory_check_interval:
+            if self._memory_check_counter >= self.MEMORY_CHECK_INTERVAL:
                 self._memory_check_counter = 0
                 memory_mb = self._check_memory_usage()
-                self._last_memory_mb = memory_mb
                 if memory_mb > self.memory_threshold_mb:
                     self.emergency_shutdown = True
                     return self._build_state(rejected=True, note="emergency shutdown: memory exceeded")
