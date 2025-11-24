@@ -5,10 +5,13 @@ type safety and validation. It ensures all configuration parameters are
 properly validated before use.
 """
 
+import logging
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from typing_extensions import Self
+
+logger = logging.getLogger(__name__)
 
 
 class MultiLevelMemoryConfig(BaseModel):
@@ -205,9 +208,12 @@ class CognitiveRhythmConfig(BaseModel):
         if wake is not None and sleep is not None:
             ratio = wake / sleep
             if ratio < 1.0 or ratio > 10.0:
-                # Note: This is a warning, not an error
-                # In production, consider logging this
-                pass
+                # Log warning for unusual wake/sleep ratios
+                logger.warning(
+                    "Unusual wake/sleep ratio detected: %.2f (wake=%d, sleep=%d). "
+                    "Recommended range is 1.0-10.0 for optimal cognitive rhythm balance.",
+                    ratio, wake, sleep
+                )
 
         return self
 
