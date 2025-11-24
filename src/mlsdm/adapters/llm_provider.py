@@ -169,7 +169,8 @@ class AnthropicProvider(LLMProvider):
             )
 
             if response.content and len(response.content) > 0:
-                return response.content[0].text
+                text_content = response.content[0].text
+                return str(text_content) if text_content is not None else ""
             return ""
 
         except Exception as e:

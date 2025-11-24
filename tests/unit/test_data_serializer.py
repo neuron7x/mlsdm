@@ -11,7 +11,7 @@ import tempfile
 import numpy as np
 import pytest
 
-from mlsdm.utils.data_serializer import DataSerializer
+from mlsdm.utils.data_serializer import DataSerializer, save_arrays
 
 
 class TestDataSerializerJSON:
@@ -69,6 +69,54 @@ class TestDataSerializerJSON:
             loaded = DataSerializer.load(filepath)
 
             assert loaded == data
+        finally:
+            if os.path.exists(filepath):
+                os.unlink(filepath)
+
+
+class TestSaveArraysTypedWrapper:
+    """Test the typed wrapper for numpy.savez."""
+
+    def test_save_arrays_roundtrip(self):
+        """Test save_arrays function with type-safe array saving."""
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.npz', delete=False) as f:
+            filepath = f.name
+
+        try:
+            arrays = {
+                "a": np.arange(5, dtype=np.float32),
+                "b": np.ones((2, 2), dtype=np.int64),
+            }
+
+            save_arrays(filepath, arrays)
+
+            loaded = np.load(filepath)
+            assert set(loaded.files) == {"a", "b"}
+            np.testing.assert_array_equal(loaded["a"], arrays["a"])
+            np.testing.assert_array_equal(loaded["b"], arrays["b"])
+        finally:
+            if os.path.exists(filepath):
+                os.unlink(filepath)
+
+    def test_save_arrays_multiple_types(self):
+        """Test save_arrays with different numpy dtypes."""
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.npz', delete=False) as f:
+            filepath = f.name
+
+        try:
+            arrays = {
+                "float32": np.array([1.0, 2.0, 3.0], dtype=np.float32),
+                "float64": np.array([4.0, 5.0], dtype=np.float64),
+                "int32": np.array([6, 7, 8], dtype=np.int32),
+                "bool": np.array([True, False, True], dtype=bool),
+            }
+
+            save_arrays(filepath, arrays)
+
+            loaded = np.load(filepath)
+            for key, expected in arrays.items():
+                np.testing.assert_array_equal(loaded[key], expected)
+                assert loaded[key].dtype == expected.dtype
         finally:
             if os.path.exists(filepath):
                 os.unlink(filepath)
