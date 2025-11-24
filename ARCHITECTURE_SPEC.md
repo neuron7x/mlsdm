@@ -43,57 +43,226 @@ MLSDM (Multi-Level Synaptic Dynamic Memory) Governed Cognitive Memory is a neuro
 
 ## System Architecture
 
-### Architectural Layers
+### Full System Architecture
+
+MLSDM is a multi-layered system spanning from low-level cognitive primitives to production-ready HTTP services, client SDKs, and operational infrastructure. All layers are currently implemented and operational.
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    Application Layer                         │
-│  (LLMWrapper - Universal LLM Integration Interface)          │
-└──────────────────────────┬──────────────────────────────────┘
-                           │
-┌──────────────────────────▼──────────────────────────────────┐
-│                   Orchestration Layer                        │
-│        (CognitiveController - Thread-Safe Coordinator)       │
-└─────┬──────────┬──────────┬──────────┬─────────────────────┘
-      │          │          │          │
-┌─────▼────┐ ┌──▼────┐ ┌───▼────┐ ┌──▼─────┐
-│  Moral   │ │Rhythm │ │ Memory │ │Ontology│
-│ Filter   │ │Manager│ │ System │ │Matcher │
-│   V2     │ │       │ │        │ │        │
-└──────────┘ └───────┘ └────────┘ └────────┘
-                           │
-              ┌────────────┴────────────┐
-              │                         │
-         ┌────▼─────┐            ┌─────▼──────┐
-         │  Phase-Entangled Lattice Memory (PELM, formerly QILM_v2) │            │Multi-Level │
-         │ (Phase   │            │ Synaptic   │
-         │Entangled)│            │  Memory    │
-         └──────────┘            └────────────┘
+┌───────────────────────────────────────────────────────────────────┐
+│                    Client & Integration Layer                      │
+│  • SDK Client (src/mlsdm/sdk/neuro_engine_client.py)             │
+│  • Direct Python Integration (LLMWrapper, NeuroLangWrapper)       │
+│  • LLM Provider Adapters (OpenAI, Local Stub via Factory)         │
+└─────────────────────────────┬─────────────────────────────────────┘
+                              │
+┌─────────────────────────────▼─────────────────────────────────────┐
+│                      Service & API Layer                           │
+│  • FastAPI Application (src/mlsdm/api/app.py)                     │
+│  • Health Endpoints (health, lifecycle)                           │
+│  • Neuro Engine Service (src/mlsdm/service/)                      │
+│  • API Middleware (rate limiting, security, observability)        │
+└─────────────────────────────┬─────────────────────────────────────┘
+                              │
+┌─────────────────────────────▼─────────────────────────────────────┐
+│                   Engine & Routing Layer                           │
+│  • NeuroCognitiveEngine (src/mlsdm/engine/neuro_cognitive_engine.py) │
+│  • LLM Router (src/mlsdm/router/llm_router.py)                    │
+│  • Engine Factory (src/mlsdm/engine/factory.py)                   │
+└─────────────────────────────┬─────────────────────────────────────┘
+                              │
+┌─────────────────────────────▼─────────────────────────────────────┐
+│              Application/Wrapper Layer (Cognitive Interface)       │
+│  • LLMWrapper (src/mlsdm/core/llm_wrapper.py) - base wrapper     │
+│  • NeuroLangWrapper (src/mlsdm/extensions/neuro_lang_extension.py) │
+│  • Speech Governance (src/mlsdm/speech/governance.py)             │
+└─────────────────────────────┬─────────────────────────────────────┘
+                              │
+┌─────────────────────────────▼─────────────────────────────────────┐
+│              Orchestration Layer (Cognitive Controller)            │
+│  • CognitiveController (src/mlsdm/core/cognitive_controller.py)  │
+│    - Thread-safe coordination of all cognitive subsystems         │
+│    - State management and metrics aggregation                     │
+│  • Memory Manager (src/mlsdm/core/memory_manager.py)             │
+└───┬─────────┬──────────┬──────────┬──────────┬────────────────────┘
+    │         │          │          │          │
+┌───▼────┐ ┌─▼─────┐ ┌──▼─────┐ ┌──▼──────┐ ┌▼────────┐
+│ Moral  │ │Rhythm │ │ Memory │ │Ontology │ │ Speech  │
+│Filter  │ │Manager│ │ System │ │ Matcher │ │Governor │
+│  V2    │ │       │ │        │ │         │ │         │
+└────────┘ └───────┘ └────┬───┘ └─────────┘ └─────────┘
+                          │
+           ┌──────────────┴──────────────┐
+           │                             │
+    ┌──────▼────────┐           ┌────────▼──────────┐
+    │ Phase-Entangled│           │  Multi-Level      │
+    │ Lattice Memory │           │  Synaptic Memory  │
+    │ (PELM)         │           │  (L1/L2/L3)       │
+    └────────────────┘           └───────────────────┘
+
+┌───────────────────────────────────────────────────────────────────┐
+│            Cross-Cutting Infrastructure Layers                     │
+│                                                                    │
+│  Observability (src/mlsdm/observability/):                        │
+│    • Metrics export (Prometheus)                                  │
+│    • Structured logging                                           │
+│    • Aphasia-specific logging                                     │
+│                                                                    │
+│  Security (src/mlsdm/security/):                                  │
+│    • Rate limiting                                                │
+│    • Payload scrubbing                                            │
+│    • Input validation (src/mlsdm/utils/input_validator.py)       │
+│    • Security logging                                             │
+│                                                                    │
+│  Configuration & Utilities (src/mlsdm/utils/):                    │
+│    • Config loader & validator                                    │
+│    • Config schema enforcement                                    │
+│    • Data serialization                                           │
+│    • Coherence/safety metrics                                     │
+│                                                                    │
+│  Deployment (src/mlsdm/deploy/, config/, docker/):               │
+│    • Canary manager                                               │
+│    • Docker images                                                │
+│    • Production configs                                           │
+└───────────────────────────────────────────────────────────────────┘
 ```
 
 ### Component Hierarchy
 
-1. **Application Layer** (`src/mlsdm/core/llm_wrapper.py`)
-   - User-facing API for LLM integration
-   - Handles prompt processing and response generation
-   - Manages max token enforcement and context retrieval
+1. **Client & Integration Layer**
+   - **SDK Client** (`src/mlsdm/sdk/neuro_engine_client.py`): HTTP client for remote engine access
+   - **LLM Adapters** (`src/mlsdm/adapters/`): Pluggable LLM providers
+     - `openai_adapter.py`: OpenAI integration
+     - `local_stub_adapter.py`: Local testing stub
+     - `provider_factory.py`: Factory pattern for adapter selection
+   - **Direct Integration**: Import LLMWrapper or NeuroLangWrapper directly in Python apps
 
-2. **Orchestration Layer** (`src/mlsdm/core/cognitive_controller.py`)
-   - Coordinates all cognitive subsystems
-   - Ensures thread-safe event processing
-   - Manages state transitions and metrics collection
+2. **Service & API Layer** (`src/mlsdm/api/`, `src/mlsdm/service/`)
+   - **FastAPI Application** (`app.py`): HTTP/JSON REST API
+   - **Health Endpoints** (`health.py`): Liveness, readiness, detailed health checks
+   - **Lifecycle Management** (`lifecycle.py`): Startup/shutdown hooks
+   - **Middleware** (`middleware.py`): Rate limiting, authentication, observability
+   - **Neuro Engine Service** (`service/neuro_engine_service.py`): Service wrapper
 
-3. **Cognitive Subsystems**
-   - **Moral Filter V2**: Adaptive moral threshold evaluation
-   - **Cognitive Rhythm**: Wake/sleep cycle management
-   - **Memory System**: Multi-level storage with phase entanglement
-   - **Ontology Matcher**: Semantic classification and matching
+3. **Engine & Routing Layer** (`src/mlsdm/engine/`, `src/mlsdm/router/`)
+   - **NeuroCognitiveEngine** (`engine/neuro_cognitive_engine.py`): High-level cognitive API
+   - **LLM Router** (`router/llm_router.py`): Multi-provider routing logic
+   - **Engine Factory** (`engine/factory.py`): Engine instantiation patterns
 
-4. **Language Processing Extensions** (`src/mlsdm/extensions/neuro_lang_extension.py` - in development)
-   - **NeuroLang Modules**: Bio-inspired language processing
-   - **Aphasia-Broca Detector**: Speech pathology detection and correction
-   
-   > **Note:** Implementation will be added in a separate PR following this specification update.
+4. **Application/Wrapper Layer** (`src/mlsdm/core/`, `src/mlsdm/extensions/`, `src/mlsdm/speech/`)
+   - **LLMWrapper** (`core/llm_wrapper.py`): Universal LLM wrapper with cognitive governance
+     - Accepts user-provided LLM and embedding functions
+     - Enforces biological constraints (memory, rhythm, moral)
+     - Manages context retrieval and injection
+   - **NeuroLangWrapper** (`extensions/neuro_lang_extension.py`): Extended wrapper with language processing
+     - Adds NeuroLang grammar enrichment
+     - Includes Aphasia-Broca detection and repair
+     - Supports configurable detection/repair modes
+   - **Speech Governance** (`speech/governance.py`): Pluggable linguistic policy framework
+     - Base `SpeechGovernanceResult` protocol
+     - Enables custom output control policies
+
+5. **Orchestration Layer** (`src/mlsdm/core/`)
+   - **CognitiveController** (`cognitive_controller.py`): Thread-safe orchestrator
+     - Coordinates moral filtering, rhythm, memory, ontology
+     - Ensures atomic state transitions
+     - Aggregates metrics from all subsystems
+   - **Memory Manager** (`memory_manager.py`): Memory lifecycle management
+
+6. **Cognitive Subsystems** (`src/mlsdm/cognition/`, `src/mlsdm/rhythm/`, `src/mlsdm/memory/`, `src/mlsdm/speech/`)
+   - **Moral Filter V2** (`cognition/moral_filter_v2.py`): Adaptive moral threshold with EMA
+   - **Cognitive Rhythm** (`rhythm/cognitive_rhythm.py`): Wake/sleep cycle state machine
+   - **Memory System**: Dual-memory architecture
+     - **PELM** (`memory/phase_entangled_lattice_memory.py`): Phase-aware retrieval
+     - **MultiLevelMemory** (`memory/multi_level_memory.py`): L1/L2/L3 decay cascade
+   - **Ontology Matcher** (`cognition/ontology_matcher.py`): Semantic classification
+   - **Speech Governor**: Pluggable output control (used by Aphasia-Broca)
+
+7. **LLM Integration** (`src/mlsdm/adapters/`, `src/mlsdm/extensions/`)
+   - **Provider Adapters**: OpenAI, local stub, extensible factory
+   - **NeuroLang Extension**: Bio-inspired language processing with:
+     - `InnateGrammarModule`: Recursive grammar templates
+     - `CriticalPeriodTrainer`: Language acquisition modeling
+     - `ModularLanguageProcessor`: Production/comprehension separation
+     - `SocialIntegrator`: Pragmatic intent simulation
+     - `AphasiaBrocaDetector`: Telegraphic speech detection
+
+8. **Observability Infrastructure** (`src/mlsdm/observability/`)
+   - **Metrics** (`metrics.py`): Prometheus-compatible metric export
+   - **Structured Logging** (`logger.py`): JSON-formatted logs with context
+   - **Aphasia Logging** (`aphasia_logging.py`): Domain-specific observability
+   - **Exporters** (`exporters.py`): Metric aggregation and export
+
+9. **Security Infrastructure** (`src/mlsdm/security/`, `src/mlsdm/utils/`)
+   - **Rate Limiting** (`security/rate_limit.py`): Token bucket rate limiter
+   - **Payload Scrubbing** (`security/payload_scrubber.py`): PII removal
+   - **Input Validation** (`utils/input_validator.py`): Schema-based validation
+   - **Security Logging** (`utils/security_logger.py`): Audit trail
+
+10. **Configuration & Utilities** (`src/mlsdm/utils/`)
+    - **Config Loader** (`config_loader.py`): YAML-based configuration
+    - **Config Validator** (`config_validator.py`): Schema enforcement
+    - **Config Schema** (`config_schema.py`): Pydantic models for validation
+    - **Data Serialization** (`data_serializer.py`): Event serialization
+    - **Coherence/Safety Metrics** (`coherence_safety_metrics.py`): Domain metrics
+
+11. **Deployment Infrastructure** (`src/mlsdm/deploy/`, `config/`, `docker/`, `deploy/`)
+    - **Canary Manager** (`deploy/canary_manager.py`): Gradual rollout logic
+    - **Docker Images**: Production containerization (Dockerfile.neuro-engine-service)
+    - **Configuration Profiles**: dev, staging, production YAML configs
+    - **Deployment Manifests**: Kubernetes, docker-compose examples
+
+12. **Testing Infrastructure** (`tests/`)
+    - **Unit Tests** (`tests/unit/`): Component-level tests (90%+ coverage)
+    - **Integration Tests** (`tests/integration/`): Cross-component integration scenarios
+    - **End-to-End Tests** (`tests/e2e/`): Full system behavior with stub backends
+    - **Property Tests** (`tests/property/`): Hypothesis-based invariant verification
+      - `test_invariants_neuro_engine.py`: Safety, liveness, metamorphic properties
+      - `test_invariants_memory.py`: Memory system invariants
+      - `counterexamples/`: Known edge cases and failure modes
+    - **Validation Tests** (`tests/validation/`): Effectiveness validation suites
+      - `test_wake_sleep_effectiveness.py`: Cognitive rhythm efficiency
+      - `test_moral_filter_effectiveness.py`: Moral filtering accuracy
+      - `test_aphasia_detection.py`: Speech pathology detection
+    - **Evaluation Tests** (`tests/eval/`): Scientific validation
+      - `aphasia_eval_suite.py`: Comprehensive aphasia test battery
+      - `sapolsky_validation_suite.py`: Schizophasia detection tests
+      - `test_llm_ab_testing.py`: A/B testing framework
+      - `test_canary_manager.py`: Deployment rollout tests
+    - **Security Tests** (`tests/security/`): Security feature validation
+    - **Speech Tests** (`tests/speech/`): Speech governance validation
+    - **Load Tests** (`tests/load/`): Performance and scalability tests
+    - **Benchmarks** (`tests/benchmarks/`): Performance baseline comparisons
+    - **Observability Tests** (`tests/observability/`): Metrics and logging validation
+    - **Extension Tests** (`tests/extensions/`): NeuroLang and extension validation
+
+13. **Scripts & Tooling** (`scripts/`)
+    - **Effectiveness Charts** (`generate_effectiveness_charts.py`): Visualization generation
+    - **Aphasia Evaluation** (`run_aphasia_eval.py`): Aphasia detection runner
+    - **Security Audit** (`security_audit.py`): Security posture assessment
+    - **NeuroLang Training** (`train_neurolang_grammar.py`): Grammar model training
+    - **Core Verification** (`verify_core_implementation.sh`): Implementation validation
+    - **Security Features Test** (`test_security_features.py`): Security integration tests
+    - **NeuroLang Smoke Test** (`smoke_neurolang_wrapper.py`): Quick validation
+
+14. **CI/CD Infrastructure** (`.github/workflows/`)
+    - **Neuro Cognitive Engine CI** (`ci-neuro-cognitive-engine.yml`): Core test suite
+      - Unit, integration, e2e tests
+      - Performance benchmarks
+      - Effectiveness validation
+      - Coverage reporting
+    - **Property-Based Tests** (`property-tests.yml`): Invariant verification
+      - Hypothesis-based property tests
+      - Counterexamples regression testing
+      - Invariant coverage checks
+    - **Aphasia/NeuroLang CI** (`aphasia-ci.yml`): Language processing tests
+      - NeuroLang module tests
+      - Aphasia detection validation
+      - Speech governance tests
+    - **Release Workflow** (`release.yml`): Automated releases
+      - Multi-platform Docker builds
+      - GitHub Container Registry publishing
+      - Release notes generation
+      - Optional TestPyPI publishing
 
 ---
 
@@ -362,10 +531,9 @@ class OntologyMatcher:
 
 ### 8. NeuroLangWrapper
 
-**Location:** `src/mlsdm/extensions/neuro_lang_extension.py` (planned implementation)  
+**Location:** `src/mlsdm/extensions/neuro_lang_extension.py`  
+**Status:** ✅ Implemented  
 **Purpose:** Enhanced LLM wrapper with NeuroLang language processing and Aphasia-Broca detection
-
-> **Implementation Note:** This component specification reflects the planned API. Implementation will be added in a subsequent PR.
 
 **Key Responsibilities:**
 - Extend base LLMWrapper with language-specific processing
@@ -406,10 +574,9 @@ class NeuroLangWrapper(LLMWrapper):
 
 ### 9. AphasiaBrocaDetector
 
-**Location:** `src/mlsdm/extensions/neuro_lang_extension.py` (planned implementation)  
+**Location:** `src/mlsdm/extensions/neuro_lang_extension.py`  
+**Status:** ✅ Implemented  
 **Purpose:** Detect and quantify telegraphic speech patterns in LLM outputs
-
-> **Implementation Note:** This component specification reflects the planned API. Implementation will be added in a subsequent PR.
 
 **Key Responsibilities:**
 - Analyze text for Broca-like aphasia characteristics
@@ -452,6 +619,196 @@ class AphasiaBrocaDetector:
 - Latency: ~1-2ms for 100-word text
 - Thread-safe (stateless, pure functional)
 - O(n) time complexity
+
+For detailed specification, see [APHASIA_SPEC.md](APHASIA_SPEC.md).
+
+---
+
+### 10. AphasiaSpeechGovernor
+
+**Location:** `src/mlsdm/extensions/neuro_lang_extension.py`  
+**Status:** ✅ Implemented  
+**Purpose:** Pluggable speech governor implementing aphasia detection and repair
+
+**Key Responsibilities:**
+- Implement `SpeechGovernanceResult` protocol from `speech.governance`
+- Integrate `AphasiaBrocaDetector` for analysis
+- Optionally trigger LLM-based repair for telegraphic speech
+- Return metadata about detection and repair operations
+
+**Interface:**
+```python
+class AphasiaSpeechGovernor:
+    def __init__(
+        detector: AphasiaBrocaDetector,
+        repair_enabled: bool = True,
+        severity_threshold: float = 0.3,
+        llm_generate_fn: Callable[[str, int], str] = None
+    ) -> None
+    
+    def __call__(
+        *, 
+        prompt: str, 
+        draft: str, 
+        max_tokens: int
+    ) -> SpeechGovernanceResult
+```
+
+**Integration:**
+- Used by `LLMWrapper` and `NeuroLangWrapper` as pluggable speech policy
+- Enables separation of detection (stateless analysis) from repair (LLM-based correction)
+- Supports monitoring-only mode (`repair_enabled=False`)
+
+---
+
+### 11. NeuroCognitiveEngine
+
+**Location:** `src/mlsdm/engine/neuro_cognitive_engine.py`  
+**Status:** ✅ Implemented  
+**Purpose:** High-level cognitive API with timeout enforcement and circuit breaker
+
+**Key Responsibilities:**
+- Provide simplified interface for cognitive processing
+- Enforce timeouts on LLM calls to prevent hangs
+- Implement circuit breaker pattern for failure isolation
+- Manage LLM provider routing via `LLMRouter`
+- Return structured responses with timing metadata
+
+**Interface:**
+```python
+class NeuroCognitiveEngine:
+    def __init__(
+        config: NeuroEngineConfig,
+        llm_router: LLMRouter,
+        embedding_fn: Callable[[str], np.ndarray]
+    ) -> None
+    
+    def generate(
+        prompt: str,
+        moral_value: float,
+        timeout_seconds: float = 30.0
+    ) -> dict  # Includes response, metadata, timing
+```
+
+**Features:**
+- Timeout enforcement with `TimingContext`
+- Circuit breaker with configurable thresholds
+- Multiple LLM backend support via routing
+- Comprehensive error handling (`MLSDMRejectionError`, `EmptyResponseError`)
+- Timing instrumentation for observability
+
+---
+
+### 12. NeuroEngineService
+
+**Location:** `src/mlsdm/service/neuro_engine_service.py`  
+**Status:** ✅ Implemented  
+**Purpose:** Service-layer wrapper for NeuroCognitiveEngine with FastAPI integration
+
+**Key Responsibilities:**
+- Define Pydantic request/response models
+- Integrate with FastAPI application
+- Provide health check endpoints
+- Handle service lifecycle (startup/shutdown)
+
+**Models:**
+```python
+class GenerateRequest(BaseModel):
+    prompt: str
+    moral_value: float
+    timeout_seconds: float = 30.0
+
+class GenerateResponse(BaseModel):
+    response: str
+    accepted: bool
+    phase: str
+    metadata: dict
+    timing: dict
+
+class HealthResponse(BaseModel):
+    status: str
+    version: str
+    uptime_seconds: float
+```
+
+---
+
+### 13. NeuroCognitiveClient (SDK)
+
+**Location:** `src/mlsdm/sdk/neuro_engine_client.py`  
+**Status:** ✅ Implemented  
+**Purpose:** Python SDK for remote NeuroCognitiveEngine access via HTTP
+
+**Key Responsibilities:**
+- HTTP client for `/generate` and `/health` endpoints
+- Request/response serialization
+- Connection pooling and retry logic
+- Timeout enforcement at client level
+- Error handling and exception translation
+
+**Interface:**
+```python
+class NeuroCognitiveClient:
+    def __init__(
+        base_url: str,
+        api_key: str = None,
+        timeout: float = 30.0
+    ) -> None
+    
+    def generate(
+        prompt: str,
+        moral_value: float,
+        timeout_seconds: float = None
+    ) -> dict
+    
+    def health_check() -> dict
+```
+
+**Usage Example:**
+```python
+client = NeuroCognitiveClient("http://localhost:8000")
+result = client.generate("Hello", moral_value=0.8)
+print(result["response"])
+```
+
+---
+
+### 14. LLM Adapters and Factory
+
+**Location:** `src/mlsdm/adapters/`  
+**Status:** ✅ Implemented  
+**Purpose:** Pluggable LLM provider integrations with unified interface
+
+**Components:**
+
+**LLMProvider Protocol** (`llm_provider.py`):
+```python
+class LLMProvider(Protocol):
+    def generate(prompt: str, max_tokens: int) -> str
+    def get_provider_name() -> str
+```
+
+**Implementations:**
+- **OpenAIAdapter** (`openai_adapter.py`): OpenAI API integration with configurable models
+- **LocalStubAdapter** (`local_stub_adapter.py`): Testing stub with configurable behavior
+
+**ProviderFactory** (`provider_factory.py`):
+```python
+class ProviderFactory:
+    @staticmethod
+    def create_provider(
+        backend: str,
+        api_key: str = None,
+        model: str = None
+    ) -> LLMProvider
+```
+
+**Supported Backends:**
+- `openai`: OpenAI GPT models (requires API key)
+- `local_stub`: Local testing stub (no external dependencies)
+- Extensible: Add new providers by implementing `LLMProvider` protocol
+
+---
 
 For detailed specification, see [APHASIA_SPEC.md](APHASIA_SPEC.md).
 
@@ -523,6 +880,67 @@ For detailed specification, see [APHASIA_SPEC.md](APHASIA_SPEC.md).
    │   └─ aphasia_flags (detection results)
 ```
 
+### End-to-End HTTP API Flow
+
+```
+1. HTTP Client (SDK or curl) → POST /generate
+   │
+2. FastAPI (src/mlsdm/api/app.py)
+   │   ├─ Middleware: Rate limiting check (5 RPS default)
+   │   ├─ Middleware: Authentication (Bearer token)
+   │   ├─ Middleware: Request validation (Pydantic)
+   │   └─ Route to NeuroEngineService
+   │
+3. NeuroEngineService (src/mlsdm/service/neuro_engine_service.py)
+   │   ├─ Parse GenerateRequest
+   │   └─ Delegate to NeuroCognitiveEngine
+   │
+4. NeuroCognitiveEngine (src/mlsdm/engine/neuro_cognitive_engine.py)
+   │   ├─ Start timeout enforcement (TimingContext)
+   │   ├─ Check circuit breaker state
+   │   ├─ Route to LLM via LLMRouter
+   │   └─ Delegate to LLMWrapper/NeuroLangWrapper
+   │
+5. LLMWrapper or NeuroLangWrapper
+   │   ├─ Create embedding of prompt
+   │   ├─ Retrieve context from CognitiveController
+   │   ├─ Call CognitiveController.process_event()
+   │   │   ├─ MoralFilter evaluation
+   │   │   ├─ CognitiveRhythm phase management
+   │   │   ├─ Memory storage (PELM + MultiLevelMemory)
+   │   │   └─ Ontology matching
+   │   ├─ If accepted: Call LLM provider (OpenAI/Stub)
+   │   ├─ If NeuroLangWrapper: Apply AphasiaSpeechGovernor
+   │   └─ Return structured response
+   │
+6. Response flows back up through layers:
+   │   ├─ NeuroCognitiveEngine: Add timing metadata
+   │   ├─ NeuroEngineService: Serialize to GenerateResponse
+   │   ├─ FastAPI: Add response headers, log metrics
+   │   └─ HTTP response to client
+   │
+7. Observability (parallel):
+   │   ├─ Metrics export to Prometheus (src/mlsdm/observability/metrics.py)
+   │   ├─ Structured logging (src/mlsdm/observability/logger.py)
+   │   └─ Aphasia-specific events (src/mlsdm/observability/aphasia_logging.py)
+```
+
+### Direct Integration Flow (No HTTP)
+
+```
+1. Application code directly imports LLMWrapper or NeuroLangWrapper
+   │
+2. Initialize with user-provided functions:
+   │   ├─ llm_generate_fn: Custom LLM integration
+   │   └─ embedding_fn: Custom embedding model
+   │
+3. Call wrapper.generate(prompt, moral_value)
+   │   ├─ Follows same cognitive flow as HTTP API
+   │   └─ No HTTP overhead, no middleware layers
+   │
+4. Returns dict with response and metadata directly to caller
+```
+
 ### Concurrent Access Pattern
 
 ```
@@ -538,6 +956,27 @@ Thread 3: get_state() ──► Lock ──► Controller ──► Unlock
 - Critical section: ~2ms P50, ~10ms P95
 - No deadlocks (single lock, no nested acquisition)
 - No race conditions (all shared state protected)
+
+### Multi-Provider Routing Flow
+
+```
+1. NeuroCognitiveEngine receives generate request
+   │
+2. LLMRouter.route() selects provider based on:
+   │   ├─ Provider availability (circuit breaker state)
+   │   ├─ Load balancing strategy (round-robin, weighted)
+   │   └─ Request characteristics (prompt length, moral value)
+   │
+3. Selected provider (OpenAI / Local Stub / Custom):
+   │   ├─ OpenAIAdapter: Calls OpenAI API with retry logic
+   │   ├─ LocalStubAdapter: Returns deterministic test response
+   │   └─ Custom: User-provided LLMProvider implementation
+   │
+4. Response flows back through NeuroCognitiveEngine
+   │   ├─ Add provider metadata (provider_name, latency)
+   │   ├─ Update circuit breaker metrics
+   │   └─ Return to caller
+```
 
 ---
 
