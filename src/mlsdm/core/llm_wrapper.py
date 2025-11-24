@@ -367,7 +367,7 @@ class LLMWrapper:
             try:
                 memories = self._safe_pelm_operation(
                     "retrieve",
-                    query_vector=prompt_vector.tolist(),
+                    query_vector=prompt_vector,  # Pass numpy array directly
                     current_phase=phase_val,
                     phase_tolerance=0.15,
                     top_k=context_top_k
@@ -415,7 +415,7 @@ class LLMWrapper:
             if not self.stateless_mode:
                 try:
                     self.synaptic.update(prompt_vector)
-                    self._safe_pelm_operation("entangle", prompt_vector.tolist(), phase=phase_val)
+                    self._safe_pelm_operation("entangle", prompt_vector, phase=phase_val)  # Pass numpy array directly
                     self.consolidation_buffer.append(prompt_vector)
                 except Exception:
                     # Continue even if memory update fails
@@ -465,7 +465,7 @@ class LLMWrapper:
         sleep_phase = 0.9
         for vector in self.consolidation_buffer:
             # Re-entangle with sleep phase for long-term storage
-            self.pelm.entangle(vector.tolist(), phase=sleep_phase)
+            self.pelm.entangle(vector, phase=sleep_phase)  # Pass numpy array directly
 
         # Clear buffer
         self.consolidation_buffer.clear()
