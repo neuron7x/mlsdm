@@ -55,12 +55,17 @@ class PhaseEntangledLatticeMemory:
             if not self._auto_recover_unsafe():
                 raise RuntimeError("Memory corruption detected and recovery failed")
 
-    def entangle(self, vector: list[float], phase: float) -> int:
+    def entangle(self, vector: list[float] | np.ndarray, phase: float) -> int:
         with self._lock:
             # Ensure integrity before operation
             self._ensure_integrity()
 
-            vec_np = np.array(vector, dtype=np.float32)
+            # Optimize: accept numpy arrays directly to avoid conversion overhead
+            if isinstance(vector, np.ndarray):
+                vec_np = vector if vector.dtype == np.float32 else vector.astype(np.float32)
+            else:
+                vec_np = np.array(vector, dtype=np.float32)
+            
             norm = float(np.linalg.norm(vec_np) or 1e-9)
             idx = self.pointer
             self.memory_bank[idx] = vec_np
@@ -75,19 +80,27 @@ class PhaseEntangledLatticeMemory:
 
             self.size = min(self.size + 1, self.capacity)
 
-            # Update checksum after modification
-            self._checksum = self._compute_checksum()
+            # Optimize: compute checksum periodically instead of every operation
+            # Update every 100 operations or when size changes significantly
+            if self.size % 100 == 0 or self.size < 100:
+                self._checksum = self._compute_checksum()
 
             return idx
 
-    def retrieve(self, query_vector: list[float], current_phase: float, phase_tolerance: float = 0.15, top_k: int = 5) -> list[MemoryRetrieval]:
+    def retrieve(self, query_vector: list[float] | np.ndarray, current_phase: float, phase_tolerance: float = 0.15, top_k: int = 5) -> list[MemoryRetrieval]:
         with self._lock:
             # Ensure integrity before operation
             self._ensure_integrity()
 
             if self.size == 0:
                 return []
-            q_vec = np.array(query_vector, dtype=np.float32)
+            
+            # Optimize: accept numpy arrays directly to avoid conversion overhead
+            if isinstance(query_vector, np.ndarray):
+                q_vec = query_vector if query_vector.dtype == np.float32 else query_vector.astype(np.float32)
+            else:
+                q_vec = np.array(query_vector, dtype=np.float32)
+            
             q_norm = float(np.linalg.norm(q_vec))
             if q_norm < 1e-9:
                 q_norm = 1e-9

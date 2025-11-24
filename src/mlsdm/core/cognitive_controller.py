@@ -35,6 +35,11 @@ class CognitiveController:
         self.max_processing_time_ms = max_processing_time_ms
         self.emergency_shutdown = False
         self._process = psutil.Process()
+        # Optimize: check memory only periodically (every N operations)
+        # Start at interval to force check on first operation for safety
+        self._memory_check_interval = 100
+        self._memory_check_counter = 100  # Force check on first operation
+        self._last_memory_mb = 0.0
 
     @property
     def qilm(self):
@@ -55,11 +60,15 @@ class CognitiveController:
             # Optimization: Invalidate state cache when processing
             self._state_cache_valid = False
 
-            # Check memory usage before processing
-            memory_mb = self._check_memory_usage()
-            if memory_mb > self.memory_threshold_mb:
-                self.emergency_shutdown = True
-                return self._build_state(rejected=True, note="emergency shutdown: memory exceeded")
+            # Optimize: check memory usage periodically instead of every request
+            self._memory_check_counter += 1
+            if self._memory_check_counter >= self._memory_check_interval:
+                self._memory_check_counter = 0
+                memory_mb = self._check_memory_usage()
+                self._last_memory_mb = memory_mb
+                if memory_mb > self.memory_threshold_mb:
+                    self.emergency_shutdown = True
+                    return self._build_state(rejected=True, note="emergency shutdown: memory exceeded")
 
             accepted = self.moral.evaluate(moral_value)
             self.moral.adapt(accepted)
@@ -69,9 +78,9 @@ class CognitiveController:
                 return self._build_state(rejected=True, note="sleep phase")
 
             self.synaptic.update(vector)
-            # Optimization: use cached phase value
+            # Optimization: use cached phase value and pass numpy array directly
             phase_val = self._phase_cache[self.rhythm.phase]
-            self.pelm.entangle(vector.tolist(), phase=phase_val)
+            self.pelm.entangle(vector, phase=phase_val)
             self.rhythm.step()
 
             # Check processing time
@@ -83,9 +92,9 @@ class CognitiveController:
 
     def retrieve_context(self, query_vector: np.ndarray, top_k: int = 5) -> list[MemoryRetrieval]:
         with self._lock:
-            # Optimize: use cached phase value
+            # Optimize: use cached phase value and pass numpy array directly
             phase_val = self._phase_cache[self.rhythm.phase]
-            return self.pelm.retrieve(query_vector.tolist(), current_phase=phase_val,
+            return self.pelm.retrieve(query_vector, current_phase=phase_val,
                                      phase_tolerance=0.15, top_k=top_k)
 
     def _check_memory_usage(self) -> float:
