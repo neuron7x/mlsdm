@@ -3,7 +3,18 @@ import os
 from typing import Any
 
 import numpy as np
+from numpy.typing import NDArray
 from tenacity import retry, stop_after_attempt
+
+
+def _save_numpy_arrays(filepath: str, arrays: dict[str, NDArray[Any]]) -> None:
+    """Save arrays to .npz file with proper typing.
+
+    This wrapper provides type safety for np.savez which has incorrect
+    type stubs for **kwargs expansion.
+    """
+    # Call np.savez with unpacked dict - runtime is correct, stubs are wrong
+    np.savez(filepath, **arrays)
 
 
 @retry(stop=stop_after_attempt(3))
@@ -14,7 +25,7 @@ def _save_data(data: dict[str, Any], filepath: str) -> None:
             json.dump(data, f, indent=2)
     elif ext == ".npz":
         processed = {k: np.asarray(v) for k, v in data.items()}
-        np.savez(filepath, **processed)  # type: ignore[arg-type]  # numpy stubs issue with **kwargs
+        _save_numpy_arrays(filepath, processed)
     else:
         raise ValueError(f"Unsupported format: {ext}")
 
