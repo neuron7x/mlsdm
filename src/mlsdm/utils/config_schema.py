@@ -213,7 +213,7 @@ class CognitiveRhythmConfig(BaseModel):
 
 class AphasiaConfig(BaseModel):
     """Configuration for Aphasia-Broca detection and repair.
-    
+
     Controls whether telegraphic speech patterns are detected and/or repaired
     in LLM outputs.
     """
@@ -243,7 +243,7 @@ class AphasiaConfig(BaseModel):
 
 class NeuroLangConfig(BaseModel):
     """Configuration for NeuroLang performance modes.
-    
+
     Controls NeuroLang training behavior and resource usage.
     Three modes: eager_train, lazy_train, and disabled.
     """
