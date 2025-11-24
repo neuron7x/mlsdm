@@ -357,17 +357,39 @@ print(state)
 
 ## Architecture
 
-**Components:**
-- `MoralFilterV2`: Adaptive moral threshold (0.30-0.90) with EMA
-- `PELM (Phase-Entangled Lattice Memory)`: Bounded phase-entangled memory with phase entanglement
-- `MultiLevelSynapticMemory`: 3-level decay (L1/L2/L3)
-- `CognitiveRhythm`: Wake/sleep cycle (8/3 duration)
-- `CognitiveController`: Thread-safe orchestrator
-- **NeuroLang Modules**:
-  - `InnateGrammarModule` for recursion
-  - `ModularLanguageProcessor` for production/comprehension
-  - `SocialIntegrator` for intent simulation
-- **`AphasiaBrocaDetector`**: Text analyzer for detecting Broca-like pathologies (short sentences, low function words, high fragments)
+MLSDM is a complete production-ready system with 14 architectural layers spanning cognitive primitives to HTTP services. See [ARCHITECTURE_SPEC.md](ARCHITECTURE_SPEC.md) for full details.
+
+**System Layers:**
+1. **Client & Integration**: SDK (`NeuroCognitiveClient`), LLM adapters (OpenAI, local stub), direct Python integration
+2. **Service & API**: FastAPI application, health endpoints, middleware (rate limiting, auth, observability)
+3. **Engine & Routing**: `NeuroCognitiveEngine`, `LLMRouter`, multi-provider support
+4. **Application/Wrapper**: `LLMWrapper`, `NeuroLangWrapper`, speech governance
+5. **Orchestration**: `CognitiveController` (thread-safe coordinator), `MemoryManager`
+6. **Cognitive Subsystems**: `MoralFilterV2`, `CognitiveRhythm`, `PELM`, `MultiLevelMemory`, `OntologyMatcher`
+7. **LLM Integration**: Provider adapters, NeuroLang extension with Aphasia-Broca
+8. **Observability**: Prometheus metrics, structured logging, aphasia logging
+9. **Security**: Rate limiting, payload scrubbing, input validation, security logging
+10. **Configuration**: Config loader/validator, schema enforcement, YAML profiles
+11. **Deployment**: Docker images, canary manager, K8s manifests
+12. **Testing**: Unit, integration, e2e, property (Hypothesis), validation, eval, security, load
+13. **Scripts**: Effectiveness charts, security audit, NeuroLang training, verification
+14. **CI/CD**: 4 GitHub Actions workflows (core tests, property tests, aphasia tests, releases)
+
+**Core Cognitive Components** (Layer 6):
+- `MoralFilterV2` (`src/mlsdm/cognition/moral_filter_v2.py`): Adaptive moral threshold (0.30-0.90) with EMA
+- `PELM` (`src/mlsdm/memory/phase_entangled_lattice_memory.py`): Phase-aware retrieval, bounded capacity
+- `MultiLevelSynapticMemory` (`src/mlsdm/memory/multi_level_memory.py`): L1/L2/L3 decay cascade
+- `CognitiveRhythm` (`src/mlsdm/rhythm/cognitive_rhythm.py`): Wake/sleep cycle (8/3 duration)
+- `CognitiveController` (`src/mlsdm/core/cognitive_controller.py`): Thread-safe orchestrator
+- `AphasiaBrocaDetector` (`src/mlsdm/extensions/neuro_lang_extension.py`): Telegraphic speech detection
+- `AphasiaSpeechGovernor` (`src/mlsdm/extensions/neuro_lang_extension.py`): Pluggable speech policy
+
+**NeuroLang Extension** (`src/mlsdm/extensions/neuro_lang_extension.py`):
+- `InnateGrammarModule`: Recursive grammar templates
+- `CriticalPeriodTrainer`: Language acquisition modeling
+- `ModularLanguageProcessor`: Production/comprehension separation
+- `SocialIntegrator`: Pragmatic intent simulation
+- `NeuroLangWrapper`: Enhanced wrapper with language processing
 
 **Formulas:**
 ```
