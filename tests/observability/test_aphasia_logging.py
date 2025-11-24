@@ -33,10 +33,13 @@ def dummy_embedder(text: str):
     return vec / np.linalg.norm(vec)
 
 
-@pytest.mark.parametrize("llm_fn, expected_decision_contains", [
-    (telegraphic_llm, "repaired"),
-    (normal_llm, "skip"),
-])
+@pytest.mark.parametrize(
+    "llm_fn, expected_decision_contains",
+    [
+        (telegraphic_llm, "repaired"),
+        (normal_llm, "skip"),
+    ],
+)
 def test_aphasia_logging_decision_emitted(caplog, llm_fn, expected_decision_contains):
     """Test that aphasia logging emits the correct decision for different LLM outputs."""
     caplog.set_level(logging.INFO, logger=LOGGER_NAME)
@@ -103,7 +106,9 @@ def test_aphasia_logging_includes_severity_and_flags(caplog):
         initial_moral_threshold=0.5,
     )
 
-    _ = wrapper.generate(prompt="Test severity and flags.", moral_value=0.8, max_tokens=64)
+    _ = wrapper.generate(
+        prompt="Test severity and flags.", moral_value=0.8, max_tokens=64
+    )
 
     records = [r for r in caplog.records if r.name == LOGGER_NAME]
     assert records, "Expected at least one aphasia log record"
@@ -129,10 +134,14 @@ def test_no_logging_when_detection_disabled(caplog):
         aphasia_detect_enabled=False,
     )
 
-    _ = wrapper.generate(prompt="Test disabled detection.", moral_value=0.8, max_tokens=64)
+    _ = wrapper.generate(
+        prompt="Test disabled detection.", moral_value=0.8, max_tokens=64
+    )
 
     records = [r for r in caplog.records if r.name == LOGGER_NAME]
-    assert len(records) == 0, "Expected no aphasia log records when detection is disabled"
+    assert (
+        len(records) == 0
+    ), "Expected no aphasia log records when detection is disabled"
 
 
 def test_detected_no_repair_decision(caplog):
@@ -151,7 +160,9 @@ def test_detected_no_repair_decision(caplog):
         aphasia_repair_enabled=False,  # Repair disabled
     )
 
-    _ = wrapper.generate(prompt="Test detected no repair.", moral_value=0.8, max_tokens=64)
+    _ = wrapper.generate(
+        prompt="Test detected no repair.", moral_value=0.8, max_tokens=64
+    )
 
     records = [r for r in caplog.records if r.name == LOGGER_NAME]
     assert records, "Expected at least one aphasia log record"

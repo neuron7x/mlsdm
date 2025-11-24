@@ -21,12 +21,14 @@ class TestYAMLLoading:
     def test_load_valid_yaml(self, tmp_path):
         """Load valid YAML configuration."""
         config_file = tmp_path / "config.yaml"
-        config_file.write_text("""
+        config_file.write_text(
+            """
 dimension: 384
 strict_mode: false
 moral_filter:
   threshold: 0.6
-""")
+"""
+        )
 
         config = ConfigLoader.load_config(str(config_file))
         assert config["dimension"] == 384
@@ -44,10 +46,12 @@ moral_filter:
     def test_load_invalid_yaml_syntax(self, tmp_path):
         """Invalid YAML syntax should raise error."""
         config_file = tmp_path / "config.yaml"
-        config_file.write_text("""
+        config_file.write_text(
+            """
 dimension: 384
   invalid: indentation
-""")
+"""
+        )
 
         with pytest.raises(ValueError) as exc_info:
             ConfigLoader.load_config(str(config_file))
@@ -74,13 +78,15 @@ class TestValidation:
     def test_valid_config_with_validation(self, tmp_path):
         """Valid configuration should pass validation."""
         config_file = tmp_path / "config.yaml"
-        config_file.write_text("""
+        config_file.write_text(
+            """
 dimension: 384
 moral_filter:
   threshold: 0.5
   min_threshold: 0.3
   max_threshold: 0.9
-""")
+"""
+        )
 
         config = ConfigLoader.load_config(str(config_file), validate=True)
         assert config["dimension"] == 384
@@ -88,9 +94,11 @@ moral_filter:
     def test_invalid_config_with_validation(self, tmp_path):
         """Invalid configuration should fail validation."""
         config_file = tmp_path / "config.yaml"
-        config_file.write_text("""
+        config_file.write_text(
+            """
 dimension: 1  # Too small
-""")
+"""
+        )
 
         with pytest.raises(ValueError) as exc_info:
             ConfigLoader.load_config(str(config_file), validate=True)
@@ -99,9 +107,11 @@ dimension: 1  # Too small
     def test_validation_disabled(self, tmp_path):
         """Validation can be disabled."""
         config_file = tmp_path / "config.yaml"
-        config_file.write_text("""
+        config_file.write_text(
+            """
 dimension: 1  # Would be invalid
-""")
+"""
+        )
 
         config = ConfigLoader.load_config(str(config_file), validate=False)
         assert config["dimension"] == 1
@@ -109,13 +119,15 @@ dimension: 1  # Would be invalid
     def test_invalid_hierarchy_detected(self, tmp_path):
         """Hierarchy violations should be detected."""
         config_file = tmp_path / "config.yaml"
-        config_file.write_text("""
+        config_file.write_text(
+            """
 dimension: 10
 multi_level_memory:
   lambda_l1: 0.1
   lambda_l2: 0.5  # Invalid: > lambda_l1
   lambda_l3: 0.01
-""")
+"""
+        )
 
         with pytest.raises(ValueError) as exc_info:
             ConfigLoader.load_config(str(config_file), validate=True)
@@ -133,16 +145,20 @@ class TestEnvironmentOverrides:
         monkeypatch.setenv("MLSDM_DIMENSION", "768")
 
         # Disable validation since we're changing dimension without updating ontology vectors
-        config = ConfigLoader.load_config(str(config_file), env_override=True, validate=False)
+        config = ConfigLoader.load_config(
+            str(config_file), env_override=True, validate=False
+        )
         assert config["dimension"] == 768
 
     def test_nested_override(self, tmp_path, monkeypatch):
         """Environment variable should override nested config."""
         config_file = tmp_path / "config.yaml"
-        config_file.write_text("""
+        config_file.write_text(
+            """
 moral_filter:
   threshold: 0.5
-""")
+"""
+        )
 
         monkeypatch.setenv("MLSDM_MORAL_FILTER__THRESHOLD", "0.7")
 
@@ -167,17 +183,21 @@ moral_filter:
         monkeypatch.setenv("MLSDM_DIMENSION", "1024")
 
         # Disable validation since we're changing dimension without updating ontology vectors
-        config = ConfigLoader.load_config(str(config_file), env_override=True, validate=False)
+        config = ConfigLoader.load_config(
+            str(config_file), env_override=True, validate=False
+        )
         assert config["dimension"] == 1024
         assert isinstance(config["dimension"], int)
 
     def test_float_parsing(self, tmp_path, monkeypatch):
         """Float environment variables should be parsed."""
         config_file = tmp_path / "config.yaml"
-        config_file.write_text("""
+        config_file.write_text(
+            """
 moral_filter:
   threshold: 0.5
-""")
+"""
+        )
 
         monkeypatch.setenv("MLSDM_MORAL_FILTER__THRESHOLD", "0.75")
 
@@ -212,10 +232,12 @@ class TestLoadValidatedConfig:
     def test_load_validated_returns_object(self, tmp_path):
         """Should return SystemConfig object."""
         config_file = tmp_path / "config.yaml"
-        config_file.write_text("""
+        config_file.write_text(
+            """
 dimension: 384
 strict_mode: false
-""")
+"""
+        )
 
         config_obj = ConfigLoader.load_validated_config(str(config_file))
         assert config_obj.dimension == 384
@@ -249,19 +271,20 @@ class TestDefaultConfigFiles:
 
     def test_default_config_validates_with_schema(self):
         """Default config should validate against SystemConfig schema."""
-        from mlsdm.utils.config_schema import validate_config_dict
         import yaml
-        
+
+        from mlsdm.utils.config_schema import validate_config_dict
+
         config_path = Path("config/default_config.yaml")
         if config_path.exists():
             with open(config_path) as f:
                 config_dict = yaml.safe_load(f)
-            
+
             # Should not raise
             validated = validate_config_dict(config_dict)
             assert validated.dimension > 0
             # Check aphasia config is present and valid
-            assert hasattr(validated, 'aphasia')
+            assert hasattr(validated, "aphasia")
             assert validated.aphasia.detect_enabled in [True, False]
             assert validated.aphasia.repair_enabled in [True, False]
             assert 0.0 <= validated.aphasia.severity_threshold <= 1.0
@@ -300,16 +323,16 @@ class TestErrorMessages:
     def test_unknown_keys_error_message(self, tmp_path):
         """Unknown config keys should provide helpful error message."""
         from mlsdm.utils.config_schema import validate_config_dict
-        
+
         config_dict = {
             "dimension": 384,
             "unknown_field": "value",
-            "another_bad_key": 123
+            "another_bad_key": 123,
         }
-        
+
         with pytest.raises(ValueError) as exc_info:
             validate_config_dict(config_dict)
-        
+
         error_msg = str(exc_info.value)
         # Should list unknown keys
         assert "unknown_field" in error_msg
@@ -331,7 +354,7 @@ class TestAphasiaConfigExtraction:
                 "detect_enabled": True,
                 "repair_enabled": False,
                 "severity_threshold": 0.5,
-            }
+            },
         }
 
         aphasia_params = ConfigLoader.get_aphasia_config_from_dict(config_dict)
@@ -364,7 +387,7 @@ class TestAphasiaConfigExtraction:
             "aphasia": {
                 "detect_enabled": False,
                 # repair_enabled and severity_threshold missing
-            }
+            },
         }
 
         aphasia_params = ConfigLoader.get_aphasia_config_from_dict(config_dict)
@@ -376,13 +399,15 @@ class TestAphasiaConfigExtraction:
     def test_extract_aphasia_config_from_file(self, tmp_path):
         """Test extraction from actual YAML file."""
         config_file = tmp_path / "config.yaml"
-        config_file.write_text("""
+        config_file.write_text(
+            """
 dimension: 384
 aphasia:
   detect_enabled: true
   repair_enabled: false
   severity_threshold: 0.7
-""")
+"""
+        )
 
         config_dict = ConfigLoader.load_config(str(config_file), validate=False)
         aphasia_params = ConfigLoader.get_aphasia_config_from_dict(config_dict)

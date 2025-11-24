@@ -34,7 +34,7 @@ class TestVectorValidation:
     def test_validate_vector_with_nan(self):
         """Test validation rejects NaN values."""
         validator = InputValidator()
-        vector = [0.1, float('nan'), 0.3, 0.4]
+        vector = [0.1, float("nan"), 0.3, 0.4]
 
         with pytest.raises(ValueError, match="NaN"):
             validator.validate_vector(vector, expected_dim=4)
@@ -42,7 +42,7 @@ class TestVectorValidation:
     def test_validate_vector_with_infinity(self):
         """Test validation rejects Infinity values."""
         validator = InputValidator()
-        vector = [0.1, float('inf'), 0.3, 0.4]
+        vector = [0.1, float("inf"), 0.3, 0.4]
 
         with pytest.raises(ValueError, match="NaN or Inf"):
             validator.validate_vector(vector, expected_dim=4)
@@ -114,14 +114,14 @@ class TestMoralValueValidation:
         validator = InputValidator()
 
         with pytest.raises(ValueError, match="NaN"):
-            validator.validate_moral_value(float('nan'))
+            validator.validate_moral_value(float("nan"))
 
     def test_validate_moral_value_infinity(self):
         """Test validation rejects Infinity."""
         validator = InputValidator()
 
         with pytest.raises(ValueError, match="NaN or Inf"):
-            validator.validate_moral_value(float('inf'))
+            validator.validate_moral_value(float("inf"))
 
     def test_validate_moral_value_wrong_type(self):
         """Test validation rejects wrong types."""
@@ -240,14 +240,14 @@ class TestNumericValidation:
         validator = InputValidator()
 
         with pytest.raises(ValueError, match="NaN"):
-            validator.validate_numeric_range(float('nan'), min_val=0.0, max_val=10.0)
+            validator.validate_numeric_range(float("nan"), min_val=0.0, max_val=10.0)
 
     def test_validate_numeric_range_infinity(self):
         """Test rejection of Infinity."""
         validator = InputValidator()
 
         with pytest.raises(ValueError, match="NaN or Inf"):
-            validator.validate_numeric_range(float('inf'), min_val=0.0, max_val=10.0)
+            validator.validate_numeric_range(float("inf"), min_val=0.0, max_val=10.0)
 
     def test_validate_numeric_range_at_boundaries(self):
         """Test validation at exact boundaries."""
@@ -378,7 +378,7 @@ class TestPromptValidation:
         """Test validation passes for valid prompt."""
         validator = InputValidator()
         prompt = "This is a valid prompt that is not too long."
-        
+
         result = validator.validate_prompt_length(prompt)
         assert isinstance(result, str)
         assert len(result) > 0
@@ -388,8 +388,10 @@ class TestPromptValidation:
         validator = InputValidator()
         # Create a prompt that exceeds the token limit
         # With CHARS_PER_TOKEN=4 and MAX_PROMPT_TOKENS=2048, max chars = 8192
-        long_prompt = "a" * (InputValidator.MAX_PROMPT_TOKENS * InputValidator.CHARS_PER_TOKEN + 100)
-        
+        long_prompt = "a" * (
+            InputValidator.MAX_PROMPT_TOKENS * InputValidator.CHARS_PER_TOKEN + 100
+        )
+
         # Should raise ValueError for exceeding length (either in sanitize or token check)
         with pytest.raises(ValueError, match="exceeds maximum|String length"):
             validator.validate_prompt_length(long_prompt)
@@ -400,7 +402,7 @@ class TestPromptValidation:
         # Create a prompt that's within sanitize limits but exceeds token limit
         # Use a smaller custom max_tokens to test the token check specifically
         prompt = "a" * 100  # 100 chars = ~25 tokens with CHARS_PER_TOKEN=4
-        
+
         with pytest.raises(ValueError, match="exceeds maximum tokens"):
             validator.validate_prompt_length(prompt, max_tokens=10, sanitize=False)
 
@@ -408,11 +410,11 @@ class TestPromptValidation:
         """Test validation with custom max tokens."""
         validator = InputValidator()
         prompt = "a" * 100
-        
+
         # Should pass with high limit
         result = validator.validate_prompt_length(prompt, max_tokens=100)
         assert result == prompt
-        
+
         # Should fail with low limit
         with pytest.raises(ValueError, match="exceeds maximum tokens"):
             validator.validate_prompt_length(prompt, max_tokens=10)
@@ -421,11 +423,11 @@ class TestPromptValidation:
         """Test that sanitization is applied when requested."""
         validator = InputValidator()
         prompt = "Hello\x00world"
-        
+
         # With sanitization (default)
         result = validator.validate_prompt_length(prompt, sanitize=True)
         assert "\x00" not in result
-        
+
         # Without sanitization
         result = validator.validate_prompt_length(prompt, sanitize=False)
         # Note: The null byte would still be in the prompt
@@ -433,10 +435,10 @@ class TestPromptValidation:
     def test_validate_prompt_length_non_string(self):
         """Test validation rejects non-string input."""
         validator = InputValidator()
-        
+
         with pytest.raises(ValueError, match="must be a string"):
             validator.validate_prompt_length(123)
-        
+
         with pytest.raises(ValueError, match="must be a string"):
             validator.validate_prompt_length(["list", "of", "strings"])
 
@@ -444,15 +446,15 @@ class TestPromptValidation:
         """Test validation rejects invalid max_tokens parameter."""
         validator = InputValidator()
         prompt = "Valid prompt"
-        
+
         # Negative max_tokens
         with pytest.raises(ValueError, match="must be a positive integer"):
             validator.validate_prompt_length(prompt, max_tokens=-1)
-        
+
         # Zero max_tokens
         with pytest.raises(ValueError, match="must be a positive integer"):
             validator.validate_prompt_length(prompt, max_tokens=0)
-        
+
         # Non-integer max_tokens
         with pytest.raises(ValueError, match="must be a positive integer"):
             validator.validate_prompt_length(prompt, max_tokens=10.5)
@@ -461,7 +463,7 @@ class TestPromptValidation:
         """Test validation of empty prompt."""
         validator = InputValidator()
         prompt = ""
-        
+
         # Empty prompt should be valid (0 tokens)
         result = validator.validate_prompt_length(prompt)
         assert result == ""
@@ -470,7 +472,7 @@ class TestPromptValidation:
         """Test validation of prompt with only whitespace."""
         validator = InputValidator()
         prompt = "   \n\t  "
-        
+
         # Should be valid after sanitization (strips whitespace)
         result = validator.validate_prompt_length(prompt)
         assert len(result) == 0 or result.strip() == ""
@@ -479,7 +481,7 @@ class TestPromptValidation:
         """Test validation preserves unicode characters."""
         validator = InputValidator()
         prompt = "Hello 你好 世界! This is a test with unicode."
-        
+
         result = validator.validate_prompt_length(prompt)
         assert "你好" in result
         assert "世界" in result
@@ -490,7 +492,7 @@ class TestPromptValidation:
         # Create prompt exactly at the boundary
         max_chars = InputValidator.MAX_PROMPT_TOKENS * InputValidator.CHARS_PER_TOKEN
         prompt = "a" * max_chars
-        
+
         # Should be valid (exactly at limit)
         result = validator.validate_prompt_length(prompt)
         assert len(result) == max_chars

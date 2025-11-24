@@ -7,7 +7,10 @@ detects and optionally repairs telegraphic speech patterns.
 
 import pytest
 
-from mlsdm.extensions.neuro_lang_extension import AphasiaBrocaDetector, AphasiaSpeechGovernor
+from mlsdm.extensions.neuro_lang_extension import (
+    AphasiaBrocaDetector,
+    AphasiaSpeechGovernor,
+)
 from mlsdm.speech.governance import SpeechGovernanceResult
 
 
@@ -86,7 +89,9 @@ def test_aphasia_governor_repairs_when_enabled():
 
     # Should be repaired
     assert result.final_text != aphasic_text
-    assert result.final_text == "This is a properly structured sentence with good grammar."
+    assert (
+        result.final_text == "This is a properly structured sentence with good grammar."
+    )
     assert result.raw_text == aphasic_text
     assert result.metadata["repaired"] is True
     assert result.metadata["aphasia_report"]["is_aphasic"] is True

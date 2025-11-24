@@ -28,9 +28,7 @@ class TestCognitiveControllerInitialization:
     def test_custom_initialization(self):
         """Test controller can be initialized with custom values."""
         controller = CognitiveController(
-            dim=128,
-            memory_threshold_mb=512.0,
-            max_processing_time_ms=500.0
+            dim=128, memory_threshold_mb=512.0, max_processing_time_ms=500.0
         )
         assert controller.dim == 128
         assert controller.memory_threshold_mb == 512.0

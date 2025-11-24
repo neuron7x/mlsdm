@@ -6,11 +6,7 @@ import time
 import pytest
 from prometheus_client import CollectorRegistry
 
-from mlsdm.observability.metrics import (
-    MetricsExporter,
-    PhaseType,
-    get_metrics_exporter,
-)
+from mlsdm.observability.metrics import MetricsExporter, PhaseType, get_metrics_exporter
 
 
 class TestPhaseType:

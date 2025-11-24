@@ -7,17 +7,16 @@ including deterministic execution order and failure isolation.
 
 import logging
 
-from mlsdm.speech.governance import (
-    SpeechGovernanceResult,
-    PipelineSpeechGovernor,
-)
+from mlsdm.speech.governance import PipelineSpeechGovernor, SpeechGovernanceResult
 
 
 class AppendGovernor:
     def __init__(self, suffix: str) -> None:
         self._suffix = suffix
 
-    def __call__(self, *, prompt: str, draft: str, max_tokens: int) -> SpeechGovernanceResult:
+    def __call__(
+        self, *, prompt: str, draft: str, max_tokens: int
+    ) -> SpeechGovernanceResult:
         new_text = draft + self._suffix
         return SpeechGovernanceResult(
             final_text=new_text,
@@ -27,7 +26,9 @@ class AppendGovernor:
 
 
 class FailingGovernor:
-    def __call__(self, *, prompt: str, draft: str, max_tokens: int) -> SpeechGovernanceResult:
+    def __call__(
+        self, *, prompt: str, draft: str, max_tokens: int
+    ) -> SpeechGovernanceResult:
         raise RuntimeError("boom")
 
 
@@ -117,9 +118,7 @@ def test_pipeline_preserves_governor_metadata():
 
 def test_pipeline_error_includes_exception_details():
     """Test that error entries include exception type and message."""
-    pipeline = PipelineSpeechGovernor(
-        governors=[("failer", FailingGovernor())]
-    )
+    pipeline = PipelineSpeechGovernor(governors=[("failer", FailingGovernor())])
     result = pipeline(prompt="test", draft="text", max_tokens=32)
 
     history = result.metadata["pipeline"]
@@ -152,7 +151,9 @@ def test_pipeline_governor_receives_correct_prompt():
         def __init__(self, name: str):
             self.name = name
 
-        def __call__(self, *, prompt: str, draft: str, max_tokens: int) -> SpeechGovernanceResult:
+        def __call__(
+            self, *, prompt: str, draft: str, max_tokens: int
+        ) -> SpeechGovernanceResult:
             received_prompts.append((self.name, prompt))
             return SpeechGovernanceResult(
                 final_text=draft,
@@ -176,7 +177,9 @@ def test_pipeline_governor_receives_correct_max_tokens():
     received_tokens = []
 
     class TokenCapturingGovernor:
-        def __call__(self, *, prompt: str, draft: str, max_tokens: int) -> SpeechGovernanceResult:
+        def __call__(
+            self, *, prompt: str, draft: str, max_tokens: int
+        ) -> SpeechGovernanceResult:
             received_tokens.append(max_tokens)
             return SpeechGovernanceResult(
                 final_text=draft,

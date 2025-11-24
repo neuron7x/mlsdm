@@ -7,7 +7,10 @@ Tests corruption detection, auto-recovery, and boundary checks.
 import numpy as np
 import pytest
 
-from mlsdm.memory.phase_entangled_lattice_memory import MemoryRetrieval, PhaseEntangledLatticeMemory
+from mlsdm.memory.phase_entangled_lattice_memory import (
+    MemoryRetrieval,
+    PhaseEntangledLatticeMemory,
+)
 
 
 class TestBackwardCompatibility:
@@ -16,14 +19,14 @@ class TestBackwardCompatibility:
     def test_pelm_alias_exists(self):
         """Test that PELM alias is available as convenient shorthand."""
         from mlsdm.memory import PELM, PhaseEntangledLatticeMemory
-        
+
         # Verify PELM is an alias to the main class
         assert PELM is PhaseEntangledLatticeMemory
-        
+
     def test_pelm_alias_works(self):
         """Test that PELM alias can be instantiated and used."""
         from mlsdm.memory import PELM
-        
+
         # Create instance using PELM alias
         memory = PELM(dimension=10, capacity=100)
         assert memory is not None
@@ -32,25 +35,25 @@ class TestBackwardCompatibility:
 
     def test_qilm_v2_alias_exists(self):
         """Test that QILM_v2 alias is available for backward compatibility."""
-        from mlsdm.memory import QILM_v2, PhaseEntangledLatticeMemory
-        
+        from mlsdm.memory import PhaseEntangledLatticeMemory, QILM_v2
+
         # Verify alias points to the same class
         assert QILM_v2 is PhaseEntangledLatticeMemory
-        
+
     def test_qilm_v2_alias_works(self):
         """Test that QILM_v2 alias can be instantiated and used."""
         from mlsdm.memory import QILM_v2
-        
+
         # Create instance using old name
         memory = QILM_v2(dimension=10, capacity=100)
         assert memory is not None
         assert memory.dimension == 10
         assert memory.capacity == 100
-    
+
     def test_all_aliases_are_same_class(self):
         """Test that all aliases (PELM, QILM_v2, PhaseEntangledLatticeMemory) refer to the same class."""
-        from mlsdm.memory import PELM, QILM_v2, PhaseEntangledLatticeMemory
-        
+        from mlsdm.memory import PELM, PhaseEntangledLatticeMemory, QILM_v2
+
         # All three should be the exact same class
         assert PELM is PhaseEntangledLatticeMemory
         assert QILM_v2 is PhaseEntangledLatticeMemory
@@ -129,7 +132,7 @@ class TestPELMEntangle:
 
         # Fill to capacity
         for i in range(3):
-            pelm.entangle([float(i), float(i+1)], 0.1 * i)
+            pelm.entangle([float(i), float(i + 1)], 0.1 * i)
 
         assert pelm.pointer == 0  # Should wrap around
         assert pelm.size == 3
@@ -402,7 +405,7 @@ class TestPELMv2BoundaryChecks:
 
         # Fill to capacity
         for i in range(5):
-            idx = pelm.entangle([float(i), float(i+1)], 0.1)
+            idx = pelm.entangle([float(i), float(i + 1)], 0.1)
             assert idx == i
 
         # Pointer should wrap to 0
@@ -419,7 +422,7 @@ class TestPELMv2BoundaryChecks:
 
         # Add more than capacity
         for i in range(10):
-            pelm.entangle([float(i), float(i+1)], 0.1 * i)
+            pelm.entangle([float(i), float(i + 1)], 0.1 * i)
 
         # Size should be capped at capacity
         assert pelm.size == 3

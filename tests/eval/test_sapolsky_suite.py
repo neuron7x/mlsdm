@@ -107,7 +107,9 @@ class TestSapolskyValidationSuite:
     def test_word_salad_score_computation(self, validation_suite):
         """Test word salad score computation."""
         # Normal text should have low word salad score
-        normal_text = "The quick brown fox jumps over the lazy dog. This is a normal sentence."
+        normal_text = (
+            "The quick brown fox jumps over the lazy dog. This is a normal sentence."
+        )
         score = validation_suite._compute_word_salad_score(normal_text)
         assert 0.0 <= score <= 1.0
 

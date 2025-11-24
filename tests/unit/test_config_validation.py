@@ -39,7 +39,9 @@ class TestSystemConfig:
         # When changing dimension, must provide matching ontology vectors
         config = SystemConfig(
             dimension=2,
-            ontology_matcher=OntologyMatcherConfig(ontology_vectors=[[1.0, 0.0], [0.0, 1.0]])
+            ontology_matcher=OntologyMatcherConfig(
+                ontology_vectors=[[1.0, 0.0], [0.0, 1.0]]
+            ),
         )
         assert config.dimension == 2
 
@@ -47,7 +49,9 @@ class TestSystemConfig:
         large_vec = [1.0] + [0.0] * 4095
         config = SystemConfig(
             dimension=4096,
-            ontology_matcher=OntologyMatcherConfig(ontology_vectors=[large_vec, large_vec])
+            ontology_matcher=OntologyMatcherConfig(
+                ontology_vectors=[large_vec, large_vec]
+            ),
         )
         assert config.dimension == 4096
 
@@ -89,11 +93,7 @@ class TestMultiLevelMemoryConfig:
 
     def test_valid_decay_hierarchy(self):
         """Valid decay rate hierarchy should pass."""
-        config = MultiLevelMemoryConfig(
-            lambda_l1=0.5,
-            lambda_l2=0.1,
-            lambda_l3=0.01
-        )
+        config = MultiLevelMemoryConfig(lambda_l1=0.5, lambda_l2=0.1, lambda_l3=0.01)
         assert config.lambda_l1 == 0.5
         assert config.lambda_l2 == 0.1
         assert config.lambda_l3 == 0.01
@@ -102,9 +102,7 @@ class TestMultiLevelMemoryConfig:
         """lambda_l3 > lambda_l2 should raise error."""
         with pytest.raises(ValidationError) as exc_info:
             MultiLevelMemoryConfig(
-                lambda_l1=0.5,
-                lambda_l2=0.1,
-                lambda_l3=0.2  # Invalid: > lambda_l2
+                lambda_l1=0.5, lambda_l2=0.1, lambda_l3=0.2  # Invalid: > lambda_l2
             )
         assert "Decay rates must follow hierarchy" in str(exc_info.value)
 
@@ -112,19 +110,13 @@ class TestMultiLevelMemoryConfig:
         """lambda_l2 > lambda_l1 should raise error."""
         with pytest.raises(ValidationError) as exc_info:
             MultiLevelMemoryConfig(
-                lambda_l1=0.1,
-                lambda_l2=0.5,  # Invalid: > lambda_l1
-                lambda_l3=0.01
+                lambda_l1=0.1, lambda_l2=0.5, lambda_l3=0.01  # Invalid: > lambda_l1
             )
         assert "Decay rates must follow hierarchy" in str(exc_info.value)
 
     def test_decay_rates_equal_allowed(self):
         """Equal decay rates should be allowed."""
-        config = MultiLevelMemoryConfig(
-            lambda_l1=0.5,
-            lambda_l2=0.5,
-            lambda_l3=0.5
-        )
+        config = MultiLevelMemoryConfig(lambda_l1=0.5, lambda_l2=0.5, lambda_l3=0.5)
         assert config.lambda_l1 == config.lambda_l2 == config.lambda_l3
 
     def test_decay_rates_range_valid(self):
@@ -146,20 +138,14 @@ class TestMultiLevelMemoryConfig:
 
     def test_valid_threshold_hierarchy(self):
         """theta_l2 > theta_l1 should pass."""
-        config = MultiLevelMemoryConfig(
-            theta_l1=1.0,
-            theta_l2=2.0
-        )
+        config = MultiLevelMemoryConfig(theta_l1=1.0, theta_l2=2.0)
         assert config.theta_l1 == 1.0
         assert config.theta_l2 == 2.0
 
     def test_invalid_threshold_hierarchy(self):
         """theta_l2 <= theta_l1 should raise error."""
         with pytest.raises(ValidationError) as exc_info:
-            MultiLevelMemoryConfig(
-                theta_l1=2.0,
-                theta_l2=1.0  # Invalid: <= theta_l1
-            )
+            MultiLevelMemoryConfig(theta_l1=2.0, theta_l2=1.0)  # Invalid: <= theta_l1
         assert "threshold hierarchy violated" in str(exc_info.value)
 
     def test_gating_factors_range(self):
@@ -180,11 +166,7 @@ class TestMoralFilterConfig:
 
     def test_valid_threshold_bounds(self):
         """Valid threshold configuration should pass."""
-        config = MoralFilterConfig(
-            threshold=0.5,
-            min_threshold=0.3,
-            max_threshold=0.9
-        )
+        config = MoralFilterConfig(threshold=0.5, min_threshold=0.3, max_threshold=0.9)
         assert config.threshold == 0.5
         assert config.min_threshold == 0.3
         assert config.max_threshold == 0.9
@@ -192,28 +174,19 @@ class TestMoralFilterConfig:
     def test_invalid_min_greater_than_max(self):
         """min_threshold >= max_threshold should fail."""
         with pytest.raises(ValidationError) as exc_info:
-            MoralFilterConfig(
-                min_threshold=0.9,
-                max_threshold=0.3
-            )
+            MoralFilterConfig(min_threshold=0.9, max_threshold=0.3)
         assert "must be <" in str(exc_info.value)
 
     def test_invalid_threshold_below_min(self):
         """threshold < min_threshold should fail."""
         with pytest.raises(ValidationError) as exc_info:
-            MoralFilterConfig(
-                threshold=0.2,
-                min_threshold=0.3
-            )
+            MoralFilterConfig(threshold=0.2, min_threshold=0.3)
         assert "must be >=" in str(exc_info.value)
 
     def test_invalid_threshold_above_max(self):
         """threshold > max_threshold should fail."""
         with pytest.raises(ValidationError) as exc_info:
-            MoralFilterConfig(
-                threshold=0.95,
-                max_threshold=0.9
-            )
+            MoralFilterConfig(threshold=0.95, max_threshold=0.9)
         # Pydantic v2 uses "less than or equal" in error messages
         assert "less than or equal" in str(exc_info.value).lower()
 
@@ -246,8 +219,7 @@ class TestOntologyMatcherConfig:
     def test_valid_vectors_and_labels(self):
         """Valid ontology configuration should pass."""
         config = OntologyMatcherConfig(
-            ontology_vectors=[[1.0, 0.0], [0.0, 1.0]],
-            ontology_labels=["cat1", "cat2"]
+            ontology_vectors=[[1.0, 0.0], [0.0, 1.0]], ontology_labels=["cat1", "cat2"]
         )
         assert len(config.ontology_vectors) == 2
         assert len(config.ontology_labels) == 2
@@ -255,9 +227,7 @@ class TestOntologyMatcherConfig:
     def test_vectors_same_dimension(self):
         """All vectors should have same dimension."""
         with pytest.raises(ValidationError) as exc_info:
-            OntologyMatcherConfig(
-                ontology_vectors=[[1.0, 0.0], [1.0, 0.0, 0.0]]
-            )
+            OntologyMatcherConfig(ontology_vectors=[[1.0, 0.0], [1.0, 0.0, 0.0]])
         assert "same dimension" in str(exc_info.value)
 
     def test_empty_vectors_rejected(self):
@@ -271,15 +241,14 @@ class TestOntologyMatcherConfig:
         with pytest.raises(ValidationError) as exc_info:
             OntologyMatcherConfig(
                 ontology_vectors=[[1.0, 0.0], [0.0, 1.0]],
-                ontology_labels=["cat1"]  # Only 1 label for 2 vectors
+                ontology_labels=["cat1"],  # Only 1 label for 2 vectors
             )
         assert "must match" in str(exc_info.value)
 
     def test_labels_optional(self):
         """Labels should be optional."""
         config = OntologyMatcherConfig(
-            ontology_vectors=[[1.0, 0.0], [0.0, 1.0]],
-            ontology_labels=None
+            ontology_vectors=[[1.0, 0.0], [0.0, 1.0]], ontology_labels=None
         )
         assert config.ontology_labels is None
 
@@ -289,10 +258,7 @@ class TestCognitiveRhythmConfig:
 
     def test_valid_durations(self):
         """Valid wake/sleep durations should pass."""
-        config = CognitiveRhythmConfig(
-            wake_duration=8,
-            sleep_duration=3
-        )
+        config = CognitiveRhythmConfig(wake_duration=8, sleep_duration=3)
         assert config.wake_duration == 8
         assert config.sleep_duration == 3
 
@@ -321,7 +287,7 @@ class TestCrossFieldValidation:
                 dimension=10,
                 ontology_matcher=OntologyMatcherConfig(
                     ontology_vectors=[[1.0, 0.0], [0.0, 1.0]]  # dim=2, not 10
-                )
+                ),
             )
         assert "must match system dimension" in str(exc_info.value)
 
@@ -331,7 +297,7 @@ class TestCrossFieldValidation:
             dimension=2,
             ontology_matcher=OntologyMatcherConfig(
                 ontology_vectors=[[1.0, 0.0], [0.0, 1.0]]
-            )
+            ),
         )
         assert config.dimension == 2
 
@@ -343,19 +309,15 @@ class TestConfigLoaderIntegration:
         """Valid configuration dictionary should pass."""
         config_dict = {
             "dimension": 384,
-            "moral_filter": {
-                "threshold": 0.5
-            },
-            "strict_mode": False
+            "moral_filter": {"threshold": 0.5},
+            "strict_mode": False,
         }
         config = validate_config_dict(config_dict)
         assert config.dimension == 384
 
     def test_invalid_dict(self):
         """Invalid configuration dictionary should raise ValueError."""
-        config_dict = {
-            "dimension": -1  # Invalid
-        }
+        config_dict = {"dimension": -1}  # Invalid
         with pytest.raises(ValueError) as exc_info:
             validate_config_dict(config_dict)
         assert "Configuration validation failed" in str(exc_info.value)
@@ -388,8 +350,7 @@ class TestConfigSerialization:
     def test_round_trip(self):
         """Config should round-trip through dict."""
         config1 = SystemConfig(
-            dimension=384,
-            moral_filter=MoralFilterConfig(threshold=0.7)
+            dimension=384, moral_filter=MoralFilterConfig(threshold=0.7)
         )
         data = config1.model_dump()
         config2 = SystemConfig(**data)

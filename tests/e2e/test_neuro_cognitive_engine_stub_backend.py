@@ -80,7 +80,9 @@ class TestNeuroCognitiveEngineE2EStubBackend:
 
         # The moral_precheck will be skipped (no compute_moral_value method)
         # but MLSDM's internal evaluate will reject it during generation
-        moral_steps = [s for s in result["validation_steps"] if s["step"] == "moral_precheck"]
+        moral_steps = [
+            s for s in result["validation_steps"] if s["step"] == "moral_precheck"
+        ]
         assert len(moral_steps) > 0
         # Should be skipped or passed (pre-flight doesn't have compute_moral_value)
         assert moral_steps[0].get("skipped", False) or moral_steps[0]["passed"]

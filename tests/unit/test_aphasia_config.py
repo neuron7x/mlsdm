@@ -46,17 +46,15 @@ class TestAphasiaDetectionDisable:
             aphasia_repair_enabled=True,  # Should have no effect if detection is off
         )
 
-        result = wrapper.generate(
-            prompt="Test prompt",
-            moral_value=0.8,
-            max_tokens=50
-        )
+        result = wrapper.generate(prompt="Test prompt", moral_value=0.8, max_tokens=50)
 
         # Detection disabled: should return raw LLM output
         assert result["accepted"] is True
         assert result["aphasia_flags"] is None
         # Should contain the telegraphic response, not the repaired one
-        assert "work" in result["response"].lower() or "fine" in result["response"].lower()
+        assert (
+            "work" in result["response"].lower() or "fine" in result["response"].lower()
+        )
 
     def test_default_detection_enabled(self):
         """Test that detection is enabled by default."""
@@ -87,19 +85,17 @@ class TestAphasiaRepairDisable:
             aphasia_repair_enabled=False,
         )
 
-        result = wrapper.generate(
-            prompt="Test prompt",
-            moral_value=0.8,
-            max_tokens=50
-        )
+        result = wrapper.generate(prompt="Test prompt", moral_value=0.8, max_tokens=50)
 
         # Detection enabled, repair disabled
         assert result["accepted"] is True
         assert result["aphasia_flags"] is not None
         assert result["aphasia_flags"]["is_aphasic"] is True
-        
+
         # Should NOT be repaired - should contain original telegraphic text
-        assert "work" in result["response"].lower() or "fine" in result["response"].lower()
+        assert (
+            "work" in result["response"].lower() or "fine" in result["response"].lower()
+        )
         # Should NOT contain the repair phrase
         assert "functioning correctly" not in result["response"].lower()
 
@@ -114,17 +110,13 @@ class TestAphasiaRepairDisable:
             aphasia_repair_enabled=True,
         )
 
-        result = wrapper.generate(
-            prompt="Test prompt",
-            moral_value=0.8,
-            max_tokens=50
-        )
+        result = wrapper.generate(prompt="Test prompt", moral_value=0.8, max_tokens=50)
 
         # Both enabled: should detect and repair
         assert result["accepted"] is True
         assert result["aphasia_flags"] is not None
         assert result["aphasia_flags"]["is_aphasic"] is True
-        
+
         # Should be repaired
         assert "functioning correctly" in result["response"].lower()
 
@@ -144,11 +136,7 @@ class TestAphasiaSeverityThreshold:
             aphasia_severity_threshold=0.01,  # Very low threshold
         )
 
-        result = wrapper.generate(
-            prompt="Test prompt",
-            moral_value=0.8,
-            max_tokens=50
-        )
+        result = wrapper.generate(prompt="Test prompt", moral_value=0.8, max_tokens=50)
 
         # With low threshold, any aphasic text should be repaired
         assert result["aphasia_flags"]["is_aphasic"] is True
@@ -166,17 +154,16 @@ class TestAphasiaSeverityThreshold:
             aphasia_severity_threshold=0.99,  # Very high threshold
         )
 
-        result = wrapper.generate(
-            prompt="Test prompt",
-            moral_value=0.8,
-            max_tokens=50
-        )
+        result = wrapper.generate(prompt="Test prompt", moral_value=0.8, max_tokens=50)
 
         # With high threshold, repair should not trigger
         assert result["aphasia_flags"]["is_aphasic"] is True
         # Should NOT be repaired if severity < 0.99
         if result["aphasia_flags"]["severity"] < 0.99:
-            assert "work" in result["response"].lower() or "fine" in result["response"].lower()
+            assert (
+                "work" in result["response"].lower()
+                or "fine" in result["response"].lower()
+            )
 
     def test_threshold_respected_at_boundary(self):
         """Test that threshold is respected at the boundary."""
@@ -190,11 +177,7 @@ class TestAphasiaSeverityThreshold:
             aphasia_severity_threshold=0.5,  # Mid-range threshold
         )
 
-        result = wrapper.generate(
-            prompt="Test prompt",
-            moral_value=0.8,
-            max_tokens=50
-        )
+        result = wrapper.generate(prompt="Test prompt", moral_value=0.8, max_tokens=50)
 
         # Check that severity threshold logic is working
         assert result["aphasia_flags"] is not None
@@ -205,7 +188,10 @@ class TestAphasiaSeverityThreshold:
                 assert "functioning correctly" in result["response"].lower()
             else:
                 # Should NOT be repaired
-                assert "work" in result["response"].lower() or "fine" in result["response"].lower()
+                assert (
+                    "work" in result["response"].lower()
+                    or "fine" in result["response"].lower()
+                )
 
 
 class TestBackwardCompatibility:
@@ -226,11 +212,7 @@ class TestBackwardCompatibility:
         assert wrapper.aphasia_repair_enabled is True
         assert wrapper.aphasia_severity_threshold == 0.3
 
-        result = wrapper.generate(
-            prompt="Test prompt",
-            moral_value=0.8,
-            max_tokens=50
-        )
+        result = wrapper.generate(prompt="Test prompt", moral_value=0.8, max_tokens=50)
 
         # With defaults, should detect and repair
         assert result["aphasia_flags"] is not None
@@ -249,11 +231,7 @@ class TestBackwardCompatibility:
             aphasia_repair_enabled=True,
         )
 
-        result = wrapper.generate(
-            prompt="Test prompt",
-            moral_value=0.8,
-            max_tokens=50
-        )
+        result = wrapper.generate(prompt="Test prompt", moral_value=0.8, max_tokens=50)
 
         # Healthy text should not be marked as aphasic
         assert result["aphasia_flags"] is not None
@@ -306,20 +284,18 @@ class TestMonitoringMode:
             aphasia_repair_enabled=False,  # Monitoring only
         )
 
-        result = wrapper.generate(
-            prompt="Test prompt",
-            moral_value=0.8,
-            max_tokens=50
-        )
+        result = wrapper.generate(prompt="Test prompt", moral_value=0.8, max_tokens=50)
 
         # Should have aphasia flags for monitoring
         assert result["aphasia_flags"] is not None
         assert result["aphasia_flags"]["is_aphasic"] is True
         assert "flags" in result["aphasia_flags"]
         assert "severity" in result["aphasia_flags"]
-        
+
         # But text should not be modified
-        assert "work" in result["response"].lower() or "fine" in result["response"].lower()
+        assert (
+            "work" in result["response"].lower() or "fine" in result["response"].lower()
+        )
 
 
 if __name__ == "__main__":

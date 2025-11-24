@@ -23,10 +23,7 @@ class TestMoralFilterInitialization:
     def test_custom_initialization(self):
         """Test filter can be initialized with custom values."""
         filter = MoralFilter(
-            threshold=0.6,
-            adapt_rate=0.1,
-            min_threshold=0.2,
-            max_threshold=0.95
+            threshold=0.6, adapt_rate=0.1, min_threshold=0.2, max_threshold=0.95
         )
         assert filter.threshold == 0.6
         assert filter.adapt_rate == 0.1
@@ -145,29 +142,26 @@ class TestMoralFilterToDict:
     def test_to_dict(self):
         """Test filter can be serialized to dict."""
         filter = MoralFilter(
-            threshold=0.6,
-            adapt_rate=0.1,
-            min_threshold=0.2,
-            max_threshold=0.95
+            threshold=0.6, adapt_rate=0.1, min_threshold=0.2, max_threshold=0.95
         )
 
         data = filter.to_dict()
 
         assert isinstance(data, dict)
-        assert data['threshold'] == 0.6
-        assert data['adapt_rate'] == 0.1
-        assert data['min_threshold'] == 0.2
-        assert data['max_threshold'] == 0.95
+        assert data["threshold"] == 0.6
+        assert data["adapt_rate"] == 0.1
+        assert data["min_threshold"] == 0.2
+        assert data["max_threshold"] == 0.95
 
     def test_to_dict_default_values(self):
         """Test to_dict with default initialization."""
         filter = MoralFilter()
         data = filter.to_dict()
 
-        assert data['threshold'] == 0.5
-        assert data['adapt_rate'] == 0.05
-        assert data['min_threshold'] == 0.3
-        assert data['max_threshold'] == 0.9
+        assert data["threshold"] == 0.5
+        assert data["adapt_rate"] == 0.05
+        assert data["min_threshold"] == 0.3
+        assert data["max_threshold"] == 0.9
 
 
 class TestMoralFilterIntegration:
@@ -193,7 +187,9 @@ class TestMoralFilterIntegration:
 
     def test_convergence_to_limits(self):
         """Test filter converges to limits with extreme adapt rates."""
-        filter = MoralFilter(threshold=0.5, adapt_rate=0.2, min_threshold=0.3, max_threshold=0.9)
+        filter = MoralFilter(
+            threshold=0.5, adapt_rate=0.2, min_threshold=0.3, max_threshold=0.9
+        )
 
         # Push to minimum
         for _ in range(5):

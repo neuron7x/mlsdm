@@ -37,7 +37,9 @@ def test_import_aphasia_without_torch_ok():
 
             assert result is not None
             assert "is_aphasic" in result
-            assert result["is_aphasic"] is True  # This text should be detected as aphasic
+            assert (
+                result["is_aphasic"] is True
+            )  # This text should be detected as aphasic
             assert "severity" in result
             assert "flags" in result
         finally:

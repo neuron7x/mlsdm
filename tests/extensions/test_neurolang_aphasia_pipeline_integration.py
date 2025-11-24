@@ -56,7 +56,9 @@ def test_neurolang_pipeline_step_structure():
         initial_moral_threshold=0.5,
     )
 
-    result = wrapper.generate(prompt="Explain something", moral_value=0.8, max_tokens=64)
+    result = wrapper.generate(
+        prompt="Explain something", moral_value=0.8, max_tokens=64
+    )
 
     sg = result["speech_governance"]
     steps = sg["metadata"]["pipeline"]
@@ -141,6 +143,7 @@ def test_neurolang_backward_compatible_aphasia_flags():
 
 def test_neurolang_pipeline_with_repair_enabled():
     """Test pipeline when repair is enabled."""
+
     def repair_llm(prompt: str, max_tokens: int) -> str:
         if "Broca-like aphasia" in prompt:
             return "This is a properly repaired sentence with good grammar."

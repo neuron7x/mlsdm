@@ -15,10 +15,7 @@ from unittest.mock import Mock, patch
 import numpy as np
 import pytest
 
-from mlsdm.engine.neuro_cognitive_engine import (
-    NeuroCognitiveEngine,
-    NeuroEngineConfig,
-)
+from mlsdm.engine.neuro_cognitive_engine import NeuroCognitiveEngine, NeuroEngineConfig
 
 
 class TestNeuroCognitiveEngineArchitecture:
@@ -348,8 +345,7 @@ class TestNeuroCognitiveEngineFSLGSIntegration:
     """FSLGS-specific integration tests."""
 
     @pytest.mark.skipif(
-        "fslgs" not in dir(),
-        reason="FSLGS not available in this environment"
+        "fslgs" not in dir(), reason="FSLGS not available in this environment"
     )
     def test_fslgs_grammar_precheck(self):
         """FSLGS grammar pre-check працює коректно."""
@@ -358,10 +354,14 @@ class TestNeuroCognitiveEngineFSLGSIntegration:
 
         config = NeuroEngineConfig(enable_fslgs=True)
 
-        with patch("mlsdm.engine.neuro_cognitive_engine.FSLGSWrapper") as mock_fslgs_cls:
+        with patch(
+            "mlsdm.engine.neuro_cognitive_engine.FSLGSWrapper"
+        ) as mock_fslgs_cls:
             mock_fslgs_instance = Mock()
             mock_fslgs_instance.grammar = Mock()
-            mock_fslgs_instance.grammar.validate_input_structure = Mock(return_value=False)
+            mock_fslgs_instance.grammar.validate_input_structure = Mock(
+                return_value=False
+            )
             mock_fslgs_cls.return_value = mock_fslgs_instance
 
             engine = NeuroCognitiveEngine(

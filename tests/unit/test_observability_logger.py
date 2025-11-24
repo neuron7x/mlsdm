@@ -359,9 +359,7 @@ class TestConvenienceMethods:
                 console_output=False,
             )
 
-            correlation_id = logger.log_moral_rejected(
-                moral_value=0.3, threshold=0.5
-            )
+            correlation_id = logger.log_moral_rejected(moral_value=0.3, threshold=0.5)
 
             assert correlation_id is not None
 
@@ -383,9 +381,7 @@ class TestConvenienceMethods:
                 console_output=False,
             )
 
-            correlation_id = logger.log_moral_accepted(
-                moral_value=0.8, threshold=0.5
-            )
+            correlation_id = logger.log_moral_accepted(moral_value=0.8, threshold=0.5)
 
             assert correlation_id is not None
 
@@ -474,9 +470,7 @@ class TestConvenienceMethods:
                 min_level=logging.DEBUG,
             )
 
-            correlation_id = logger.log_memory_store(
-                vector_dim=384, memory_size=100
-            )
+            correlation_id = logger.log_memory_store(vector_dim=384, memory_size=100)
 
             assert correlation_id is not None
 
@@ -725,9 +719,7 @@ class TestEdgeCases:
                 console_output=False,
             )
 
-            correlation_id = logger.info(
-                EventType.SYSTEM_STARTUP, "Test", metrics=None
-            )
+            correlation_id = logger.info(EventType.SYSTEM_STARTUP, "Test", metrics=None)
 
             assert correlation_id is not None
 

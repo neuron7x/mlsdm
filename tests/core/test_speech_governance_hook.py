@@ -28,7 +28,9 @@ def dummy_embedder(text: str):
 class UpperCaseGovernor:
     """Test governor that converts text to uppercase."""
 
-    def __call__(self, *, prompt: str, draft: str, max_tokens: int) -> SpeechGovernanceResult:
+    def __call__(
+        self, *, prompt: str, draft: str, max_tokens: int
+    ) -> SpeechGovernanceResult:
         return SpeechGovernanceResult(
             final_text=draft.upper(),
             raw_text=draft,
@@ -42,7 +44,9 @@ class PrefixGovernor:
     def __init__(self, prefix: str):
         self.prefix = prefix
 
-    def __call__(self, *, prompt: str, draft: str, max_tokens: int) -> SpeechGovernanceResult:
+    def __call__(
+        self, *, prompt: str, draft: str, max_tokens: int
+    ) -> SpeechGovernanceResult:
         return SpeechGovernanceResult(
             final_text=f"{self.prefix}: {draft}",
             raw_text=draft,
@@ -53,7 +57,9 @@ class PrefixGovernor:
 class ConditionalGovernor:
     """Test governor that only modifies text if a condition is met."""
 
-    def __call__(self, *, prompt: str, draft: str, max_tokens: int) -> SpeechGovernanceResult:
+    def __call__(
+        self, *, prompt: str, draft: str, max_tokens: int
+    ) -> SpeechGovernanceResult:
         # Only modify if draft is short
         if len(draft) < 20:
             final = f"[EXPANDED] {draft}"

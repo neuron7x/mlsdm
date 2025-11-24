@@ -35,14 +35,14 @@ class TestNeuroCognitiveClientInit:
             del os.environ["OPENAI_API_KEY"]
 
         # Mock the factory to bypass OpenAI adapter creation
-        with patch("mlsdm.sdk.neuro_engine_client.build_neuro_engine_from_env") as mock_factory:
+        with patch(
+            "mlsdm.sdk.neuro_engine_client.build_neuro_engine_from_env"
+        ) as mock_factory:
             mock_engine = MagicMock()
             mock_factory.return_value = mock_engine
 
             client = NeuroCognitiveClient(
-                backend="openai",
-                api_key="sk-test-key-12345",
-                model="gpt-4"
+                backend="openai", api_key="sk-test-key-12345", model="gpt-4"
             )
             assert client.backend == "openai"
             assert os.environ.get("OPENAI_API_KEY") == "sk-test-key-12345"
@@ -53,7 +53,9 @@ class TestNeuroCognitiveClientInit:
         os.environ["OPENAI_API_KEY"] = "sk-env-key"
 
         # Mock the factory
-        with patch("mlsdm.sdk.neuro_engine_client.build_neuro_engine_from_env") as mock_factory:
+        with patch(
+            "mlsdm.sdk.neuro_engine_client.build_neuro_engine_from_env"
+        ) as mock_factory:
             mock_engine = MagicMock()
             mock_factory.return_value = mock_engine
 

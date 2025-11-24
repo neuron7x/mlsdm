@@ -13,7 +13,6 @@ Tests cover:
 from unittest.mock import Mock, patch
 
 import numpy as np
-import pytest
 
 from mlsdm.engine import NeuroCognitiveEngine, NeuroEngineConfig
 
@@ -216,7 +215,9 @@ class TestNeuroCognitiveEngineGenerate:
         config = NeuroEngineConfig(enable_fslgs=True)
 
         # Patch FSLGSWrapper at module level to simulate it being available
-        with patch("mlsdm.engine.neuro_cognitive_engine.FSLGSWrapper", mock_fslgs_class):
+        with patch(
+            "mlsdm.engine.neuro_cognitive_engine.FSLGSWrapper", mock_fslgs_class
+        ):
             engine = NeuroCognitiveEngine(
                 llm_generate_fn=llm_fn,
                 embedding_fn=embed_fn,

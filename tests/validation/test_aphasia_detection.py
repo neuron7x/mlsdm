@@ -33,7 +33,9 @@ def test_healthy_response_detection():
     for text in healthy_texts:
         result = detector.analyze(text)
         assert not result["is_aphasic"], f"Text incorrectly marked as aphasic: {text}"
-        assert result["severity"] == 0.0, f"Severity should be 0.0 for healthy text: {text}"
+        assert (
+            result["severity"] == 0.0
+        ), f"Severity should be 0.0 for healthy text: {text}"
         assert result["avg_sentence_len"] >= 6.0
         assert result["function_word_ratio"] >= 0.15
         assert result["fragment_ratio"] <= 0.5
@@ -52,7 +54,9 @@ def test_aphasic_response_detection():
     for text in aphasic_texts:
         result = detector.analyze(text)
         assert result["is_aphasic"], f"Text should be marked as aphasic: {text}"
-        assert result["severity"] > 0.0, f"Severity should be > 0 for aphasic text: {text}"
+        assert (
+            result["severity"] > 0.0
+        ), f"Severity should be > 0 for aphasic text: {text}"
         assert len(result["flags"]) > 0, f"Should have flags for aphasic text: {text}"
 
 
@@ -143,9 +147,7 @@ def test_thread_safety():
 def test_custom_thresholds():
     """Test AphasiaBrocaDetector with custom thresholds."""
     detector = AphasiaBrocaDetector(
-        min_sentence_len=8.0,
-        min_function_word_ratio=0.20,
-        max_fragment_ratio=0.3
+        min_sentence_len=8.0, min_function_word_ratio=0.20, max_fragment_ratio=0.3
     )
 
     assert detector.min_sentence_len == 8.0
@@ -185,7 +187,9 @@ def test_effectiveness_metrics():
     ]
 
     # Count how many are detected as aphasic
-    detected = sum(1 for text in telegraphic_samples if detector.analyze(text)["is_aphasic"])
+    detected = sum(
+        1 for text in telegraphic_samples if detector.analyze(text)["is_aphasic"]
+    )
     detection_rate = detected / len(telegraphic_samples)
 
     # Should detect at least 80% of telegraphic responses
@@ -201,11 +205,15 @@ def test_effectiveness_metrics():
     ]
 
     # Count false positives (healthy text marked as aphasic)
-    false_positives = sum(1 for text in healthy_samples if detector.analyze(text)["is_aphasic"])
+    false_positives = sum(
+        1 for text in healthy_samples if detector.analyze(text)["is_aphasic"]
+    )
     false_positive_rate = false_positives / len(healthy_samples)
 
     # False positive rate should be low (< 10%)
-    assert false_positive_rate < 0.10, f"False positive rate {false_positive_rate:.1%} above 10%"
+    assert (
+        false_positive_rate < 0.10
+    ), f"False positive rate {false_positive_rate:.1%} above 10%"
 
 
 def test_severity_range():
