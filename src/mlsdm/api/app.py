@@ -215,6 +215,6 @@ async def shutdown_event():
 
 
 @app.get("/health")
-async def health() -> dict[str, str]:
+async def health_check() -> dict[str, str]:
     """Health check endpoint (no authentication required)."""
     return {"status": "healthy"}

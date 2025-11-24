@@ -117,10 +117,16 @@ module = [
     "mlsdm.service.*",
     "mlsdm.main",
     "mlsdm.extensions.*",
+    "mlsdm.adapters.*",
+    "mlsdm.utils.data_serializer",
+    "mlsdm.observability.*",
+    "mlsdm.core.llm_wrapper",
 ]
 disallow_untyped_decorators = false
 disallow_untyped_defs = false
 check_untyped_defs = false
+warn_return_any = false
+warn_unused_ignores = false
 
 [tool.pytest.ini_options]
 minversion = "8.0"

@@ -27,8 +27,9 @@ NeuroCognitiveEngine: integrated MLSDM + FSLGS orchestration layer.
 from __future__ import annotations
 
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Callable, Literal, cast
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 from mlsdm.core.llm_wrapper import LLMWrapper
 
@@ -226,13 +227,13 @@ class NeuroCognitiveEngine:
                     fallback = f"[provider_error:{self._selected_provider_id}] {str(e)}"
                     return fallback
 
-            actual_llm_fn = cast(Callable[..., str], routed_llm_fn)
+            actual_llm_fn = cast("Callable[..., str]", routed_llm_fn)
         else:
             if llm_generate_fn is None:
                 raise ValueError(
                     "Either llm_generate_fn or router must be provided"
                 )
-            actual_llm_fn = cast(Callable[..., str], llm_generate_fn)
+            actual_llm_fn = cast("Callable[..., str]", llm_generate_fn)
 
         if embedding_fn is None:
             raise ValueError("embedding_fn is required")
