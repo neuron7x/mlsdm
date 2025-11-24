@@ -212,11 +212,13 @@ class NeuroCognitiveEngine:
 
                 # Generate response - handle both kwargs and non-kwargs providers
                 try:
-                    return provider.generate(prompt, max_tokens, **kwargs)
+                    result: str = provider.generate(prompt, max_tokens, **kwargs)
+                    return result
                 except TypeError:
                     # Provider may not accept kwargs; try without them
                     try:
-                        return provider.generate(prompt, max_tokens)
+                        result_no_kwargs: str = provider.generate(prompt, max_tokens)
+                        return result_no_kwargs
                     except Exception as e:
                         # Return a fallback response to avoid empty response errors
                         fallback = f"[provider_error:{self._selected_provider_id}] {str(e)}"
@@ -226,7 +228,7 @@ class NeuroCognitiveEngine:
                     fallback = f"[provider_error:{self._selected_provider_id}] {str(e)}"
                     return fallback
 
-            actual_llm_fn = routed_llm_fn
+            actual_llm_fn: Callable[[str, int], str] = routed_llm_fn
         else:
             if llm_generate_fn is None:
                 raise ValueError(
@@ -426,16 +428,16 @@ class NeuroCognitiveEngine:
         # If using router, pre-select provider/variant for metrics tracking
         # This ensures we track even rejected requests
         if self._router is not None:
-            metadata = {
+            router_metadata = {
                 "user_intent": user_intent,
                 "priority_tier": getattr(self, "_runtime_priority_tier", "normal"),
             }
-            provider_name = self._router.select_provider(prompt, metadata)
+            provider_name = self._router.select_provider(prompt, router_metadata)
             provider = self._router.get_provider(provider_name)
             self._selected_provider_id = getattr(provider, "provider_id", None)
             if hasattr(self._router, "get_variant"):
                 try:
-                    self._selected_variant = self._router.get_variant(provider_name, **metadata)
+                    self._selected_variant = self._router.get_variant(provider_name, **router_metadata)
                 except TypeError:
                     self._selected_variant = self._router.get_variant(provider_name)
 
@@ -746,11 +748,11 @@ class NeuroCognitiveEngine:
                 self._metrics.record_latency_total(timing["total"])
 
         # Build metadata with provider/variant info
-        meta: dict[str, Any] = {}
+        metadata: dict[str, Any] = {}
         if self._selected_provider_id is not None:
-            meta["backend_id"] = self._selected_provider_id
+            metadata["backend_id"] = self._selected_provider_id
         if self._selected_variant is not None:
-            meta["variant"] = self._selected_variant
+            metadata["variant"] = self._selected_variant
 
         return {
             "response": response_text,
@@ -760,7 +762,7 @@ class NeuroCognitiveEngine:
             "validation_steps": validation_steps,
             "error": None,
             "rejected_at": None,
-            "meta": meta,
+            "meta": metadata,
         }
 
     # ------------------------------------------------------------------ #
@@ -784,7 +786,8 @@ class NeuroCognitiveEngine:
         moral_filter = getattr(self._mlsdm, "moral", None)
         if moral_filter is not None and hasattr(moral_filter, "compute_moral_value"):
             try:
-                return moral_filter.compute_moral_value(response_text)
+                moral_score: float = moral_filter.compute_moral_value(response_text)
+                return moral_score
             except Exception:
                 pass  # Fall back to heuristic
 

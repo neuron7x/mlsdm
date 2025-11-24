@@ -25,11 +25,16 @@ def _load_data(filepath: str) -> dict[str, Any]:
     ext = os.path.splitext(filepath)[1].lower()
     if ext == ".json":
         with open(filepath, encoding="utf-8") as f:
-            return json.load(f)
+            data: dict[str, Any] = json.load(f)
+            return data
     elif ext == ".npz":
         arrs = np.load(filepath, allow_pickle=True)
-        # Type ignore: numpy.load returns NpzFile with items() that have Any values
-        return {k: v.tolist() if isinstance(v, np.ndarray) else v for k, v in arrs.items()}  # type: ignore[no-any-return]
+        # Convert NpzFile to dict - explicit type to satisfy mypy
+        result: dict[str, Any] = {
+            k: v.tolist() if isinstance(v, np.ndarray) else v
+            for k, v in arrs.items()
+        }
+        return result
     else:
         raise ValueError(f"Unsupported format: {ext}")
 

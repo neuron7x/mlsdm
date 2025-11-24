@@ -9,6 +9,7 @@ Principal System Architect level implementation with statistical rigor.
 """
 
 from dataclasses import dataclass
+from typing import Any
 
 import numpy as np
 
@@ -49,11 +50,11 @@ class CoherenceSafetyAnalyzer:
 
     def reset(self) -> None:
         """Reset all collected metrics"""
-        self.wake_retrievals = []
-        self.sleep_retrievals = []
-        self.moral_history = []
-        self.rejection_history = []
-        self.threshold_history = []
+        self.wake_retrievals: list[Any] = []
+        self.sleep_retrievals: list[Any] = []
+        self.moral_history: list[float] = []
+        self.rejection_history: list[bool] = []
+        self.threshold_history: list[float] = []
 
     # ========== COHERENCE METRICS ==========
 

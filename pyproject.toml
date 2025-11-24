@@ -116,6 +116,15 @@ module = "mlsdm.tests.*"
 disallow_untyped_defs = false
 check_untyped_defs = false
 
+# NeuroLang extension is an optional PyTorch-based plugin
+# Torch typing is complex and unstable, so we use lenient checking
+[[tool.mypy.overrides]]
+module = "mlsdm.extensions.neuro_lang_extension"
+disallow_untyped_defs = false
+disallow_untyped_calls = false
+check_untyped_defs = false
+# Note: This is explicitly an optional extension and does not affect core functionality
+
 [tool.pytest.ini_options]
 minversion = "8.0"
 addopts = [
