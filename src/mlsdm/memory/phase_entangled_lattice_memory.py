@@ -27,11 +27,21 @@ class PhaseEntangledLatticeMemory:
     def __init__(self, dimension: int = 384, capacity: int = 20000) -> None:
         # Validate inputs
         if dimension <= 0:
-            raise ValueError(f"dimension must be positive, got {dimension}")
+            raise ValueError(
+                f"dimension must be positive, got {dimension}. "
+                "Dimension determines the embedding vector size and must match the model's embedding dimension."
+            )
         if capacity <= 0:
-            raise ValueError(f"capacity must be positive, got {capacity}")
+            raise ValueError(
+                f"capacity must be positive, got {capacity}. "
+                "Capacity determines the maximum number of vectors that can be stored in memory."
+            )
         if capacity > 1_000_000:
-            raise ValueError(f"capacity too large (max 1,000,000), got {capacity}")
+            raise ValueError(
+                f"capacity too large (max 1,000,000), got {capacity}. "
+                "Large capacities may cause excessive memory usage. "
+                f"Estimated memory: {capacity * dimension * 4 / (1024**2):.2f} MB"
+            )
 
         self.dimension = dimension
         self.capacity = capacity
@@ -53,12 +63,32 @@ class PhaseEntangledLatticeMemory:
         """
         if self._detect_corruption_unsafe():  # noqa: SIM102
             if not self._auto_recover_unsafe():
-                raise RuntimeError("Memory corruption detected and recovery failed")
+                raise RuntimeError(
+                    "Memory corruption detected and recovery failed. "
+                    f"Current state: pointer={self.pointer}, size={self.size}, capacity={self.capacity}. "
+                    "This may indicate hardware issues, race conditions, or memory overwrites. "
+                    "Consider restarting the system or reducing capacity."
+                )
 
     def entangle(self, vector: list[float], phase: float) -> int:
         with self._lock:
             # Ensure integrity before operation
             self._ensure_integrity()
+
+            # Validate inputs
+            if not isinstance(vector, list):
+                raise TypeError(f"vector must be a list, got {type(vector).__name__}")
+            if len(vector) != self.dimension:
+                raise ValueError(
+                    f"vector dimension mismatch: expected {self.dimension}, got {len(vector)}"
+                )
+            if not isinstance(phase, (int, float)):
+                raise TypeError(f"phase must be numeric, got {type(phase).__name__}")
+            if not (0.0 <= phase <= 1.0):
+                raise ValueError(
+                    f"phase must be in [0.0, 1.0], got {phase}. "
+                    "Phase values represent cognitive states (e.g., 0.1=wake, 0.9=sleep)."
+                )
 
             vec_np = np.array(vector, dtype=np.float32)
             norm = float(np.linalg.norm(vec_np) or 1e-9)

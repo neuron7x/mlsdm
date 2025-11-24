@@ -310,6 +310,29 @@ class TestCognitiveRhythmConfig:
         with pytest.raises(ValidationError):
             CognitiveRhythmConfig(sleep_duration=101)
 
+    def test_unusual_ratio_warning(self, caplog):
+        """Unusual wake/sleep ratios should trigger warning."""
+        import logging
+        caplog.set_level(logging.WARNING)
+        
+        # Ratio < 1.0 should trigger warning
+        config = CognitiveRhythmConfig(wake_duration=2, sleep_duration=5)
+        assert config.wake_duration == 2
+        assert config.sleep_duration == 5
+        assert "Unusual wake/sleep ratio detected" in caplog.text
+        
+        # Clear log and test ratio > 10.0
+        caplog.clear()
+        config = CognitiveRhythmConfig(wake_duration=50, sleep_duration=4)
+        assert config.wake_duration == 50
+        assert config.sleep_duration == 4
+        assert "Unusual wake/sleep ratio detected" in caplog.text
+        
+        # Normal ratio should not trigger warning
+        caplog.clear()
+        config = CognitiveRhythmConfig(wake_duration=8, sleep_duration=3)
+        assert "Unusual wake/sleep ratio detected" not in caplog.text
+
 
 class TestCrossFieldValidation:
     """Tests for cross-field validation in SystemConfig."""
