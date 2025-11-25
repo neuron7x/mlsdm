@@ -453,13 +453,13 @@ This validation demonstrates **Principal System Architect level** contributions:
 2. ✅ Enable moral filtering for safety-critical applications
 3. ⚠️ Tune thresholds based on domain-specific requirements
 4. ⚠️ Implement user feedback loops to reduce false positives
-5. ⚠️ Monitor drift metrics in production (Prometheus/OpenTelemetry - planned for v1.x+)
+5. ✅ Monitor drift metrics in production - Prometheus metrics implemented (`src/mlsdm/observability/metrics.py`)
 
-**For Research Extension** (⚠️ Planned, not yet implemented):
-1. Formal verification (TLA+, Coq) - planned for v1.x+
-2. Adversarial red teaming - planned for v1.x+
-3. RAG hallucination assessment (ragas) - planned for v1.x+
-4. Chaos engineering suite - planned for v1.x+
+**For Research Extension** (Open Problems):
+1. ⚠️ Formal verification (TLA+, Coq) - requires formal methods expertise
+2. ⚠️ Adversarial red teaming (automated) - requires attack corpus
+3. ⚠️ RAG hallucination assessment (ragas) - requires retrieval setup
+4. ⚠️ Chaos engineering suite - requires staging environment
 
 ---
 
@@ -592,7 +592,7 @@ For complete bibliography, see [BIBLIOGRAPHY.md](BIBLIOGRAPHY.md).
 - Hypothesis Framework: Property-Based Testing
 - Industry Standards: Perspective API, OpenAI Moderation API (comparison baselines)
 
-**Note**: References to chaos engineering, formal verification (TLA+, Coq), OpenTelemetry tracing, and RAG hallucination testing (ragas) in this document refer to planned future enhancements and are not currently implemented in the repository.
+**Note**: Core observability (Prometheus metrics, JSON logging, drift analysis) is implemented. References to OpenTelemetry distributed tracing, chaos engineering, formal verification (TLA+, Coq), and RAG hallucination testing (ragas) in this document refer to open research problems requiring external resources.
 
 ---
 
