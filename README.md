@@ -451,6 +451,84 @@ print('PASS')
 "
 ```
 
+## HTTP API Quick Start
+
+The MLSDM API provides HTTP endpoints for text generation with cognitive governance.
+
+### Starting the Service
+
+```bash
+# Using uvicorn directly
+uvicorn mlsdm.api.app:app --host 0.0.0.0 --port 8000
+
+# Or using Docker
+docker run -p 8000:8000 ghcr.io/neuron7x/mlsdm-neuro-engine:latest
+```
+
+### Health Check
+
+```bash
+curl http://localhost:8000/health
+```
+
+Response:
+```json
+{"status": "healthy"}
+```
+
+### Generate Endpoint
+
+```bash
+curl -X POST http://localhost:8000/generate \
+  -H "Content-Type: application/json" \
+  -d '{"prompt": "Hello, how are you?", "moral_value": 0.8}'
+```
+
+Response:
+```json
+{
+  "response": "Generated response text...",
+  "phase": "wake",
+  "accepted": true,
+  "metrics": {"timing": {"total": 15.2}},
+  "safety_flags": {"validation_steps": [...]},
+  "memory_stats": {"step": 1, "moral_threshold": 0.5}
+}
+```
+
+**Request Parameters:**
+- `prompt` (required): Input text to process
+- `max_tokens` (optional): Maximum tokens to generate (1-4096)
+- `moral_value` (optional): Moral threshold (0.0-1.0)
+
+**Response Fields:**
+- `response`: Generated text
+- `phase`: Current cognitive phase ("wake" or "sleep")
+- `accepted`: Whether the request was accepted
+- `metrics`: Performance timing (optional)
+- `safety_flags`: Safety validation results (optional)
+- `memory_stats`: Memory state statistics (optional)
+
+### Error Responses
+
+Invalid requests return structured errors:
+
+```bash
+# Missing prompt
+curl -X POST http://localhost:8000/generate \
+  -H "Content-Type: application/json" \
+  -d '{}'
+```
+
+Response (HTTP 422):
+```json
+{
+  "detail": [{"loc": ["body", "prompt"], "msg": "Field required", "type": "missing"}]
+}
+```
+
+See [API_REFERENCE.md](./API_REFERENCE.md) for complete API documentation.
+
 ## Legacy API and Simulation
 
 ```bash
