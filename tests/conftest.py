@@ -7,11 +7,11 @@ for deterministic, reproducible testing across the test suite.
 
 import os
 import random
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 import numpy as np
 import pytest
-
 
 # ============================================================
 # Pytest Hooks and Configuration
@@ -38,14 +38,14 @@ def pytest_configure(config: Any) -> None:
 def deterministic_seed() -> int:
     """
     Set deterministic random seeds for reproducible tests.
-    
+
     Returns:
         The seed value used (42).
     """
     seed = 42
     random.seed(seed)
     np.random.seed(seed)
-    
+
     # Set torch seed if available
     try:
         import torch
@@ -54,7 +54,7 @@ def deterministic_seed() -> int:
             torch.cuda.manual_seed_all(seed)
     except ImportError:
         pass
-    
+
     return seed
 
 
@@ -62,7 +62,7 @@ def deterministic_seed() -> int:
 def random_seed() -> Callable[[int], None]:
     """
     Factory fixture for setting custom random seeds.
-    
+
     Returns:
         A function that sets all random seeds to the given value.
     """
@@ -76,7 +76,7 @@ def random_seed() -> Callable[[int], None]:
                 torch.cuda.manual_seed_all(seed)
         except ImportError:
             pass
-    
+
     return _set_seed
 
 
@@ -89,13 +89,13 @@ def random_seed() -> Callable[[int], None]:
 def mock_llm() -> Callable[[str, int], str]:
     """
     Provide a mock LLM function for testing.
-    
+
     Returns:
         A function that generates deterministic responses.
     """
     def _generate(prompt: str, max_tokens: int = 100) -> str:
         return f"Mock response for prompt with {len(prompt)} characters."
-    
+
     return _generate
 
 
@@ -103,7 +103,7 @@ def mock_llm() -> Callable[[str, int], str]:
 def mock_embedder() -> Callable[[str], np.ndarray]:
     """
     Provide a mock embedding function for testing.
-    
+
     Returns:
         A function that generates deterministic embeddings.
     """
@@ -112,7 +112,7 @@ def mock_embedder() -> Callable[[str], np.ndarray]:
         np.random.seed(hash(text) % (2**32))
         vec = np.random.randn(384).astype(np.float32)
         return vec / np.linalg.norm(vec)
-    
+
     return _embed
 
 
@@ -120,7 +120,7 @@ def mock_embedder() -> Callable[[str], np.ndarray]:
 def mock_embedder_dim() -> Callable[[int], Callable[[str], np.ndarray]]:
     """
     Factory fixture for mock embedders with custom dimensions.
-    
+
     Returns:
         A function that creates embedders with specified dimension.
     """
@@ -130,7 +130,7 @@ def mock_embedder_dim() -> Callable[[int], Callable[[str], np.ndarray]]:
             vec = np.random.randn(dim).astype(np.float32)
             return vec / np.linalg.norm(vec)
         return _embed
-    
+
     return _create_embedder
 
 
@@ -143,7 +143,7 @@ def mock_embedder_dim() -> Callable[[int], Callable[[str], np.ndarray]]:
 def sample_vector() -> np.ndarray:
     """
     Provide a normalized sample vector for testing.
-    
+
     Returns:
         A 384-dimensional normalized vector.
     """
@@ -156,7 +156,7 @@ def sample_vector() -> np.ndarray:
 def sample_vectors() -> list[np.ndarray]:
     """
     Provide a list of sample vectors for testing.
-    
+
     Returns:
         A list of 10 normalized 384-dimensional vectors.
     """
@@ -172,7 +172,7 @@ def sample_vectors() -> list[np.ndarray]:
 def vector_factory() -> Callable[[int, int], list[np.ndarray]]:
     """
     Factory fixture for creating custom vector sets.
-    
+
     Returns:
         A function that creates n vectors of specified dimension.
     """
@@ -183,7 +183,7 @@ def vector_factory() -> Callable[[int, int], list[np.ndarray]]:
             vec = np.random.randn(dim).astype(np.float32)
             vectors.append(vec / np.linalg.norm(vec))
         return vectors
-    
+
     return _create_vectors
 
 
@@ -214,7 +214,7 @@ def borderline_moral_value() -> float:
 def moral_value_distribution() -> Callable[[int, float], list[float]]:
     """
     Factory fixture for generating moral value distributions.
-    
+
     Returns:
         A function that generates n moral values with specified toxic ratio.
     """
@@ -222,14 +222,14 @@ def moral_value_distribution() -> Callable[[int, float], list[float]]:
         np.random.seed(seed)
         n_toxic = int(n * toxic_ratio)
         n_safe = n - n_toxic
-        
+
         toxic_values = np.random.uniform(0.1, 0.4, n_toxic).tolist()
         safe_values = np.random.uniform(0.6, 0.95, n_safe).tolist()
-        
+
         all_values = toxic_values + safe_values
         np.random.shuffle(all_values)
         return all_values
-    
+
     return _generate
 
 
@@ -289,7 +289,7 @@ def aphasia_detector():
 def secure_mode_enabled():
     """
     Context manager that enables secure mode for testing.
-    
+
     Yields:
         None. Sets MLSDM_SECURE_MODE=1 during the test.
     """
@@ -306,7 +306,7 @@ def secure_mode_enabled():
 def secure_mode_disabled():
     """
     Context manager that disables secure mode for testing.
-    
+
     Yields:
         None. Sets MLSDM_SECURE_MODE=0 during the test.
     """
