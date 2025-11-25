@@ -205,13 +205,13 @@ python scripts/generate_effectiveness_charts.py
 1. ✅ **Deploy wake/sleep cycles** - Proven resource efficiency
 2. ✅ **Enable moral filtering** - Critical safety improvement
 3. ⚠️ **Tune thresholds** per use case - Optimize false positive rate
-4. ⚠️ **Monitor drift metrics** - Use Prometheus/OpenTelemetry (planned for v1.x+)
+4. ✅ **Monitor drift metrics** - Prometheus metrics implemented (`src/mlsdm/observability/metrics.py`), drift analysis in `src/mlsdm/utils/coherence_safety_metrics.py`
 
-### For Research (⚠️ Planned, not yet implemented)
-1. Formal verification (TLA+, Coq) - planned for v1.x+
-2. Adversarial red teaming - planned for v1.x+
-3. RAG hallucination assessment (ragas) - planned for v1.x+
-4. Chaos engineering suite - planned for v1.x+
+### For Research (Open Problems)
+1. ⚠️ Formal verification (TLA+, Coq) - requires formal methods expertise
+2. ⚠️ Adversarial red teaming (automated) - requires attack corpus and infrastructure
+3. ⚠️ RAG hallucination assessment (ragas) - requires retrieval setup
+4. ⚠️ Chaos engineering suite - requires chaos-toolkit and staging environment
 
 ---
 
@@ -234,7 +234,7 @@ The implementation meets **Principal System Architect** standards with:
 
 ---
 
-**Note**: This validation report focuses on implemented features. References to chaos engineering, formal verification (TLA+, Coq), OpenTelemetry tracing, and RAG hallucination testing (ragas) refer to planned future enhancements and are not currently implemented in the repository.
+**Note**: This validation report focuses on implemented features. Core observability (Prometheus metrics, structured JSON logging, drift analysis) is implemented. References to OpenTelemetry distributed tracing, chaos engineering, formal verification (TLA+, Coq), and RAG hallucination testing (ragas) refer to open research problems requiring external resources.
 
 **Author**: Principal System Architect  
 **Date**: 2025-11-19  
