@@ -22,6 +22,12 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/health", tags=["health"])
 
 
+class SimpleHealthStatus(BaseModel):
+    """Simple health status response for basic health check."""
+
+    status: str
+
+
 class HealthStatus(BaseModel):
     """Basic health status response."""
 
@@ -74,6 +80,19 @@ def get_memory_manager() -> Any | None:
         MemoryManager instance or None
     """
     return _memory_manager
+
+
+@router.get("", response_model=SimpleHealthStatus)
+async def health_check() -> SimpleHealthStatus:
+    """Simple health check endpoint.
+
+    Returns basic health status without detailed information.
+    This is the primary endpoint for simple health checks.
+
+    Returns:
+        SimpleHealthStatus with status="healthy" if service is responsive.
+    """
+    return SimpleHealthStatus(status="healthy")
 
 
 @router.get("/liveness", response_model=HealthStatus)

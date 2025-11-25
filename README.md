@@ -451,6 +451,126 @@ print('PASS')
 "
 ```
 
+## HTTP API Quick Start
+
+The MLSDM API provides HTTP endpoints for text generation with cognitive governance.
+
+### Starting the Service
+
+```bash
+# Using uvicorn directly
+uvicorn mlsdm.api.app:app --host 0.0.0.0 --port 8000
+
+# Or using Docker
+docker run -p 8000:8000 ghcr.io/neuron7x/mlsdm-neuro-engine:latest
+```
+
+### Health Check
+
+```bash
+curl http://localhost:8000/health
+```
+
+Response:
+```json
+{"status": "healthy"}
+```
+
+### Generate Endpoint
+
+```bash
+curl -X POST http://localhost:8000/generate \
+  -H "Content-Type: application/json" \
+  -d '{"prompt": "Hello, how are you?", "moral_value": 0.8}'
+```
+
+Response:
+```json
+{
+  "response": "Generated response text...",
+  "phase": "wake",
+  "accepted": true,
+  "metrics": {"timing": {"total": 15.2}},
+  "safety_flags": {"validation_steps": [...]},
+  "memory_stats": {"step": 1, "moral_threshold": 0.5}
+}
+```
+
+**Request Parameters:**
+- `prompt` (required): Input text to process
+- `max_tokens` (optional): Maximum tokens to generate (1-4096)
+- `moral_value` (optional): Moral threshold (0.0-1.0)
+
+**Response Fields:**
+- `response`: Generated text
+- `phase`: Current cognitive phase ("wake" or "sleep")
+- `accepted`: Whether the request was accepted
+- `metrics`: Performance timing (optional)
+- `safety_flags`: Safety validation results (optional)
+- `memory_stats`: Memory state statistics (optional)
+
+### Error Responses
+
+Invalid requests return structured errors:
+
+```bash
+# Missing prompt
+curl -X POST http://localhost:8000/generate \
+  -H "Content-Type: application/json" \
+  -d '{}'
+```
+
+Response (HTTP 422):
+```json
+{
+  "detail": [{"loc": ["body", "prompt"], "msg": "Field required", "type": "missing"}]
+}
+```
+
+See [API_REFERENCE.md](./API_REFERENCE.md) for complete API documentation.
+
+## LLM Backend Configuration
+
+MLSDM supports multiple LLM backends that can be switched via environment variables:
+
+### Using Local Stub (Default - for development/testing)
+
+```bash
+# No configuration needed - local_stub is the default
+export LLM_BACKEND=local_stub
+uvicorn mlsdm.api.app:app --host 0.0.0.0 --port 8000
+```
+
+### Using OpenAI
+
+```bash
+export LLM_BACKEND=openai
+export OPENAI_API_KEY=sk-your-api-key-here
+export OPENAI_MODEL=gpt-3.5-turbo  # Optional
+
+uvicorn mlsdm.api.app:app --host 0.0.0.0 --port 8000
+```
+
+### Using Anthropic (Claude)
+
+```bash
+export LLM_BACKEND=anthropic
+export ANTHROPIC_API_KEY=sk-ant-your-api-key-here
+export ANTHROPIC_MODEL=claude-3-sonnet-20240229  # Optional
+
+uvicorn mlsdm.api.app:app --host 0.0.0.0 --port 8000
+```
+
+### Multi-Provider / A/B Testing
+
+```bash
+# Configure multiple providers
+export MULTI_LLM_BACKENDS="control:local_stub,treatment:openai"
+export OPENAI_API_KEY=sk-your-api-key-here
+```
+
+See [docs/LLM_ADAPTERS_AND_ROUTER.md](./docs/LLM_ADAPTERS_AND_ROUTER.md) for complete backend configuration and routing options.
+
 ## Legacy API and Simulation
 
 ```bash

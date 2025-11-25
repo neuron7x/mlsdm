@@ -9,6 +9,9 @@ Complete API reference for MLSDM Governed Cognitive Memory v1.0.0.
 
 ## Table of Contents
 
+- [HTTP API Endpoints](#http-api-endpoints)
+  - [Health Check](#health-check)
+  - [Generate](#generate)
 - [LLMWrapper](#llmwrapper)
 - [CognitiveController](#cognitivecontroller)
 - [Memory Components](#memory-components)
@@ -21,6 +24,120 @@ Complete API reference for MLSDM Governed Cognitive Memory v1.0.0.
   - [CognitiveRhythm](#cognitiverhythm)
 - [Utilities](#utilities)
   - [MetricsCollector](#metricscollector)
+
+---
+
+## HTTP API Endpoints
+
+The MLSDM HTTP API provides RESTful endpoints for text generation with cognitive governance.
+
+### Starting the Server
+
+```bash
+# Start with uvicorn
+uvicorn mlsdm.api.app:app --host 0.0.0.0 --port 8000
+
+# With environment variables
+CONFIG_PATH=config/production.yaml uvicorn mlsdm.api.app:app --host 0.0.0.0 --port 8000
+```
+
+### Health Check
+
+Simple health check endpoint to verify service is running.
+
+**Endpoint:** `GET /health`
+
+**Response:**
+```json
+{
+  "status": "healthy"
+}
+```
+
+**Response Model:**
+| Field | Type | Description |
+|-------|------|-------------|
+| `status` | string | Always "healthy" if service is responsive |
+
+**Example:**
+```bash
+curl http://localhost:8000/health
+```
+
+### Generate
+
+Generate text using the NeuroCognitiveEngine with moral governance.
+
+**Endpoint:** `POST /generate`
+
+**Request Body:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `prompt` | string | Yes | Input text to process (min 1 character) |
+| `max_tokens` | integer | No | Maximum tokens to generate (1-4096) |
+| `moral_value` | float | No | Moral threshold value (0.0-1.0) |
+
+**Response Model:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `response` | string | Generated response text |
+| `phase` | string | Current cognitive phase ("wake" or "sleep") |
+| `accepted` | boolean | Whether the request was accepted |
+| `metrics` | object \| null | Performance timing metrics |
+| `safety_flags` | object \| null | Safety validation results |
+| `memory_stats` | object \| null | Memory state statistics |
+
+**Success Response (200):**
+```json
+{
+  "response": "Generated response text...",
+  "phase": "wake",
+  "accepted": true,
+  "metrics": {
+    "timing": {
+      "total": 15.2,
+      "generation": 10.5,
+      "moral_precheck": 2.1
+    }
+  },
+  "safety_flags": {
+    "validation_steps": [
+      {"step": "moral_precheck", "passed": true, "score": 0.85, "threshold": 0.5}
+    ],
+    "rejected_at": null
+  },
+  "memory_stats": {
+    "step": 1,
+    "moral_threshold": 0.5,
+    "context_items": 3
+  }
+}
+```
+
+**Error Responses:**
+
+| Status | Condition | Response |
+|--------|-----------|----------|
+| 400 | Invalid input (e.g., whitespace-only prompt) | `{"error": {"error_type": "validation_error", "message": "...", "details": {...}}}` |
+| 422 | Validation failed (missing/invalid fields) | `{"detail": [...]}` |
+| 429 | Rate limit exceeded | `{"error": {"error_type": "rate_limit_exceeded", "message": "...", "details": null}}` |
+| 500 | Internal server error | `{"error": {"error_type": "internal_error", "message": "...", "details": null}}` |
+
+**Examples:**
+
+```bash
+# Basic request
+curl -X POST http://localhost:8000/generate \
+  -H "Content-Type: application/json" \
+  -d '{"prompt": "Explain machine learning"}'
+
+# With all parameters
+curl -X POST http://localhost:8000/generate \
+  -H "Content-Type: application/json" \
+  -d '{"prompt": "Explain machine learning", "max_tokens": 200, "moral_value": 0.8}'
+```
 
 ---
 

@@ -262,3 +262,129 @@ class TestAPIEndpoints:
             assert data["L1_norm"] >= 0
             assert data["L2_norm"] >= 0
             assert data["L3_norm"] >= 0
+
+
+class TestGenerateEndpoint:
+    """Test suite for /generate endpoint."""
+
+    def test_generate_valid_request(self, client):
+        """Test generate with valid request returns expected fields."""
+        request_data = {
+            "prompt": "Hello, how are you?"
+        }
+        response = client.post("/generate", json=request_data)
+        assert response.status_code == 200
+        data = response.json()
+
+        # Check required fields
+        assert "response" in data
+        assert "phase" in data
+        assert "accepted" in data
+
+        # Check types
+        assert isinstance(data["response"], str)
+        assert isinstance(data["phase"], str)
+        assert isinstance(data["accepted"], bool)
+
+    def test_generate_with_all_params(self, client):
+        """Test generate with all optional parameters."""
+        request_data = {
+            "prompt": "Explain quantum computing",
+            "max_tokens": 100,
+            "moral_value": 0.8
+        }
+        response = client.post("/generate", json=request_data)
+        assert response.status_code == 200
+        data = response.json()
+
+        # Check required fields
+        assert "response" in data
+        assert "phase" in data
+        assert "accepted" in data
+
+    def test_generate_missing_prompt(self, client):
+        """Test generate with missing prompt returns 422."""
+        request_data = {}
+        response = client.post("/generate", json=request_data)
+        # FastAPI validation returns 422 for missing required field
+        assert response.status_code == 422
+
+    def test_generate_empty_prompt(self, client):
+        """Test generate with empty prompt returns 422 (Pydantic validation)."""
+        request_data = {
+            "prompt": ""
+        }
+        response = client.post("/generate", json=request_data)
+        # Pydantic validation for min_length=1 returns 422
+        assert response.status_code == 422
+
+    def test_generate_whitespace_only_prompt(self, client):
+        """Test generate with whitespace-only prompt returns 400."""
+        request_data = {
+            "prompt": "   "
+        }
+        response = client.post("/generate", json=request_data)
+        assert response.status_code == 400
+        data = response.json()
+
+        # Check structured error response
+        assert "error" in data
+        assert "error_type" in data["error"]
+        assert "message" in data["error"]
+
+    def test_generate_invalid_moral_value(self, client):
+        """Test generate with invalid moral_value returns 422."""
+        request_data = {
+            "prompt": "Hello",
+            "moral_value": 1.5  # Out of range
+        }
+        response = client.post("/generate", json=request_data)
+        assert response.status_code == 422
+
+    def test_generate_invalid_max_tokens(self, client):
+        """Test generate with invalid max_tokens returns 422."""
+        request_data = {
+            "prompt": "Hello",
+            "max_tokens": 0  # Below minimum
+        }
+        response = client.post("/generate", json=request_data)
+        assert response.status_code == 422
+
+    def test_generate_response_has_optional_metrics(self, client):
+        """Test generate response may include optional metrics."""
+        request_data = {
+            "prompt": "Tell me about AI"
+        }
+        response = client.post("/generate", json=request_data)
+        assert response.status_code == 200
+        data = response.json()
+
+        # Check optional fields are present in response model
+        # They may have None values but should be in the response
+        assert "metrics" in data
+        assert "safety_flags" in data
+        assert "memory_stats" in data
+
+    def test_generate_does_not_require_auth(self, client):
+        """Test that generate endpoint does not require authentication."""
+        request_data = {
+            "prompt": "Hello"
+        }
+        # No auth header provided
+        response = client.post("/generate", json=request_data)
+        # Should not return 401
+        assert response.status_code != 401
+
+    def test_generate_error_response_structure(self, client):
+        """Test error responses have structured format."""
+        # Send invalid JSON
+        response = client.post(
+            "/generate",
+            content="not valid json",
+            headers={"Content-Type": "application/json"}
+        )
+        assert response.status_code == 422
+
+        # FastAPI's validation error response
+        data = response.json()
+        assert "detail" in data
