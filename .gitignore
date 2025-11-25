@@ -22,3 +22,6 @@ htmlcov/
 baseline_comparison*.png
 baseline_comparison*.json
 load_test_report.json
+
+# Benchmark result files (keep .gitkeep)
+benchmarks/results/*.json
