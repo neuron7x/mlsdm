@@ -20,6 +20,9 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
+# Small constant to avoid division by zero
+EPSILON = 1e-9
+
 
 @dataclass
 class ComboStats:
@@ -284,7 +287,7 @@ class SynergyExperienceMemory:
                 r = rng.random()
                 cumulative = 0.0
                 selected = available_combos[-1]  # Default to last
-                for combo_id, prob in zip(available_combos, normalized, strict=False):
+                for combo_id, prob in zip(available_combos, normalized, strict=True):
                     cumulative += prob
                     if r <= cumulative:
                         selected = combo_id
@@ -379,7 +382,7 @@ def compute_eoi(
     """
     # Memory utilization component (balanced usage across levels is good)
     # Penalize when L1 >> L3 (poor consolidation) or L1 << L3 (stagnation)
-    total_memory = memory_l1_norm + memory_l2_norm + memory_l3_norm + 1e-9
+    total_memory = memory_l1_norm + memory_l2_norm + memory_l3_norm + EPSILON
     l1_ratio = memory_l1_norm / total_memory
     l3_ratio = memory_l3_norm / total_memory
 

@@ -458,12 +458,13 @@ class TestThreadSafety:
 
     def test_concurrent_updates(self) -> None:
         """Test concurrent updates don't cause data corruption."""
+        import queue
         import threading
 
         memory = SynergyExperienceMemory()
         num_threads = 10
         updates_per_thread = 100
-        errors: list[Exception] = []
+        error_queue: queue.Queue[Exception] = queue.Queue()
 
         def update_thread(thread_id: int) -> None:
             try:
@@ -474,7 +475,7 @@ class TestThreadSafety:
                         float(thread_id) / 10,
                     )
             except Exception as e:
-                errors.append(e)
+                error_queue.put(e)
 
         threads = [
             threading.Thread(target=update_thread, args=(i,))
@@ -486,7 +487,7 @@ class TestThreadSafety:
         for t in threads:
             t.join()
 
-        assert len(errors) == 0
+        assert error_queue.empty(), f"Thread errors: {list(error_queue.queue)}"
         stats = memory.get_stats()
         assert stats["total_updates"] == num_threads * updates_per_thread
 
