@@ -184,12 +184,18 @@ class RuleBasedRouter(LLMRouter):
             if priority_tier and priority_tier in self.rules:
                 selected = self.rules[priority_tier]
 
-        # Check other metadata keys
+        # Check other metadata keys - support any hashable value type
         if selected is None:
             for _key, value in metadata.items():
-                if isinstance(value, str) and value in self.rules:
-                    selected = self.rules[value]
-                    break
+                # Skip None values and check if value is a valid rule key
+                if value is not None:
+                    try:
+                        if value in self.rules:
+                            selected = self.rules[value]
+                            break
+                    except TypeError:
+                        # Skip unhashable values (lists, dicts, etc.)
+                        continue
 
         # Use default if nothing selected
         if selected is None:

@@ -160,14 +160,8 @@ class OpenAIProvider(LLMProvider):
             LLMTimeoutError: If the API call times out.
             LLMProviderError: If the API call fails for other reasons.
         """
-        try:
-            import openai
-        except ImportError as e:
-            raise LLMProviderError(
-                "openai package not available",
-                provider_id=self.provider_id,
-                original_error=e,
-            ) from e
+        # Import openai for exception types - already validated in __init__
+        import openai
 
         try:
             response = self.client.chat.completions.create(
@@ -271,14 +265,8 @@ class AnthropicProvider(LLMProvider):
             LLMTimeoutError: If the API call times out.
             LLMProviderError: If the API call fails for other reasons.
         """
-        try:
-            import anthropic
-        except ImportError as e:
-            raise LLMProviderError(
-                "anthropic package not available",
-                provider_id=self.provider_id,
-                original_error=e,
-            ) from e
+        # Import anthropic for exception types - already validated in __init__
+        import anthropic
 
         try:
             response = self.client.messages.create(
