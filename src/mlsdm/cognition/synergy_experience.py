@@ -96,14 +96,18 @@ class ComboStats:
             delta_eoi: The change in eOI (eOI_after - eOI_before).
                        NaN/inf values are treated as 0.0 with a warning.
         """
-        # Sanitize input
-        sanitized = _sanitize_delta_eoi(delta_eoi)
-        if sanitized != delta_eoi:
+        # Check for invalid values before sanitizing (NaN != NaN, so direct compare fails)
+        is_invalid = (
+            delta_eoi is None or
+            math.isnan(delta_eoi) or
+            math.isinf(delta_eoi)
+        )
+        if is_invalid:
             logger.warning(
                 "ComboStats.update received invalid delta_eoi=%s, treating as 0.0",
                 delta_eoi,
             )
-            delta_eoi = sanitized
+            delta_eoi = 0.0
 
         self.trial_count += 1
         self.total_delta_eoi += delta_eoi
@@ -201,14 +205,17 @@ class SynergyExperienceMemory:
         Returns:
             The updated ComboStats for this state-combo pair
         """
-        # Sanitize delta_eoi
-        sanitized_delta = _sanitize_delta_eoi(delta_eoi)
-        if sanitized_delta != delta_eoi:
+        # Check for invalid values (NaN != NaN, so use math.isnan)
+        is_invalid = (
+            delta_eoi is None or
+            (isinstance(delta_eoi, float) and (math.isnan(delta_eoi) or math.isinf(delta_eoi)))
+        )
+        if is_invalid:
             logger.warning(
                 "update_experience received invalid delta_eoi=%s for combo=%s, treating as 0.0",
                 delta_eoi, combo_id,
             )
-            delta_eoi = sanitized_delta
+            delta_eoi = 0.0
 
         key = (state_signature, combo_id)
 
@@ -267,19 +274,23 @@ class SynergyExperienceMemory:
             Invalid values (NaN, inf, None) in eoi_before or eoi_after
             result in delta_eoi being treated as 0.0 with a warning logged.
         """
-        # Sanitize inputs
-        before = _sanitize_delta_eoi(eoi_before)
-        after = _sanitize_delta_eoi(eoi_after)
+        # Check for invalid values (NaN != NaN, so use math.isnan)
+        def _is_invalid(value: float | None) -> bool:
+            return value is None or math.isnan(value) or math.isinf(value)
 
-        if before != eoi_before or after != eoi_after:
+        before_invalid = _is_invalid(eoi_before)
+        after_invalid = _is_invalid(eoi_after)
+
+        if before_invalid or after_invalid:
             logger.warning(
                 "record_combo_result received invalid eOI values: before=%s, after=%s "
-                "for combo=%s. Treating as 0.0.",
+                "for combo=%s. Treating delta as 0.0.",
                 eoi_before, eoi_after, combo_id,
             )
             delta_eoi = 0.0
         else:
-            delta_eoi = after - before
+            # Both values are valid floats
+            delta_eoi = float(eoi_after) - float(eoi_before)
 
         return self.update_experience(state_signature, combo_id, delta_eoi)
 
