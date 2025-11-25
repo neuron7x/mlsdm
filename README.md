@@ -620,20 +620,19 @@ This project incorporates advanced system reliability, mathematical correctness,
 | Reliability | Drift & Anomaly Injection | Validate detection pipeline reaction | ⚠️ Planned | Synthetic anomaly injectors |
 
 ### Core Invariants (Examples)
-- Moral filter threshold T always ∈ [0.1, 0.9].
-- Episodic graph remains acyclic (no circular temporal references).
+- Moral filter threshold T always ∈ [0.30, 0.90] (see `MoralFilterV2.MIN_THRESHOLD` / `MAX_THRESHOLD`).
 - State cannot jump directly from Sleep → Processing without Wake.
 - Retrieval under corruption degrades to stateless fallback but always returns a syntactically valid response envelope.
 
 ### Sample Property-Based Invariant (Hypothesis Sketch)
 ```python
 from hypothesis import given, strategies as st
-from src.moral import clamp_threshold
+from mlsdm.cognition.moral_filter_v2 import MoralFilterV2
 
 @given(t=st.floats(min_value=-10, max_value=10))
 def test_moral_threshold_clamped(t):
-    clamped = clamp_threshold(t)
-    assert 0.1 <= clamped <= 0.9
+    mf = MoralFilterV2(initial_threshold=t)
+    assert 0.30 <= mf.threshold <= 0.90
 ```
 
 ### Planned Chaos Scenarios (v1.x+)
@@ -685,7 +684,7 @@ def test_moral_threshold_clamped(t):
 
 ## Aphasia-Broca Model for LLM Speech Governance
 
-> **Note:** This section describes the planned NeuroLang extension with Aphasia-Broca Model. The implementation will be added in a separate PR following this documentation update.
+> **Note:** The Aphasia-Broca Model is fully implemented in `src/mlsdm/extensions/neuro_lang_extension.py` and tested in `tests/extensions/test_aphasia_edge_cases.py`. See **Status** section above.
 
 MLSDM Governed Cognitive Memory integrates a neurobiologically-inspired **Aphasia-Broca Controller**, which models speech deficits similar to Broca's aphasia to detect and "treat" generation pathologies in LLMs.
 
@@ -706,7 +705,7 @@ In LLMs, this corresponds to states where:
 The Aphasia-Broca model in MLSDM consists of three levels:
 
 1. **PLAN (Semantics / Wernicke-like)**
-   - High-level response plan formed (via LLM + QILM + MultiLevelSynapticMemory)
+   - High-level response plan formed (via LLM + PELM + MultiLevelSynapticMemory)
    - Semantic invariants and context stabilized through `CognitiveController`
 
 2. **SPEECH (Production / Broca-like)**
@@ -830,12 +829,12 @@ MIT License - see LICENSE file
 
 ## Bibliography
 
-For comprehensive references covering the neurobiological, cognitive, and AI safety foundations of this project, see [BIBLIOGRAPHY.md](BIBLIOGRAPHY.md). The bibliography v1.0 includes 18 validated sources + 1 software artifact across 6 key themes:
+For comprehensive references covering the neurobiological, cognitive, and AI safety foundations of this project, see [BIBLIOGRAPHY.md](BIBLIOGRAPHY.md). The bibliography v2.0 includes 18 validated peer-reviewed sources + 1 software artifact across 6 key themes:
 - Moral Governance and Homeostatic Alignment
 - Circadian Rhythms and Rhythmic Processing
 - Multi-Level Synaptic Memory Models
 - Hippocampal Replay and Memory Consolidation
-- Quantum-Inspired Entangled Memory
+- Quantum-Inspired Associative Memory (classical algorithms inspired by quantum concepts, per Masuyama et al.)
 - General Cognitive Architectures and Long-Term LLM Memory
 
 All sources include DOI/arXiv identifiers for traceability and relevance annotations linking to specific MLSDM components.

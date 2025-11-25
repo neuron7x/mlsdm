@@ -2,7 +2,9 @@
 
 ## Executive Summary
 
-This document summarizes the complete implementation of MLSDM Governed Cognitive Memory v1.0.0, a production-ready neuro-symbolic framework for governing LLM memory and behavior with hard biological constraints.
+This document summarizes the complete implementation of MLSDM Governed Cognitive Memory v1.0.0, a production-ready **neurobiologically-inspired cognitive architecture** for governing LLM memory and behavior with hard biological constraints.
+
+> **Terminology Note:** MLSDM is not a neuro-symbolic system (which combines neural networks with symbolic reasoning). It is a **cognitive constraint framework** that applies neurobiological principles (circadian rhythms, multi-level memory consolidation, homeostatic regulation) to govern LLM behavior.
 
 **Status**: ✅ **Production Ready** - Ready for immediate deployment
 
