@@ -260,7 +260,7 @@ async def get_state(
 async def generate(
     request_body: GenerateRequest,
     request: Request,
-) -> GenerateResponse:
+) -> GenerateResponse | JSONResponse:
     """Generate a response using the NeuroCognitiveEngine.
 
     This endpoint processes the input prompt through the complete cognitive pipeline,
