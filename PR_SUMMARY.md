@@ -287,7 +287,7 @@ This PR transforms the MLSDM Governed Cognitive Memory project into a profession
 
 **Code (3 files, ~29KB)**:
 5. `examples/production_chatbot_example.py` (16KB) - Production chatbot example
-6. `src/utils/config_validator.py` (15KB) - Configuration validation
+6. `src/mlsdm/utils/config_validator.py` (15KB) - Configuration validation
 7. `src/tests/unit/test_config_validator.py` (14KB) - Validation tests
 
 ### Modified (1 file)

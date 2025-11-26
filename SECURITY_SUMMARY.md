@@ -11,7 +11,7 @@ All security features specified in SECURITY_POLICY.md and THREAT_MODEL.md have b
 ## Security Features Implemented
 
 ### 1. Rate Limiting ✅
-**File:** `src/utils/rate_limiter.py`
+**File:** `src/mlsdm/utils/rate_limiter.py`
 
 - **Algorithm:** Leaky bucket
 - **Limit:** 5 requests per second (RPS) per client
@@ -25,7 +25,7 @@ All security features specified in SECURITY_POLICY.md and THREAT_MODEL.md have b
 - **Tests:** 7 comprehensive unit tests
 
 ### 2. Input Validation and Sanitization ✅
-**File:** `src/utils/input_validator.py`
+**File:** `src/mlsdm/utils/input_validator.py`
 
 **Vector Validation:**
 - Dimension checking against expected size
@@ -53,7 +53,7 @@ All security features specified in SECURITY_POLICY.md and THREAT_MODEL.md have b
 **Tests:** 21 comprehensive unit tests
 
 ### 3. Security Audit Logging ✅
-**File:** `src/utils/security_logger.py`
+**File:** `src/mlsdm/utils/security_logger.py`
 
 **Features:**
 - Structured JSON logging
@@ -231,12 +231,12 @@ Files Created: 7
 Breakdown:
 - SECURITY_IMPLEMENTATION.md: 464 lines
 - src/tests/unit/test_security.py: 438 lines
-- src/utils/security_logger.py: 306 lines
+- src/mlsdm/utils/security_logger.py: 306 lines
 - scripts/security_audit.py: 303 lines
-- src/utils/input_validator.py: 253 lines
+- src/mlsdm/utils/input_validator.py: 253 lines
 - scripts/test_security_features.py: 175 lines
 - src/api/app.py: 131 lines (modified)
-- src/utils/rate_limiter.py: 120 lines
+- src/mlsdm/utils/rate_limiter.py: 120 lines
 - src/tests/unit/test_api.py: 5 lines (modified)
 ```
 

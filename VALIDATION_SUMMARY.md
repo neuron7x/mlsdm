@@ -77,7 +77,7 @@ This validation provides **quantitative proof** that wake/sleep cycles and moral
 ## Validation Artifacts
 
 ### Code
-- `src/utils/coherence_safety_metrics.py` - Metrics framework (500+ lines)
+- `src/mlsdm/utils/coherence_safety_metrics.py` - Metrics framework (500+ lines)
 - `tests/validation/test_wake_sleep_effectiveness.py` - 4 tests
 - `tests/validation/test_moral_filter_effectiveness.py` - 5 tests
 - `scripts/generate_effectiveness_charts.py` - Visualization

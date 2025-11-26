@@ -158,6 +158,48 @@ All validation tests use:
 
 ---
 
+## D. API & SDK Claims
+
+### HTTP API Contract
+
+| Claim | Value | Source Test/Benchmark | Notes |
+|-------|-------|----------------------|-------|
+| Stable HTTP API Contract | 100% | `tests/api/test_http_contracts.py` | All endpoints documented in `docs/API_CONTRACT.md` |
+| Pydantic Schema Validation | All endpoints | `tests/api/test_http_contracts.py::TestGenerateEndpointContracts` | Request/response schemas enforced |
+| Health Check Endpoints | 5 endpoints | `tests/api/test_http_contracts.py::TestHealthEndpointContracts` | /health, /liveness, /readiness, /detailed, /metrics |
+| Error Response Consistency | 100% | `tests/api/test_http_contracts.py::TestErrorResponseFormat` | ErrorResponse schema for all errors |
+| Secure Mode Support | Working | `tests/api/test_http_contracts.py::TestSecureModeWithoutTraining` | No prior training required |
+
+### SDK Client
+
+| Claim | Value | Source Test/Benchmark | Notes |
+|-------|-------|----------------------|-------|
+| SDK-API Synchronization | 100% | `tests/sdk/test_neuro_engine_client.py` | SDK matches HTTP API contract |
+| Error Propagation | Verified | `tests/sdk/test_neuro_engine_client.py::TestNeuroCognitiveClientErrorHandling` | LLMProviderError, LLMTimeoutError propagated |
+| Backend Configuration | 2 backends | `tests/sdk/test_neuro_engine_client.py::TestNeuroCognitiveClientBackendConfiguration` | local_stub, openai supported |
+| Response Structure | 7 fields | `tests/sdk/test_neuro_engine_client.py::TestNeuroCognitiveClientResponseStructure` | response, timing, mlsdm, governance, etc. |
+
+### Payload Scrubbing (Security)
+
+| Claim | Value | Source Test/Benchmark | Notes |
+|-------|-------|----------------------|-------|
+| PII Protection | Verified | `tests/security/test_payload_scrubber.py::TestPIIScrubbing` | Credit cards scrubbed |
+| Token Scrubbing | 6+ patterns | `tests/security/test_payload_scrubber.py::TestTokenScrubbing` | OpenAI, AWS, JWT, generic tokens |
+| Secret Patterns | 10+ patterns | `tests/security/test_payload_scrubber.py::TestSecretPatternCoverage` | API keys, passwords, private keys |
+| Large Payload Handling | 1MB+ | `tests/security/test_payload_scrubber.py::TestLargePayloadHandling` | Unicode, nested structures |
+| Dict Immutability | Preserved | `tests/security/test_payload_scrubber.py::TestScrubDictOriginalUnmodified` | Original data not modified |
+
+### Adapters
+
+| Claim | Value | Source Test/Benchmark | Notes |
+|-------|-------|----------------------|-------|
+| LocalStubAdapter Stability | 100% | `tests/adapters/test_adapters.py::TestLocalStubAdapter` | Deterministic output |
+| OpenAI Contract | Mocked | `tests/adapters/test_adapters.py::TestOpenAIAdapterContract` | API call structure verified |
+| Error Handling | All types | `tests/adapters/test_adapters.py::TestLLMProviderErrors` | Timeout, rate limit, connection errors |
+| Provider Factory | 3 backends | `tests/adapters/test_adapters.py::TestProviderFactory` | openai, anthropic, local_stub |
+
+---
+
 ## Document Maintenance
 
 This traceability matrix should be updated when:

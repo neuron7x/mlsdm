@@ -16,7 +16,7 @@ This document summarizes the code optimizations and test coverage improvements m
 
 ## Optimizations Implemented
 
-### 1. PELM Memory Retrieval (`src/memory/qilm_v2.py`)
+### 1. PELM Memory Retrieval (`src/mlsdm/memory/qilm_v2.py`)
 
 **Issue**: Cosine similarity computation was using full sort for all candidate sizes.
 
@@ -41,7 +41,7 @@ else:
 - Better performance characteristics across different query patterns
 - Verified with performance benchmarks showing <50ms for 900-vector memory
 
-### 2. Multi-Level Synaptic Memory (`src/memory/multi_level_memory.py`)
+### 2. Multi-Level Synaptic Memory (`src/mlsdm/memory/multi_level_memory.py`)
 
 **Issue**: Unnecessary dtype conversion when input is already float32.
 
@@ -165,8 +165,8 @@ return bool(moral_value >= self.threshold)
 ### Coverage Analysis
 
 **Coverage by Module**:
-- `src/memory/qilm_v2.py`: 100%
-- `src/memory/multi_level_memory.py`: 100%
+- `src/mlsdm/memory/qilm_v2.py`: 100%
+- `src/mlsdm/memory/multi_level_memory.py`: 100%
 - `src/cognition/moral_filter_v2.py`: 100%
 - `src/core/cognitive_controller.py`: 100%
 - `src/core/llm_wrapper.py`: 95%
