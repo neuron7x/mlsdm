@@ -173,7 +173,7 @@ class TestRawLLMPayloadScrubbing:
         assert result["api_key"] == "***REDACTED***"
 
 
-class TestSafeFIeldsPreserved:
+class TestSafeFieldsPreserved:
     """Tests that safe fields remain unchanged."""
 
     def test_normal_text_preserved(self):
