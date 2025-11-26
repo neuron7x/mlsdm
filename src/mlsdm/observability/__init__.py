@@ -49,20 +49,20 @@ from .tracing import (
 )
 
 __all__ = [
-    # General observability
-    "EventType",
-    "ObservabilityLogger",
-    "get_observability_logger",
-    "MetricsExporter",
-    "PhaseType",
-    "get_metrics_exporter",
     # Aphasia-specific observability
     "APHASIA_LOGGER_NAME",
     "AphasiaLogEvent",
-    "get_aphasia_logger",
-    "log_aphasia_event",
     "AphasiaMetricsExporter",
+    # General observability
+    "EventType",
+    "MetricsExporter",
+    "ObservabilityLogger",
+    "PhaseType",
+    "get_aphasia_logger",
     "get_aphasia_metrics_exporter",
+    "get_metrics_exporter",
+    "get_observability_logger",
+    "log_aphasia_event",
     "reset_aphasia_metrics_exporter",
     # Tracing
     "TracerManager",

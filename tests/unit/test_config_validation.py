@@ -316,20 +316,20 @@ class TestCognitiveRhythmConfig:
         """Unusual wake/sleep ratios should trigger warning."""
         import logging
         caplog.set_level(logging.WARNING)
-        
+
         # Ratio < 1.0 should trigger warning
         config = CognitiveRhythmConfig(wake_duration=2, sleep_duration=5)
         assert config.wake_duration == 2
         assert config.sleep_duration == 5
         assert "Unusual wake/sleep ratio detected" in caplog.text
-        
+
         # Clear log and test ratio > 10.0
         caplog.clear()
         config = CognitiveRhythmConfig(wake_duration=50, sleep_duration=4)
         assert config.wake_duration == 50
         assert config.sleep_duration == 4
         assert "Unusual wake/sleep ratio detected" in caplog.text
-        
+
         # Normal ratio should not trigger warning
         caplog.clear()
         config = CognitiveRhythmConfig(wake_duration=8, sleep_duration=3)

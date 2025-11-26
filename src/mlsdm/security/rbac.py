@@ -10,7 +10,7 @@ Roles:
 
 Example:
     >>> from mlsdm.security.rbac import RBACMiddleware, require_role
-    >>> 
+    >>>
     >>> # Using decorator
     >>> @require_role(["write", "admin"])
     >>> async def protected_endpoint(request: Request):
@@ -26,7 +26,6 @@ import hashlib
 import logging
 import os
 import time
-from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from enum import Enum
 from functools import wraps
@@ -37,7 +36,7 @@ from fastapi import HTTPException, Request, Response, status
 from starlette.middleware.base import BaseHTTPMiddleware
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Awaitable, Callable, Sequence
 
 logger = logging.getLogger(__name__)
 
@@ -111,10 +110,10 @@ class UserContext:
         Returns:
             True if user has the role
         """
-        for user_role in self.roles:
-            if role in ROLE_HIERARCHY.get(user_role, set()):
-                return True
-        return False
+        return any(
+            role in ROLE_HIERARCHY.get(user_role, set())
+            for user_role in self.roles
+        )
 
     def has_any_role(self, roles: Sequence[Role]) -> bool:
         """Check if user has any of the specified roles.

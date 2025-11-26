@@ -15,14 +15,16 @@ import logging
 import os
 import time
 import uuid
-from collections.abc import Awaitable, Callable
 from contextlib import asynccontextmanager
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from threading import Lock
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from fastapi import Request, Response, status
 from starlette.middleware.base import BaseHTTPMiddleware
+
+if TYPE_CHECKING:
+    from collections.abc import Awaitable, Callable
 
 logger = logging.getLogger(__name__)
 

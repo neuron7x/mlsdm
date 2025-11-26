@@ -10,25 +10,21 @@ Tests the RBAC functionality including:
 
 from __future__ import annotations
 
-import asyncio
 import time
-from typing import Any
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import patch
 
-import pytest
 from fastapi import FastAPI, Request
 from starlette.testclient import TestClient
 
 from mlsdm.security.rbac import (
-    APIKeyConfig,
+    ROLE_HIERARCHY,
+    RBACMiddleware,
     Role,
     RoleValidator,
     UserContext,
     get_role_validator,
     require_role,
     reset_role_validator,
-    ROLE_HIERARCHY,
-    RBACMiddleware,
 )
 
 
@@ -233,7 +229,7 @@ class TestRoleValidator:
         validator.add_key("my-secret-key", [Role.WRITE], "user-1")
 
         # The key itself should not appear in the config
-        for key_hash in validator._keys.keys():
+        for key_hash in validator._keys:
             assert "my-secret-key" not in key_hash
 
 

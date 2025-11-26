@@ -468,49 +468,49 @@ class TestPELMInputValidation:
     def test_entangle_validates_vector_type(self):
         """Test that entangle validates vector is a list."""
         pelm = PhaseEntangledLatticeMemory(dimension=3, capacity=10)
-        
+
         with pytest.raises(TypeError, match="vector must be a list"):
             pelm.entangle(np.array([1.0, 2.0, 3.0]), 0.5)  # numpy array instead of list
-    
+
     def test_entangle_validates_vector_dimension(self):
         """Test that entangle validates vector dimension matches."""
         pelm = PhaseEntangledLatticeMemory(dimension=3, capacity=10)
-        
+
         with pytest.raises(ValueError, match="vector dimension mismatch"):
             pelm.entangle([1.0, 2.0], 0.5)  # Wrong dimension
-        
+
         with pytest.raises(ValueError, match="vector dimension mismatch"):
             pelm.entangle([1.0, 2.0, 3.0, 4.0], 0.5)  # Wrong dimension
-    
+
     def test_entangle_validates_phase_type(self):
         """Test that entangle validates phase is numeric."""
         pelm = PhaseEntangledLatticeMemory(dimension=3, capacity=10)
-        
+
         with pytest.raises(TypeError, match="phase must be numeric"):
             pelm.entangle([1.0, 2.0, 3.0], "0.5")  # String instead of number
-    
+
     def test_entangle_validates_phase_range(self):
         """Test that entangle validates phase is in [0.0, 1.0]."""
         pelm = PhaseEntangledLatticeMemory(dimension=3, capacity=10)
-        
+
         with pytest.raises(ValueError, match="phase must be in"):
             pelm.entangle([1.0, 2.0, 3.0], -0.1)  # Below 0.0
-        
+
         with pytest.raises(ValueError, match="phase must be in"):
             pelm.entangle([1.0, 2.0, 3.0], 1.5)  # Above 1.0
-    
+
     def test_entangle_accepts_valid_inputs(self):
         """Test that entangle accepts valid inputs."""
         pelm = PhaseEntangledLatticeMemory(dimension=3, capacity=10)
-        
+
         # Should work with correct inputs
         idx = pelm.entangle([1.0, 2.0, 3.0], 0.5)
         assert idx == 0
-        
+
         # Phase at boundaries should work
         idx = pelm.entangle([1.0, 2.0, 3.0], 0.0)
         assert idx == 1
-        
+
         idx = pelm.entangle([1.0, 2.0, 3.0], 1.0)
         assert idx == 2
 
