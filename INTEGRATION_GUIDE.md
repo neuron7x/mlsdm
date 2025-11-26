@@ -38,9 +38,9 @@ engine = create_neuro_engine()
 # Generate governed response
 result = engine.generate("Tell me about machine learning")
 
-print(result["response"])        # Generated text
-print(result["accepted"])        # True if accepted
-print(result["timing"]["total"]) # Timing in milliseconds
+print(result["response"])              # Generated text
+print(result["mlsdm"]["accepted"])     # True if accepted  
+print(result["timing"]["total"])       # Timing in milliseconds
 ```
 
 That's it! The engine handles moral filtering, memory management, and cognitive rhythm automatically.
