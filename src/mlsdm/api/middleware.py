@@ -85,10 +85,20 @@ class BulkheadSemaphore:
         """
         self._max_concurrent = max_concurrent
         self._queue_timeout = queue_timeout
-        self._semaphore = asyncio.Semaphore(max_concurrent)
+        self._semaphore: asyncio.Semaphore | None = None
         self._metrics = BulkheadMetrics()
         self._lock = Lock()
         self._waiting_count = 0
+
+    def _get_semaphore(self) -> asyncio.Semaphore:
+        """Get or create the semaphore lazily for the current event loop.
+
+        Returns:
+            asyncio.Semaphore bound to the current event loop
+        """
+        if self._semaphore is None:
+            self._semaphore = asyncio.Semaphore(self._max_concurrent)
+        return self._semaphore
 
     @property
     def metrics(self) -> BulkheadMetrics:
@@ -112,6 +122,8 @@ class BulkheadSemaphore:
         Yields:
             None when slot is acquired
         """
+        semaphore = self._get_semaphore()
+
         with self._lock:
             self._metrics.total_requests += 1
             self._waiting_count += 1
@@ -121,8 +133,8 @@ class BulkheadSemaphore:
 
         try:
             # Try to acquire with timeout
-            acquired = await asyncio.wait_for(
-                self._semaphore.acquire(),
+            await asyncio.wait_for(
+                semaphore.acquire(),
                 timeout=self._queue_timeout,
             )
 
@@ -134,7 +146,7 @@ class BulkheadSemaphore:
             try:
                 yield
             finally:
-                self._semaphore.release()
+                semaphore.release()
                 with self._lock:
                     self._metrics.current_active -= 1
 

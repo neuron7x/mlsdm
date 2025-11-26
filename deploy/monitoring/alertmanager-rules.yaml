@@ -9,6 +9,16 @@
 # 3. Reload Prometheus configuration
 #
 # Reference: SLO_SPEC.md
+#
+# Threshold Constants (based on SLO_SPEC.md):
+# - MEMORY_TARGET_BYTES: 29370000 (29.37 MB - SLO target)
+# - MEMORY_WARNING_BYTES: 35000000 (~35 MB - warning threshold)
+# - MEMORY_CRITICAL_BYTES: 50000000 (~50 MB - critical threshold)
+# - MEMORY_GROWTH_ALERT_BYTES: 10000000 (10 MB growth threshold per hour)
+# - LATENCY_P95_SLO_MS: 50 (P95 latency SLO in milliseconds)
+# - LATENCY_P99_CRITICAL_MS: 100 (P99 critical threshold)
+# - ERROR_RATE_SLO: 0.005 (0.5% error rate SLO)
+# - THROUGHPUT_MIN_RPS: 100 (minimum expected throughput)
 
 groups:
   # ===========================================================================

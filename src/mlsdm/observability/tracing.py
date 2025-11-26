@@ -40,6 +40,9 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+# Version constant for consistency across the codebase
+MLSDM_VERSION = "1.0.0"
+
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -183,7 +186,7 @@ class TracerManager:
             resource = Resource.create(
                 {
                     "service.name": self._config.service_name,
-                    "service.version": "1.0.0",
+                    "service.version": MLSDM_VERSION,
                     "deployment.environment": os.getenv("DEPLOYMENT_ENV", "development"),
                 }
             )
@@ -208,7 +211,7 @@ class TracerManager:
             # Get tracer
             self._tracer = trace.get_tracer(
                 self._config.service_name,
-                "1.0.0",
+                MLSDM_VERSION,
             )
 
             self._initialized = True
@@ -293,7 +296,7 @@ class TracerManager:
 
         if self._tracer is None:
             # Return a no-op tracer if not initialized
-            return trace.get_tracer("mlsdm", "1.0.0")
+            return trace.get_tracer("mlsdm", MLSDM_VERSION)
 
         return self._tracer
 
