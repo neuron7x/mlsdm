@@ -12,8 +12,10 @@ These tests ensure that:
 - Secure mode disables training and checkpoint loading
 """
 
+import json
 import logging
 import os
+import uuid
 from unittest.mock import patch
 
 import pytest
@@ -260,7 +262,6 @@ class TestLogFormatInvariants:
 
         assert correlation_id is not None
         # Correlation ID should be a valid UUID
-        import uuid
         try:
             uuid.UUID(correlation_id)
         except ValueError:
@@ -268,8 +269,6 @@ class TestLogFormatInvariants:
 
     def test_logs_have_timestamp(self, logger, caplog, tmp_path):
         """INVARIANT: All logs have a timestamp."""
-        import json
-
         log_file = tmp_path / "format_test.log"
 
         with caplog.at_level(logging.ERROR, logger=logger.logger.name):
@@ -285,8 +284,6 @@ class TestLogFormatInvariants:
 
     def test_logs_have_event_type(self, logger, caplog, tmp_path):
         """INVARIANT: All logs have an event_type field."""
-        import json
-
         log_file = tmp_path / "format_test.log"
 
         with caplog.at_level(logging.ERROR, logger=logger.logger.name):
