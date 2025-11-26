@@ -6,9 +6,13 @@ for the cognitive architecture system.
 
 from .aphasia_logging import (
     LOGGER_NAME as APHASIA_LOGGER_NAME,
+)
+from .aphasia_logging import (
     AphasiaLogEvent,
-    get_logger as get_aphasia_logger,
     log_aphasia_event,
+)
+from .aphasia_logging import (
+    get_logger as get_aphasia_logger,
 )
 from .aphasia_metrics import (
     AphasiaMetricsExporter,
