@@ -3,13 +3,40 @@
 ![CI - Neuro Cognitive Engine](https://github.com/neuron7x/mlsdm/actions/workflows/ci-neuro-cognitive-engine.yml/badge.svg)
 ![Aphasia / NeuroLang CI](https://github.com/neuron7x/mlsdm/actions/workflows/aphasia-ci.yml/badge.svg)
 
-MLSDM is a cognitive architecture that wraps any LLM with moral filtering, phase-based memory, circadian rhythm, and Aphasia-Broca linguistic correction.
-
 **Status:** Beta v1.2+
 
 ---
 
+## Table of Contents
+
+- [At a Glance](#at-a-glance)
+- [Key Metrics](#key-metrics)
+- [Component Reference](#component-reference)
+- [Usage Patterns](#usage-patterns)
+- [Architecture Overview](#architecture-overview)
+- [Safety & Limitations](#safety--limitations)
+- [Operational Checklist](#operational-checklist)
+- [Further Reading](#further-reading)
+
+---
+
 ## At a Glance
+
+**MLSDM** is a governed cognitive memory wrapper for Large Language Models. It provides moral filtering, phase-based memory (wake/sleep cycles), and Aphasia-Broca speech governance without requiring RLHF.
+
+**Typical use cases:**
+- Governed LLM APIs requiring content filtering without RLHF
+- Language pathology research (telegraphic speech detection/repair)
+- Sensitive domain interfaces requiring safety guardrails
+
+**Key metrics at a glance:**
+- P95 latency: ~50ms ([SLO_SPEC.md](SLO_SPEC.md))
+- Toxic rejection: 93.3% ([EFFECTIVENESS_VALIDATION_REPORT.md](EFFECTIVENESS_VALIDATION_REPORT.md))
+- Memory footprint: 29.37 MB fixed ([SLO_SPEC.md](SLO_SPEC.md))
+
+---
+
+## Key Metrics
 
 | Metric | Value | Source |
 |--------|-------|--------|
@@ -22,97 +49,77 @@ MLSDM is a cognitive architecture that wraps any LLM with moral filtering, phase
 
 ---
 
-## What is MLSDM
+## Component Reference
 
-MLSDM is a governed memory wrapper and cognitive controller for Large Language Models. It provides:
-
-- **MoralFilter** — implements EMA-based adaptive threshold mechanism, bounded [0.30, 0.90] ([`src/mlsdm/cognition/moral_filter_v2.py`](src/mlsdm/cognition/moral_filter_v2.py))
-- **Phase-based memory** — implements wake/sleep cycles for context retrieval and consolidation ([`src/mlsdm/rhythm/cognitive_rhythm.py`](src/mlsdm/rhythm/cognitive_rhythm.py))
-- **Speech governance** — allows detection and repair of telegraphic/fragmented LLM outputs ([`src/mlsdm/extensions/neuro_lang_extension.py`](src/mlsdm/extensions/neuro_lang_extension.py))
-
-### When to Use
-
-- **Governed LLM APIs** — building APIs that require content filtering and moral governance without RLHF
-- **Language pathology research** — experimenting with detection/repair of telegraphic speech patterns in LLM outputs
-- **Sensitive domain interfaces** — wrapping LLMs for domains requiring safety guardrails (not a replacement for formal audit/certification)
-- **Memory-aware assistants** — applications needing phase-based context retrieval with wake/sleep cycles
-
-### When NOT to Use
-
-- **Simple chatbots** — applications without governance requirements where overhead is unnecessary
-- **Latency-critical real-time systems** — when cognitive processing overhead is unacceptable
-- **Formally certified systems** — MLSDM does not provide formal safety certification; use where formal guarantees are required
-- **Production without hardening** — beta status requires additional monitoring, logging, and error handling
+| Component | Description | Key Files | Key Tests |
+|-----------|-------------|-----------|-----------|
+| LLMWrapper | Universal LLM wrapper with cognitive governance | [`src/mlsdm/core/llm_wrapper.py`](src/mlsdm/core/llm_wrapper.py) | [`tests/integration/test_llm_wrapper_integration.py`](tests/integration/test_llm_wrapper_integration.py) |
+| CognitiveController | Thread-safe coordinator for all cognitive subsystems | [`src/mlsdm/core/cognitive_controller.py`](src/mlsdm/core/cognitive_controller.py) | [`tests/unit/test_cognitive_controller.py`](tests/unit/test_cognitive_controller.py) |
+| MoralFilterV2 | EMA-based adaptive threshold mechanism [0.30, 0.90] | [`src/mlsdm/cognition/moral_filter_v2.py`](src/mlsdm/cognition/moral_filter_v2.py) | [`tests/unit/test_moral_filter.py`](tests/unit/test_moral_filter.py) |
+| PELM | Phase-entangled lattice memory (20k capacity) | [`src/mlsdm/memory/phase_entangled_lattice_memory.py`](src/mlsdm/memory/phase_entangled_lattice_memory.py) | [`tests/unit/test_pelm.py`](tests/unit/test_pelm.py) |
+| CognitiveRhythm | Wake/sleep state machine (8+3 steps) | [`src/mlsdm/rhythm/cognitive_rhythm.py`](src/mlsdm/rhythm/cognitive_rhythm.py) | [`tests/validation/test_rhythm_state_machine.py`](tests/validation/test_rhythm_state_machine.py) |
+| AphasiaBrocaDetector | Telegraphic speech pattern detection | [`src/mlsdm/extensions/neuro_lang_extension.py`](src/mlsdm/extensions/neuro_lang_extension.py) | [`tests/validation/test_aphasia_detection.py`](tests/validation/test_aphasia_detection.py) |
+| SpeechGovernance | Pluggable linguistic policies for output control | [`src/mlsdm/speech/governance.py`](src/mlsdm/speech/governance.py) | [`tests/speech/test_pipeline_speech_governor.py`](tests/speech/test_pipeline_speech_governor.py) |
 
 ---
 
-## Core Features
-
-- **Universal LLM Wrapper** — wrap any LLM (OpenAI, Anthropic, local models) with cognitive governance ([`src/mlsdm/core/llm_wrapper.py`](src/mlsdm/core/llm_wrapper.py))
-- **MoralFilterV2** — implements adaptive threshold with EMA, bounded within [0.30, 0.90] ([`src/mlsdm/cognition/moral_filter_v2.py`](src/mlsdm/cognition/moral_filter_v2.py))
-- **Phase-Entangled Lattice Memory (PELM)** — implements phase-aware memory with 20k capacity, zero allocation after startup ([`src/mlsdm/memory/phase_entangled_lattice_memory.py`](src/mlsdm/memory/phase_entangled_lattice_memory.py))
-- **Multi-Level Synaptic Memory** — implements L1/L2/L3 decay cascade with λ=0.95/0.98/0.99 ([`src/mlsdm/memory/multi_level_memory.py`](src/mlsdm/memory/multi_level_memory.py))
-- **CognitiveRhythm** — implements wake/sleep state machine (8 wake + 3 sleep steps) ([`src/mlsdm/rhythm/cognitive_rhythm.py`](src/mlsdm/rhythm/cognitive_rhythm.py))
-- **AphasiaBrocaDetector** — allows detection of telegraphic speech patterns in LLM outputs ([`src/mlsdm/extensions/neuro_lang_extension.py`](src/mlsdm/extensions/neuro_lang_extension.py))
-- **Speech Governance Framework** — allows pluggable linguistic policies for output control ([`src/mlsdm/speech/governance.py`](src/mlsdm/speech/governance.py))
-- **NeuroLang Extension** (optional) — provides bio-inspired language processing with recursive grammar (requires PyTorch)
-
----
-
-## Quickstart
+## Usage Patterns
 
 ### Installation
 
-**Core Installation (recommended):**
-
 ```bash
-pip install mlsdm-governed-cognitive-memory
-# or from source:
+# Core installation (recommended)
 pip install -r requirements.txt
-```
 
-**With NeuroLang (requires PyTorch):**
-
-```bash
-pip install 'mlsdm-governed-cognitive-memory[neurolang]'
-# or from source:
+# With NeuroLang (requires PyTorch)
 pip install -r requirements.txt -r requirements-neurolang.txt
 ```
 
-### Basic Usage
+### Pattern 1: Governed LLM Wrapper
 
-**Using LLMWrapper (core, no PyTorch):**
+Wrap any LLM with moral filtering and cognitive governance:
 
 ```python
-from src.core.llm_wrapper import LLMWrapper
+from mlsdm.core.llm_wrapper import LLMWrapper
 import numpy as np
 
-# Your LLM function
 def my_llm(prompt: str, max_tokens: int) -> str:
     return "LLM response"
 
-# Your embedding function
 def my_embedder(text: str) -> np.ndarray:
     return np.random.randn(384).astype(np.float32)
 
-# Create wrapper with cognitive governance
 wrapper = LLMWrapper(
     llm_generate_fn=my_llm,
     embedding_fn=my_embedder,
     dim=384,
     capacity=20_000,
-    wake_duration=8,
-    sleep_duration=3,
     initial_moral_threshold=0.50
 )
 
-# Generate with governance
 result = wrapper.generate(prompt="Hello", moral_value=0.8)
-print(result["response"])
-print(f"Phase: {result['phase']}, Accepted: {result['accepted']}")
+# result["accepted"], result["phase"], result["response"]
 ```
 
-**Using NeuroLangWrapper (with Aphasia-Broca, requires PyTorch):**
+### Pattern 2: Low-Level Cognitive Controller
+
+Direct access to cognitive subsystems:
+
+```python
+from mlsdm.core.cognitive_controller import CognitiveController
+import numpy as np
+
+controller = CognitiveController(dim=384, capacity=20_000)
+vector = np.random.randn(384).astype(np.float32)
+vector = vector / np.linalg.norm(vector)
+
+state = controller.process_event(vector, moral_value=0.8)
+# state["step"], state["phase"], state["accepted"], state["moral_threshold"]
+```
+
+### Pattern 3: Speech Governance / Aphasia-Broca
+
+Detect and repair telegraphic speech patterns (requires PyTorch):
 
 ```python
 from mlsdm.extensions import NeuroLangWrapper
@@ -128,32 +135,32 @@ wrapper = NeuroLangWrapper(
     llm_generate_fn=my_llm,
     embedding_fn=my_embedder,
     dim=384,
-    capacity=20_000,
     aphasia_detect_enabled=True,
     aphasia_repair_enabled=True
 )
 
 result = wrapper.generate(prompt="Hello", moral_value=0.8)
-print(result["response"])
-print(f"Aphasia Flags: {result['aphasia_flags']}")
+# result["aphasia_flags"]["is_aphasic"], result["aphasia_flags"]["severity"]
 ```
 
-### Run Tests
+### Pattern 4: Memory Operations (PELM)
 
-```bash
-# Integration tests
-pytest tests/integration/test_end_to_end.py -v
+Direct phase-entangled memory access:
 
-# Effectiveness validation
-pytest tests/validation/test_wake_sleep_effectiveness.py -v
-pytest tests/validation/test_moral_filter_effectiveness.py -v
+```python
+from mlsdm.memory.phase_entangled_lattice_memory import PhaseEntangledLatticeMemory
+import numpy as np
+
+pelm = PhaseEntangledLatticeMemory(dimension=384, capacity=20_000)
+vector = np.random.randn(384).astype(np.float32)
+
+# Store with phase (phase is float in [0.0, 1.0])
+pelm.entangle(vector.tolist(), phase=0.5)
+
+# Retrieve by similarity and phase proximity
+results = pelm.retrieve(query_vector=vector.tolist(), current_phase=0.5, top_k=5)
+# results: List[MemoryRetrieval] with .vector, .phase, .resonance
 ```
-
-### Next Steps
-
-- **API Reference**: See [API_REFERENCE.md](API_REFERENCE.md) for complete interface documentation
-- **Configuration**: See [CONFIGURATION_GUIDE.md](CONFIGURATION_GUIDE.md) for all available options
-- **Validation Tests**: Run `pytest tests/validation/` to verify effectiveness metrics
 
 ---
 
@@ -172,18 +179,7 @@ flowchart LR
     I --> J[Response]
 ```
 
-**Request Flow:** User prompt enters the system through input validation, then flows to `CognitiveController` which coordinates all cognitive subsystems. The `MoralFilter` evaluates the request against the adaptive threshold — rejected requests return immediately. Accepted requests proceed to phase-based memory (PELM) for context retrieval, then to the underlying LLM for generation. The `AphasiaSpeechGovernor` analyzes the output for telegraphic speech patterns and triggers repair if needed.
-
-**Core Components:**
-
-| Component | Description | Location |
-|-----------|-------------|----------|
-| CognitiveController | Coordinates all cognitive subsystems in thread-safe manner | [`src/mlsdm/core/cognitive_controller.py`](src/mlsdm/core/cognitive_controller.py) |
-| MoralFilterV2 | Implements adaptive moral threshold with EMA | [`src/mlsdm/cognition/moral_filter_v2.py`](src/mlsdm/cognition/moral_filter_v2.py) |
-| PELM | Implements phase-entangled lattice memory | [`src/mlsdm/memory/phase_entangled_lattice_memory.py`](src/mlsdm/memory/phase_entangled_lattice_memory.py) |
-| MultiLevelMemory | Implements L1/L2/L3 decay cascade | [`src/mlsdm/memory/multi_level_memory.py`](src/mlsdm/memory/multi_level_memory.py) |
-| CognitiveRhythm | Implements wake/sleep state machine | [`src/mlsdm/rhythm/cognitive_rhythm.py`](src/mlsdm/rhythm/cognitive_rhythm.py) |
-| AphasiaBrocaDetector | Analyzes text for telegraphic speech patterns | [`src/mlsdm/extensions/neuro_lang_extension.py`](src/mlsdm/extensions/neuro_lang_extension.py) |
+**Request Flow:** User prompt enters through input validation → `CognitiveController` coordinates subsystems → `MoralFilter` evaluates against adaptive threshold (rejected requests return immediately) → Accepted requests proceed to PELM for context retrieval → LLM generates response → `AphasiaSpeechGovernor` analyzes output for telegraphic patterns and triggers repair if needed.
 
 **Invariants:**
 - Moral threshold always in [0.30, 0.90]
@@ -198,65 +194,90 @@ See [ARCHITECTURE_SPEC.md](ARCHITECTURE_SPEC.md) for detailed system design.
 
 ### Safety Mechanisms
 
-The system implements the following safety mechanisms:
+| Mechanism | Description | Reference |
+|-----------|-------------|-----------|
+| MoralFilterV2 | EMA-based threshold bounded [0.30, 0.90]; rejects events below threshold | [`src/mlsdm/cognition/moral_filter_v2.py`](src/mlsdm/cognition/moral_filter_v2.py) |
+| Bounded Drift | Threshold drift limited to 0.33 max under sustained toxic input | [EFFECTIVENESS_VALIDATION_REPORT.md](EFFECTIVENESS_VALIDATION_REPORT.md) |
+| AphasiaBrocaDetector | Analyzes output for telegraphic patterns; triggers repair when severity > 0.3 | [`src/mlsdm/extensions/neuro_lang_extension.py`](src/mlsdm/extensions/neuro_lang_extension.py) |
+| Capacity Bounds | PELM fixed at 20,000 vectors, 29.37 MB max footprint | [SLO_SPEC.md](SLO_SPEC.md) |
 
-- **MoralFilterV2** — implements EMA-based adaptive threshold bounded within [0.30, 0.90]; rejects events below threshold ([`src/mlsdm/cognition/moral_filter_v2.py`](src/mlsdm/cognition/moral_filter_v2.py))
-- **Bounded drift** — threshold drift limited to 0.33 maximum under sustained toxic input ([EFFECTIVENESS_VALIDATION_REPORT.md](EFFECTIVENESS_VALIDATION_REPORT.md))
-- **AphasiaBrocaDetector** — analyzes LLM output for telegraphic patterns; allows repair when severity exceeds threshold ([`src/mlsdm/extensions/neuro_lang_extension.py`](src/mlsdm/extensions/neuro_lang_extension.py))
-- **Capacity bounds** — PELM memory fixed at 20,000 vectors, 29.37 MB maximum footprint
+### Limitations (What This System Does NOT Provide)
 
-### Limitations
+- **No hallucination prevention** — MLSDM wraps the LLM but cannot improve base model factual accuracy
+- **No complete content filtering** — 93.3% toxic rejection rate means ~6.7% may pass; ~37.5% false positive rate
+- **No low-latency guarantee** — cognitive processing adds overhead; not for latency-critical systems
+- **No formal certification** — not designed for medical, legal, or life-critical applications
+- **No production readiness** — beta status requires additional hardening before production
+- **Not a replacement for audit** — domain-specific deployment requires separate security/compliance audit
 
-The system does NOT guarantee or provide:
+---
 
-- **Underlying LLM quality** — MLSDM wraps the LLM but cannot improve the base model's capabilities or factual accuracy
-- **Complete content filtering** — 93.3% toxic rejection rate means ~6.7% may pass; false positive rate ~37.5%
-- **Low latency** — cognitive processing adds overhead; not suitable for latency-critical real-time systems
-- **Formal certification** — not designed for medical, legal, or life-critical applications; does not replace formal audit or safety certification
-- **Production readiness** — beta status requires additional hardening (monitoring, logging, error handling) before production deployment
-- **NeuroLang efficiency** — PyTorch-based NeuroLang extension is compute-intensive; use `neurolang_mode="disabled"` for production
+## Operational Checklist
 
-### Aphasia Detection Thresholds
+Before deploying to production, complete the following:
 
-Classification criteria for telegraphic speech detection:
+1. **Run integration tests**
+   ```bash
+   pytest tests/integration/test_end_to_end.py -v
+   pytest tests/integration/test_llm_wrapper_integration.py -v
+   ```
 
-- **Non-aphasic**: avg_sentence_len ≥ 6, function_word_ratio ≥ 0.15, fragment_ratio ≤ 0.5
-- **Repair trigger**: When `is_aphasic=True` and severity > threshold (default 0.3)
+2. **Run effectiveness validation**
+   ```bash
+   pytest tests/validation/test_moral_filter_effectiveness.py -v
+   pytest tests/validation/test_wake_sleep_effectiveness.py -v
+   pytest tests/validation/test_aphasia_detection.py -v
+   ```
 
-See [APHASIA_SPEC.md](APHASIA_SPEC.md) for detection algorithm details.
+3. **Measure latency/throughput on your infrastructure**
+   ```bash
+   pytest tests/load/ -v
+   ```
+
+4. **Configure logging and metrics**
+   - Enable Prometheus metrics export ([`src/mlsdm/observability/metrics.py`](src/mlsdm/observability/metrics.py))
+   - Enable structured logging ([`src/mlsdm/observability/logger.py`](src/mlsdm/observability/logger.py))
+
+5. **Review and adjust moral filter thresholds**
+   - Default: initial_moral_threshold=0.50
+   - Bounds: [0.30, 0.90]
+   - See [CONFIGURATION_GUIDE.md](CONFIGURATION_GUIDE.md)
+
+6. **Disable NeuroLang for production** (unless required)
+   ```python
+   neurolang_mode="disabled"  # Reduces compute overhead
+   ```
+
+7. **Plan for edge cases**
+   - Review [APHASIA_SPEC.md](APHASIA_SPEC.md) detection thresholds
+   - Test with domain-specific toxic content samples
+
+8. **Conduct domain-specific security audit**
+   - MLSDM does not replace formal security review
+   - See [SECURITY_POLICY.md](SECURITY_POLICY.md)
 
 ---
 
 ## Further Reading
 
 ### Core Documentation
-
-- [ARCHITECTURE_SPEC.md](ARCHITECTURE_SPEC.md) — System architecture and component design
-- [API_REFERENCE.md](API_REFERENCE.md) — Complete API documentation
-- [CONFIGURATION_GUIDE.md](CONFIGURATION_GUIDE.md) — Configuration reference and validation
-- [USAGE_GUIDE.md](USAGE_GUIDE.md) — Detailed usage examples
+- [ARCHITECTURE_SPEC.md](ARCHITECTURE_SPEC.md) — System architecture
+- [API_REFERENCE.md](API_REFERENCE.md) — API documentation
+- [CONFIGURATION_GUIDE.md](CONFIGURATION_GUIDE.md) — Configuration options
 
 ### Validation & Testing
-
-- [EFFECTIVENESS_VALIDATION_REPORT.md](EFFECTIVENESS_VALIDATION_REPORT.md) — Quantitative validation results
+- [EFFECTIVENESS_VALIDATION_REPORT.md](EFFECTIVENESS_VALIDATION_REPORT.md) — Quantitative validation
 - [TESTING_STRATEGY.md](TESTING_STRATEGY.md) — Testing methodology
 - [SLO_SPEC.md](SLO_SPEC.md) — Service level objectives
 
 ### Aphasia & NeuroLang
-
 - [APHASIA_SPEC.md](APHASIA_SPEC.md) — Aphasia-Broca model specification
 - [docs/NEURO_FOUNDATIONS.md](docs/NEURO_FOUNDATIONS.md) — Neuroscience foundations
 
 ### Deployment & Operations
-
-- [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) — Production deployment patterns
+- [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) — Production deployment
 - [RUNBOOK.md](RUNBOOK.md) — Operational runbook
 - [SECURITY_POLICY.md](SECURITY_POLICY.md) — Security guidelines
-
-### Contributing
-
-- [CONTRIBUTING.md](CONTRIBUTING.md) — Contribution guidelines
-- [CHANGELOG.md](CHANGELOG.md) — Version history
 
 ---
 
