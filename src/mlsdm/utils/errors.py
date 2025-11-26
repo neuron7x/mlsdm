@@ -571,20 +571,15 @@ def get_http_status_for_error(error: MLSDMError) -> int:
     elif code.startswith("E8"):  # Config
         return 500
     elif code.startswith("E9"):  # API
-        if code == "E901":
-            return 429
-        elif code == "E902":
-            return 504
-        elif code == "E903":
-            return 503
-        elif code == "E904":
-            return 400
-        elif code == "E905":
-            return 404
-        elif code == "E906":
-            return 405
-        elif code == "E907":
-            return 409
-        return 500
+        api_status_codes = {
+            "E901": 429,  # Too Many Requests
+            "E902": 504,  # Gateway Timeout
+            "E903": 503,  # Service Unavailable
+            "E904": 400,  # Bad Request
+            "E905": 404,  # Not Found
+            "E906": 405,  # Method Not Allowed
+            "E907": 409,  # Conflict
+        }
+        return api_status_codes.get(code, 500)
 
     return 500

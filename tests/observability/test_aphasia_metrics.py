@@ -259,7 +259,7 @@ def test_no_metrics_when_detection_disabled(caplog):
 
 def test_metrics_do_not_contain_content(metrics_exporter):
     """Test that metrics contain only metadata, no content or PII."""
-    secret_content = "SUPER_SECRET_CONTENT_12345"
+    # secret_content = "SUPER_SECRET_CONTENT_12345" -- not needed for test
 
     # Record event - flags should be predefined constants, not content
     metrics_exporter.record_aphasia_event(

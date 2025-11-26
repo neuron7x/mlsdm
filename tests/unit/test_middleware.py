@@ -10,16 +10,15 @@ from __future__ import annotations
 
 import asyncio
 import time
-from typing import Any
-from unittest.mock import AsyncMock, patch
+from unittest.mock import patch
 
 import pytest
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from starlette.testclient import TestClient
 
 from mlsdm.api.middleware import (
-    BulkheadMiddleware,
     BulkheadMetrics,
+    BulkheadMiddleware,
     BulkheadSemaphore,
     TimeoutMiddleware,
 )

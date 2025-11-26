@@ -6,9 +6,13 @@ for the cognitive architecture system.
 
 from .aphasia_logging import (
     LOGGER_NAME as APHASIA_LOGGER_NAME,
+)
+from .aphasia_logging import (
     AphasiaLogEvent,
-    get_logger as get_aphasia_logger,
     log_aphasia_event,
+)
+from .aphasia_logging import (
+    get_logger as get_aphasia_logger,
 )
 from .aphasia_metrics import (
     AphasiaMetricsExporter,
@@ -27,19 +31,19 @@ from .metrics import (
 )
 
 __all__ = [
-    # General observability
-    "EventType",
-    "ObservabilityLogger",
-    "get_observability_logger",
-    "MetricsExporter",
-    "PhaseType",
-    "get_metrics_exporter",
     # Aphasia-specific observability
     "APHASIA_LOGGER_NAME",
     "AphasiaLogEvent",
-    "get_aphasia_logger",
-    "log_aphasia_event",
     "AphasiaMetricsExporter",
+    # General observability
+    "EventType",
+    "MetricsExporter",
+    "ObservabilityLogger",
+    "PhaseType",
+    "get_aphasia_logger",
     "get_aphasia_metrics_exporter",
+    "get_metrics_exporter",
+    "get_observability_logger",
+    "log_aphasia_event",
     "reset_aphasia_metrics_exporter",
 ]
