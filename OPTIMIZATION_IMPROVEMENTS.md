@@ -73,7 +73,7 @@ Security audit identified **21 vulnerabilities** in dependencies across 9 packag
 
 ### Optimization Areas
 
-#### 1. Input Validator (`src/utils/input_validator.py`)
+#### 1. Input Validator (`src/mlsdm/utils/input_validator.py`)
 
 **Problem**: Redundant array conversions and unnecessary allocations in hot path.
 
@@ -126,7 +126,7 @@ if not rejected and self._state_cache_valid:
     return result
 ```
 
-#### 3. Rate Limiter (`src/utils/rate_limiter.py`)
+#### 3. Rate Limiter (`src/mlsdm/utils/rate_limiter.py`)
 
 **Problem**: Multiple `time.time()` syscalls and redundant min() operations.
 
@@ -240,7 +240,7 @@ All optimizations are backward compatible:
    - Updated all vulnerable dependencies
    - Added security pins for indirect dependencies
 
-2. **src/utils/input_validator.py** (+60 lines, optimized)
+2. **src/mlsdm/utils/input_validator.py** (+60 lines, optimized)
    - Fast path for numpy arrays
    - Early dimension checking
    - In-place normalization
@@ -251,7 +251,7 @@ All optimizations are backward compatible:
    - Cache invalidation logic
    - Pre-allocated dictionaries
 
-4. **src/utils/rate_limiter.py** (+5 lines, optimized)
+4. **src/mlsdm/utils/rate_limiter.py** (+5 lines, optimized)
    - Reduced syscalls
    - Eliminated redundant min()
    - Early exit paths

@@ -600,7 +600,7 @@ cp env.example .env
 
 ### Schema Validation
 
-All configurations are validated against the schema defined in `src/utils/config_schema.py`.
+All configurations are validated against the schema defined in `src/mlsdm/utils/config_schema.py`.
 
 **Validation checks:**
 
@@ -619,7 +619,7 @@ Configuration validation failed for 'config/custom.yaml':
 Decay rates must follow hierarchy: lambda_l3 (0.1) <= lambda_l2 (0.05) <= lambda_l1 (0.5)
 
 Please check your configuration file against the schema documentation 
-in src/utils/config_schema.py
+in src/mlsdm/utils/config_schema.py
 ```
 
 ### Disable Validation

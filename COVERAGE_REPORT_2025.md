@@ -68,9 +68,9 @@ According to ESA standards for Technology Readiness Level 5-6:
 
 | Module | Statements | Missed | Coverage | Status |
 |--------|-----------|--------|----------|--------|
-| `src/memory/qilm_module.py` | 27 | 2 | **85.37%** | ✅ |
-| `src/memory/qilm_v2.py` | 64 | 3 | **92.50%** | ✅ |
-| `src/memory/multi_level_memory.py` | 56 | 8 | **78.95%** | ⚠️ |
+| `src/mlsdm/memory/qilm_module.py` | 27 | 2 | **85.37%** | ✅ |
+| `src/mlsdm/memory/qilm_v2.py` | 64 | 3 | **92.50%** | ✅ |
+| `src/mlsdm/memory/multi_level_memory.py` | 56 | 8 | **78.95%** | ⚠️ |
 
 **Analysis:** Quantum-Inspired Learning Module (QILM) meets coverage requirements. Multi-level memory has room for improvement (lines 19-33 uncovered - constructor edge cases).
 
@@ -86,15 +86,15 @@ According to ESA standards for Technology Readiness Level 5-6:
 
 | Module | Statements | Missed | Coverage | Status |
 |--------|-----------|--------|----------|--------|
-| `src/utils/coherence_safety_metrics.py` | 169 | 0 | **98.24%** | ✅ (branch coverage) |
-| `src/utils/config_loader.py` | 94 | 9 | **90.48%** | ✅ |
-| `src/utils/config_validator.py` | 117 | 3 | **96.41%** | ✅ |
-| `src/utils/config_schema.py` | 99 | 1 | **94.57%** | ✅ |
-| `src/utils/data_serializer.py` | 36 | 0 | **100%** | ✅ |
-| `src/utils/input_validator.py` | 112 | 2 | **98.88%** | ✅ |
-| `src/utils/metrics.py` | 49 | 1 | **96.36%** | ✅ |
-| `src/utils/rate_limiter.py` | 46 | 1 | **95.00%** | ✅ |
-| `src/utils/security_logger.py` | 61 | 0 | **98.55%** | ✅ |
+| `src/mlsdm/utils/coherence_safety_metrics.py` | 169 | 0 | **98.24%** | ✅ (branch coverage) |
+| `src/mlsdm/utils/config_loader.py` | 94 | 9 | **90.48%** | ✅ |
+| `src/mlsdm/utils/config_validator.py` | 117 | 3 | **96.41%** | ✅ |
+| `src/mlsdm/utils/config_schema.py` | 99 | 1 | **94.57%** | ✅ |
+| `src/mlsdm/utils/data_serializer.py` | 36 | 0 | **100%** | ✅ |
+| `src/mlsdm/utils/input_validator.py` | 112 | 2 | **98.88%** | ✅ |
+| `src/mlsdm/utils/metrics.py` | 49 | 1 | **96.36%** | ✅ |
+| `src/mlsdm/utils/rate_limiter.py` | 46 | 1 | **95.00%** | ✅ |
+| `src/mlsdm/utils/security_logger.py` | 61 | 0 | **98.55%** | ✅ |
 
 **Analysis:** Critical safety and coherence metrics achieve near-100% coverage. **Notable improvement: InputValidator increased from 70.79% to 98.88% (+28.09%)** through 21 new edge case tests.
 

@@ -14,7 +14,7 @@ Translation: "Work on the quality of system configurations. Work practically and
 
 ### 1. Configuration Schema with Validation (NEW)
 
-**File**: `src/utils/config_schema.py` (10.5 KB)
+**File**: `src/mlsdm/utils/config_schema.py` (10.5 KB)
 
 **Features**:
 - Comprehensive Pydantic v2-based schema for all configuration parameters
@@ -33,7 +33,7 @@ Translation: "Work on the quality of system configurations. Work practically and
 
 ### 2. Enhanced Configuration Loader (ENHANCED)
 
-**File**: `src/utils/config_loader.py` (enhanced, 6.7 KB)
+**File**: `src/mlsdm/utils/config_loader.py` (enhanced, 6.7 KB)
 
 **New Features**:
 - Schema validation integration
@@ -271,7 +271,7 @@ Configuration validation failed:
 Decay rates must follow hierarchy: lambda_l3 (0.01) <= lambda_l2 (0.5) <= lambda_l1 (0.1)
 
 Please check your configuration file against the schema documentation 
-in src/utils/config_schema.py
+in src/mlsdm/utils/config_schema.py
 ```
 
 ## Migration Guide
@@ -294,7 +294,7 @@ in src/utils/config_schema.py
 ## Files Modified/Created
 
 ### Created (7 files)
-1. `src/utils/config_schema.py` - Configuration schema
+1. `src/mlsdm/utils/config_schema.py` - Configuration schema
 2. `config/production.yaml` - Production template
 3. `CONFIGURATION_GUIDE.md` - Configuration documentation
 4. `tests/unit/test_config_validation.py` - Validation tests
@@ -303,7 +303,7 @@ in src/utils/config_schema.py
 7. `CONFIGURATION_IMPROVEMENTS_SUMMARY.md` - This document
 
 ### Enhanced (6 files)
-1. `src/utils/config_loader.py` - Added validation and env override support
+1. `src/mlsdm/utils/config_loader.py` - Added validation and env override support
 2. `config/default_config.yaml` - Added documentation comments
 3. `env.example` - Comprehensive environment documentation
 4. `docker/Dockerfile` - Multi-stage build, security hardening

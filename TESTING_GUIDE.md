@@ -122,8 +122,8 @@ src/tests/unit/          # Unit tests for individual components
   - `src/core/cognitive_controller.py`
   - `src/core/memory_manager.py`
   - `src/cognition/moral_filter.py`
-  - `src/utils/coherence_safety_metrics.py`
-  - `src/utils/security_logger.py`
+  - `src/mlsdm/utils/coherence_safety_metrics.py`
+  - `src/mlsdm/utils/security_logger.py`
 
 ## Writing New Tests
 
@@ -187,7 +187,7 @@ class TestEdgeCases:
 ### Checking Coverage for Specific Module
 
 ```bash
-pytest --cov=src/utils/coherence_safety_metrics --cov-report=term-missing tests/ src/tests/unit/
+pytest --cov=src/mlsdm/utils/coherence_safety_metrics --cov-report=term-missing tests/ src/tests/unit/
 ```
 
 ### Finding Uncovered Lines
@@ -195,13 +195,13 @@ pytest --cov=src/utils/coherence_safety_metrics --cov-report=term-missing tests/
 The coverage report shows uncovered lines:
 
 ```
-src/utils/coherence_safety_metrics.py    169      0   100%
+src/mlsdm/utils/coherence_safety_metrics.py    169      0   100%
 ```
 
 If there are missing lines, they will be listed:
 
 ```
-src/utils/input_validator.py    87     12    86%   42, 59-60, 95-96, 131, 168, 206, 211, 241, 245-246
+src/mlsdm/utils/input_validator.py    87     12    86%   42, 59-60, 95-96, 131, 168, 206, 211, 241, 245-246
 ```
 
 ## Continuous Integration
