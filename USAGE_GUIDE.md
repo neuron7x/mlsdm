@@ -16,7 +16,7 @@ The MLSDM system provides a production-ready wrapper for any LLM that enforces b
 ### Basic Integration
 
 ```python
-from src.core.llm_wrapper import LLMWrapper
+from mlsdm.core.llm_wrapper import LLMWrapper
 import numpy as np
 
 # Step 1: Define your LLM generation function
@@ -102,7 +102,7 @@ result = wrapper.generate(
 ```python
 import openai
 from sentence_transformers import SentenceTransformer
-from src.core.llm_wrapper import LLMWrapper
+from mlsdm.core.llm_wrapper import LLMWrapper
 
 # Initialize OpenAI
 openai.api_key = "your-api-key"
@@ -135,7 +135,7 @@ print(result["response"])
 
 ```python
 import anthropic
-from src.core.llm_wrapper import LLMWrapper
+from mlsdm.core.llm_wrapper import LLMWrapper
 
 client = anthropic.Anthropic(api_key="your-api-key")
 
@@ -158,7 +158,7 @@ wrapper = LLMWrapper(
 
 ```python
 from transformers import AutoModelForCausalLM, AutoTokenizer
-from src.core.llm_wrapper import LLMWrapper
+from mlsdm.core.llm_wrapper import LLMWrapper
 
 # Load local model
 model = AutoModelForCausalLM.from_pretrained("your-model")
@@ -487,7 +487,7 @@ CMD ["python", "examples/llm_wrapper_example.py"]
 
 ```python
 from fastapi import FastAPI
-from src.core.llm_wrapper import LLMWrapper
+from mlsdm.core.llm_wrapper import LLMWrapper
 
 app = FastAPI()
 wrapper = LLMWrapper(...)

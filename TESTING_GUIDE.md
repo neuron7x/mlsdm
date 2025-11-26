@@ -138,7 +138,7 @@ src/tests/unit/          # Unit tests for individual components
 ```python
 import pytest
 import numpy as np
-from src.utils.coherence_safety_metrics import CoherenceSafetyAnalyzer
+from mlsdm.utils.coherence_safety_metrics import CoherenceSafetyAnalyzer
 
 class TestMyComponent:
     """Test suite for MyComponent"""

@@ -336,7 +336,7 @@ wake → (8 steps) → sleep → consolidate →
 ## Usage Example
 
 ```python
-from src.core.llm_wrapper import LLMWrapper
+from mlsdm.core.llm_wrapper import LLMWrapper
 import numpy as np
 
 # Define your LLM and embedding functions
@@ -401,7 +401,7 @@ CMD ["python", "your_app.py"]
 
 ```python
 from fastapi import FastAPI
-from src.core.llm_wrapper import LLMWrapper
+from mlsdm.core.llm_wrapper import LLMWrapper
 
 app = FastAPI()
 wrapper = LLMWrapper(...)
