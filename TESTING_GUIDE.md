@@ -37,6 +37,7 @@ This guide provides comprehensive instructions for testing MLSDM Governed Cognit
 |----------|---------|----------|-------|----------------|
 | **Unit Tests** | Test individual components | `src/tests/unit/` | 150+ | <2s |
 | **Integration Tests** | Test component interactions | `tests/integration/` | 10+ | <5s |
+| **E2E Tests** | Test full prod-level scenarios | `tests/e2e/` | 28+ | <3s |
 | **Validation Tests** | Test effectiveness claims | `tests/validation/` | 8+ | <10s |
 | **Property Tests** | Test invariants with fuzzing | `src/tests/unit/test_property_based.py` | 20+ | <3s |
 
@@ -55,6 +56,12 @@ pytest src/tests/unit/ -v
 
 # Run only integration tests
 pytest tests/integration/ -v
+
+# Run only E2E tests
+pytest tests/e2e/ -v
+
+# Run E2E tests (fast, production scenarios)
+pytest tests/e2e -v -m "not slow"
 
 # Run only validation tests
 pytest tests/validation/ -v
@@ -78,6 +85,11 @@ xdg-open htmlcov/index.html  # Linux
 
 ```
 tests/
+├── e2e/                 # End-to-end tests for prod-level scenarios
+│   ├── conftest.py            # E2E fixtures (e2e_config, e2e_app, e2e_http_client)
+│   ├── test_e2e_scenarios.py  # E2E prod scenarios (happy path, toxic rejection, aphasia, etc.)
+│   ├── test_end_to_end_core.py # Core happy path tests
+│   └── test_neuro_cognitive_engine_stub_backend.py  # Engine E2E tests
 ├── integration/          # Integration tests for end-to-end workflows
 │   ├── test_end_to_end.py
 │   └── test_llm_wrapper_integration.py
@@ -246,6 +258,63 @@ For TRL 5-6 compliance:
 3. **Document any coverage regressions**
 4. **Review COVERAGE_REPORT.md quarterly**
 5. **Update tests when adding new features**
+
+## E2E Test Suite
+
+### Overview
+
+The End-to-End (E2E) test suite validates that MLSDM works correctly as a complete system, exercising the full pipeline through external interfaces (HTTP API/Python API). These tests ensure production-level reliability.
+
+### Running E2E Tests
+
+```bash
+# Run all E2E tests
+pytest tests/e2e -v
+
+# Run E2E tests excluding slow tests
+pytest tests/e2e -m "not slow" -v
+
+# Run with verbose output and timing
+pytest tests/e2e -v --tb=short
+```
+
+### E2E Test Scenarios
+
+The E2E test suite covers the following scenarios:
+
+| Scenario | Test File | Purpose |
+|----------|-----------|---------|
+| **Happy Path Governed Chat** | `test_e2e_scenarios.py` | Validates non-toxic prompts are accepted with responses |
+| **Toxic Rejection** | `test_e2e_scenarios.py` | Validates moral filter correctly rejects harmful prompts |
+| **Aphasia Detection & Repair** | `test_e2e_scenarios.py` | Validates telegraphic speech detection and repair |
+| **Secure Mode** | `test_e2e_scenarios.py` | Validates secure mode operation without training |
+| **Memory Phase Rhythm** | `test_e2e_scenarios.py` | Validates wake/sleep phase alternation |
+| **Metrics Exposed** | `test_e2e_scenarios.py` | Validates `/health/metrics` endpoint returns data |
+| **Core Happy Path** | `test_end_to_end_core.py` | Validates basic CognitiveController flow |
+| **Engine Stub Backend** | `test_neuro_cognitive_engine_stub_backend.py` | Validates complete NeuroCognitiveEngine pipeline |
+
+### Key E2E Invariants Tested
+
+1. **Moral Filter**: Toxic prompts with high moral threshold are rejected
+2. **Aphasia Repair**: Telegraphic text is detected with severity > 0
+3. **Rhythm**: Wake/sleep phases alternate correctly
+4. **Memory**: Events in sleep phase are handled (not stored)
+5. **Telemetry/Metrics**: `/health/metrics` returns Prometheus-formatted data
+6. **Latency**: Responses under 100ms (soft upper bound)
+
+### CI Integration
+
+E2E tests are mandatory for release:
+- Job: `e2e-tests` in `ci-neuro-cognitive-engine.yml`
+- Gate: Part of `All CI Checks Passed` job
+- Runtime: < 60 seconds (currently ~2-3s)
+
+### When to Run E2E Tests
+
+- **Always**: Before merging PRs
+- **Always**: Before releases
+- **Recommended**: After changing core modules
+- **Optional**: During local development (fast enough for frequent runs)
 
 ## References
 

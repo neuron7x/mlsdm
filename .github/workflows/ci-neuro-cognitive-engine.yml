@@ -39,6 +39,32 @@ jobs:
         run: |
           pytest -q --ignore=tests/load
   
+  e2e-tests:
+    name: End-to-End Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -e ".[test]"
+      
+      - name: Run E2E tests
+        run: |
+          pytest tests/e2e -v -m "not slow" --tb=short
+        env:
+          LLM_BACKEND: local_stub
+          DISABLE_RATE_LIMIT: "1"
+  
   effectiveness-validation:
     name: Effectiveness Validation
     runs-on: ubuntu-latest
@@ -142,3 +168,12 @@ jobs:
           path: |
             sapolsky_eval_results.json
           retention-days: 90
+  
+  # Gate job that requires all critical CI jobs to pass
+  all-ci-passed:
+    name: All CI Checks Passed
+    runs-on: ubuntu-latest
+    needs: [test, e2e-tests, effectiveness-validation]
+    steps:
+      - name: All checks passed
+        run: echo "All CI checks passed successfully!"
