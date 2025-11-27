@@ -1,7 +1,9 @@
 # MLSDM
 
 <p align="center">
-  <img src="assets/mlsdm-hero.png" alt="MLSDM Neural Architecture Visualization" width="600">
+  <img src="assets/neurocode-brain.png"
+       alt="Силует мозку з червоним, зеленим і синім програмним кодом на чорному фоні"
+       width="512">
 </p>
 
 > Neuro-inspired governed memory wrapper for LLMs: phase-based memory, adaptive moral filter, aphasia/Broca detection & repair, production-grade tests.
