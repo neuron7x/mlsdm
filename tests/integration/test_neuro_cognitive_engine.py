@@ -20,7 +20,6 @@ from mlsdm.engine.neuro_cognitive_engine import (
     NeuroEngineConfig,
 )
 
-
 # Fixed seed for reproducible tests
 _SEED = 42
 
