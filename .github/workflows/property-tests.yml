@@ -19,6 +19,17 @@ on:
       - 'tests/property/**'
       - 'tests/unit/**'
       - '.github/workflows/property-tests.yml'
+  workflow_dispatch:
+    inputs:
+      hypothesis_profile:
+        description: 'Hypothesis profile to use'
+        required: false
+        type: choice
+        options:
+          - default
+          - ci
+          - debug
+        default: 'ci'
 
 # Cancel in-progress runs for the same branch/PR to save resources
 concurrency:

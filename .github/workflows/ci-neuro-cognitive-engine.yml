@@ -5,10 +5,35 @@ on:
     branches:
       - main
       - 'feature/*'
+    paths:
+      - 'src/**'
+      - 'tests/**'
+      - 'benchmarks/**'
+      - 'scripts/**'
+      - 'examples/**'
+      - 'requirements.txt'
+      - 'pyproject.toml'
+      - '.github/workflows/ci-neuro-cognitive-engine.yml'
   pull_request:
     branches:
       - main
       - 'feature/*'
+    paths:
+      - 'src/**'
+      - 'tests/**'
+      - 'benchmarks/**'
+      - 'scripts/**'
+      - 'examples/**'
+      - 'requirements.txt'
+      - 'pyproject.toml'
+      - '.github/workflows/ci-neuro-cognitive-engine.yml'
+  workflow_dispatch:
+    inputs:
+      debug_enabled:
+        type: boolean
+        description: 'Run the build with tmate debugging enabled'
+        required: false
+        default: false
 
 # Cancel in-progress runs for the same branch/PR to save resources
 concurrency:
@@ -120,9 +145,20 @@ jobs:
           pip install -r requirements.txt
           pip install -e ".[test]"
       
-      - name: Run tests
+      - name: Run tests with coverage
         run: |
-          pytest -q --ignore=tests/load
+          pytest -q --ignore=tests/load --cov=src/mlsdm --cov-report=xml --cov-report=term-missing
+      
+      - name: Upload coverage to Codecov
+        if: matrix.python-version == '3.11'
+        uses: codecov/codecov-action@v4
+        with:
+          file: ./coverage.xml
+          flags: unittests
+          name: codecov-mlsdm
+          fail_ci_if_error: false
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
   
   e2e-tests:
     name: End-to-End Tests

@@ -1,0 +1,43 @@
+# CODEOWNERS - Defines code owners for automatic review requests
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default owners for everything in the repo
+*                           @neuron7x
+
+# Core cognitive engine
+/src/mlsdm/                 @neuron7x
+
+# Memory systems
+/src/mlsdm/memory/          @neuron7x
+
+# Moral governance and safety
+/src/mlsdm/governance/      @neuron7x
+/src/mlsdm/safety/          @neuron7x
+
+# Extensions (NeuroLang, etc.)
+/src/mlsdm/extensions/      @neuron7x
+
+# Observability and metrics
+/src/mlsdm/observability/   @neuron7x
+
+# Configuration
+/config/                    @neuron7x
+
+# Tests
+/tests/                     @neuron7x
+
+# CI/CD and workflows
+/.github/                   @neuron7x
+
+# Documentation
+/docs/                      @neuron7x
+*.md                        @neuron7x
+
+# Docker and deployment
+/docker/                    @neuron7x
+/deploy/                    @neuron7x
+Dockerfile*                 @neuron7x
+
+# Security-sensitive files
+/SECURITY_*.md              @neuron7x
+/SAFETY_POLICY.yaml         @neuron7x

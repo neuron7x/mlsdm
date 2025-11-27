@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 📖 Documentation
+    url: https://github.com/neuron7x/mlsdm/blob/main/DOCUMENTATION_INDEX.md
+    about: Check our documentation before opening an issue
+  - name: 💬 Discussions
+    url: https://github.com/neuron7x/mlsdm/discussions
+    about: Ask questions and discuss ideas
+  - name: 🔒 Security Issues
+    url: https://github.com/neuron7x/mlsdm/security/advisories/new
+    about: Report security vulnerabilities privately

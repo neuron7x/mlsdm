@@ -1,6 +1,21 @@
 name: Aphasia / NeuroLang CI
 
 on:
+  push:
+    branches: [ main, master ]
+    paths:
+      - "src/mlsdm/extensions/**"
+      - "src/mlsdm/observability/**"
+      - "tests/eval/**"
+      - "tests/validation/test_aphasia_*"
+      - "tests/observability/test_aphasia_*"
+      - "tests/security/test_aphasia_*"
+      - "tests/packaging/test_neurolang_optional_dependency.py"
+      - "tests/scripts/test_*neurolang*"
+      - "tests/scripts/test_run_aphasia_eval.py"
+      - "scripts/*neurolang*"
+      - "scripts/run_aphasia_eval.py"
+      - ".github/workflows/aphasia-ci.yml"
   pull_request:
     branches: [ main, master ]
     paths:
@@ -16,6 +31,13 @@ on:
       - "scripts/*neurolang*"
       - "scripts/run_aphasia_eval.py"
       - ".github/workflows/aphasia-ci.yml"
+  workflow_dispatch:
+    inputs:
+      verbose:
+        description: 'Enable verbose output'
+        required: false
+        type: boolean
+        default: false
 
 # Cancel in-progress runs for the same branch/PR to save resources
 concurrency:
