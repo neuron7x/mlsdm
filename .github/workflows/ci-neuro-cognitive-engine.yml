@@ -10,8 +10,21 @@ on:
       - main
       - 'feature/*'
 
+# Cancel in-progress runs for the same branch/PR to save resources
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
+
+env:
+  # Optimize pip behavior
+  PIP_DISABLE_PIP_VERSION_CHECK: 1
+  PIP_NO_WARN_SCRIPT_LOCATION: 1
+  # Python optimization
+  PYTHONDONTWRITEBYTECODE: 1
+  PYTHONUNBUFFERED: 1
 
 jobs:
   lint:
@@ -27,6 +40,10 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: |
+            requirements.txt
+            pyproject.toml
       
       - name: Install dependencies
         run: |
@@ -55,6 +72,10 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: |
+            requirements.txt
+            pyproject.toml
       
       - name: Install dependencies
         run: |
@@ -72,11 +93,13 @@ jobs:
           echo "::error::Dependency vulnerabilities detected. Please update vulnerable packages."
 
   test:
+    name: Tests (Python ${{ matrix.python-version }})
     runs-on: ubuntu-latest
     timeout-minutes: 20
     strategy:
+      fail-fast: false
       matrix:
-        python-version: ['3.10', '3.11']
+        python-version: ['3.10', '3.11', '3.12']
     
     steps:
       - name: Checkout code
@@ -86,6 +109,10 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
+          cache: 'pip'
+          cache-dependency-path: |
+            requirements.txt
+            pyproject.toml
       
       - name: Install dependencies
         run: |
@@ -110,6 +137,10 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: |
+            requirements.txt
+            pyproject.toml
       
       - name: Install dependencies
         run: |
@@ -137,6 +168,10 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: |
+            requirements.txt
+            pyproject.toml
       
       - name: Install dependencies
         run: |
@@ -171,6 +206,10 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: |
+            requirements.txt
+            pyproject.toml
       
       - name: Install dependencies
         run: |
@@ -206,6 +245,10 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: |
+            requirements.txt
+            pyproject.toml
       
       - name: Install dependencies
         run: |
