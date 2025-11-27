@@ -149,6 +149,7 @@ markers = [
     "unit: marks tests as unit tests",
     "property: marks property-based tests",
     "security: marks security-related tests",
+    "experimental: marks experimental feature tests",
 ]
 
 [tool.coverage.run]

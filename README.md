@@ -134,6 +134,45 @@ All metrics are backed by reproducible tests. See the traceability matrix for cl
 - **Beta status** — additional hardening needed before production
 - **Not a compliance substitute** — requires domain-specific security audit
 
+## Advanced / Experimental Backends
+
+MLSDM provides optional experimental backends for specialized use cases. These are **not** required for basic usage and do not change the default CPU-friendly behavior.
+
+### FractalPELMGPU (Experimental)
+
+A GPU-accelerated phase-entangled memory backend using PyTorch. Intended for high-throughput research and benchmarks.
+
+**Features:**
+- Batch vector storage and retrieval
+- Phase-aware scoring with fractal distance weighting
+- Optional AMP (automatic mixed precision) for CUDA devices
+- Falls back to CPU if CUDA is unavailable
+
+**Requirements:**
+- PyTorch 2.0+ (`pip install mlsdm[neurolang]` or `pip install torch>=2.0.0`)
+
+**Usage:**
+
+```python
+from mlsdm.memory.experimental import FractalPELMGPU
+import numpy as np
+
+# Create memory backend (auto-detects CPU/GPU)
+memory = FractalPELMGPU(dimension=384, capacity=100_000, device="cpu")
+
+# Store vectors
+vectors = np.random.randn(100, 384).astype(np.float32)
+phases = np.random.uniform(0, 1, 100).astype(np.float32)
+memory.batch_entangle(vectors, phases)
+
+# Retrieve
+results = memory.retrieve(vectors[0], current_phase=0.5, top_k=5)
+for score, vector, metadata in results:
+    print(f"Score: {score:.4f}")
+```
+
+**Note:** This backend is experimental and not integrated into the core MLSDM pipeline (LLMWrapper, NeuroCognitiveEngine, etc.). The default PELM remains CPU-based for broad compatibility.
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, coding standards, and pull request process.
