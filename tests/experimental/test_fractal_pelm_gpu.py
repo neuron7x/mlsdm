@@ -492,18 +492,15 @@ class TestFractalPELMGPUScoringMonotonicity:
         # Query with same vector at phase 0.0
         results = memory.retrieve(base, current_phase=0.0, top_k=len(phases))
 
-        # Group by phase difference and check monotonicity
-        # Phase 0.0 should have highest score, phase 0.9 lowest
-        scores_by_phase = {}
-        for score, _, _ in results:
-            # Find which phase this result corresponds to
-            # The score should decrease with phase difference from 0.0
-            scores_by_phase[score] = score
-
+        # Extract scores - they should be sorted descending by score
         scores = [score for score, _, _ in results]
 
-        # First result should be for phase 0.0 (exact match)
+        # First result should have highest score (phase 0.0, exact match)
+        # Last result should have lowest score (furthest phase from 0.0)
         assert scores[0] >= scores[-1], "Score should decrease with phase difference"
+        # Verify monotonicity: each score should be >= next score
+        for i in range(len(scores) - 1):
+            assert scores[i] >= scores[i + 1], f"Scores not monotonic: {scores}"
 
     def test_identical_vector_and_phase_gives_max_score(self) -> None:
         """Test that identical vector and phase gives score close to 1.0."""
@@ -537,22 +534,22 @@ class TestFractalPELMGPUTorchImportBehavior:
     def test_fractal_pelm_raises_runtime_error_when_torch_unavailable(self) -> None:
         """Test that FractalPELMGPU raises RuntimeError with clear message if torch is unavailable.
 
-        This test verifies the error message format by directly checking the module's
-        error handling mechanism, without actually uninstalling torch.
+        This test verifies the error handling by temporarily modifying the module state.
         """
         from mlsdm.memory.experimental import fractal_pelm_gpu
 
         # Verify TORCH_AVAILABLE is True (since torch is installed)
         assert fractal_pelm_gpu.TORCH_AVAILABLE is True
 
-        # Verify the error message format is defined for when torch is missing
-        # We can test this by temporarily setting TORCH_AVAILABLE to False
-        # and checking that FractalPELMGPU raises the expected error
-        original_value = fractal_pelm_gpu.TORCH_AVAILABLE
+        # Save original state
+        original_available = fractal_pelm_gpu.TORCH_AVAILABLE
+        original_msg = getattr(fractal_pelm_gpu, "_IMPORT_ERROR_MSG", None)
+
         try:
             # Simulate torch not being available
             fractal_pelm_gpu.TORCH_AVAILABLE = False
-            # Need to set the error message
+            # The actual error message is generated during module load,
+            # so we set a representative message for testing
             fractal_pelm_gpu._IMPORT_ERROR_MSG = (
                 "FractalPELMGPU requires PyTorch. "
                 "Install with 'pip install mlsdm[neurolang]' or 'pip install torch>=2.0.0'."
@@ -561,11 +558,14 @@ class TestFractalPELMGPUTorchImportBehavior:
             with pytest.raises(RuntimeError) as exc_info:
                 fractal_pelm_gpu.FractalPELMGPU(dimension=8, capacity=10, device="cpu")
 
-            assert "PyTorch" in str(exc_info.value)
-            assert "mlsdm[neurolang]" in str(exc_info.value)
+            error_msg = str(exc_info.value)
+            assert "PyTorch" in error_msg
+            assert "mlsdm[neurolang]" in error_msg
         finally:
-            # Restore original value
-            fractal_pelm_gpu.TORCH_AVAILABLE = original_value
+            # Restore original state
+            fractal_pelm_gpu.TORCH_AVAILABLE = original_available
+            if original_msg is not None:
+                fractal_pelm_gpu._IMPORT_ERROR_MSG = original_msg
 
     def test_main_mlsdm_package_imports_without_torch(self) -> None:
         """Test that main mlsdm package imports successfully regardless of torch."""
