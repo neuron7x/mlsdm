@@ -408,15 +408,85 @@ class FractalPELMGPU:
         if self.size == 0:
             return [[] for _ in range(batch_size)]
 
-        # Process each query
+        # Vectorized batch scoring for GPU parallelization
+        with torch.autocast(device_type=self._device.type, enabled=self._amp_enabled):
+            scores = self._score_batch(q_tensor, phase_tensor)  # (batch, size)
+
+        # Get top-k for each query
+        effective_k = min(top_k, self.size)
+        top_scores, top_indices = torch.topk(scores, k=effective_k, dim=1)  # (batch, k)
+
+        # Convert to numpy
+        top_scores_np = top_scores.cpu().numpy()
+        top_indices_np = top_indices.cpu().numpy()
+        vectors_np = self._vectors[: self.size].float().cpu().numpy()
+
+        # Build results
         all_results: list[list[tuple[float, np.ndarray, dict | None]]] = []
-        for i in range(batch_size):
-            query_vec = q_tensor[i]
-            query_phase = float(phase_tensor[i].item())
-            results = self.retrieve(query_vec, query_phase, top_k)
-            all_results.append(results)
+        for b in range(batch_size):
+            query_results: list[tuple[float, np.ndarray, dict | None]] = []
+            for k in range(effective_k):
+                idx = int(top_indices_np[b, k])
+                score = float(top_scores_np[b, k])
+                vector = vectors_np[idx].astype(np.float32).copy()
+                metadata = self._metadata[idx]
+                query_results.append((score, vector, metadata))
+            all_results.append(query_results)
 
         return all_results
+
+    def _score_batch(
+        self,
+        query_vecs: torch.Tensor,
+        query_phases: torch.Tensor,
+    ) -> torch.Tensor:
+        """Compute retrieval scores for a batch of queries against stored vectors.
+
+        Vectorized implementation for GPU parallelization.
+
+        Args:
+            query_vecs: Query vectors tensor of shape (batch, dimension), float32.
+            query_phases: Query phase values tensor of shape (batch,), float32.
+
+        Returns:
+            Score tensor of shape (batch, size) with values in [0, 1].
+        """
+        batch_size = query_vecs.shape[0]
+
+        if self.size == 0:
+            return torch.zeros((batch_size, 0), device=self._device, dtype=torch.float32)
+
+        # Get active portion of storage
+        active_vectors = self._vectors[: self.size].float()  # (size, dim)
+        active_phases = self._phases[: self.size]  # (size,)
+        active_norms = self._norms[: self.size]  # (size,)
+
+        # Query norms with numerical stability: (batch,)
+        query_norms = torch.clamp(torch.norm(query_vecs, dim=1), min=_EPS)
+
+        # Cosine similarity: (batch, dim) @ (dim, size) -> (batch, size)
+        dot_products = torch.mm(query_vecs, active_vectors.t())
+        # Outer product of norms: (batch, 1) * (1, size) -> (batch, size)
+        norm_products = query_norms.unsqueeze(1) * active_norms.unsqueeze(0) + _EPS
+        cos_sim = dot_products / norm_products
+
+        # Phase similarity: exp(-|φ_q - φ_v|)
+        # (batch, 1) - (1, size) -> (batch, size)
+        phase_diff = torch.abs(query_phases.unsqueeze(1) - active_phases.unsqueeze(0))
+        phase_sim = torch.exp(-phase_diff)
+
+        # Distance term: log1p(||q - v||) using cdist for efficiency
+        # cdist computes pairwise distances: (batch, dim), (size, dim) -> (batch, size)
+        distances = torch.cdist(query_vecs, active_vectors, p=2.0)
+        log_dist = torch.log1p(distances)
+
+        # Distance factor: clamp(1 - fractal_weight * log1p(dist), 0, 1)
+        distance_factor = torch.clamp(1.0 - self.fractal_weight * log_dist, min=0.0, max=1.0)
+
+        # Combined score: cos_sim * phase_sim * distance_factor
+        scores = torch.clamp(cos_sim * phase_sim * distance_factor, min=0.0, max=1.0)
+
+        return scores
 
     def reset(self) -> None:
         """Clear all stored vectors and reset memory state.
