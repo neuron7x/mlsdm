@@ -9,7 +9,6 @@ It validates the basic flow through the CognitiveController.
 import numpy as np
 import pytest
 
-
 # Fixed seed for reproducible tests
 _SEED = 42
 
