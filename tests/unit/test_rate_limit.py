@@ -76,6 +76,7 @@ class TestIsAllowed:
         assert limiter.is_allowed("client1") is False
         assert limiter.is_allowed("client2") is False
 
+    @pytest.mark.slow
     def test_is_allowed_window_expiration(self):
         """Test that old requests expire."""
         limiter = RateLimiter(requests_per_window=2, window_seconds=1)
@@ -169,6 +170,7 @@ class TestReset:
 class TestCleanup:
     """Tests for cleanup functionality."""
 
+    @pytest.mark.slow
     def test_cleanup_triggered(self):
         """Test that cleanup is triggered after interval."""
         limiter = RateLimiter(
@@ -191,6 +193,7 @@ class TestCleanup:
         # (Internal check - the requests dict should be clean)
         assert limiter.get_remaining("client1") == 10  # Reset due to expired window
 
+    @pytest.mark.slow
     def test_cleanup_removes_empty_clients(self):
         """Test that cleanup removes clients with no recent requests."""
         limiter = RateLimiter(

@@ -53,7 +53,7 @@ The rate limiter uses a **leaky bucket algorithm** to provide smooth rate limiti
 ### Usage
 
 ```python
-from src.utils.rate_limiter import RateLimiter
+from mlsdm.utils.rate_limiter import RateLimiter
 
 # Initialize rate limiter
 limiter = RateLimiter(rate=5.0, capacity=10)
@@ -115,7 +115,7 @@ Comprehensive input validation prevents injection attacks, data corruption, and 
 ### Usage Examples
 
 ```python
-from src.utils.input_validator import InputValidator
+from mlsdm.utils.input_validator import InputValidator
 
 validator = InputValidator()
 
@@ -202,7 +202,7 @@ All logs are structured JSON with the following fields:
 ### Usage
 
 ```python
-from src.utils.security_logger import get_security_logger
+from mlsdm.utils.security_logger import get_security_logger
 
 logger = get_security_logger()
 

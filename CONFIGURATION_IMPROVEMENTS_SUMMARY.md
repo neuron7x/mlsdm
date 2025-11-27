@@ -210,7 +210,7 @@ export MLSDM_COGNITIVE_RHYTHM__WAKE_DURATION=10
 ### Basic Configuration Loading
 
 ```python
-from src.utils.config_loader import ConfigLoader
+from mlsdm.utils.config_loader import ConfigLoader
 
 # Load with validation (recommended)
 config = ConfigLoader.load_config('config/production.yaml', validate=True)

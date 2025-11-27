@@ -67,7 +67,7 @@ Simplest deployment - integrate directly into your Python application.
 
 ```python
 # app.py
-from src.core.llm_wrapper import LLMWrapper
+from mlsdm.core.llm_wrapper import LLMWrapper
 import numpy as np
 
 # Initialize once at startup
@@ -119,7 +119,7 @@ Production-ready REST API with async support.
 # api_server.py
 from fastapi import FastAPI, HTTPException, Depends
 from pydantic import BaseModel, Field
-from src.core.llm_wrapper import LLMWrapper
+from mlsdm.core.llm_wrapper import LLMWrapper
 import numpy as np
 from typing import Optional
 

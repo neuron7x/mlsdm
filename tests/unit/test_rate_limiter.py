@@ -299,6 +299,7 @@ class TestEdgeCases:
 class TestRateLimiterAccuracy:
     """Test rate limiter timing accuracy."""
 
+    @pytest.mark.slow
     def test_rate_accuracy(self):
         """Test rate limiting is approximately accurate."""
         limiter = RateLimiter(rate=10.0, capacity=10)

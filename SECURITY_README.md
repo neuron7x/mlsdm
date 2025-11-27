@@ -50,7 +50,7 @@ export DISABLE_RATE_LIMIT=1
 ### Rate Limiting
 
 ```python
-from src.utils.rate_limiter import RateLimiter
+from mlsdm.utils.rate_limiter import RateLimiter
 
 limiter = RateLimiter(rate=5.0, capacity=10)
 if limiter.is_allowed(client_id):
@@ -64,7 +64,7 @@ else:
 ### Input Validation
 
 ```python
-from src.utils.input_validator import InputValidator
+from mlsdm.utils.input_validator import InputValidator
 
 validator = InputValidator()
 
@@ -81,7 +81,7 @@ safe_text = validator.sanitize_string(user_input, max_length=1000)
 ### Security Logging
 
 ```python
-from src.utils.security_logger import get_security_logger
+from mlsdm.utils.security_logger import get_security_logger
 
 logger = get_security_logger()
 

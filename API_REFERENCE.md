@@ -182,7 +182,7 @@ LLMWrapper(
 
 **Example:**
 ```python
-from src.core.llm_wrapper import LLMWrapper
+from mlsdm.core.llm_wrapper import LLMWrapper
 import numpy as np
 
 def my_llm(prompt: str, max_tokens: int) -> str:
@@ -728,7 +728,7 @@ def process_event(
 
 **Example:**
 ```python
-from src.core.cognitive_controller import CognitiveController
+from mlsdm.core.cognitive_controller import CognitiveController
 import numpy as np
 
 controller = CognitiveController(dim=384)
@@ -934,7 +934,7 @@ def adapt(accepted: bool) -> None
 
 **Example:**
 ```python
-from src.cognition.moral_filter_v2 import MoralFilterV2
+from mlsdm.cognition.moral_filter_v2 import MoralFilterV2
 
 filter = MoralFilterV2(0.5)
 accepted = filter.evaluate(0.8)
@@ -1135,7 +1135,7 @@ except ValueError as e:
 ### Complete Integration Example
 
 ```python
-from src.core.llm_wrapper import LLMWrapper
+from mlsdm.core.llm_wrapper import LLMWrapper
 import numpy as np
 import openai
 
