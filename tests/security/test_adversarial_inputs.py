@@ -400,7 +400,8 @@ class TestSecretScrubbingSecurity:
         """
         SECURITY: AWS credential patterns are detected and scrubbed
 
-        AWS access keys and secrets should be identified.
+        AWS access keys are partially redacted, preserving the AKIA prefix
+        for identification while removing the secret portion.
         """
         test_cases = [
             "AKIA1234567890123456",  # AWS Access Key ID
@@ -408,8 +409,12 @@ class TestSecretScrubbingSecurity:
 
         for payload in test_cases:
             result = scrub_text(payload)
-            assert "REDACTED" in result or "AKIA" in result[:4], \
-                f"AWS key pattern not fully scrubbed: {result}"
+            # The scrubber preserves "AKIA" prefix but redacts the rest
+            # Expected output: "AKIA***REDACTED***"
+            assert "REDACTED" in result, \
+                f"AWS key not properly scrubbed: {result}"
+            assert "1234567890123456" not in result, \
+                f"AWS key ID not redacted: {result}"
 
     def test_private_key_patterns_scrubbed(self):
         """

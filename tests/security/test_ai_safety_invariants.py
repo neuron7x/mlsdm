@@ -245,9 +245,11 @@ class TestCoherenceMetricsBounds:
     )
     def test_semantic_coherence_bounded(self, dim, num_queries):
         """
-        INVARIANT: Semantic coherence ∈ [0, 1]
+        Test that semantic coherence returns finite values.
 
-        Semantic alignment score must be bounded.
+        Note: The implementation uses cosine similarity which can range [-1, 1]
+        for arbitrary vectors, despite the docstring claiming [0, 1].
+        This test verifies the metric remains finite and bounded.
         """
         analyzer = CoherenceSafetyAnalyzer()
 
@@ -257,10 +259,9 @@ class TestCoherenceMetricsBounds:
 
         coherence = analyzer.measure_semantic_coherence(query_vectors, retrieved_vectors)
 
-        # Coherence can be negative for anti-correlated vectors, but measure returns 0-1
-        # Actually, cosine similarity can be [-1, 1], so we need to check if it's handled
+        # Cosine similarity can be [-1, 1], so we validate that range
         assert -1.0 <= coherence <= 1.0, \
-            f"Semantic coherence {coherence} out of expected bounds"
+            f"Semantic coherence {coherence} out of expected bounds [-1, 1]"
 
 
 # ============================================================================
