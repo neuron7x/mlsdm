@@ -104,7 +104,8 @@ check_tools() {
 # Validate YAML syntax
 validate_yaml_syntax() {
     local file=$1
-    local filename=$(basename "$file")
+    local filename
+    filename=$(basename "$file")
     
     if [ "$HAS_YQ" = true ]; then
         if yq eval '.' "$file" > /dev/null 2>&1; then
@@ -130,7 +131,8 @@ validate_yaml_syntax() {
 # Validate JSON syntax
 validate_json_syntax() {
     local file=$1
-    local filename=$(basename "$file")
+    local filename
+    filename=$(basename "$file")
     
     if python3 -c "import json; json.load(open('$file'))" 2>/dev/null; then
         log_success "$filename - JSON syntax valid"
@@ -144,7 +146,8 @@ validate_json_syntax() {
 # Validate with yq for stricter YAML linting
 validate_yaml_strict() {
     local file=$1
-    local filename=$(basename "$file")
+    local filename
+    filename=$(basename "$file")
     
     if [ "$HAS_YQ" = true ]; then
         if yq eval '.' "$file" > /dev/null 2>&1; then
@@ -161,7 +164,8 @@ validate_yaml_strict() {
 # Validate Kubernetes schema with kubeconform
 validate_k8s_schema() {
     local file=$1
-    local filename=$(basename "$file")
+    local filename
+    filename=$(basename "$file")
     
     if [ "$HAS_KUBECONFORM" = true ]; then
         if kubeconform -strict -summary "$file" 2>&1; then
@@ -178,7 +182,8 @@ validate_k8s_schema() {
 # Check for common issues
 check_common_issues() {
     local file=$1
-    local filename=$(basename "$file")
+    local filename
+    filename=$(basename "$file")
     
     # Check for hardcoded secrets (look for non-placeholder, non-variable values)
     # Only warn if we see actual values that aren't placeholders or env vars
@@ -214,7 +219,8 @@ check_common_issues() {
 # Validate individual manifest
 validate_manifest() {
     local file=$1
-    local filename=$(basename "$file")
+    local filename
+    filename=$(basename "$file")
     
     echo ""
     log_info "Validating: $filename"
