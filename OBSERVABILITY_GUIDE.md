@@ -168,7 +168,11 @@ api.generate (SERVER)
 │   ├── engine.moral_precheck (INTERNAL)
 │   ├── engine.grammar_precheck (INTERNAL)
 │   ├── engine.llm_generation (INTERNAL)
-│   │   ├── mlsdm.llm_call (CLIENT)
+│   │   ├── llm_wrapper.generate (INTERNAL)
+│   │   │   ├── llm_wrapper.moral_filter (INTERNAL)
+│   │   │   ├── llm_wrapper.memory_retrieval (INTERNAL)
+│   │   │   ├── llm_wrapper.llm_call (INTERNAL)
+│   │   │   └── llm_wrapper.memory_update (INTERNAL)
 │   │   └── mlsdm.speech_governance (INTERNAL)
 │   │       ├── mlsdm.aphasia_detection (INTERNAL)
 │   │       └── mlsdm.aphasia_repair (INTERNAL)
@@ -187,6 +191,12 @@ api.generate (SERVER)
 | `mlsdm.prompt_length` | Length of prompt (not content!) |
 | `mlsdm.response_length` | Length of response |
 | `mlsdm.latency_ms` | Processing latency |
+| `mlsdm.moral.accepted` | Whether moral filter accepted the input |
+| `mlsdm.moral.threshold` | Current moral threshold value |
+| `mlsdm.memory.items_retrieved` | Number of memory items retrieved |
+| `mlsdm.llm.max_tokens` | Max tokens for LLM generation |
+| `mlsdm.llm.response_length` | Length of LLM response |
+| `mlsdm.step` | Current step counter |
 
 ## Logging Structure
 
@@ -335,6 +345,62 @@ services:
       - "3000:3000"
     volumes:
       - ./deploy/grafana:/etc/grafana/provisioning/dashboards
+```
+
+## Testing Observability
+
+### In-Memory Span Exporter
+
+For testing tracing without external dependencies, use the `in_memory` exporter type:
+
+```python
+from mlsdm.observability.tracing import TracerManager, TracingConfig, get_tracer_manager
+
+# Configure in-memory exporter
+TracerManager.reset_instance()
+config = TracingConfig(enabled=True, exporter_type="in_memory")
+manager = get_tracer_manager(config)
+manager.initialize()
+
+# Run code that creates spans
+with manager.start_span("test_operation") as span:
+    span.set_attribute("test.key", "value")
+    # ... your code here
+
+# Verify spans were created
+spans = manager.get_finished_spans()
+assert len(spans) == 1
+assert spans[0].name == "test_operation"
+
+# Clear spans between tests
+manager.clear_spans()
+
+# Clean up
+TracerManager.reset_instance()
+```
+
+### Testing with pytest
+
+Example pytest fixture for isolated tracing tests:
+
+```python
+import pytest
+from mlsdm.observability.tracing import TracerManager, TracingConfig, get_tracer_manager
+
+@pytest.fixture(autouse=True)
+def reset_tracer_between_tests():
+    """Ensure tracer is reset between tests."""
+    TracerManager.reset_instance()
+    yield
+    TracerManager.reset_instance()
+
+@pytest.fixture
+def in_memory_tracer():
+    """Create tracer with in-memory exporter."""
+    config = TracingConfig(enabled=True, exporter_type="in_memory")
+    manager = get_tracer_manager(config)
+    manager.initialize()
+    return manager
 ```
 
 ## Best Practices

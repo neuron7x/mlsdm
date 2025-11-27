@@ -31,6 +31,7 @@ from tenacity import (
 from ..cognition.moral_filter_v2 import MoralFilterV2
 from ..memory.multi_level_memory import MultiLevelSynapticMemory
 from ..memory.phase_entangled_lattice_memory import PhaseEntangledLatticeMemory
+from ..observability.tracing import get_tracer_manager
 from ..rhythm.cognitive_rhythm import CognitiveRhythm
 from ..speech.governance import (  # noqa: TC001 - used at runtime in function signatures
     SpeechGovernanceResult,
@@ -467,49 +468,79 @@ class LLMWrapper:
                 - note: Processing note
                 - stateless_mode: Whether running in degraded mode
         """
+        tracer_manager = get_tracer_manager()
+
         with self._lock:
             self.step_counter += 1
 
-            # Step 1: Moral evaluation and phase check
-            rejection = self._check_moral_and_phase(moral_value)
-            if rejection is not None:
-                return rejection
+            # Create the main generate span
+            with tracer_manager.start_span(
+                "llm_wrapper.generate",
+                attributes={
+                    "mlsdm.prompt_length": len(prompt),
+                    "mlsdm.moral_value": moral_value,
+                    "mlsdm.step": self.step_counter,
+                },
+            ) as generate_span:
+                # Step 1: Moral evaluation and phase check
+                with tracer_manager.start_span("llm_wrapper.moral_filter") as moral_span:
+                    rejection = self._check_moral_and_phase(moral_value)
+                    if rejection is not None:
+                        moral_span.set_attribute("mlsdm.moral.accepted", False)
+                        moral_span.set_attribute("mlsdm.moral.threshold", self.moral.threshold)
+                        generate_span.set_attribute("mlsdm.accepted", False)
+                        return rejection
+                    moral_span.set_attribute("mlsdm.moral.accepted", True)
+                    moral_span.set_attribute("mlsdm.moral.threshold", self.moral.threshold)
 
-            # Step 2: Embed prompt
-            embed_result = self._embed_and_validate_prompt(prompt)
-            if isinstance(embed_result, dict):
-                return embed_result
-            prompt_vector = embed_result
+                # Step 2: Embed prompt
+                embed_result = self._embed_and_validate_prompt(prompt)
+                if isinstance(embed_result, dict):
+                    generate_span.set_attribute("mlsdm.error", "embedding_failed")
+                    return embed_result
+                prompt_vector = embed_result
 
-            # Step 3: Retrieve context and build enhanced prompt
-            is_wake = self.rhythm.is_wake()
-            phase_val = self.WAKE_PHASE if is_wake else self.SLEEP_PHASE
-            memories, enhanced_prompt = self._retrieve_and_build_context(
-                prompt, prompt_vector, phase_val, context_top_k
-            )
+                # Step 3: Retrieve context and build enhanced prompt
+                is_wake = self.rhythm.is_wake()
+                phase_val = self.WAKE_PHASE if is_wake else self.SLEEP_PHASE
+                generate_span.set_attribute("mlsdm.phase", "wake" if is_wake else "sleep")
 
-            # Step 4: Determine max tokens
-            max_tokens = self._determine_max_tokens(max_tokens, is_wake)
+                with tracer_manager.start_span("llm_wrapper.memory_retrieval") as mem_span:
+                    memories, enhanced_prompt = self._retrieve_and_build_context(
+                        prompt, prompt_vector, phase_val, context_top_k
+                    )
+                    mem_span.set_attribute("mlsdm.memory.items_retrieved", len(memories))
 
-            # Step 5: Generate and govern response
-            gen_result = self._generate_and_govern(prompt, enhanced_prompt, max_tokens)
-            if self._is_error_response(gen_result):
-                return cast("dict[str, Any]", gen_result)
-            # At this point gen_result must be a tuple
-            response_text, governed_metadata = cast(
-                "tuple[str, dict[str, Any] | None]", gen_result
-            )
+                # Step 4: Determine max tokens
+                max_tokens = self._determine_max_tokens(max_tokens, is_wake)
 
-            # Step 6: Update memory state
-            self._update_memory_after_generate(prompt_vector, phase_val)
+                # Step 5: Generate and govern response
+                with tracer_manager.start_span("llm_wrapper.llm_call") as llm_span:
+                    llm_span.set_attribute("mlsdm.llm.max_tokens", max_tokens)
+                    gen_result = self._generate_and_govern(prompt, enhanced_prompt, max_tokens)
+                    if self._is_error_response(gen_result):
+                        llm_span.set_attribute("mlsdm.llm.error", True)
+                        generate_span.set_attribute("mlsdm.accepted", False)
+                        return cast("dict[str, Any]", gen_result)
+                    # At this point gen_result must be a tuple
+                    response_text, governed_metadata = cast(
+                        "tuple[str, dict[str, Any] | None]", gen_result
+                    )
+                    llm_span.set_attribute("mlsdm.llm.response_length", len(response_text))
 
-            # Step 7: Advance rhythm and consolidate
-            self._advance_rhythm_and_consolidate()
+                # Step 6: Update memory state
+                with tracer_manager.start_span("llm_wrapper.memory_update"):
+                    self._update_memory_after_generate(prompt_vector, phase_val)
 
-            # Step 8: Build final response
-            return self._build_success_response(
-                response_text, memories, max_tokens, governed_metadata
-            )
+                # Step 7: Advance rhythm and consolidate
+                self._advance_rhythm_and_consolidate()
+
+                # Step 8: Build final response
+                generate_span.set_attribute("mlsdm.accepted", True)
+                generate_span.set_attribute("mlsdm.response_length", len(response_text))
+                return self._build_success_response(
+                    response_text, memories, max_tokens, governed_metadata
+                )
 
     def _check_moral_and_phase(self, moral_value: float) -> dict[str, Any] | None:
         """Check moral acceptability and cognitive phase. Returns rejection response or None."""

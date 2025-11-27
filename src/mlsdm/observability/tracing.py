@@ -29,7 +29,14 @@ from typing import TYPE_CHECKING, Any, Literal
 from opentelemetry import trace
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import SpanProcessor, TracerProvider
-from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
+from opentelemetry.sdk.trace.export import (
+    BatchSpanProcessor,
+    ConsoleSpanExporter,
+    SimpleSpanProcessor,
+    SpanExporter,
+    SpanExportResult,
+)
+from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 from opentelemetry.trace import SpanKind, Status, StatusCode
 
 if TYPE_CHECKING:
@@ -83,7 +90,7 @@ class TracingConfig:
         self,
         service_name: str | None = None,
         enabled: bool | None = None,
-        exporter_type: Literal["console", "otlp", "jaeger", "none"] | None = None,
+        exporter_type: Literal["console", "otlp", "jaeger", "none", "in_memory"] | None = None,
         otlp_endpoint: str | None = None,
         otlp_protocol: Literal["http/protobuf", "grpc"] | None = None,
         sample_rate: float | None = None,
@@ -165,6 +172,7 @@ class TracerManager:
         self._tracer: Tracer | None = None
         self._provider: TracerProvider | None = None
         self._processor: SpanProcessor | None = None
+        self._in_memory_exporter: InMemorySpanExporter | None = None
 
     @classmethod
     def get_instance(cls, config: TracingConfig | None = None) -> TracerManager:
@@ -188,11 +196,24 @@ class TracerManager:
 
     @classmethod
     def reset_instance(cls) -> None:
-        """Reset the singleton instance (useful for testing)."""
+        """Reset the singleton instance (useful for testing).
+        
+        This method also resets the global OpenTelemetry tracer provider
+        to allow re-initialization with different configuration.
+        """
         with cls._lock:
             if cls._instance is not None:
                 cls._instance.shutdown()
                 cls._instance = None
+            
+            # Reset the global OpenTelemetry tracer provider flag
+            # This allows re-initialization with different configuration
+            # Note: This is for testing purposes only
+            try:
+                trace._TRACER_PROVIDER_SET_ONCE._done = False
+            except AttributeError:
+                # Fallback for older OpenTelemetry versions
+                pass
 
     def initialize(self) -> None:
         """Initialize the OpenTelemetry tracer provider and exporter.
@@ -223,12 +244,17 @@ class TracerManager:
             # Create exporter based on configuration
             exporter = self._create_exporter()
             if exporter is not None:
-                self._processor = BatchSpanProcessor(
-                    exporter,
-                    max_queue_size=self._config.batch_max_queue_size,
-                    max_export_batch_size=self._config.batch_max_export_batch_size,
-                    schedule_delay_millis=self._config.batch_schedule_delay_millis,
-                )
+                # Use SimpleSpanProcessor for in-memory exporter (synchronous)
+                # to ensure spans are immediately available for testing
+                if self._config.exporter_type == "in_memory":
+                    self._processor = SimpleSpanProcessor(exporter)
+                else:
+                    self._processor = BatchSpanProcessor(
+                        exporter,
+                        max_queue_size=self._config.batch_max_queue_size,
+                        max_export_batch_size=self._config.batch_max_export_batch_size,
+                        schedule_delay_millis=self._config.batch_schedule_delay_millis,
+                    )
                 self._provider.add_span_processor(self._processor)
 
             # Register as global provider
@@ -264,6 +290,11 @@ class TracerManager:
 
         if self._config.exporter_type == "console":
             return ConsoleSpanExporter()
+
+        if self._config.exporter_type == "in_memory":
+            # Create and store in-memory exporter for test verification
+            self._in_memory_exporter = InMemorySpanExporter()
+            return self._in_memory_exporter
 
         if self._config.exporter_type == "otlp":
             try:
@@ -309,6 +340,36 @@ class TracerManager:
                 self._provider = None
                 self._tracer = None
                 self._initialized = False
+                self._in_memory_exporter = None
+
+    def get_in_memory_exporter(self) -> InMemorySpanExporter | None:
+        """Get the in-memory exporter for testing purposes.
+
+        Returns:
+            InMemorySpanExporter if exporter_type is 'in_memory', None otherwise
+        """
+        return self._in_memory_exporter
+
+    def get_finished_spans(self) -> list[Any]:
+        """Get finished spans from in-memory exporter.
+
+        This is a convenience method for testing. Returns empty list
+        if not using in-memory exporter.
+
+        Returns:
+            List of finished ReadableSpan objects
+        """
+        if self._in_memory_exporter is None:
+            return []
+        return self._in_memory_exporter.get_finished_spans()
+
+    def clear_spans(self) -> None:
+        """Clear all finished spans from in-memory exporter.
+
+        Useful for test isolation between test cases.
+        """
+        if self._in_memory_exporter is not None:
+            self._in_memory_exporter.clear()
 
     @property
     def tracer(self) -> Tracer:
