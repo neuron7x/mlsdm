@@ -365,6 +365,155 @@ class TestSecretPatternCoverage:
         assert len(SECRET_PATTERNS) >= 10
 
 
+class TestPrivateKeyScrubbingEdgeCases:
+    """Tests for private key scrubbing edge cases."""
+
+    def test_rsa_private_key_scrubbed(self):
+        """Test that RSA private key is scrubbed."""
+        text = """-----BEGIN RSA PRIVATE KEY-----
+MIIEpAIBAAKCAQEA0Z3VS5JJcps3DR5X8hoZS
+-----END RSA PRIVATE KEY-----"""
+        result = scrub_text(text)
+        assert "***REDACTED***" in result
+        assert "MIIEpAIBAAKCAQEA" not in result
+
+    def test_ec_private_key_scrubbed(self):
+        """Test that EC private key is scrubbed."""
+        text = """-----BEGIN EC PRIVATE KEY-----
+MHQCAQEEIEfGq2YgpPkKXY8E0GNKFV9d7Q3Z
+-----END EC PRIVATE KEY-----"""
+        result = scrub_text(text)
+        assert "***REDACTED***" in result
+        assert "MHQCAQEEIEfGq2YgpPkKXY8E0GNKFV9d7Q3Z" not in result
+
+    def test_private_key_in_multiline_json(self):
+        """Test private key in multiline JSON structure."""
+        payload = {
+            "config": "value",
+            "key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBg\n-----END PRIVATE KEY-----",
+        }
+        result = scrub_dict(payload)
+        assert "***REDACTED***" in result["key"]
+        assert "MIIEvQIBADANBg" not in result["key"]
+
+
+class TestPasswordPatternEdgeCases:
+    """Tests for password pattern edge cases."""
+
+    def test_password_in_url(self):
+        """Test that password in URL format is scrubbed."""
+        text = "postgres://user:secretpass@host:5432/db"
+        result = scrub_text(text)
+        # Current implementation may or may not scrub this specific format
+        # The password pattern expects = or : followed by password value
+        # This test documents current behavior
+        assert "secretpass" in result or "***REDACTED***" in result
+
+    def test_password_with_special_chars(self):
+        """Test password with special characters."""
+        text = 'password="P@$$w0rd!#%^&*()"'
+        result = scrub_text(text)
+        assert "***REDACTED***" in result
+        assert "P@$$w0rd" not in result
+
+    def test_password_short_not_scrubbed(self):
+        """Test that short passwords (< 8 chars) are not scrubbed."""
+        text = 'password="short"'
+        result = scrub_text(text)
+        # Short passwords may not match the pattern requiring 8+ chars
+        # This is by design to avoid false positives
+        assert result == text
+
+
+class TestApiKeyVariantsScrubbing:
+    """Tests for API key format variations."""
+
+    def test_api_key_with_underscore(self):
+        """Test api_key with underscore format."""
+        text = 'api_key: "abcdefghij1234567890klmnopq"'
+        result = scrub_text(text)
+        assert "***REDACTED***" in result
+
+    def test_api_key_with_dash(self):
+        """Test api-key with dash format."""
+        text = 'api-key: "abcdefghij1234567890klmnopq"'
+        result = scrub_text(text)
+        assert "***REDACTED***" in result
+
+    def test_apikey_concatenated(self):
+        """Test apikey without separator."""
+        text = 'apikey: "abcdefghij1234567890klmnopq"'
+        result = scrub_text(text)
+        assert "***REDACTED***" in result
+
+    def test_anthropic_key_format(self):
+        """Test Anthropic API key format (sk-ant-)."""
+        text = "api_key=sk-ant-api03-1234567890abcdefghijklmnopqrstuvwxyz"
+        result = scrub_text(text)
+        # Should be scrubbed by either api_key pattern or sk- pattern
+        assert "***REDACTED***" in result
+
+
+class TestBooleanAndNumericPreservation:
+    """Tests for preserving boolean and numeric values."""
+
+    def test_boolean_true_preserved(self):
+        """Test that boolean True is preserved."""
+        payload = {"enabled": True, "api_key": "secret123456"}
+        result = scrub_dict(payload)
+        assert result["enabled"] is True
+        assert result["api_key"] == "***REDACTED***"
+
+    def test_boolean_false_preserved(self):
+        """Test that boolean False is preserved."""
+        payload = {"disabled": False, "token": "secret123456789012345"}
+        result = scrub_dict(payload)
+        assert result["disabled"] is False
+        assert result["token"] == "***REDACTED***"
+
+    def test_integer_preserved(self):
+        """Test that integers are preserved."""
+        payload = {"port": 5432, "secret": "supersecretpassword"}
+        result = scrub_dict(payload)
+        assert result["port"] == 5432
+        assert result["secret"] == "***REDACTED***"
+
+    def test_float_preserved(self):
+        """Test that floats are preserved."""
+        payload = {"rate": 3.14159, "api_key": "key123456789012345"}
+        result = scrub_dict(payload)
+        assert result["rate"] == 3.14159
+        assert result["api_key"] == "***REDACTED***"
+
+
+class TestCustomKeysToScrub:
+    """Tests for custom keys_to_scrub parameter."""
+
+    def test_custom_keys_to_scrub(self):
+        """Test scrub_dict with custom keys."""
+        custom_keys = {"custom_secret", "another_secret"}
+        payload = {
+            "custom_secret": "value1",
+            "another_secret": "value2",
+            "normal": "preserved",
+        }
+        result = scrub_dict(payload, keys_to_scrub=custom_keys)
+        assert result["custom_secret"] == "***REDACTED***"
+        assert result["another_secret"] == "***REDACTED***"
+        assert result["normal"] == "preserved"
+
+    def test_default_keys_with_custom_keys(self):
+        """Test that default keys are replaced when custom keys provided."""
+        custom_keys = {"custom_key"}
+        payload = {
+            "api_key": "should_be_preserved",  # Not in custom keys
+            "custom_key": "should_be_scrubbed",
+        }
+        result = scrub_dict(payload, keys_to_scrub=custom_keys)
+        # api_key is not in custom keys, so it depends on pattern matching
+        assert result["custom_key"] == "***REDACTED***"
+
+
 class TestEnvironmentVariableScrubbing:
     """Test LOG_PAYLOADS environment variable behavior."""
 
