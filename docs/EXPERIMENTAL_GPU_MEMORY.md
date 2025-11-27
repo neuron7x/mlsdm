@@ -37,10 +37,10 @@ memory = FractalPELMGPU(
     capacity=100_000,   # Maximum vectors to store
     device=None,        # "cuda", "cpu", or None for auto-detect
     use_amp=True,       # Automatic mixed precision (CUDA only)
-    fractal_weight=0.3, # Distance weighting parameter
+    fractal_weight=0.3, # Distance weighting parameter [0, 1]
 )
 
-# Store vectors
+# Store vectors (raises RuntimeError if capacity exceeded)
 memory.batch_entangle(vectors, phases, metadatas=None)
 
 # Retrieve similar vectors
@@ -59,14 +59,24 @@ memory.reset()
 The retrieval score combines three factors:
 
 ```
-score = cos_sim(q, v) × exp(-|φ_q - φ_v|) × clamp(1 - w × log1p(‖q - v‖), 0, 1)
+score = clamp(cos_sim × phase_sim × distance_factor, 0, 1)
 ```
 
 Where:
-- `cos_sim` — cosine similarity between query and stored vector
-- `exp(-|Δφ|)` — phase similarity (peaks at 1.0 when phases match)
-- `log1p(‖·‖)` — distance term with log for numerical stability
-- `w` — `fractal_weight` parameter controlling distance influence
+- `cos_sim = (q · v) / (‖q‖ × ‖v‖ + ε)` — cosine similarity (can be negative for opposite vectors)
+- `phase_sim = exp(-|φ_q - φ_v|)` — phase similarity, peaks at 1.0 when phases match
+- `distance_factor = clamp(1 - fractal_weight × log1p(‖q - v‖), 0, 1)` — distance penalty
+- `ε = 1e-12` — numerical stability constant
+- `fractal_weight` — engineering hyperparameter controlling distance influence
+
+The final score is clamped to [0, 1].
+
+### Scoring Behavior
+
+- **Identical vector and phase**: score ≈ 1.0
+- **Larger Euclidean distance**: lower score (monotonically decreasing)
+- **Larger phase difference**: lower score (monotonically decreasing)
+- **Opposite vectors** (cos_sim ≈ -1): score ≈ 0 due to final clamp
 
 ## Differences from Core PELM
 
@@ -75,8 +85,8 @@ Where:
 | Location | `mlsdm.memory` | `mlsdm.memory.experimental` |
 | Dependencies | numpy only | requires torch |
 | Device | CPU only | CPU or GPU |
-| Capacity | Ring buffer (overwrites) | Strict (raises error) |
-| Storage | float32 | float16 vectors, float32 phases |
+| Capacity | Ring buffer (overwrites) | Strict (raises RuntimeError) |
+| Storage | float32 | float16 vectors, float32 phases/norms |
 | Status | Production | Experimental |
 
 ## Benchmark
@@ -88,9 +98,11 @@ python benchmarks/benchmark_fractal_pelm_gpu.py
 ```
 
 This runs on CPU by default and compares with GPU if CUDA is available.
+The script handles missing CUDA gracefully and outputs CPU-only results.
 
 ## Notes
 
 - This module does **not** integrate with the core MLSDM pipeline
 - The API may change in future versions without notice
 - For production use, prefer `PhaseEntangledLatticeMemory` from `mlsdm.memory`
+- Capacity is strictly enforced; exceeding it raises `RuntimeError`

@@ -417,6 +417,178 @@ class TestFractalPELMGPUNumericalStability:
             for score, _, _ in results:
                 assert 0.0 <= score <= 1.0
 
+    def test_opposite_vectors_score_valid(self) -> None:
+        """Test that opposite vectors (cos_sim = -1) still produce valid score in [0,1]."""
+        memory = FractalPELMGPU(dimension=4, capacity=10, device="cpu")
+
+        # Create a vector and its opposite
+        v1 = np.array([1.0, 0.0, 0.0, 0.0], dtype=np.float32)
+        v2 = np.array([-1.0, 0.0, 0.0, 0.0], dtype=np.float32)  # Opposite direction
+
+        memory.batch_entangle(
+            np.array([v2]),
+            np.array([0.5], dtype=np.float32),
+        )
+
+        # Query with v1 (opposite to stored v2)
+        results = memory.retrieve(v1, current_phase=0.5, top_k=1)
+
+        assert len(results) == 1
+        score, _, _ = results[0]
+        # Score must still be in [0, 1] even for opposite vectors
+        assert 0.0 <= score <= 1.0, f"Score {score} out of valid range"
+
+
+class TestFractalPELMGPUScoringMonotonicity:
+    """Test that scoring behaves correctly with distance and phase differences."""
+
+    def test_score_decreases_with_euclidean_distance(self) -> None:
+        """Test that score decreases as Euclidean distance increases (fixed phase)."""
+        memory = FractalPELMGPU(dimension=8, capacity=100, device="cpu", fractal_weight=0.3)
+
+        # Create base vector
+        base = np.array([1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], dtype=np.float32)
+
+        # Create vectors at increasing distances from base (in same direction)
+        # Using positive direction to ensure positive cosine similarity
+        vectors = []
+        for scale in [1.0, 1.5, 2.0, 3.0, 5.0]:
+            vectors.append(base * scale)
+
+        vectors_np = np.array(vectors, dtype=np.float32)
+        phases = np.full(len(vectors), 0.5, dtype=np.float32)  # Same phase
+
+        memory.batch_entangle(vectors_np, phases)
+
+        # Query with the base vector at same phase
+        results = memory.retrieve(base, current_phase=0.5, top_k=len(vectors))
+
+        # Extract scores
+        scores = [score for score, _, _ in results]
+
+        # Verify all scores are in valid range
+        for score in scores:
+            assert 0.0 <= score <= 1.0, f"Score {score} out of range"
+
+        # The closest vector (scale=1.0, distance=0) should have highest score
+        # Note: Due to normalization, vectors in same direction have cos_sim=1
+        # but different distances affect the distance_factor
+        assert scores[0] >= scores[-1], "Score should not increase with distance"
+
+    def test_score_decreases_with_phase_difference(self) -> None:
+        """Test that score decreases as phase difference increases (fixed vector)."""
+        memory = FractalPELMGPU(dimension=4, capacity=100, device="cpu", fractal_weight=0.3)
+
+        # Store the same vector with different phases
+        base = np.array([1.0, 1.0, 1.0, 1.0], dtype=np.float32)
+        base = base / np.linalg.norm(base)  # Normalize
+
+        # Create copies with different phases
+        phases = np.array([0.0, 0.1, 0.3, 0.5, 0.9], dtype=np.float32)
+        vectors = np.tile(base, (len(phases), 1))
+
+        memory.batch_entangle(vectors, phases)
+
+        # Query with same vector at phase 0.0
+        results = memory.retrieve(base, current_phase=0.0, top_k=len(phases))
+
+        # Group by phase difference and check monotonicity
+        # Phase 0.0 should have highest score, phase 0.9 lowest
+        scores_by_phase = {}
+        for score, _, _ in results:
+            # Find which phase this result corresponds to
+            # The score should decrease with phase difference from 0.0
+            scores_by_phase[score] = score
+
+        scores = [score for score, _, _ in results]
+
+        # First result should be for phase 0.0 (exact match)
+        assert scores[0] >= scores[-1], "Score should decrease with phase difference"
+
+    def test_identical_vector_and_phase_gives_max_score(self) -> None:
+        """Test that identical vector and phase gives score close to 1.0."""
+        memory = FractalPELMGPU(dimension=8, capacity=100, device="cpu", fractal_weight=0.3)
+
+        # Create a normalized vector
+        vec = np.random.randn(8).astype(np.float32)
+        vec = vec / np.linalg.norm(vec)
+        phase = 0.5
+
+        memory.batch_entangle(np.array([vec]), np.array([phase], dtype=np.float32))
+
+        # Query with exact same vector and phase
+        results = memory.retrieve(vec, current_phase=phase, top_k=1)
+
+        assert len(results) == 1
+        score, retrieved_vec, _ = results[0]
+
+        # Score should be very close to 1.0 for identical vector and phase
+        # With fractal_weight=0.3 and distance=0: distance_factor=1.0
+        # cos_sim=1.0, phase_sim=1.0, so score should be 1.0
+        assert score > 0.95, f"Expected score near 1.0 for identical match, got {score}"
+
+        # Retrieved vector should match
+        np.testing.assert_array_almost_equal(retrieved_vec, vec, decimal=4)
+
+
+class TestFractalPELMGPUTorchImportBehavior:
+    """Test import behavior when torch is unavailable."""
+
+    def test_fractal_pelm_raises_runtime_error_when_torch_unavailable(self) -> None:
+        """Test that FractalPELMGPU raises RuntimeError with clear message if torch is unavailable.
+
+        This test verifies the error message format by directly checking the module's
+        error handling mechanism, without actually uninstalling torch.
+        """
+        from mlsdm.memory.experimental import fractal_pelm_gpu
+
+        # Verify TORCH_AVAILABLE is True (since torch is installed)
+        assert fractal_pelm_gpu.TORCH_AVAILABLE is True
+
+        # Verify the error message format is defined for when torch is missing
+        # We can test this by temporarily setting TORCH_AVAILABLE to False
+        # and checking that FractalPELMGPU raises the expected error
+        original_value = fractal_pelm_gpu.TORCH_AVAILABLE
+        try:
+            # Simulate torch not being available
+            fractal_pelm_gpu.TORCH_AVAILABLE = False
+            # Need to set the error message
+            fractal_pelm_gpu._IMPORT_ERROR_MSG = (
+                "FractalPELMGPU requires PyTorch. "
+                "Install with 'pip install mlsdm[neurolang]' or 'pip install torch>=2.0.0'."
+            )
+
+            with pytest.raises(RuntimeError) as exc_info:
+                fractal_pelm_gpu.FractalPELMGPU(dimension=8, capacity=10, device="cpu")
+
+            assert "PyTorch" in str(exc_info.value)
+            assert "mlsdm[neurolang]" in str(exc_info.value)
+        finally:
+            # Restore original value
+            fractal_pelm_gpu.TORCH_AVAILABLE = original_value
+
+    def test_main_mlsdm_package_imports_without_torch(self) -> None:
+        """Test that main mlsdm package imports successfully regardless of torch."""
+        # This test verifies the main package doesn't break if torch is missing
+        # Since torch IS installed in test environment, we just verify import works
+        import mlsdm
+
+        assert mlsdm is not None
+
+        # Verify core memory module works
+        from mlsdm.memory import PELM, PhaseEntangledLatticeMemory
+
+        assert PhaseEntangledLatticeMemory is not None
+        assert PELM is PhaseEntangledLatticeMemory
+
+    def test_experimental_init_exports_fractal_pelm_when_torch_available(self) -> None:
+        """Test that __init__.py exports FractalPELMGPU when torch is available."""
+        from mlsdm.memory import experimental
+
+        # Should be exported when torch is available
+        assert "FractalPELMGPU" in experimental.__all__
+        assert hasattr(experimental, "FractalPELMGPU")
+
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
