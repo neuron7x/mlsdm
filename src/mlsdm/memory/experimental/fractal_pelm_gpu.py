@@ -65,6 +65,9 @@ class FractalPELMGPU:
         >>> results = memory.retrieve(vectors[0], current_phase=0.5, top_k=5)
     """
 
+    # Minimum norm threshold to avoid division by zero (consistent with PELM)
+    MIN_NORM_THRESHOLD = 1e-9
+
     def __init__(
         self,
         dimension: int = 384,
@@ -97,9 +100,12 @@ class FractalPELMGPU:
         # AMP only makes sense on CUDA
         self.use_amp = use_amp and (self._device.type == "cuda")
 
+        # Storage dtype: float16 for GPU (memory efficient), float32 for CPU (better precision)
+        self._storage_dtype = torch.float16 if self._device.type == "cuda" else torch.float32
+
         # Pre-allocate storage buffers
         self._vectors: torch.Tensor = torch.zeros(
-            (capacity, dimension), dtype=torch.float16, device=self._device
+            (capacity, dimension), dtype=self._storage_dtype, device=self._device
         )
         self._phases: torch.Tensor = torch.zeros(capacity, dtype=torch.float32, device=self._device)
         self._norms: torch.Tensor = torch.zeros(capacity, dtype=torch.float32, device=self._device)
@@ -168,12 +174,12 @@ class FractalPELMGPU:
         # Compute norms
         norms = torch.linalg.norm(vectors_t.float(), dim=1)
         # Avoid division by zero
-        norms = torch.clamp(norms, min=1e-9)
+        norms = torch.clamp(norms, min=self.MIN_NORM_THRESHOLD)
 
-        # Store in buffers
+        # Store in buffers with appropriate dtype for the device
         start_idx = self.size
         end_idx = self.size + batch_size
-        self._vectors[start_idx:end_idx] = vectors_t.half()
+        self._vectors[start_idx:end_idx] = vectors_t.to(self._storage_dtype)
         self._phases[start_idx:end_idx] = phases_t.float()
         self._norms[start_idx:end_idx] = norms
 
@@ -210,7 +216,7 @@ class FractalPELMGPU:
             # Query norm
             query_vec_f = query_vec.float()
             query_norm = torch.linalg.norm(query_vec_f)
-            query_norm = torch.clamp(query_norm, min=1e-9)
+            query_norm = torch.clamp(query_norm, min=self.MIN_NORM_THRESHOLD)
 
             # Cosine similarity: dot(q, v) / (||q|| * ||v||)
             dots = torch.mv(active_vectors, query_vec_f)
@@ -221,9 +227,9 @@ class FractalPELMGPU:
             phase_sim = torch.exp(-phase_diff)
 
             # Fractal distance term: log1p(L2 distance)
-            # Compute L2 distances using cdist for efficiency
-            query_2d = query_vec_f.unsqueeze(0)  # (1, dim)
-            distances = torch.cdist(query_2d, active_vectors, p=2).squeeze(0)  # (size,)
+            # Compute L2 distances efficiently using torch.norm
+            diff = active_vectors - query_vec_f.unsqueeze(0)  # (size, dim)
+            distances = torch.norm(diff, dim=1)  # (size,)
             dist_term = torch.log1p(distances)
 
             # Combined score with fractal weighting
@@ -296,6 +302,9 @@ class FractalPELMGPU:
         top_k: int = 5,
     ) -> list[list[tuple[float, np.ndarray[Any, np.dtype[np.float32]], dict[str, Any] | None]]]:
         """Batch retrieve top-k vectors for multiple queries.
+
+        Note: This implementation processes queries sequentially. Future versions
+        may implement true batch parallelism for improved GPU utilization.
 
         Args:
             query_vectors: Batch of query vectors, shape (batch_size, dimension)
