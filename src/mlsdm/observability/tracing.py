@@ -200,6 +200,11 @@ class TracerManager:
         
         This method also resets the global OpenTelemetry tracer provider
         to allow re-initialization with different configuration.
+        
+        Warning:
+            This method is intended for testing only. It accesses internal
+            OpenTelemetry state to reset the provider, which may break with
+            future OpenTelemetry SDK updates.
         """
         with cls._lock:
             if cls._instance is not None:
@@ -208,11 +213,13 @@ class TracerManager:
             
             # Reset the global OpenTelemetry tracer provider flag
             # This allows re-initialization with different configuration
-            # Note: This is for testing purposes only
+            # Note: This is a test-only workaround. The OpenTelemetry SDK
+            # does not provide a public API for resetting the global provider.
             try:
+                # Access internal flag to allow provider re-initialization
                 trace._TRACER_PROVIDER_SET_ONCE._done = False
             except AttributeError:
-                # Fallback for older OpenTelemetry versions
+                # Fallback for older/different OpenTelemetry versions
                 pass
 
     def initialize(self) -> None:

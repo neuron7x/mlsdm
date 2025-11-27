@@ -33,8 +33,9 @@ def reset_tracer_between_tests():
 def in_memory_tracer():
     """Create a tracer with in-memory exporter for span verification.
     
-    Note: This fixture sets up the global tracer manager with in-memory exporter.
-    The autouse fixture ensures cleanup between tests.
+    Note: This fixture uses get_tracer_manager() to configure the global
+    tracer with in-memory exporter. The reset_tracer_between_tests autouse
+    fixture ensures the tracer is reset between tests for isolation.
     """
     config = TracingConfig(enabled=True, exporter_type="in_memory")
     manager = get_tracer_manager(config)
@@ -55,7 +56,8 @@ def stub_embedding_fn():
     """Create a stub embedding function for testing."""
     def _stub_embed(text: str) -> np.ndarray:
         # Create deterministic embedding based on text hash
-        np.random.seed(hash(text) % 2**32)
+        # Use abs() to ensure non-negative seed value
+        np.random.seed(abs(hash(text)) % (2**32))
         vec = np.random.randn(384).astype(np.float32)
         return vec / np.linalg.norm(vec)
     return _stub_embed
