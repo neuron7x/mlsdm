@@ -364,14 +364,15 @@ pytest tests/property/ -v
 <summary><b>🔌 OpenAI Integration</b></summary>
 
 ```python
-import openai
+from openai import OpenAI
+import numpy as np
 from mlsdm.core.llm_wrapper import LLMWrapper
 
-# OpenAI setup
-openai.api_key = "your-api-key"
+# Initialize OpenAI client
+client = OpenAI(api_key="your-api-key")
 
 def openai_generate(prompt: str, max_tokens: int) -> str:
-    response = openai.ChatCompletion.create(
+    response = client.chat.completions.create(
         model="gpt-4",
         messages=[{"role": "user", "content": prompt}],
         max_tokens=max_tokens
@@ -379,7 +380,7 @@ def openai_generate(prompt: str, max_tokens: int) -> str:
     return response.choices[0].message.content
 
 def openai_embed(text: str):
-    response = openai.Embedding.create(
+    response = client.embeddings.create(
         model="text-embedding-ada-002",
         input=text
     )
