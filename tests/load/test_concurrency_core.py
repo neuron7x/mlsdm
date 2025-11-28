@@ -13,7 +13,6 @@ Usage:
 
 from __future__ import annotations
 
-import hashlib
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -65,8 +64,8 @@ def create_fake_embedder(dim: int = 384) -> Any:
 
     def fake_embedder(text: str) -> np.ndarray:
         """Thread-safe deterministic embedder stub."""
-        # Use hash of text to seed random state locally (not global)
-        text_hash = int(hashlib.md5(text.encode()).hexdigest()[:8], 16)
+        # Use Python's built-in hash for deterministic seeding (not crypto, just for tests)
+        text_hash = abs(hash(text))
         local_rng = np.random.RandomState(text_hash % (2**31))
         vec = local_rng.randn(dim).astype(np.float32)
         norm = np.linalg.norm(vec)
@@ -209,9 +208,10 @@ class TestNeuroCognitiveEngineConcurrency:
                 try:
                     future.result(timeout=10.0)  # Per-future timeout
                 except Exception as e:
+                    # Exceptions are rare and already captured in worker,
+                    # just log additional context here
                     with lock:
-                        if (idx, e) not in exceptions:
-                            exceptions.append((idx, e))
+                        exceptions.append((idx, e))
 
         elapsed = time.time() - start_time
 
@@ -461,7 +461,8 @@ class TestCognitiveControllerConcurrency:
         def worker() -> None:
             """Worker that records step values."""
             vec = np.random.randn(384).astype(np.float32)
-            vec = vec / np.linalg.norm(vec)
+            norm = np.linalg.norm(vec)
+            vec = vec / (norm if norm > 1e-9 else 1.0)
 
             result = controller.process_event(vec, 0.8)
 
@@ -707,7 +708,8 @@ class TestConcurrencySmoke:
 
         def worker(idx: int) -> dict[str, Any]:
             vec = np.random.randn(384).astype(np.float32)
-            vec = vec / np.linalg.norm(vec)
+            norm = np.linalg.norm(vec)
+            vec = vec / (norm if norm > 1e-9 else 1.0)
             return controller.process_event(vec, 0.8)
 
         with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
