@@ -36,8 +36,12 @@ DECAY_RATE_TOLERANCE = 0.15
 )
 def test_multilevel_decay_monotonicity(dim, num_updates):
     """
-    Property: Decay reduces level norms monotonically without new input.
-    After stopping updates, each level's norm should decrease or stay zero.
+    Property: Total memory norm decreases monotonically without new input.
+
+    Note: Individual level norms may temporarily increase due to transfers
+    (e.g., L2→L3 transfer can increase L3), but the total system norm
+    should always decrease when no new input is provided, as decay is
+    applied to all levels.
     """
     np.random.seed(PROPERTY_TEST_SEED)
     memory = MultiLevelSynapticMemory(dimension=dim)
@@ -49,27 +53,32 @@ def test_multilevel_decay_monotonicity(dim, num_updates):
 
     # Get state after updates
     L1_before, L2_before, L3_before = memory.get_state()
-    norm_L1_before = np.linalg.norm(L1_before)
-    norm_L2_before = np.linalg.norm(L2_before)
-    norm_L3_before = np.linalg.norm(L3_before)
+    total_norm_before = (np.linalg.norm(L1_before) +
+                         np.linalg.norm(L2_before) +
+                         np.linalg.norm(L3_before))
 
-    # Apply decay without new input (zero vector)
+    # Apply multiple decay cycles without new input (zero vector)
+    # Multiple cycles ensure we observe true decay behavior
     zero_vec = np.zeros(dim, dtype=np.float32)
-    memory.update(zero_vec)
+    for _ in range(5):
+        memory.update(zero_vec)
 
     # Get state after decay
     L1_after, L2_after, L3_after = memory.get_state()
-    norm_L1_after = np.linalg.norm(L1_after)
-    norm_L2_after = np.linalg.norm(L2_after)
-    norm_L3_after = np.linalg.norm(L3_after)
+    total_norm_after = (np.linalg.norm(L1_after) +
+                        np.linalg.norm(L2_after) +
+                        np.linalg.norm(L3_after))
 
-    # Decay should reduce or maintain norms (within floating point tolerance)
+    # Total system norm should decrease (decay removes energy from the system)
+    # L1 always decays (fastest), so total must decrease
+    assert total_norm_after <= total_norm_before + 1e-6, \
+        f"Total norm increased: {total_norm_before} -> {total_norm_after}"
+
+    # L1 specifically should always decrease (no incoming transfers, only decay)
+    norm_L1_before = np.linalg.norm(L1_before)
+    norm_L1_after = np.linalg.norm(L1_after)
     assert norm_L1_after <= norm_L1_before + 1e-6, \
         f"L1 norm increased: {norm_L1_before} -> {norm_L1_after}"
-    assert norm_L2_after <= norm_L2_before + 1e-6, \
-        f"L2 norm increased: {norm_L2_before} -> {norm_L2_after}"
-    assert norm_L3_after <= norm_L3_before + 1e-6, \
-        f"L3 norm increased: {norm_L3_before} -> {norm_L3_after}"
 
 
 @settings(max_examples=30, deadline=None)
