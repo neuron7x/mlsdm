@@ -79,7 +79,7 @@ def prompt_strategy(draw):
     # Generate printable text to avoid encoding issues
     text = draw(st.text(
         alphabet=st.characters(
-            whitelist_categories=('L', 'N', 'P', 'S', 'Z'),
+            categories=('L', 'N', 'P', 'S', 'Z'),
             min_codepoint=32,
             max_codepoint=126
         ),
@@ -308,7 +308,7 @@ def test_stateless_mode_no_memory_writes(prompt, moral_value, num_calls):
 @given(
     prompts=st.lists(
         st.text(min_size=5, max_size=50, alphabet=st.characters(
-            whitelist_categories=('L', 'N'),
+            categories=('L', 'N'),
             min_codepoint=97,
             max_codepoint=122
         )),
