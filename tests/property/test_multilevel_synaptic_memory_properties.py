@@ -28,6 +28,12 @@ DEFAULT_LAMBDA_L3 = 0.01  # Slowest decay (long-term memory)
 # and transfer effects between levels during decay
 DECAY_RATE_TOLERANCE = 0.15
 
+# Floating point tolerance for norm comparisons
+FLOAT_TOLERANCE = 1e-6
+
+# Number of decay cycles to apply in decay tests for robust verification
+DECAY_TEST_CYCLES = 5
+
 
 @settings(max_examples=30, deadline=None)
 @given(
@@ -60,7 +66,7 @@ def test_multilevel_decay_monotonicity(dim, num_updates):
     # Apply multiple decay cycles without new input (zero vector)
     # Multiple cycles ensure we observe true decay behavior
     zero_vec = np.zeros(dim, dtype=np.float32)
-    for _ in range(5):
+    for _ in range(DECAY_TEST_CYCLES):
         memory.update(zero_vec)
 
     # Get state after decay
@@ -71,13 +77,13 @@ def test_multilevel_decay_monotonicity(dim, num_updates):
 
     # Total system norm should decrease (decay removes energy from the system)
     # L1 always decays (fastest), so total must decrease
-    assert total_norm_after <= total_norm_before + 1e-6, \
+    assert total_norm_after <= total_norm_before + FLOAT_TOLERANCE, \
         f"Total norm increased: {total_norm_before} -> {total_norm_after}"
 
     # L1 specifically should always decrease (no incoming transfers, only decay)
     norm_L1_before = np.linalg.norm(L1_before)
     norm_L1_after = np.linalg.norm(L1_after)
-    assert norm_L1_after <= norm_L1_before + 1e-6, \
+    assert norm_L1_after <= norm_L1_before + FLOAT_TOLERANCE, \
         f"L1 norm increased: {norm_L1_before} -> {norm_L1_after}"
 
 
