@@ -499,3 +499,53 @@ def get_calibration_summary() -> dict[str, dict[str, Any]]:
             "recovery_max_attempts": config.cognitive_controller.recovery_max_attempts,
         },
     }
+
+
+def get_synaptic_memory_config(
+    yaml_config: dict[str, Any] | None = None
+) -> SynapticMemoryCalibration:
+    """Get synaptic memory configuration merged with defaults.
+
+    This factory function loads synaptic memory parameters from a YAML config
+    dictionary (if provided) and merges them with SYNAPTIC_MEMORY_DEFAULTS.
+    Any missing keys will use default values, ensuring backward compatibility.
+
+    Args:
+        yaml_config: Optional dictionary containing YAML config. The function
+            looks for parameters under the 'multi_level_memory' key. If None
+            or if specific keys are missing, defaults from
+            SYNAPTIC_MEMORY_DEFAULTS are used.
+
+    Returns:
+        SynapticMemoryCalibration with merged values.
+
+    Example:
+        >>> # With YAML config
+        >>> yaml_data = {'multi_level_memory': {'lambda_l1': 0.3}}
+        >>> config = get_synaptic_memory_config(yaml_data)
+        >>> config.lambda_l1  # 0.3 (from YAML)
+        >>> config.lambda_l2  # 0.10 (from defaults)
+
+        >>> # Without YAML config
+        >>> config = get_synaptic_memory_config()
+        >>> config.lambda_l1  # 0.50 (from defaults)
+    """
+    # If no YAML config provided, return defaults
+    if yaml_config is None:
+        return SYNAPTIC_MEMORY_DEFAULTS
+
+    # Extract multi_level_memory section from YAML
+    memory_config = yaml_config.get("multi_level_memory", {})
+    if not memory_config:
+        return SYNAPTIC_MEMORY_DEFAULTS
+
+    # Merge YAML values with defaults
+    return SynapticMemoryCalibration(
+        lambda_l1=memory_config.get("lambda_l1", SYNAPTIC_MEMORY_DEFAULTS.lambda_l1),
+        lambda_l2=memory_config.get("lambda_l2", SYNAPTIC_MEMORY_DEFAULTS.lambda_l2),
+        lambda_l3=memory_config.get("lambda_l3", SYNAPTIC_MEMORY_DEFAULTS.lambda_l3),
+        theta_l1=memory_config.get("theta_l1", SYNAPTIC_MEMORY_DEFAULTS.theta_l1),
+        theta_l2=memory_config.get("theta_l2", SYNAPTIC_MEMORY_DEFAULTS.theta_l2),
+        gating12=memory_config.get("gating12", SYNAPTIC_MEMORY_DEFAULTS.gating12),
+        gating23=memory_config.get("gating23", SYNAPTIC_MEMORY_DEFAULTS.gating23),
+    )
