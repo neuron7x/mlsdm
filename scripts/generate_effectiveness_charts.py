@@ -83,7 +83,7 @@ def create_wake_sleep_charts(
     ax.text(0.5, max(processed) * 0.95,
             '89.5% Reduction',
             ha='center', fontsize=14, fontweight='bold',
-            bbox=dict(boxstyle='round', facecolor='yellow', alpha=0.7),
+            bbox={"boxstyle": "round", "facecolor": "yellow", "alpha": 0.7},
             transform=ax.transData)
 
     plt.tight_layout()
@@ -173,7 +173,7 @@ def create_moral_filter_charts(
     ax.text(0.5, 80,
             '+93.3%\nImprovement',
             ha='center', fontsize=14, fontweight='bold',
-            bbox=dict(boxstyle='round', facecolor='lightgreen', alpha=0.7),
+            bbox={"boxstyle": "round", "facecolor": "lightgreen", "alpha": 0.7},
             transform=ax.transData)
 
     plt.tight_layout()
