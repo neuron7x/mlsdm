@@ -1,5 +1,5 @@
 """
-Safety-focused, non-flaky tests for NeuroCognitiveEngine invariants and metrics.
+Safety-focused, non-flaky tests for NeuroCognitiveEngine invariants.
 
 Design goals:
 - Stable under refactoring: tests check structural invariants, not internal details
@@ -32,8 +32,8 @@ SMALL_CAPACITY = 1000
 
 
 def _make_test_vector(dim: int = TEST_DIMENSION) -> np.ndarray:
-    """Create deterministic test vector. No random state dependency."""
-    return np.ones(dim, dtype=np.float32) * 0.1
+    """Create deterministic test vector with varied values. No random state dependency."""
+    return (np.arange(dim, dtype=np.float32) / dim) * 0.1
 
 
 def _make_mock_llm(response: str = "test response"):
@@ -367,12 +367,12 @@ class TestNeuroCognitiveEngineIntegration:
         )
 
         # Multiple generations with explicit max_tokens
-        r1 = engine.generate("short", max_tokens=50)
-        r2 = engine.generate("a longer prompt", max_tokens=50)
-        r3 = engine.generate("x", max_tokens=50)
+        short_result = engine.generate("short", max_tokens=50)
+        longer_result = engine.generate("a longer prompt", max_tokens=50)
+        single_char_result = engine.generate("x", max_tokens=50)
 
         # All should have valid structure
-        for result in [r1, r2, r3]:
+        for result in [short_result, longer_result, single_char_result]:
             assert "response" in result
             assert "mlsdm" in result
             # Response should be non-empty and contain our prefix
