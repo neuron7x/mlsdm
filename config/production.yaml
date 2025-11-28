@@ -4,7 +4,7 @@
 # This is a production-ready configuration template with recommended
 # settings for deployment. Adjust values based on your requirements.
 #
-# For detailed parameter descriptions, see: src/utils/config_schema.py
+# For detailed parameter descriptions, see: src/mlsdm/utils/config_schema.py
 # For deployment guide, see: DEPLOYMENT_GUIDE.md
 
 # ============================================================

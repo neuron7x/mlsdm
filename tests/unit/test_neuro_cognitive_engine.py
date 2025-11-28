@@ -8,11 +8,16 @@ Tests cover:
 4. Mock FSLGS integration
 5. get_last_states method
 6. Error handling scenarios
+7. Metrics integration
+8. Router integration
+9. Moral check paths
+10. Exception handling
 """
 
 from unittest.mock import Mock, patch
 
 import numpy as np
+import pytest
 
 from mlsdm.engine import NeuroCognitiveEngine, NeuroEngineConfig
 
@@ -365,3 +370,296 @@ class TestNeuroCognitiveEngineIntegration:
         # Verify state is tracked
         states = engine.get_last_states()
         assert states["mlsdm"] is not None
+
+
+class TestNeuroCognitiveEngineMetrics:
+    """Test metrics integration in NeuroCognitiveEngine."""
+
+    def test_get_metrics_returns_registry_when_enabled(self):
+        """Test that get_metrics returns MetricsRegistry when enabled."""
+        llm_fn = Mock(return_value="response")
+        embed_fn = Mock(return_value=np.random.randn(384))
+
+        config = NeuroEngineConfig(
+            enable_fslgs=False,
+            enable_metrics=True,
+        )
+        engine = NeuroCognitiveEngine(
+            llm_generate_fn=llm_fn,
+            embedding_fn=embed_fn,
+            config=config,
+        )
+
+        metrics = engine.get_metrics()
+        assert metrics is not None
+
+    def test_get_metrics_returns_none_when_disabled(self):
+        """Test that get_metrics returns None when metrics disabled."""
+        llm_fn = Mock(return_value="response")
+        embed_fn = Mock(return_value=np.random.randn(384))
+
+        config = NeuroEngineConfig(
+            enable_fslgs=False,
+            enable_metrics=False,
+        )
+        engine = NeuroCognitiveEngine(
+            llm_generate_fn=llm_fn,
+            embedding_fn=embed_fn,
+            config=config,
+        )
+
+        metrics = engine.get_metrics()
+        assert metrics is None
+
+
+class TestNeuroCognitiveEngineValidation:
+    """Test input validation in NeuroCognitiveEngine."""
+
+    def test_missing_llm_fn_and_router_raises_error(self):
+        """Test that missing both llm_fn and router raises ValueError."""
+        embed_fn = Mock(return_value=np.random.randn(384))
+
+        with pytest.raises(ValueError, match="Either llm_generate_fn or router must be provided"):
+            NeuroCognitiveEngine(
+                llm_generate_fn=None,
+                embedding_fn=embed_fn,
+                router=None,
+            )
+
+    def test_missing_embedding_fn_raises_error(self):
+        """Test that missing embedding_fn raises ValueError."""
+        llm_fn = Mock(return_value="response")
+
+        with pytest.raises(ValueError, match="embedding_fn is required"):
+            NeuroCognitiveEngine(
+                llm_generate_fn=llm_fn,
+                embedding_fn=None,
+            )
+
+
+class TestNeuroCognitiveEngineRouter:
+    """Test router integration in NeuroCognitiveEngine."""
+
+    def test_router_provider_selection(self):
+        """Test that router correctly selects provider."""
+        embed_fn = Mock(return_value=np.random.randn(384))
+
+        # Mock provider
+        mock_provider = Mock()
+        mock_provider.generate.return_value = "routed response"
+        mock_provider.provider_id = "mock_provider"
+
+        # Mock router
+        mock_router = Mock()
+        mock_router.select_provider.return_value = "mock_provider"
+        mock_router.get_provider.return_value = mock_provider
+
+        config = NeuroEngineConfig(enable_fslgs=False)
+        engine = NeuroCognitiveEngine(
+            llm_generate_fn=None,
+            embedding_fn=embed_fn,
+            router=mock_router,
+            config=config,
+        )
+
+        result = engine.generate("Test prompt", max_tokens=100)
+
+        assert result["response"] == "routed response"
+        mock_router.select_provider.assert_called()
+        mock_provider.generate.assert_called()
+
+    def test_router_with_variant_tracking(self):
+        """Test that router tracks variants when get_variant is available."""
+        embed_fn = Mock(return_value=np.random.randn(384))
+
+        # Mock provider
+        mock_provider = Mock()
+        mock_provider.generate.return_value = "variant response"
+        mock_provider.provider_id = "test_provider"
+
+        # Mock router with get_variant
+        mock_router = Mock()
+        mock_router.select_provider.return_value = "test_provider"
+        mock_router.get_provider.return_value = mock_provider
+        mock_router.get_variant.return_value = "treatment"
+
+        config = NeuroEngineConfig(enable_fslgs=False)
+        engine = NeuroCognitiveEngine(
+            llm_generate_fn=None,
+            embedding_fn=embed_fn,
+            router=mock_router,
+            config=config,
+        )
+
+        result = engine.generate("Test prompt")
+
+        assert result["response"] == "variant response"
+        assert "meta" in result
+        # Meta should contain backend_id and variant
+        assert result["meta"].get("backend_id") == "test_provider"
+        assert result["meta"].get("variant") == "treatment"
+
+    def test_router_provider_type_error_fallback(self):
+        """Test fallback when provider.generate doesn't accept kwargs."""
+        embed_fn = Mock(return_value=np.random.randn(384))
+
+        # Mock provider that raises TypeError on kwargs but works without kwargs
+        mock_provider = Mock()
+        mock_provider.provider_id = "fallback_provider"
+
+        def generate_side_effect(prompt, max_tokens, **kwargs):
+            """Simulates provider that doesn't accept kwargs."""
+            if kwargs:
+                raise TypeError("unexpected keyword argument")
+            return "fallback response"
+
+        mock_provider.generate.side_effect = generate_side_effect
+
+        # Mock router
+        mock_router = Mock()
+        mock_router.select_provider.return_value = "fallback_provider"
+        mock_router.get_provider.return_value = mock_provider
+
+        config = NeuroEngineConfig(enable_fslgs=False)
+        engine = NeuroCognitiveEngine(
+            llm_generate_fn=None,
+            embedding_fn=embed_fn,
+            router=mock_router,
+            config=config,
+        )
+
+        result = engine.generate("Test prompt")
+
+        assert result["response"] == "fallback response"
+
+    def test_router_provider_error_returns_fallback_message(self):
+        """Test that provider errors return fallback message."""
+        embed_fn = Mock(return_value=np.random.randn(384))
+
+        # Mock provider that raises exception
+        mock_provider = Mock()
+        mock_provider.generate.side_effect = RuntimeError("provider failed")
+        mock_provider.provider_id = "error_provider"
+
+        # Mock router
+        mock_router = Mock()
+        mock_router.select_provider.return_value = "error_provider"
+        mock_router.get_provider.return_value = mock_provider
+
+        config = NeuroEngineConfig(enable_fslgs=False)
+        engine = NeuroCognitiveEngine(
+            llm_generate_fn=None,
+            embedding_fn=embed_fn,
+            router=mock_router,
+            config=config,
+        )
+
+        result = engine.generate("Test prompt")
+
+        # Should contain error fallback message
+        assert "[provider_error:" in result["response"]
+        assert "provider failed" in result["response"]
+
+
+class TestNeuroCognitiveEngineMoralChecks:
+    """Test moral check paths in NeuroCognitiveEngine."""
+
+    def test_estimate_response_moral_score_harmful_prompt(self):
+        """Test that harmful prompts get low moral score."""
+        llm_fn = Mock(return_value="normal response")
+        embed_fn = Mock(return_value=np.random.randn(384))
+
+        config = NeuroEngineConfig(enable_fslgs=False)
+        engine = NeuroCognitiveEngine(
+            llm_generate_fn=llm_fn,
+            embedding_fn=embed_fn,
+            config=config,
+        )
+
+        # Test harmful pattern detection
+        score = engine._estimate_response_moral_score("response", "hate speech prompt")
+        assert score == 0.2
+
+        score = engine._estimate_response_moral_score("response", "violence in the city")
+        assert score == 0.2
+
+    def test_estimate_response_moral_score_cannot_respond(self):
+        """Test that 'cannot respond' responses get moderate score."""
+        llm_fn = Mock(return_value="I cannot respond to that")
+        embed_fn = Mock(return_value=np.random.randn(384))
+
+        config = NeuroEngineConfig(enable_fslgs=False)
+        engine = NeuroCognitiveEngine(
+            llm_generate_fn=llm_fn,
+            embedding_fn=embed_fn,
+            config=config,
+        )
+
+        score = engine._estimate_response_moral_score(
+            "I cannot respond to that request", "normal prompt"
+        )
+        assert score == 0.3
+
+    def test_estimate_response_moral_score_normal(self):
+        """Test that normal prompts get high moral score."""
+        llm_fn = Mock(return_value="normal response")
+        embed_fn = Mock(return_value=np.random.randn(384))
+
+        config = NeuroEngineConfig(enable_fslgs=False)
+        engine = NeuroCognitiveEngine(
+            llm_generate_fn=llm_fn,
+            embedding_fn=embed_fn,
+            config=config,
+        )
+
+        score = engine._estimate_response_moral_score("Hello world!", "How are you?")
+        assert score == 0.8
+
+
+class TestNeuroCognitiveEngineExceptionHandling:
+    """Test exception handling paths in NeuroCognitiveEngine."""
+
+    def test_generate_handles_unexpected_exception(self):
+        """Test that generate() catches unexpected exceptions."""
+        llm_fn = Mock(return_value="response")
+        embed_fn = Mock(return_value=np.random.randn(384))
+
+        config = NeuroEngineConfig(enable_fslgs=False)
+        engine = NeuroCognitiveEngine(
+            llm_generate_fn=llm_fn,
+            embedding_fn=embed_fn,
+            config=config,
+        )
+
+        # Force an unexpected exception in internal method
+        with patch.object(engine, "_prepare_request_context", side_effect=RuntimeError("unexpected")):
+            result = engine.generate("Test prompt")
+
+            assert result["response"] == ""
+            assert result["error"] is not None
+            assert result["error"]["type"] == "internal_error"
+            assert "RuntimeError" in result["error"]["message"]
+            assert result["rejected_at"] == "generation"
+
+    def test_empty_response_error_handling(self):
+        """Test that empty response from MLSDM is handled properly."""
+        # Return empty response
+        llm_fn = Mock(return_value="")
+        embed_fn = Mock(return_value=np.random.randn(384))
+
+        config = NeuroEngineConfig(enable_fslgs=False)
+        engine = NeuroCognitiveEngine(
+            llm_generate_fn=llm_fn,
+            embedding_fn=embed_fn,
+            config=config,
+        )
+
+        result = engine.generate("Test prompt")
+
+        # Should handle empty response gracefully
+        assert result["error"] is not None
+        # Error should indicate empty response (type='empty_response' is used by engine)
+        error_type = result["error"].get("type", "")
+        error_message = result["error"].get("message", "")
+        assert error_type == "empty_response" or "empty" in error_message.lower(), \
+            f"Expected empty_response error, got type='{error_type}', message='{error_message}'"
