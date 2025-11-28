@@ -1,8 +1,8 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # ====================================================
 # MLSDM Kubernetes Manifest Validation Script
 # ====================================================
-# Validates all Kubernetes manifests for syntax and 
+# Validates all Kubernetes manifests for syntax and
 # common issues before deployment.
 #
 # Usage:
@@ -15,7 +15,8 @@
 #   - kubeconform (optional, for schema validation)
 # ====================================================
 
-set -e
+set -euo pipefail
+IFS=$'\n\t'
 
 # Colors for output
 RED='\033[0;31m'

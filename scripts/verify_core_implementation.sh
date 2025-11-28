@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # MLSDM Core Implementation Verification Script
-# 
+#
 # This script validates that the core cognitive components are fully implemented
 # by running test collection and checking for TODOs/stubs/NotImplementedError.
 #
@@ -10,7 +10,8 @@
 #   0 - All checks passed
 #   1 - One or more checks failed
 
-set -e
+set -euo pipefail
+IFS=$'\n\t'
 
 # Colors for output
 RED='\033[0;31m'

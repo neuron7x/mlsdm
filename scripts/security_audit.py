@@ -48,10 +48,10 @@ def install_pip_audit() -> bool:
 
 def run_pip_audit(fix: bool = False) -> tuple[bool, dict]:
     """Run pip-audit to check for vulnerabilities.
-    
+
     Args:
         fix: If True, attempt to fix vulnerabilities by upgrading packages
-        
+
     Returns:
         Tuple of (success, results_dict)
     """
@@ -90,7 +90,9 @@ def run_pip_audit(fix: bool = False) -> tuple[bool, dict]:
                     print(f"\n  Package: {dep.get('name', 'unknown')}")
                     print(f"  Version: {dep.get('version', 'unknown')}")
                     for vuln in dep.get("vulns", []):
-                        print(f"    - {vuln.get('id', 'N/A')}: {vuln.get('description', 'No description')}")
+                        vuln_id = vuln.get("id", "N/A")
+                        vuln_desc = vuln.get("description", "No description")
+                        print(f"    - {vuln_id}: {vuln_desc}")
                         print(f"      Fix: {vuln.get('fix_versions', 'No fix available')}")
             return False, audit_results
 
@@ -104,7 +106,7 @@ def run_pip_audit(fix: bool = False) -> tuple[bool, dict]:
 
 def check_security_configs() -> bool:
     """Check security configuration files are present and valid.
-    
+
     Returns:
         True if all checks pass
     """
@@ -131,7 +133,7 @@ def check_security_configs() -> bool:
 
 def check_security_implementations() -> tuple[bool, list[str]]:
     """Check that security features are implemented.
-    
+
     Returns:
         Tuple of (all_present, list_of_findings)
     """
@@ -183,13 +185,13 @@ def generate_security_report(
     impl_findings: list[str]
 ) -> str:
     """Generate security audit report.
-    
+
     Args:
         audit_results: Results from pip-audit
         config_check: Whether config files check passed
         impl_check: Whether implementation check passed
         impl_findings: List of implementation findings
-        
+
     Returns:
         Report as string
     """
@@ -220,8 +222,10 @@ def generate_security_report(
         report.append("-" * 60)
         for dep in audit_results.get("dependencies", []):
             for vuln in dep.get("vulns", []):
+                vuln_id = vuln.get("id", "N/A")
+                vuln_desc = vuln.get("description", "No description")
                 report.append(f"• {dep['name']} {dep['version']}")
-                report.append(f"  {vuln.get('id', 'N/A')}: {vuln.get('description', 'No description')}")
+                report.append(f"  {vuln_id}: {vuln_desc}")
                 report.append(f"  Fix: {vuln.get('fix_versions', 'No fix available')}")
                 report.append("")
 
