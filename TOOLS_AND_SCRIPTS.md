@@ -339,6 +339,39 @@ Validate Kubernetes manifests for syntax and common issues.
 
 ---
 
+### `bin/mlsdm-env.sh`
+
+Initialize MLSDM environment by loading configuration from `mlsdm_config.sh`.
+
+**Features:**
+- Context-independent: works from any directory
+- Defensive programming: validates config file thoroughly
+- Cognitive feedback: clear error messages with instructions
+
+**Setup:**
+```bash
+# Copy the example config
+cp mlsdm_config.example.sh mlsdm_config.sh
+
+# Edit with your settings
+vim mlsdm_config.sh
+```
+
+**Usage:**
+```bash
+# Source the environment (from any directory)
+source bin/mlsdm-env.sh
+
+# Or run directly
+./bin/mlsdm-env.sh
+```
+
+**Exit codes:**
+- `0`: Configuration loaded successfully
+- `1`: Configuration error (missing file, permission denied, or empty file)
+
+---
+
 ## Exit Codes
 
 All scripts follow standard exit code conventions:
