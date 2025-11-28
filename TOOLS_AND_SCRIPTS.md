@@ -4,10 +4,57 @@ This document provides an overview of all utility scripts, CLI tools, and benchm
 
 ## Table of Contents
 
+- [Architecture Overview](#architecture-overview)
 - [CLI Tool](#cli-tool)
 - [Scripts](#scripts)
 - [Benchmarks](#benchmarks)
 - [Shell Scripts](#shell-scripts)
+- [CI/CD Integration](#cicd-integration)
+
+---
+
+## Architecture Overview
+
+```mermaid
+flowchart TB
+    subgraph CI["CI/CD Pipeline"]
+        direction TB
+        Lint["🔍 Lint<br/>ruff + shellcheck"]
+        TypeCheck["🔎 Type Check<br/>mypy --strict"]
+        Security["🔒 Security<br/>bandit + CodeQL"]
+        Tests["✅ Tests<br/>pytest + bats"]
+        Coverage["📊 Coverage<br/>pytest-cov"]
+    end
+
+    subgraph Scripts["Development Scripts"]
+        direction TB
+        EnvInit["bin/mlsdm-env.sh<br/>Environment Init"]
+        CoreVerify["verify_core_implementation.sh<br/>Core Validation"]
+        K8sValidate["validate-manifests.sh<br/>K8s Validation"]
+    end
+
+    subgraph Tools["Python Tools"]
+        direction TB
+        EffSuite["run_effectiveness_suite.py"]
+        SecAudit["security_audit.py"]
+        Calibration["run_calibration_benchmarks.py"]
+    end
+
+    subgraph Benchmarks["Benchmarks"]
+        direction TB
+        GPU["benchmark_fractal_pelm_gpu.py"]
+        Memory["measure_memory_footprint.py"]
+        Perf["test_neuro_engine_performance.py"]
+    end
+
+    CI --> Scripts
+    CI --> Tools
+    CI --> Benchmarks
+
+    EnvInit --> |"loads"| Config["mlsdm_config.sh"]
+    CoreVerify --> |"validates"| Core["src/mlsdm/*"]
+    K8sValidate --> |"validates"| K8s["deploy/k8s/*"]
+```
 
 ---
 
@@ -394,3 +441,57 @@ All scripts follow standard exit code conventions:
 - [CONFIGURATION_GUIDE.md](CONFIGURATION_GUIDE.md) - Configuration options
 - [TESTING_GUIDE.md](TESTING_GUIDE.md) - Testing documentation
 - [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) - Deployment instructions
+
+---
+
+## CI/CD Integration
+
+### Pre-commit Hooks
+
+Install pre-commit hooks for automatic code quality checks:
+
+```bash
+pip install pre-commit
+pre-commit install
+```
+
+Pre-commit runs automatically on `git commit` and includes:
+- Trailing whitespace removal
+- End-of-file fixing
+- YAML/JSON validation
+- Ruff linting and formatting
+- ShellCheck for bash scripts
+- MyPy type checking
+- Bandit security scanning
+
+### GitHub Actions
+
+All scripts are validated in CI via GitHub Actions:
+
+| Workflow | Checks |
+|----------|--------|
+| **Lint** | ruff, shellcheck, shfmt |
+| **Type Check** | mypy --strict |
+| **Security** | bandit, CodeQL |
+| **Tests** | pytest, bats-core |
+| **Coverage** | pytest-cov with badge |
+
+### Running CI Locally
+
+```bash
+# Lint Python
+ruff check scripts/ benchmarks/ --fix
+ruff format scripts/ benchmarks/
+
+# Lint Bash
+shellcheck bin/*.sh scripts/*.sh deploy/scripts/*.sh
+
+# Type check
+mypy scripts/ --ignore-missing-imports
+
+# Security scan
+bandit -r scripts/ benchmarks/ -ll
+
+# Run tests
+pytest tests/scripts/ -v
+```

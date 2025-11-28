@@ -96,8 +96,9 @@ def main(argv=None):
     print(f"Checkpoint saved to: {args.output}")
 
     # Verify checkpoint can be loaded
+    # Note: This loads a checkpoint we just created, so it's safe
     print("Verifying checkpoint...")
-    loaded_checkpoint = torch.load(args.output, map_location=device)
+    loaded_checkpoint = torch.load(args.output, map_location=device, weights_only=True)  # nosec B614
     assert "actor" in loaded_checkpoint
     assert "critic" in loaded_checkpoint
     print("Checkpoint verified successfully!")

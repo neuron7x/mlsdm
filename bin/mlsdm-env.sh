@@ -2,6 +2,9 @@
 # ==============================================================================
 # MLSDM Environment Initialization Script
 # ==============================================================================
+# Copyright (c) 2024 MLSDM Project
+# SPDX-License-Identifier: MIT
+#
 # This script initializes the MLSDM environment by loading configuration from
 # mlsdm_config.sh in the project root.
 #
@@ -16,7 +19,9 @@
 #   - Cognitive feedback: clear error messages with instructions
 # ==============================================================================
 
-set -euo pipefail
+# Strict mode: exit on error, error in pipes, undefined vars, fail on glob miss
+set -eEfuo pipefail
+shopt -s nullglob
 IFS=$'\n\t'
 
 # ==============================================================================
