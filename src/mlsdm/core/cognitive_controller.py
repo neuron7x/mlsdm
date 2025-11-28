@@ -1,7 +1,8 @@
 import logging
 import time
+from collections.abc import Callable
 from threading import Lock
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import psutil
@@ -11,12 +12,29 @@ from ..memory.multi_level_memory import MultiLevelSynapticMemory
 from ..memory.phase_entangled_lattice_memory import MemoryRetrieval, PhaseEntangledLatticeMemory
 from ..rhythm.cognitive_rhythm import CognitiveRhythm
 
-# Import recovery calibration parameters
+if TYPE_CHECKING:
+    from config.calibration import SynapticMemoryCalibration
+
+# Import recovery calibration parameters and synaptic memory defaults
+# Type annotations use X | None since module may not be available
+_SYNAPTIC_MEMORY_DEFAULTS: "SynapticMemoryCalibration | None" = None
+_get_synaptic_memory_config: Callable[[dict[str, Any] | None], "SynapticMemoryCalibration"] | None = None
+
 try:
-    from config.calibration import COGNITIVE_CONTROLLER_DEFAULTS
+    from config.calibration import (
+        COGNITIVE_CONTROLLER_DEFAULTS,
+    )
+    from config.calibration import (
+        SYNAPTIC_MEMORY_DEFAULTS as _IMPORTED_DEFAULTS,
+    )
+    from config.calibration import (
+        get_synaptic_memory_config as _imported_get_config,
+    )
     _CC_RECOVERY_COOLDOWN_STEPS = COGNITIVE_CONTROLLER_DEFAULTS.recovery_cooldown_steps
     _CC_RECOVERY_MEMORY_SAFETY_RATIO = COGNITIVE_CONTROLLER_DEFAULTS.recovery_memory_safety_ratio
     _CC_RECOVERY_MAX_ATTEMPTS = COGNITIVE_CONTROLLER_DEFAULTS.recovery_max_attempts
+    _SYNAPTIC_MEMORY_DEFAULTS = _IMPORTED_DEFAULTS
+    _get_synaptic_memory_config = _imported_get_config
 except ImportError:
     # Fallback defaults if calibration module is not available
     _CC_RECOVERY_COOLDOWN_STEPS = 10
@@ -31,14 +49,39 @@ class CognitiveController:
         self,
         dim: int = 384,
         memory_threshold_mb: float = 8192.0,
-        max_processing_time_ms: float = 1000.0
+        max_processing_time_ms: float = 1000.0,
+        *,
+        synaptic_config: "SynapticMemoryCalibration | None" = None,
+        yaml_config: dict[str, Any] | None = None,
     ) -> None:
+        """Initialize the CognitiveController.
+
+        Args:
+            dim: Vector dimension for embeddings.
+            memory_threshold_mb: Memory threshold in MB before emergency shutdown.
+            max_processing_time_ms: Maximum processing time in ms per event.
+            synaptic_config: Optional SynapticMemoryCalibration for synaptic memory.
+                If provided, uses these parameters for MultiLevelSynapticMemory.
+            yaml_config: Optional YAML config dictionary. If provided and
+                synaptic_config is None, loads synaptic memory config from
+                'multi_level_memory' section merged with SYNAPTIC_MEMORY_DEFAULTS.
+        """
         self.dim = dim
         self._lock = Lock()
         self.moral = MoralFilterV2(initial_threshold=0.50)
         self.pelm = PhaseEntangledLatticeMemory(dimension=dim, capacity=20_000)
         self.rhythm = CognitiveRhythm(wake_duration=8, sleep_duration=3)
-        self.synaptic = MultiLevelSynapticMemory(dimension=dim)
+
+        # Resolve synaptic memory configuration:
+        # Priority: synaptic_config > yaml_config > SYNAPTIC_MEMORY_DEFAULTS
+        resolved_config: SynapticMemoryCalibration | None = synaptic_config
+        if resolved_config is None and yaml_config is not None:
+            if _get_synaptic_memory_config is not None:
+                resolved_config = _get_synaptic_memory_config(yaml_config)
+        if resolved_config is None:
+            resolved_config = _SYNAPTIC_MEMORY_DEFAULTS
+
+        self.synaptic = MultiLevelSynapticMemory(dimension=dim, config=resolved_config)
         self.step_counter = 0
         # Optimization: Cache for phase values to avoid repeated computation
         self._phase_cache: dict[str, float] = {"wake": 0.1, "sleep": 0.9}

@@ -1,46 +1,99 @@
-from typing import Any
+from typing import TYPE_CHECKING, Any, Optional
 
 import numpy as np
+
+if TYPE_CHECKING:
+    from config.calibration import SynapticMemoryCalibration
+
+# Import calibration defaults for consistent parameter values
+# Type annotation uses Optional since module may not be available
+_SYNAPTIC_MEMORY_DEFAULTS: Optional["SynapticMemoryCalibration"] = None
+try:
+    from config.calibration import SYNAPTIC_MEMORY_DEFAULTS as _IMPORTED_DEFAULTS
+    _SYNAPTIC_MEMORY_DEFAULTS = _IMPORTED_DEFAULTS
+except ImportError:
+    # Fallback if calibration module is not available - already None
+    pass
+
+
+# Helper to get default value from calibration or fallback
+def _get_default(attr: str, fallback: float) -> float:
+    if _SYNAPTIC_MEMORY_DEFAULTS is not None:
+        return getattr(_SYNAPTIC_MEMORY_DEFAULTS, attr, fallback)
+    return fallback
 
 
 class MultiLevelSynapticMemory:
     def __init__(
         self,
         dimension: int = 384,
-        lambda_l1: float = 0.50,
-        lambda_l2: float = 0.10,
-        lambda_l3: float = 0.01,
-        theta_l1: float = 1.2,
-        theta_l2: float = 2.5,
-        gating12: float = 0.45,
-        gating23: float = 0.30,
+        lambda_l1: float | None = None,
+        lambda_l2: float | None = None,
+        lambda_l3: float | None = None,
+        theta_l1: float | None = None,
+        theta_l2: float | None = None,
+        gating12: float | None = None,
+        gating23: float | None = None,
+        *,
+        config: "SynapticMemoryCalibration | None" = None,
     ) -> None:
+        """Initialize MultiLevelSynapticMemory.
+
+        Args:
+            dimension: Vector dimension for memory arrays.
+            lambda_l1: L1 decay rate. If None, uses SYNAPTIC_MEMORY_DEFAULTS.
+            lambda_l2: L2 decay rate. If None, uses SYNAPTIC_MEMORY_DEFAULTS.
+            lambda_l3: L3 decay rate. If None, uses SYNAPTIC_MEMORY_DEFAULTS.
+            theta_l1: L1→L2 consolidation threshold. If None, uses SYNAPTIC_MEMORY_DEFAULTS.
+            theta_l2: L2→L3 consolidation threshold. If None, uses SYNAPTIC_MEMORY_DEFAULTS.
+            gating12: L1→L2 gating factor. If None, uses SYNAPTIC_MEMORY_DEFAULTS.
+            gating23: L2→L3 gating factor. If None, uses SYNAPTIC_MEMORY_DEFAULTS.
+            config: Optional SynapticMemoryCalibration instance. If provided,
+                all λ/θ/gating values are taken from it (unless explicitly overridden).
+        """
+        # Resolve parameter source: explicit arg > config > SYNAPTIC_MEMORY_DEFAULTS
+        if config is not None:
+            _lambda_l1 = lambda_l1 if lambda_l1 is not None else config.lambda_l1
+            _lambda_l2 = lambda_l2 if lambda_l2 is not None else config.lambda_l2
+            _lambda_l3 = lambda_l3 if lambda_l3 is not None else config.lambda_l3
+            _theta_l1 = theta_l1 if theta_l1 is not None else config.theta_l1
+            _theta_l2 = theta_l2 if theta_l2 is not None else config.theta_l2
+            _gating12 = gating12 if gating12 is not None else config.gating12
+            _gating23 = gating23 if gating23 is not None else config.gating23
+        else:
+            _lambda_l1 = lambda_l1 if lambda_l1 is not None else _get_default("lambda_l1", 0.50)
+            _lambda_l2 = lambda_l2 if lambda_l2 is not None else _get_default("lambda_l2", 0.10)
+            _lambda_l3 = lambda_l3 if lambda_l3 is not None else _get_default("lambda_l3", 0.01)
+            _theta_l1 = theta_l1 if theta_l1 is not None else _get_default("theta_l1", 1.2)
+            _theta_l2 = theta_l2 if theta_l2 is not None else _get_default("theta_l2", 2.5)
+            _gating12 = gating12 if gating12 is not None else _get_default("gating12", 0.45)
+            _gating23 = gating23 if gating23 is not None else _get_default("gating23", 0.30)
         # Validate inputs
         if dimension <= 0:
             raise ValueError(f"dimension must be positive, got {dimension}")
-        if not (0 < lambda_l1 <= 1.0):
-            raise ValueError(f"lambda_l1 must be in (0, 1], got {lambda_l1}")
-        if not (0 < lambda_l2 <= 1.0):
-            raise ValueError(f"lambda_l2 must be in (0, 1], got {lambda_l2}")
-        if not (0 < lambda_l3 <= 1.0):
-            raise ValueError(f"lambda_l3 must be in (0, 1], got {lambda_l3}")
-        if theta_l1 <= 0:
-            raise ValueError(f"theta_l1 must be positive, got {theta_l1}")
-        if theta_l2 <= 0:
-            raise ValueError(f"theta_l2 must be positive, got {theta_l2}")
-        if not (0 <= gating12 <= 1.0):
-            raise ValueError(f"gating12 must be in [0, 1], got {gating12}")
-        if not (0 <= gating23 <= 1.0):
-            raise ValueError(f"gating23 must be in [0, 1], got {gating23}")
+        if not (0 < _lambda_l1 <= 1.0):
+            raise ValueError(f"lambda_l1 must be in (0, 1], got {_lambda_l1}")
+        if not (0 < _lambda_l2 <= 1.0):
+            raise ValueError(f"lambda_l2 must be in (0, 1], got {_lambda_l2}")
+        if not (0 < _lambda_l3 <= 1.0):
+            raise ValueError(f"lambda_l3 must be in (0, 1], got {_lambda_l3}")
+        if _theta_l1 <= 0:
+            raise ValueError(f"theta_l1 must be positive, got {_theta_l1}")
+        if _theta_l2 <= 0:
+            raise ValueError(f"theta_l2 must be positive, got {_theta_l2}")
+        if not (0 <= _gating12 <= 1.0):
+            raise ValueError(f"gating12 must be in [0, 1], got {_gating12}")
+        if not (0 <= _gating23 <= 1.0):
+            raise ValueError(f"gating23 must be in [0, 1], got {_gating23}")
 
         self.dim = int(dimension)
-        self.lambda_l1 = float(lambda_l1)
-        self.lambda_l2 = float(lambda_l2)
-        self.lambda_l3 = float(lambda_l3)
-        self.theta_l1 = float(theta_l1)
-        self.theta_l2 = float(theta_l2)
-        self.gating12 = float(gating12)
-        self.gating23 = float(gating23)
+        self.lambda_l1 = float(_lambda_l1)
+        self.lambda_l2 = float(_lambda_l2)
+        self.lambda_l3 = float(_lambda_l3)
+        self.theta_l1 = float(_theta_l1)
+        self.theta_l2 = float(_theta_l2)
+        self.gating12 = float(_gating12)
+        self.gating23 = float(_gating23)
 
         self.l1 = np.zeros(self.dim, dtype=np.float32)
         self.l2 = np.zeros(self.dim, dtype=np.float32)
