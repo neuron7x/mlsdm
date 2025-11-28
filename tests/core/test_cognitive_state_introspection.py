@@ -192,7 +192,8 @@ class TestCognitiveStateStability:
             initial_moral_threshold=0.5,
         )
 
-        state_before = wrapper.get_cognitive_state()
+        # Get state before generation (used for reference)
+        _ = wrapper.get_cognitive_state()
 
         # Perform a generation
         wrapper.generate(prompt="test prompt", moral_value=0.8, max_tokens=16)
