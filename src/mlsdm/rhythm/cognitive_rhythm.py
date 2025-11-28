@@ -45,9 +45,4 @@ class CognitiveRhythm:
         Returns:
             State label: "wake", "sleep", or "unknown" if in an unexpected state.
         """
-        if self.phase == "wake":
-            return "wake"
-        elif self.phase == "sleep":
-            return "sleep"
-        else:
-            return "unknown"
+        return self.phase if self.phase in ("wake", "sleep") else "unknown"

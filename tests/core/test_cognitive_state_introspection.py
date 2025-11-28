@@ -26,7 +26,7 @@ def dummy_llm(prompt: str, max_tokens: int) -> str:
 
 def dummy_embedder(text: str):
     """Generate deterministic embeddings based on text hash."""
-    np.random.seed(hash(text) & 0xFFFFFFFF)
+    np.random.seed(abs(hash(text)) % (2**32))
     vec = np.random.randn(384).astype(np.float32)
     return vec / np.linalg.norm(vec)
 
@@ -360,8 +360,8 @@ class TestCognitiveStateJSONCompatibility:
 
         state = wrapper.get_cognitive_state()
 
-        # Using __dict__ should also work
-        state_dict = state.__dict__
+        # Using to_dict() method for consistent serialization
+        state_dict = state.to_dict()
         json_str = json.dumps(state_dict)
 
         assert isinstance(json_str, str)
