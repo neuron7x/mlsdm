@@ -503,15 +503,12 @@ class TestNeuroCognitiveEngineRouter:
         """Test fallback when provider.generate doesn't accept kwargs."""
         embed_fn = Mock(return_value=np.random.randn(384))
 
-        # Mock provider that raises TypeError on kwargs
+        # Mock provider that raises TypeError on kwargs but works without kwargs
         mock_provider = Mock()
-        mock_provider.generate.side_effect = [
-            TypeError("unexpected keyword argument"),  # First call with kwargs fails
-        ]
         mock_provider.provider_id = "fallback_provider"
 
-        # Second call without kwargs - need to reset side_effect
         def generate_side_effect(prompt, max_tokens, **kwargs):
+            """Simulates provider that doesn't accept kwargs."""
             if kwargs:
                 raise TypeError("unexpected keyword argument")
             return "fallback response"
@@ -661,4 +658,8 @@ class TestNeuroCognitiveEngineExceptionHandling:
 
         # Should handle empty response gracefully
         assert result["error"] is not None
-        assert "empty" in result["error"]["type"].lower() or "empty" in result["error"].get("message", "").lower()
+        # Error should indicate empty response (type='empty_response' is used by engine)
+        error_type = result["error"].get("type", "")
+        error_message = result["error"].get("message", "")
+        assert error_type == "empty_response" or "empty" in error_message.lower(), \
+            f"Expected empty_response error, got type='{error_type}', message='{error_message}'"
