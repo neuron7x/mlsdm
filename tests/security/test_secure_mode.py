@@ -8,7 +8,6 @@ This test suite validates that when MLSDM_SECURE_MODE is enabled:
 - Logs and telemetry are scrubbed of sensitive data
 """
 
-import logging
 import os
 from unittest.mock import patch
 
