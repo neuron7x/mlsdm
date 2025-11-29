@@ -216,6 +216,29 @@ class MetricsExporter:
             registry=self.registry,
         )
 
+        # Requests in-flight gauge (for tracking concurrent requests)
+        self.requests_inflight = Gauge(
+            "mlsdm_requests_inflight",
+            "Number of requests currently being processed",
+            registry=self.registry,
+        )
+
+        # Cognitive emergency total counter (alias for emergency_shutdowns)
+        # This counter aggregates all emergency events regardless of reason
+        self.cognitive_emergency_total = Counter(
+            "mlsdm_cognitive_emergency_total",
+            "Total number of cognitive emergency events (emergency shutdowns)",
+            registry=self.registry,
+        )
+
+        # Generate latency in seconds (alternative to milliseconds histogram)
+        self.generate_latency_seconds = Histogram(
+            "mlsdm_generate_latency_seconds",
+            "End-to-end generate() call latency in seconds",
+            buckets=(0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0, 30.0),
+            registry=self.registry,
+        )
+
         # Track timing contexts
         self._processing_start_times: dict[str, float] = {}
         self._retrieval_start_times: dict[str, float] = {}
@@ -487,6 +510,36 @@ class MetricsExporter:
         with self._lock:
             self.llm_call_latency_ms.observe(latency_ms)
 
+    def increment_requests_inflight(self) -> None:
+        """Increment the requests in-flight gauge when starting a request."""
+        with self._lock:
+            self.requests_inflight.inc()
+
+    def decrement_requests_inflight(self) -> None:
+        """Decrement the requests in-flight gauge when completing a request."""
+        with self._lock:
+            self.requests_inflight.dec()
+
+    def increment_cognitive_emergency(self, count: int = 1) -> None:
+        """Increment the cognitive emergency total counter.
+
+        This counter aggregates all emergency events regardless of reason.
+
+        Args:
+            count: Number to add (default: 1)
+        """
+        with self._lock:
+            self.cognitive_emergency_total.inc(count)
+
+    def observe_generate_latency_seconds(self, latency_seconds: float) -> None:
+        """Observe generate() call latency in seconds.
+
+        Args:
+            latency_seconds: Latency in seconds
+        """
+        with self._lock:
+            self.generate_latency_seconds.observe(latency_seconds)
+
     def get_severity_bucket(self, severity: float) -> str:
         """Convert aphasia severity score to bucket label.
 
@@ -549,6 +602,9 @@ class MetricsExporter:
             "memory_l1_norm": self.memory_l1_norm._value.get(),
             "memory_l2_norm": self.memory_l2_norm._value.get(),
             "memory_l3_norm": self.memory_l3_norm._value.get(),
+            "requests_inflight": self.requests_inflight._value.get(),
+            "cognitive_emergency_total": self.cognitive_emergency_total._value.get(),
+            "emergency_shutdown_active": self.emergency_shutdown_active._value.get(),
         }
 
 
