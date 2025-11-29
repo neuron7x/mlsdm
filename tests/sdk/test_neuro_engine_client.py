@@ -408,8 +408,9 @@ class TestGenerateTypedMethod:
         client = NeuroCognitiveClient()
         result = client.generate_typed("Test moral", moral_value=0.8)
 
-        # moral_score should reflect the input
-        assert result.moral_score == 0.8 or result.moral_score is not None
+        # moral_score should reflect the input value
+        assert result.moral_score is not None, "moral_score should be set"
+        assert result.moral_score == 0.8, f"moral_score should be 0.8, got {result.moral_score}"
 
 
 class TestSDKExceptions:
