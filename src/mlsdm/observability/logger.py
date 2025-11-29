@@ -706,6 +706,7 @@ class ObservabilityLogger:
         memory_mb: float | None = None,
         processing_time_ms: float | None = None,
         correlation_id: str | None = None,
+        cognitive_state: dict[str, Any] | None = None,
     ) -> str:
         """Log an emergency shutdown event (CRITICAL for prod observability).
 
@@ -713,10 +714,18 @@ class ObservabilityLogger:
         INVARIANT: Only metadata is logged, never PII or raw user content.
 
         Args:
-            reason: Reason for shutdown (e.g., 'memory_exceeded', 'processing_timeout')
+            reason: Reason for shutdown (e.g., 'memory_exceeded', 'processing_timeout',
+                    'memory_limit', 'config_error', 'safety_violation')
             memory_mb: Current memory usage in MB (if applicable)
             processing_time_ms: Processing time in ms (if applicable)
             correlation_id: Optional correlation ID
+            cognitive_state: Optional cognitive state dict with keys:
+                - phase: current cognitive phase (wake/sleep)
+                - memory_used: memory usage in bytes
+                - is_stateless: whether in stateless/degraded mode
+                - aphasia_flags: list of aphasia detection flags
+                - step_counter: current step count
+                - moral_threshold: current moral threshold
 
         Returns:
             Correlation ID
@@ -727,17 +736,81 @@ class ObservabilityLogger:
         elif reason == "processing_timeout":
             event_type = EventType.EMERGENCY_SHUTDOWN_TIMEOUT
 
-        metrics: dict[str, Any] = {"reason": reason}
+        metrics: dict[str, Any] = {"event": "emergency_shutdown", "reason": reason}
         if memory_mb is not None:
             metrics["memory_mb"] = memory_mb
         if processing_time_ms is not None:
             metrics["processing_time_ms"] = processing_time_ms
+
+        # Add cognitive_state fields if provided
+        if cognitive_state is not None:
+            if "phase" in cognitive_state and cognitive_state["phase"] is not None:
+                metrics["phase"] = cognitive_state["phase"]
+            if "memory_used" in cognitive_state and cognitive_state["memory_used"] is not None:
+                metrics["memory_used"] = cognitive_state["memory_used"]
+            if "is_stateless" in cognitive_state and cognitive_state["is_stateless"] is not None:
+                metrics["is_stateless"] = cognitive_state["is_stateless"]
+            if "aphasia_flags" in cognitive_state and cognitive_state["aphasia_flags"] is not None:
+                metrics["aphasia_flags"] = cognitive_state["aphasia_flags"]
+            if "step_counter" in cognitive_state and cognitive_state["step_counter"] is not None:
+                metrics["step_counter"] = cognitive_state["step_counter"]
+            if "moral_threshold" in cognitive_state and cognitive_state["moral_threshold"] is not None:
+                metrics["moral_threshold"] = cognitive_state["moral_threshold"]
 
         return self.error(
             event_type,
             f"EMERGENCY SHUTDOWN triggered: {reason}",
             correlation_id=correlation_id,
             metrics=metrics,
+        )
+
+    def log_emergency_shutdown_with_context(
+        self,
+        reason: str,
+        phase: str | None = None,
+        memory_used: int | None = None,
+        is_stateless: bool | None = None,
+        aphasia_flags: list[str] | None = None,
+        step_counter: int | None = None,
+        moral_threshold: float | None = None,
+        correlation_id: str | None = None,
+    ) -> str:
+        """Log an emergency shutdown event with explicit cognitive state fields.
+
+        This is an alternative to log_emergency_shutdown that accepts individual
+        fields rather than a dict, for convenience.
+
+        Args:
+            reason: Reason for shutdown
+            phase: Current cognitive phase (wake/sleep)
+            memory_used: Memory usage in bytes
+            is_stateless: Whether in stateless/degraded mode
+            aphasia_flags: List of aphasia detection flags
+            step_counter: Current step count
+            moral_threshold: Current moral threshold
+            correlation_id: Optional correlation ID
+
+        Returns:
+            Correlation ID
+        """
+        cognitive_state: dict[str, Any] = {}
+        if phase is not None:
+            cognitive_state["phase"] = phase
+        if memory_used is not None:
+            cognitive_state["memory_used"] = memory_used
+        if is_stateless is not None:
+            cognitive_state["is_stateless"] = is_stateless
+        if aphasia_flags is not None:
+            cognitive_state["aphasia_flags"] = aphasia_flags
+        if step_counter is not None:
+            cognitive_state["step_counter"] = step_counter
+        if moral_threshold is not None:
+            cognitive_state["moral_threshold"] = moral_threshold
+
+        return self.log_emergency_shutdown(
+            reason=reason,
+            cognitive_state=cognitive_state if cognitive_state else None,
+            correlation_id=correlation_id,
         )
 
     def log_emergency_shutdown_reset(

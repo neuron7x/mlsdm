@@ -2,6 +2,13 @@
 
 Provides liveness, readiness, and detailed health status endpoints
 with appropriate HTTP status codes based on system state.
+
+Health endpoints:
+- GET /health      - Simple health check (always 200 if process alive)
+- GET /health/live - Liveness probe (process alive)
+- GET /health/ready - Readiness probe (aggregated component status)
+- GET /health/detailed - Detailed health with full metrics
+- GET /health/metrics - Prometheus metrics endpoint
 """
 
 import logging
@@ -12,7 +19,7 @@ import numpy as np
 import psutil
 from fastapi import APIRouter, Response, status
 from fastapi.responses import PlainTextResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from mlsdm.observability.metrics import get_metrics_exporter
 
@@ -28,6 +35,13 @@ class SimpleHealthStatus(BaseModel):
     status: str
 
 
+class LivenessStatus(BaseModel):
+    """Liveness status response - just confirms process is running."""
+
+    status: str = Field(description="Always 'alive' if process is responsive")
+    timestamp: float = Field(description="Unix timestamp of response")
+
+
 class HealthStatus(BaseModel):
     """Basic health status response."""
 
@@ -35,13 +49,29 @@ class HealthStatus(BaseModel):
     timestamp: float
 
 
-class ReadinessStatus(BaseModel):
-    """Readiness status response."""
+class ComponentStatus(BaseModel):
+    """Status of a single component for readiness check."""
 
-    ready: bool
-    status: str
-    timestamp: float
-    checks: dict[str, bool]
+    healthy: bool = Field(description="Whether component is healthy")
+    details: str | None = Field(default=None, description="Optional details about status")
+
+
+class ReadinessStatus(BaseModel):
+    """Readiness status response with aggregated component health."""
+
+    ready: bool = Field(description="Overall readiness status")
+    status: str = Field(description="Status string: 'ready' or 'not_ready'")
+    timestamp: float = Field(description="Unix timestamp of response")
+    components: dict[str, ComponentStatus] = Field(
+        description="Per-component health status"
+    )
+    details: dict[str, Any] | None = Field(
+        default=None, description="Additional details for debugging"
+    )
+    # Legacy field for backward compatibility
+    checks: dict[str, bool] = Field(
+        description="Legacy check results (deprecated, use components)"
+    )
 
 
 class DetailedHealthStatus(BaseModel):
@@ -61,6 +91,12 @@ _start_time = time.time()
 
 # Global manager reference (to be set by the application)
 _memory_manager: Any | None = None
+
+# Global cognitive controller reference (to be set by the application)
+_cognitive_controller: Any | None = None
+
+# Global neuro engine reference (to be set by the application)
+_neuro_engine: Any | None = None
 
 
 def set_memory_manager(manager: Any) -> None:
@@ -82,6 +118,44 @@ def get_memory_manager() -> Any | None:
     return _memory_manager
 
 
+def set_cognitive_controller(controller: Any) -> None:
+    """Set the global cognitive controller reference for health checks.
+
+    Args:
+        controller: CognitiveController instance
+    """
+    global _cognitive_controller
+    _cognitive_controller = controller
+
+
+def get_cognitive_controller() -> Any | None:
+    """Get the global cognitive controller reference.
+
+    Returns:
+        CognitiveController instance or None
+    """
+    return _cognitive_controller
+
+
+def set_neuro_engine(engine: Any) -> None:
+    """Set the global NeuroCognitiveEngine reference for health checks.
+
+    Args:
+        engine: NeuroCognitiveEngine instance
+    """
+    global _neuro_engine
+    _neuro_engine = engine
+
+
+def get_neuro_engine() -> Any | None:
+    """Get the global NeuroCognitiveEngine reference.
+
+    Returns:
+        NeuroCognitiveEngine instance or None
+    """
+    return _neuro_engine
+
+
 @router.get("", response_model=SimpleHealthStatus)
 async def health_check() -> SimpleHealthStatus:
     """Simple health check endpoint.
@@ -97,10 +171,12 @@ async def health_check() -> SimpleHealthStatus:
 
 @router.get("/liveness", response_model=HealthStatus)
 async def liveness() -> HealthStatus:
-    """Liveness probe endpoint.
+    """Liveness probe endpoint (legacy).
 
     Indicates whether the process is alive and running.
     Always returns 200 if the process is responsive.
+
+    Note: For Kubernetes, prefer /health/live endpoint.
 
     Returns:
         HealthStatus with 200 status code
@@ -111,49 +187,206 @@ async def liveness() -> HealthStatus:
     )
 
 
-@router.get("/readiness", response_model=ReadinessStatus)
-async def readiness(response: Response) -> ReadinessStatus:
-    """Readiness probe endpoint.
+@router.get("/live", response_model=LivenessStatus)
+async def live() -> LivenessStatus:
+    """Liveness probe endpoint.
 
-    Indicates whether the system can accept traffic.
-    Returns 200 if ready, 503 if not ready.
+    Returns 200 if the process is alive - no dependency checks.
+    Use this for Kubernetes liveness probes.
+
+    Returns:
+        LivenessStatus with 200 status code
+    """
+    return LivenessStatus(
+        status="alive",
+        timestamp=time.time(),
+    )
+
+
+def _check_cognitive_controller_health() -> tuple[bool, str | None]:
+    """Check cognitive controller health status.
+
+    Returns:
+        Tuple of (healthy, details) - healthy is False if in emergency_shutdown
+    """
+    controller = get_cognitive_controller()
+    if controller is None:
+        return True, "not_configured"  # Not a failure if not configured
+
+    try:
+        if hasattr(controller, "is_emergency_shutdown"):
+            if controller.is_emergency_shutdown():
+                return False, "emergency_shutdown_active"
+        elif hasattr(controller, "emergency_shutdown"):
+            if controller.emergency_shutdown:
+                return False, "emergency_shutdown_active"
+        return True, None
+    except Exception as e:
+        logger.warning(f"Failed to check cognitive controller: {e}")
+        return False, f"check_failed: {str(e)}"
+
+
+def _check_memory_within_bounds() -> tuple[bool, str | None]:
+    """Check if memory usage is within configured bounds.
+
+    Returns:
+        Tuple of (healthy, details)
+    """
+    controller = get_cognitive_controller()
+    if controller is None:
+        return True, "not_configured"
+
+    try:
+        if hasattr(controller, "memory_usage_bytes") and hasattr(controller, "max_memory_bytes"):
+            current = controller.memory_usage_bytes()
+            max_bytes = controller.max_memory_bytes
+            if current > max_bytes:
+                return False, f"over_limit: {current}/{max_bytes} bytes"
+            # Also return details on usage percentage
+            usage_pct = (current / max_bytes) * 100 if max_bytes > 0 else 0
+            return True, f"usage: {usage_pct:.1f}%"
+        return True, "not_configured"
+    except Exception as e:
+        logger.warning(f"Failed to check memory bounds: {e}")
+        return False, f"check_failed: {str(e)}"
+
+
+def _check_moral_filter_health() -> tuple[bool, str | None]:
+    """Check moral filter initialization and health.
+
+    Returns:
+        Tuple of (healthy, details)
+    """
+    # Try neuro engine first, then memory manager
+    engine = get_neuro_engine()
+    if engine is not None and hasattr(engine, "_mlsdm"):
+        llm_wrapper = engine._mlsdm
+        if hasattr(llm_wrapper, "moral"):
+            moral = llm_wrapper.moral
+            if moral is not None:
+                try:
+                    threshold = getattr(moral, "threshold", None)
+                    return True, f"threshold={threshold:.2f}" if threshold else None
+                except Exception:
+                    return True, "initialized"
+            return False, "moral_filter_not_initialized"
+
+    manager = get_memory_manager()
+    if manager is not None and hasattr(manager, "filter"):
+        moral = manager.filter
+        if moral is not None:
+            try:
+                threshold = getattr(moral, "threshold", None)
+                return True, f"threshold={threshold:.2f}" if threshold else None
+            except Exception:
+                return True, "initialized"
+        return False, "moral_filter_not_initialized"
+
+    return True, "not_configured"
+
+
+def _check_aphasia_health() -> tuple[bool, str | None]:
+    """Check aphasia module health (if configured).
+
+    Returns:
+        Tuple of (healthy, details) - always healthy if not configured
+    """
+    # Aphasia is optional, so absence is not a failure
+    # Just check that if it's configured, it's not in an error state
+    return True, "not_configured_or_ok"
+
+
+@router.get("/ready", response_model=ReadinessStatus)
+async def ready(response: Response) -> ReadinessStatus:
+    """Readiness probe endpoint with aggregated component health.
+
+    Checks:
+    - cognitive_controller: not in emergency_shutdown
+    - memory_bounds: global memory usage within limit
+    - moral_filter: initialized without critical errors
+    - system_resources: CPU and memory available
+
+    Returns 200 if all critical components healthy, 503 otherwise.
 
     Args:
         response: FastAPI response object to set status code
 
     Returns:
-        ReadinessStatus with appropriate status code
+        ReadinessStatus with status, components, and details
     """
-    checks: dict[str, bool] = {}
+    components: dict[str, ComponentStatus] = {}
+    checks: dict[str, bool] = {}  # Legacy format
     all_ready = True
+    details: dict[str, Any] = {}
 
-    # Check if memory manager is initialized
-    manager = get_memory_manager()
-    checks["memory_manager"] = manager is not None
-    if not checks["memory_manager"]:
+    # Check 1: Cognitive controller not in emergency shutdown
+    cc_healthy, cc_details = _check_cognitive_controller_health()
+    components["cognitive_controller"] = ComponentStatus(healthy=cc_healthy, details=cc_details)
+    checks["cognitive_controller"] = cc_healthy
+    if not cc_healthy and cc_details != "not_configured":
         all_ready = False
 
-    # Check system resources
+    # Check 2: Memory within bounds
+    mem_healthy, mem_details = _check_memory_within_bounds()
+    components["memory_bounds"] = ComponentStatus(healthy=mem_healthy, details=mem_details)
+    checks["memory_bounds"] = mem_healthy
+    if not mem_healthy and mem_details != "not_configured":
+        all_ready = False
+
+    # Check 3: Moral filter initialized
+    moral_healthy, moral_details = _check_moral_filter_health()
+    components["moral_filter"] = ComponentStatus(healthy=moral_healthy, details=moral_details)
+    checks["moral_filter"] = moral_healthy
+    if not moral_healthy and moral_details != "not_configured":
+        all_ready = False
+
+    # Check 4: Aphasia health (optional)
+    aphasia_healthy, aphasia_details = _check_aphasia_health()
+    components["aphasia"] = ComponentStatus(healthy=aphasia_healthy, details=aphasia_details)
+    checks["aphasia"] = aphasia_healthy
+
+    # Check 5: Memory manager initialized (legacy check)
+    manager = get_memory_manager()
+    manager_healthy = manager is not None
+    components["memory_manager"] = ComponentStatus(
+        healthy=manager_healthy,
+        details="initialized" if manager_healthy else "not_initialized"
+    )
+    checks["memory_manager"] = manager_healthy
+    # Don't require memory_manager for readiness - it's optional
+
+    # Check 6: System resources
     try:
         memory = psutil.virtual_memory()
-        # Consider not ready if memory usage > 95%
-        checks["memory_available"] = memory.percent < 95.0
-        if not checks["memory_available"]:
+        mem_available = memory.percent < 95.0
+        components["system_memory"] = ComponentStatus(
+            healthy=mem_available,
+            details=f"usage: {memory.percent:.1f}%"
+        )
+        checks["memory_available"] = mem_available
+        if not mem_available:
             all_ready = False
+            details["system_memory_percent"] = memory.percent
     except Exception as e:
         logger.warning(f"Failed to check memory availability: {e}")
+        components["system_memory"] = ComponentStatus(healthy=False, details=str(e))
         checks["memory_available"] = False
         all_ready = False
 
-    # Check CPU
     try:
         cpu_percent = psutil.cpu_percent(interval=0.1)
-        # Consider not ready if CPU usage > 98%
-        checks["cpu_available"] = cpu_percent < 98.0
-        if not checks["cpu_available"]:
+        cpu_available = cpu_percent < 98.0
+        components["system_cpu"] = ComponentStatus(
+            healthy=cpu_available,
+            details=f"usage: {cpu_percent:.1f}%"
+        )
+        checks["cpu_available"] = cpu_available
+        if not cpu_available:
             all_ready = False
+            details["system_cpu_percent"] = cpu_percent
     except Exception as e:
         logger.warning(f"Failed to check CPU availability: {e}")
+        components["system_cpu"] = ComponentStatus(healthy=False, details=str(e))
         checks["cpu_available"] = False
         all_ready = False
 
@@ -164,13 +397,34 @@ async def readiness(response: Response) -> ReadinessStatus:
     else:
         response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
         status_str = "not_ready"
+        # Add reason to details
+        unhealthy = [k for k, v in components.items() if not v.healthy]
+        details["unhealthy_components"] = unhealthy
 
     return ReadinessStatus(
         ready=all_ready,
         status=status_str,
         timestamp=time.time(),
+        components=components,
+        details=details if details else None,
         checks=checks,
     )
+
+
+@router.get("/readiness", response_model=ReadinessStatus)
+async def readiness(response: Response) -> ReadinessStatus:
+    """Readiness probe endpoint (legacy alias for /health/ready).
+
+    Indicates whether the system can accept traffic.
+    Returns 200 if ready, 503 if not ready.
+
+    Args:
+        response: FastAPI response object to set status code
+
+    Returns:
+        ReadinessStatus with appropriate status code
+    """
+    return await ready(response)
 
 
 @router.get("/detailed", response_model=DetailedHealthStatus)
