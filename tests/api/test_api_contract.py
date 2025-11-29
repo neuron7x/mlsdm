@@ -10,6 +10,9 @@ docs/API_CONTRACT.md. The tests focus on:
 CONTRACT STABILITY:
 These tests protect the API contract. If a test fails after code changes,
 it indicates a potential breaking change that requires a major version bump.
+
+NOTE: These tests verify CONTRACT structure (fields, types) rather than
+response content which can vary based on cognitive rhythm state.
 """
 
 import os
