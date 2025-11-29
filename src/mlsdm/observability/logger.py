@@ -744,17 +744,17 @@ class ObservabilityLogger:
 
         # Add cognitive_state fields if provided
         if cognitive_state is not None:
-            if "phase" in cognitive_state:
+            if "phase" in cognitive_state and cognitive_state["phase"] is not None:
                 metrics["phase"] = cognitive_state["phase"]
-            if "memory_used" in cognitive_state:
+            if "memory_used" in cognitive_state and cognitive_state["memory_used"] is not None:
                 metrics["memory_used"] = cognitive_state["memory_used"]
-            if "is_stateless" in cognitive_state:
+            if "is_stateless" in cognitive_state and cognitive_state["is_stateless"] is not None:
                 metrics["is_stateless"] = cognitive_state["is_stateless"]
-            if "aphasia_flags" in cognitive_state:
+            if "aphasia_flags" in cognitive_state and cognitive_state["aphasia_flags"] is not None:
                 metrics["aphasia_flags"] = cognitive_state["aphasia_flags"]
-            if "step_counter" in cognitive_state:
+            if "step_counter" in cognitive_state and cognitive_state["step_counter"] is not None:
                 metrics["step_counter"] = cognitive_state["step_counter"]
-            if "moral_threshold" in cognitive_state:
+            if "moral_threshold" in cognitive_state and cognitive_state["moral_threshold"] is not None:
                 metrics["moral_threshold"] = cognitive_state["moral_threshold"]
 
         return self.error(
