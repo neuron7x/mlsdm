@@ -117,7 +117,7 @@ The README already mentions some engineering/production aspects:
 4. **Table of Contents Update**: Add entry after "Validated Metrics" and before "Documentation":
    ```markdown
    - [Validated Metrics](#-validated-metrics)
-   - [Engineering & Production Readiness](#️-engineering--production-readiness)  ← NEW
+   - [Engineering & Production Readiness](#-engineering--production-readiness)  ← NEW
    - [Documentation](#-documentation)
    ```
 
@@ -169,13 +169,18 @@ The README already mentions some engineering/production aspects:
 | `DISASTER_RECOVERY.md` | Operations | Dedicated DR procedures (currently embedded in RUNBOOK.md) |
 | `CAPACITY_PLANNING.md` | Operations | Resource sizing and scaling guidelines |
 | `INCIDENT_POSTMORTEM_TEMPLATE.md` | Operations | Standard template for incident retrospectives |
-| `CHANGELOG.md` (Enhancement) | Release | Currently exists but could include security-related changelog entries |
 | `COMPLIANCE.md` | Compliance | Formal compliance mapping (SOC2, GDPR, etc.) if needed |
 | `ARCHITECTURE_DECISION_RECORDS/` | Architecture | ADR directory for key technical decisions |
 | `LOAD_TEST_RESULTS.md` | Testing | Documented results from load testing (currently just in `tests/load/`) |
 | `CHAOS_ENGINEERING_GUIDE.md` | Testing | Chaos testing procedures (mentioned in strategy but not documented) |
 | `API_VERSIONING.md` | API | API versioning strategy and deprecation policy |
 | `ON_CALL_GUIDE.md` | Operations | On-call rotation and escalation procedures |
+
+### Existing Documents That Could Be Enhanced
+
+| File | Category | Enhancement Suggestion |
+|------|----------|------------------------|
+| `CHANGELOG.md` | Release | Could include security-related changelog entries |
 
 ### Recommendations for Phase 2
 
