@@ -557,10 +557,10 @@ class TestScrubRequestPayload:
 
     def test_never_raises_exceptions(self):
         """Test that scrub_request_payload never raises exceptions."""
-        # Test with malformed data
+        # Test with malformed data - should return empty dict
         assert scrub_request_payload({}) == {}
+        # None values in dict should be preserved
         assert scrub_request_payload({"key": None})["key"] is None
-        # Original data should still be usable on error
 
 
 class TestScrubLogRecord:
@@ -704,10 +704,13 @@ class TestExceptionSafety:
     """Tests that scrubber functions never raise exceptions."""
 
     def test_scrub_text_with_malformed_input(self):
-        """Test that scrub_text handles malformed input."""
-        # These should not raise
+        """Test that scrub_text handles malformed input gracefully."""
+        # Empty string should return empty string
         assert scrub_text("") == ""
-        assert scrub_text(None) is None  # type: ignore
+        # None should be returned as-is (documented behavior for empty/null input)
+        # The function checks 'if not text' which handles None
+        result = scrub_text(None)  # type: ignore[arg-type]
+        assert result is None
 
     def test_scrub_dict_with_malformed_input(self):
         """Test that scrub_dict handles malformed input."""
