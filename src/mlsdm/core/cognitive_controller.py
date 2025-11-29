@@ -10,6 +10,7 @@ import psutil
 from ..cognition.moral_filter_v2 import MoralFilterV2
 from ..memory.multi_level_memory import MultiLevelSynapticMemory
 from ..memory.phase_entangled_lattice_memory import MemoryRetrieval, PhaseEntangledLatticeMemory
+from ..observability.tracing import get_tracer_manager
 from ..rhythm.cognitive_rhythm import CognitiveRhythm
 
 if TYPE_CHECKING:
@@ -172,65 +173,156 @@ class CognitiveController:
         return self.emergency_shutdown
 
     def process_event(self, vector: np.ndarray, moral_value: float) -> dict[str, Any]:
-        with self._lock:
-            # Check emergency shutdown and attempt auto-recovery if applicable
-            if self.emergency_shutdown:
-                if self._try_auto_recovery():
-                    logger.info(
-                        "auto-recovery succeeded after emergency_shutdown "
-                        f"(cooldown_steps={self.step_counter - self._last_emergency_step}, "
-                        f"recovery_attempt={self._recovery_attempts})"
+        """Process a cognitive event with full observability tracing.
+
+        This method wraps event processing with OpenTelemetry spans for
+        visibility into the cognitive pipeline.
+
+        Args:
+            vector: Input embedding vector
+            moral_value: Moral score for this interaction (0.0-1.0)
+
+        Returns:
+            Dictionary with processing state and results
+        """
+        # Get tracer manager for spans (graceful fallback if tracing disabled)
+        tracer_manager = get_tracer_manager()
+
+        with self._lock:  # noqa: SIM117 - Lock must be held for entire operation
+            # Create span for the entire process_event operation
+            with tracer_manager.start_span(
+                "cognitive_controller.process_event",
+                attributes={
+                    "mlsdm.step": self.step_counter + 1,
+                    "mlsdm.moral_value": moral_value,
+                    "mlsdm.emergency_shutdown": self.emergency_shutdown,
+                },
+            ) as event_span:
+                # Check emergency shutdown and attempt auto-recovery if applicable
+                if self.emergency_shutdown:
+                    if self._try_auto_recovery():
+                        logger.info(
+                            "auto-recovery succeeded after emergency_shutdown "
+                            f"(cooldown_steps={self.step_counter - self._last_emergency_step}, "
+                            f"recovery_attempt={self._recovery_attempts})"
+                        )
+                        event_span.set_attribute("mlsdm.auto_recovery", True)
+                    else:
+                        event_span.set_attribute("mlsdm.rejected", True)
+                        event_span.set_attribute("mlsdm.rejected_reason", "emergency_shutdown")
+                        return self._build_state(rejected=True, note="emergency shutdown")
+
+                start_time = time.perf_counter()
+                self.step_counter += 1
+                # Optimization: Invalidate state cache when processing
+                self._state_cache_valid = False
+
+                # Check memory usage before processing (psutil-based, legacy)
+                memory_mb = self._check_memory_usage()
+                if memory_mb > self.memory_threshold_mb:
+                    self._enter_emergency_shutdown("process_memory_exceeded")
+                    event_span.set_attribute("mlsdm.rejected", True)
+                    event_span.set_attribute("mlsdm.rejected_reason", "memory_exceeded")
+                    event_span.set_attribute("mlsdm.emergency_shutdown", True)
+                    return self._build_state(rejected=True, note="emergency shutdown: memory exceeded")
+
+                # Moral evaluation with tracing
+                with tracer_manager.start_span(
+                    "cognitive_controller.moral_filter",
+                    attributes={
+                        "mlsdm.moral_value": moral_value,
+                        "mlsdm.moral_threshold": self.moral.threshold,
+                    },
+                ) as moral_span:
+                    accepted = self.moral.evaluate(moral_value)
+                    self.moral.adapt(accepted)
+                    moral_span.set_attribute("mlsdm.moral.accepted", accepted)
+
+                    if not accepted:
+                        event_span.set_attribute("mlsdm.rejected", True)
+                        event_span.set_attribute("mlsdm.rejected_reason", "morally_rejected")
+                        return self._build_state(rejected=True, note="morally rejected")
+
+                # Check cognitive phase
+                if not self.rhythm.is_wake():
+                    event_span.set_attribute("mlsdm.rejected", True)
+                    event_span.set_attribute("mlsdm.rejected_reason", "sleep_phase")
+                    event_span.set_attribute("mlsdm.phase", "sleep")
+                    return self._build_state(rejected=True, note="sleep phase")
+
+                event_span.set_attribute("mlsdm.phase", "wake")
+
+                # Memory update with tracing
+                with tracer_manager.start_span(
+                    "cognitive_controller.memory_update",
+                    attributes={
+                        "mlsdm.phase": self.rhythm.phase,
+                    },
+                ) as memory_span:
+                    self.synaptic.update(vector)
+                    # Optimization: use cached phase value
+                    phase_val = self._phase_cache[self.rhythm.phase]
+                    self.pelm.entangle(vector.tolist(), phase=phase_val)
+                    memory_span.set_attribute("mlsdm.pelm_used", self.pelm.get_state_stats()["used"])
+
+                self.rhythm.step()
+
+                # Check global memory bound (CORE-04) after memory-modifying operations
+                current_memory_bytes = self.memory_usage_bytes()
+                if current_memory_bytes > self.max_memory_bytes:
+                    self._enter_emergency_shutdown("memory_limit_exceeded")
+                    logger.warning(
+                        f"Global memory limit exceeded: {current_memory_bytes} > {self.max_memory_bytes} bytes. "
+                        "Emergency shutdown triggered."
                     )
-                else:
-                    return self._build_state(rejected=True, note="emergency shutdown")
+                    event_span.set_attribute("mlsdm.rejected", True)
+                    event_span.set_attribute("mlsdm.rejected_reason", "memory_limit_exceeded")
+                    event_span.set_attribute("mlsdm.emergency_shutdown", True)
+                    return self._build_state(rejected=True, note="emergency shutdown: global memory limit exceeded")
 
-            start_time = time.perf_counter()
-            self.step_counter += 1
-            # Optimization: Invalidate state cache when processing
-            self._state_cache_valid = False
+                # Check processing time
+                elapsed_ms = (time.perf_counter() - start_time) * 1000
+                event_span.set_attribute("mlsdm.processing_time_ms", elapsed_ms)
 
-            # Check memory usage before processing (psutil-based, legacy)
-            memory_mb = self._check_memory_usage()
-            if memory_mb > self.memory_threshold_mb:
-                self._enter_emergency_shutdown("process_memory_exceeded")
-                return self._build_state(rejected=True, note="emergency shutdown: memory exceeded")
+                if elapsed_ms > self.max_processing_time_ms:
+                    event_span.set_attribute("mlsdm.rejected", True)
+                    event_span.set_attribute("mlsdm.rejected_reason", "processing_timeout")
+                    return self._build_state(rejected=True, note=f"processing time exceeded: {elapsed_ms:.2f}ms")
 
-            accepted = self.moral.evaluate(moral_value)
-            self.moral.adapt(accepted)
-            if not accepted:
-                return self._build_state(rejected=True, note="morally rejected")
-            if not self.rhythm.is_wake():
-                return self._build_state(rejected=True, note="sleep phase")
-
-            self.synaptic.update(vector)
-            # Optimization: use cached phase value
-            phase_val = self._phase_cache[self.rhythm.phase]
-            self.pelm.entangle(vector.tolist(), phase=phase_val)
-            self.rhythm.step()
-
-            # Check global memory bound (CORE-04) after memory-modifying operations
-            current_memory_bytes = self.memory_usage_bytes()
-            if current_memory_bytes > self.max_memory_bytes:
-                self._enter_emergency_shutdown("memory_limit_exceeded")
-                logger.warning(
-                    f"Global memory limit exceeded: {current_memory_bytes} > {self.max_memory_bytes} bytes. "
-                    "Emergency shutdown triggered."
-                )
-                return self._build_state(rejected=True, note="emergency shutdown: global memory limit exceeded")
-
-            # Check processing time
-            elapsed_ms = (time.perf_counter() - start_time) * 1000
-            if elapsed_ms > self.max_processing_time_ms:
-                return self._build_state(rejected=True, note=f"processing time exceeded: {elapsed_ms:.2f}ms")
-
-            return self._build_state(rejected=False, note="processed")
+                # Success
+                event_span.set_attribute("mlsdm.accepted", True)
+                return self._build_state(rejected=False, note="processed")
 
     def retrieve_context(self, query_vector: np.ndarray, top_k: int = 5) -> list[MemoryRetrieval]:
-        with self._lock:
-            # Optimize: use cached phase value
-            phase_val = self._phase_cache[self.rhythm.phase]
-            return self.pelm.retrieve(query_vector.tolist(), current_phase=phase_val,
-                                     phase_tolerance=0.15, top_k=top_k)
+        """Retrieve context from memory with tracing.
+
+        Args:
+            query_vector: Query embedding vector
+            top_k: Number of results to retrieve
+
+        Returns:
+            List of MemoryRetrieval objects
+        """
+        tracer_manager = get_tracer_manager()
+
+        with self._lock:  # noqa: SIM117 - Lock must be held for entire operation
+            with tracer_manager.start_span(
+                "cognitive_controller.retrieve_context",
+                attributes={
+                    "mlsdm.top_k": top_k,
+                    "mlsdm.phase": self.rhythm.phase,
+                },
+            ) as span:
+                # Optimize: use cached phase value
+                phase_val = self._phase_cache[self.rhythm.phase]
+                results = self.pelm.retrieve(
+                    query_vector.tolist(),
+                    current_phase=phase_val,
+                    phase_tolerance=0.15,
+                    top_k=top_k
+                )
+                span.set_attribute("mlsdm.results_count", len(results))
+                return results
 
     def _check_memory_usage(self) -> float:
         """Check current memory usage in MB."""
