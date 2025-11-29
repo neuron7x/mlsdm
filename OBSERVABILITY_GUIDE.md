@@ -46,6 +46,79 @@ export MLSDM_OTEL_ENDPOINT=http://jaeger:4318
 3. Select your Prometheus data source
 4. Click Import
 
+## Minimal Observability Schema for Core Pipeline
+
+This section defines the **minimal** observability requirements for the core MLSDM pipeline (`generate()` → engine → controller → memory). This schema ensures incidents and system behavior are observable without excessive overhead.
+
+### Tracing Schema
+
+For each call to `LLMWrapper.generate()` or `NeuroCognitiveEngine.generate()`:
+
+**Root Span:**
+- `mlsdm.generate` - Root span for the entire request
+
+**Child Spans (nested under root):**
+- `mlsdm.cognitive_controller.step` - Processing each event/step
+- `mlsdm.memory.query` - PELM + Synaptic memory retrieval
+- `mlsdm.moral_filter.evaluate` - Moral filter evaluation
+- `mlsdm.aphasia.detect_repair` - Aphasia detection and repair (when enabled)
+
+**Required Span Attributes:**
+
+| Attribute | Type | Description |
+|-----------|------|-------------|
+| `mlsdm.phase` | string | Current cognitive phase (`wake` or `sleep`) |
+| `mlsdm.stateless_mode` | bool | Whether running in degraded stateless mode |
+| `mlsdm.moral_threshold` | float | Current moral threshold value |
+| `mlsdm.accepted` | bool | Whether the request was accepted |
+| `mlsdm.emergency_shutdown` | bool | Whether emergency shutdown was triggered |
+| `mlsdm.aphasia_flagged` | bool | Whether aphasia was detected |
+
+### Metrics Schema
+
+**Counters:**
+
+| Metric | Labels | Description |
+|--------|--------|-------------|
+| `mlsdm_requests_total` | `status=ok\|error`, `emergency=true\|false` | Total requests processed |
+| `mlsdm_aphasia_events_total` | `mode=detect\|repair` | Aphasia detection/repair events |
+
+**Histograms:**
+
+| Metric | Labels | Description |
+|--------|--------|-------------|
+| `mlsdm_request_latency_seconds` | `endpoint`, `phase` | Request latency distribution |
+
+### Helper Functions
+
+Simple helper functions are provided for consistent metric recording:
+
+```python
+from mlsdm.observability import record_request, record_aphasia_event, span
+
+# Record a successful request
+record_request(status="ok", latency_sec=0.15)
+
+# Record an error with emergency shutdown
+record_request(status="error", emergency=True, latency_sec=0.5)
+
+# Record aphasia detection
+record_aphasia_event(mode="detect", severity=0.7)
+
+# Create a span with attributes
+with span("mlsdm.generate", phase="wake", stateless_mode=False):
+    # ... do work ...
+    pass
+```
+
+### Graceful Fallback
+
+All observability functions are designed to fail gracefully:
+
+- If tracing is disabled (`MLSDM_OTEL_ENABLED=false`), span operations become no-ops
+- If metrics fail for any reason, `record_request()` and `record_aphasia_event()` silently continue
+- No network calls or blocking operations in the hot path
+
 ## Configuration
 
 ### Environment Variables

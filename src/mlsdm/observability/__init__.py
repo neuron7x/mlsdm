@@ -31,6 +31,8 @@ from .metrics import (
     MetricsExporter,
     PhaseType,
     get_metrics_exporter,
+    record_aphasia_event,
+    record_request,
 )
 from .tracing import (
     TracerManager,
@@ -40,6 +42,7 @@ from .tracing import (
     get_tracer_manager,
     initialize_tracing,
     shutdown_tracing,
+    span,
     trace_aphasia_detection,
     trace_aphasia_repair,
     trace_emergency_shutdown,
@@ -75,6 +78,9 @@ __all__ = [
     "payload_scrubber",
     "reset_aphasia_metrics_exporter",
     "scrub_for_log",
+    # Metrics helpers
+    "record_request",
+    "record_aphasia_event",
     # Tracing
     "TracerManager",
     "TracingConfig",
@@ -83,6 +89,7 @@ __all__ = [
     "get_tracer_manager",
     "initialize_tracing",
     "shutdown_tracing",
+    "span",
     "traced",
     "traced_async",
     "trace_generate",

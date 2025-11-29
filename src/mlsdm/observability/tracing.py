@@ -43,6 +43,10 @@ logger = logging.getLogger(__name__)
 # Version constant for consistency across the codebase
 MLSDM_VERSION = "1.0.0"
 
+# Span attribute prefix constants
+SPAN_ATTR_PREFIX_MLSDM = "mlsdm."
+SPAN_ATTR_PREFIX_HTTP = "http."
+
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -421,6 +425,45 @@ def shutdown_tracing() -> None:
     This should be called at application shutdown.
     """
     TracerManager.reset_instance()
+
+
+@contextmanager
+def span(name: str, **attrs: Any) -> Iterator[Span]:
+    """Simple context manager for creating spans with attributes.
+
+    This is a convenience wrapper around TracerManager.start_span() that
+    provides a cleaner API for common use cases.
+
+    The function is safe to use even when tracing is disabled - it will
+    create a no-op span that accepts attribute calls without error.
+
+    Args:
+        name: Name of the span (e.g., "mlsdm.generate", "mlsdm.memory.query")
+        **attrs: Span attributes to set (will be prefixed with 'mlsdm.' if not already)
+
+    Yields:
+        The created span
+
+    Example:
+        >>> with span("mlsdm.generate", phase="wake", stateless_mode=False):
+        ...     # do work
+        ...     pass
+
+        >>> with span("mlsdm.cognitive_controller.step", step=1):
+        ...     result = controller.process_event(vector, moral)
+    """
+    manager = get_tracer_manager()
+
+    # Normalize attribute keys to use mlsdm prefix
+    normalized_attrs: dict[str, Any] = {}
+    for key, value in attrs.items():
+        if not key.startswith(SPAN_ATTR_PREFIX_MLSDM) and not key.startswith(SPAN_ATTR_PREFIX_HTTP):
+            normalized_attrs[f"{SPAN_ATTR_PREFIX_MLSDM}{key}"] = value
+        else:
+            normalized_attrs[key] = value
+
+    with manager.start_span(name, attributes=normalized_attrs) as s:
+        yield s
 
 
 # ---------------------------------------------------------------------------

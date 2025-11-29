@@ -587,6 +587,103 @@ def get_metrics_exporter(registry: CollectorRegistry | None = None) -> MetricsEx
 
 
 # ---------------------------------------------------------------------------
+# Convenience helper functions for common observability operations
+# These provide a simple API for instrumenting the core pipeline without
+# requiring direct access to the MetricsExporter singleton.
+# ---------------------------------------------------------------------------
+
+
+def record_request(
+    status: str = "ok",
+    emergency: bool = False,
+    latency_sec: float = 0.0,
+    endpoint: str = "/generate",
+    phase: str = "wake",
+) -> None:
+    """Record a request with standard labels for the core pipeline.
+
+    This is the primary helper for instrumenting generate() calls.
+    It updates both the requests counter and latency histogram.
+
+    Safe to call even if metrics are not configured - will gracefully
+    no-op if MetricsExporter is not available.
+
+    Args:
+        status: Request status ("ok" or "error")
+        emergency: Whether emergency shutdown was triggered
+        latency_sec: Request latency in seconds
+        endpoint: API endpoint (default: "/generate")
+        phase: Cognitive phase (default: "wake")
+
+    Example:
+        >>> import time
+        >>> start = time.perf_counter()
+        >>> # ... do generation ...
+        >>> elapsed = time.perf_counter() - start
+        >>> record_request(status="ok", latency_sec=elapsed)
+    """
+    try:
+        exporter = get_metrics_exporter()
+
+        # Map status to HTTP-style status code category
+        status_code = "5xx" if status == "error" else "2xx"
+        exporter.increment_requests(endpoint, status_code)
+
+        # Record latency with endpoint and phase labels
+        if latency_sec > 0:
+            exporter.observe_request_latency_seconds(latency_sec, endpoint, phase)
+
+        # Record emergency shutdown if applicable
+        if emergency:
+            exporter.increment_emergency_shutdown("request_triggered")
+            exporter.set_emergency_shutdown_active(True)
+
+    except Exception:
+        # Graceful degradation - don't crash if metrics fail
+        pass
+
+
+def record_aphasia_event(mode: str = "detect", severity: float = 0.0) -> None:
+    """Record an aphasia detection or repair event.
+
+    This is the primary helper for instrumenting aphasia pipeline events.
+    It updates the appropriate counter based on the mode:
+    - mode="detect": Increments aphasia_detected_total with severity bucket
+    - mode="repair": Increments only aphasia_repaired_total (no double-counting)
+
+    Note: To track both detection and repair, call this function twice:
+        record_aphasia_event(mode="detect", severity=0.7)
+        record_aphasia_event(mode="repair", severity=0.7)
+
+    Safe to call even if metrics are not configured - will gracefully
+    no-op if MetricsExporter is not available.
+
+    Args:
+        mode: Operation mode ("detect" or "repair")
+        severity: Aphasia severity score (0.0 to 1.0)
+
+    Example:
+        >>> record_aphasia_event(mode="detect", severity=0.7)
+        >>> record_aphasia_event(mode="repair", severity=0.8)
+    """
+    try:
+        exporter = get_metrics_exporter()
+
+        # Get severity bucket based on score
+        severity_bucket = exporter.get_severity_bucket(severity)
+
+        if mode == "detect":
+            exporter.increment_aphasia_detected(severity_bucket)
+        elif mode == "repair":
+            # Only increment repair counter - detection should be recorded separately
+            exporter.increment_aphasia_repaired()
+
+    except Exception:
+        # Graceful degradation - don't crash if metrics fail
+        pass
+
+
+# ---------------------------------------------------------------------------
 # Simple MetricsRegistry for NeuroCognitiveEngine
 # ---------------------------------------------------------------------------
 
