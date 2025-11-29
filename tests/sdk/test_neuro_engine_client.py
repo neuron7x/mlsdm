@@ -355,7 +355,7 @@ class TestGenerateTypedMethod:
 
     def test_generate_typed_dto_has_all_fields(self):
         """Test that GenerateResponseDTO has all contract fields."""
-        from mlsdm.sdk import GENERATE_RESPONSE_DTO_KEYS, GenerateResponseDTO
+        from mlsdm.sdk import GENERATE_RESPONSE_DTO_KEYS
 
         client = NeuroCognitiveClient()
         result = client.generate_typed("Test fields")
@@ -365,7 +365,8 @@ class TestGenerateTypedMethod:
         expected_fields = GENERATE_RESPONSE_DTO_KEYS
 
         missing = expected_fields - dto_fields
-        assert not missing, f"Missing DTO fields: {missing}"
+        extra = dto_fields - expected_fields
+        assert not missing and not extra, f"Missing DTO fields: {missing}; Extra fields: {extra}"
 
     def test_generate_typed_response_is_string(self):
         """Test that generate_typed returns string response."""
@@ -479,7 +480,10 @@ class TestGenerateResponseDTOKeys:
             "rejected_at",
         }
 
-        assert GENERATE_RESPONSE_DTO_KEYS == expected_keys
+        # Verify contract keys match expected (with clear error message)
+        missing = expected_keys - GENERATE_RESPONSE_DTO_KEYS
+        extra = GENERATE_RESPONSE_DTO_KEYS - expected_keys
+        assert expected_keys == GENERATE_RESPONSE_DTO_KEYS, f"Missing: {missing}; Extra: {extra}"
 
     def test_generate_typed_keys_match_contract(self):
         """Test generate_typed result keys match contract."""
