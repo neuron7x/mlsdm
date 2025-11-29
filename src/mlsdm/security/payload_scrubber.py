@@ -34,17 +34,41 @@ SECRET_PATTERNS = [
 
     # Credit card numbers (simple pattern)
     (re.compile(r'\b\d{4}[\s-]?\d{4}[\s-]?\d{4}[\s-]?\d{4}\b'), r'****-****-****-****'),
-
-    # Email addresses (optional, depending on privacy requirements)
-    # (re.compile(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'), r'***@***.***'),
 ]
 
+# PII field names that should be scrubbed
+PII_FIELDS = frozenset({
+    'email', 'e-mail', 'email_address',
+    'ssn', 'social_security', 'social_security_number',
+    'phone', 'phone_number', 'telephone',
+    'address', 'home_address', 'street_address',
+    'date_of_birth', 'dob', 'birth_date',
+    'credit_card', 'card_number', 'cc_number',
+})
 
-def scrub_text(text: str) -> str:
+# Default keys to scrub (secrets)
+DEFAULT_SECRET_KEYS = frozenset({
+    'api_key', 'apikey', 'api-key',
+    'password', 'passwd', 'pwd',
+    'token', 'access_token', 'refresh_token',
+    'secret', 'secret_key', 'private_key',
+    'openai_api_key', 'openai_key',
+    'authorization', 'auth',
+})
+
+# Pre-computed combined set for scrub_pii=True
+_SECRET_AND_PII_KEYS = DEFAULT_SECRET_KEYS | PII_FIELDS
+
+# Email pattern for scrubbing PII in text
+EMAIL_PATTERN = re.compile(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b')
+
+
+def scrub_text(text: str, scrub_emails: bool = False) -> str:
     """Scrub sensitive information from text.
 
     Args:
         text: Input text that may contain secrets.
+        scrub_emails: Whether to scrub email addresses (default: False for backward compat).
 
     Returns:
         Text with secrets replaced by placeholders.
@@ -52,6 +76,8 @@ def scrub_text(text: str) -> str:
     Example:
         >>> scrub_text("api_key=sk-123456789abcdef")
         'api_key=sk-***REDACTED***'
+        >>> scrub_text("contact: user@example.com", scrub_emails=True)
+        'contact: ***@***.***'
     """
     if not text:
         return text
@@ -60,10 +86,19 @@ def scrub_text(text: str) -> str:
     for pattern, replacement in SECRET_PATTERNS:
         scrubbed = pattern.sub(replacement, scrubbed)
 
+    # Optionally scrub email addresses
+    if scrub_emails:
+        scrubbed = EMAIL_PATTERN.sub(r'***@***.***', scrubbed)
+
     return scrubbed
 
 
-def scrub_dict(data: dict[str, Any], keys_to_scrub: set[str] | None = None) -> dict[str, Any]:
+def scrub_dict(
+    data: dict[str, Any],
+    keys_to_scrub: frozenset[str] | set[str] | None = None,
+    scrub_emails: bool = False,
+    scrub_pii: bool = False,
+) -> dict[str, Any]:
     """Scrub sensitive information from a dictionary.
 
     This function recursively scrubs both values matching secret patterns
@@ -73,6 +108,8 @@ def scrub_dict(data: dict[str, Any], keys_to_scrub: set[str] | None = None) -> d
         data: Dictionary to scrub.
         keys_to_scrub: Set of keys that should always be scrubbed.
             Defaults to common secret key names.
+        scrub_emails: Whether to scrub email addresses in text values.
+        scrub_pii: Whether to scrub PII fields (email, ssn, phone, etc.).
 
     Returns:
         Dictionary with scrubbed values (creates a new dict, doesn't modify original).
@@ -80,20 +117,22 @@ def scrub_dict(data: dict[str, Any], keys_to_scrub: set[str] | None = None) -> d
     Example:
         >>> scrub_dict({"api_key": "secret123", "username": "john"})
         {'api_key': '***REDACTED***', 'username': 'john'}
+        >>> scrub_dict({"email": "user@example.com"}, scrub_pii=True)
+        {'email': '***REDACTED***'}
     """
+    # Determine effective keys to scrub
     if keys_to_scrub is None:
-        keys_to_scrub = {
-            'api_key', 'apikey', 'api-key',
-            'password', 'passwd', 'pwd',
-            'token', 'access_token', 'refresh_token',
-            'secret', 'secret_key', 'private_key',
-            'openai_api_key', 'openai_key',
-            'authorization', 'auth',
-        }
+        # Use pre-computed sets for efficiency
+        effective_keys: frozenset[str] | set[str] = (
+            _SECRET_AND_PII_KEYS if scrub_pii else DEFAULT_SECRET_KEYS
+        )
+    else:
+        # Custom keys provided - need to compute union if scrub_pii
+        effective_keys = keys_to_scrub | PII_FIELDS if scrub_pii else keys_to_scrub
 
     def _scrub_value(key: str, value: Any) -> Any:
         # Check if key should always be scrubbed
-        if key.lower() in keys_to_scrub:
+        if key.lower() in effective_keys:
             return '***REDACTED***'
 
         # Recursively scrub nested structures
@@ -103,7 +142,7 @@ def scrub_dict(data: dict[str, Any], keys_to_scrub: set[str] | None = None) -> d
             return [_scrub_value(key, item) for item in value]
         elif isinstance(value, str):
             # Scrub text for patterns
-            return scrub_text(value)
+            return scrub_text(value, scrub_emails=scrub_emails)
         else:
             return value
 

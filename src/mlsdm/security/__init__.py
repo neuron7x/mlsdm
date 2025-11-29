@@ -5,7 +5,15 @@ This module provides security features including rate limiting,
 payload scrubbing, and logging controls.
 """
 
-from mlsdm.security.payload_scrubber import scrub_dict, scrub_text, should_log_payload
+from mlsdm.security.payload_scrubber import (
+    DEFAULT_SECRET_KEYS,
+    EMAIL_PATTERN,
+    PII_FIELDS,
+    SECRET_PATTERNS,
+    scrub_dict,
+    scrub_text,
+    should_log_payload,
+)
 from mlsdm.security.rate_limit import RateLimiter, get_rate_limiter
 
 __all__ = [
@@ -14,4 +22,8 @@ __all__ = [
     "scrub_text",
     "scrub_dict",
     "should_log_payload",
+    "SECRET_PATTERNS",
+    "PII_FIELDS",
+    "EMAIL_PATTERN",
+    "DEFAULT_SECRET_KEYS",
 ]
