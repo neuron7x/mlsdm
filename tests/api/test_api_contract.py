@@ -400,18 +400,20 @@ class TestResponseHeaders:
         assert "x-request-id" in response.headers
 
     def test_request_id_is_uuid_format(self, client):
-        """Request ID is in UUID format."""
+        """Request ID is in valid UUID format."""
+        import uuid
+
         response = client.get("/health")
         request_id = response.headers.get("x-request-id", "")
 
-        # UUID format check (8-4-4-4-12)
-        parts = request_id.split("-")
-        assert len(parts) == 5
-        assert len(parts[0]) == 8
-        assert len(parts[1]) == 4
-        assert len(parts[2]) == 4
-        assert len(parts[3]) == 4
-        assert len(parts[4]) == 12
+        # Use Python's uuid module for proper validation
+        try:
+            uuid.UUID(request_id)
+            is_valid_uuid = True
+        except ValueError:
+            is_valid_uuid = False
+
+        assert is_valid_uuid, f"Request ID '{request_id}' is not a valid UUID"
 
 
 class TestStatusEndpointContract:

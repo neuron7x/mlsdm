@@ -81,15 +81,33 @@ class GenerateResponseDTO:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> GenerateResponseDTO:
-        """Create a GenerateResponseDTO from a dictionary.
+        """Create a GenerateResponseDTO from a raw engine response dictionary.
 
-        This method maps the engine's raw response dictionary to a typed DTO.
+        This method maps the engine's raw response dictionary to a typed DTO,
+        transforming the nested structure into a flat, typed interface.
+
+        Mapping Strategy:
+        - `response`: Direct mapping from `data["response"]`
+        - `phase`: Extracted from `data["mlsdm"]["phase"]`, defaults to "unknown"
+        - `accepted`: True if no rejection, no error, and response is non-empty
+        - `metrics`: Wrapped timing dict from `data["timing"]`
+        - `safety_flags`: Built from `data["validation_steps"]` and `rejected_at`
+        - `memory_stats`: Extracted from `data["mlsdm"]` (step, moral_threshold, context_items)
+        - `latency_ms`: Extracted from `data["timing"]["total"]`
+        - `error`: Direct mapping from `data["error"]`
+        - `rejected_at`: Direct mapping from `data["rejected_at"]`
 
         Args:
-            data: Raw response dictionary from the engine.
+            data: Raw response dictionary from the engine containing:
+                - response (str): Generated text
+                - mlsdm (dict): MLSDM internal state with phase, step, etc.
+                - timing (dict): Performance timing metrics
+                - validation_steps (list): Validation steps executed
+                - error (dict | None): Error information if any
+                - rejected_at (str | None): Stage at which request was rejected
 
         Returns:
-            A typed GenerateResponseDTO instance.
+            A typed GenerateResponseDTO instance with mapped fields.
         """
         # Extract mlsdm state for phase and other info
         mlsdm_state = data.get("mlsdm", {})
