@@ -20,6 +20,29 @@ from pathlib import Path
 from threading import Lock
 from typing import Any
 
+from opentelemetry import trace
+
+
+def get_current_trace_context() -> dict[str, str | None]:
+    """Get current trace context from OpenTelemetry.
+
+    Returns:
+        Dictionary with trace_id and span_id (or None if not available)
+    """
+    try:
+        current_span = trace.get_current_span()
+        span_context = current_span.get_span_context()
+
+        if span_context.is_valid:
+            # Format trace_id and span_id as hex strings (standard W3C format)
+            trace_id = format(span_context.trace_id, "032x")
+            span_id = format(span_context.span_id, "016x")
+            return {"trace_id": trace_id, "span_id": span_id}
+        return {"trace_id": None, "span_id": None}
+    except Exception:
+        # Graceful fallback if OpenTelemetry is not available/configured
+        return {"trace_id": None, "span_id": None}
+
 # ---------------------------------------------------------------------------
 # Payload Scrubbing
 # ---------------------------------------------------------------------------
@@ -150,24 +173,32 @@ class RejectionReason(Enum):
 
 
 class JSONFormatter(logging.Formatter):
-    """Custom JSON formatter for structured logging."""
+    """Custom JSON formatter for structured logging with trace correlation.
+
+    Automatically injects trace_id and span_id from the current OpenTelemetry
+    context for log-trace correlation. This enables cross-referencing logs
+    with distributed traces in Jaeger, Zipkin, or other tracing backends.
+    """
 
     def format(self, record: logging.LogRecord) -> str:
-        """Format log record as JSON.
+        """Format log record as JSON with trace correlation.
 
         Args:
             record: Log record to format
 
         Returns:
-            JSON-formatted log string
+            JSON-formatted log string with trace_id and span_id
         """
         # Extract custom fields if present
         event_type = getattr(record, "event_type", "unknown")
         correlation_id = getattr(record, "correlation_id", str(uuid.uuid4()))
         metrics = getattr(record, "metrics", {})
 
+        # Get trace context from OpenTelemetry (graceful fallback if not available)
+        trace_context = get_current_trace_context()
+
         # Use the record's timestamp for consistency
-        log_entry = {
+        log_entry: dict[str, Any] = {
             "timestamp": datetime.fromtimestamp(record.created, timezone.utc).isoformat(),
             "timestamp_unix": record.created,
             "level": record.levelname,
@@ -177,6 +208,12 @@ class JSONFormatter(logging.Formatter):
             "message": record.getMessage(),
             "metrics": metrics,  # Always include metrics (even if empty)
         }
+
+        # Add trace context for log-trace correlation (only if available)
+        if trace_context["trace_id"]:
+            log_entry["trace_id"] = trace_context["trace_id"]
+        if trace_context["span_id"]:
+            log_entry["span_id"] = trace_context["span_id"]
 
         # Add exception info if present
         if record.exc_info:

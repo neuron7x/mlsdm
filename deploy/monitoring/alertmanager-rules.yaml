@@ -384,3 +384,163 @@ groups:
         annotations:
           summary: "LLM errors detected"
           description: "LLM provider {{ $labels.provider_id }} is experiencing errors at {{ $value | printf \"%.2f\" }}/s."
+
+  # ===========================================================================
+  # Aphasia Detection Alerts
+  # ===========================================================================
+  - name: mlsdm_aphasia
+    rules:
+      # Alert when critical aphasia detections exceed 20% of total
+      - alert: MLSDMHighCriticalAphasiaRate
+        expr: |
+          (
+            sum(rate(mlsdm_aphasia_detected_total{severity_bucket="critical"}[5m]))
+            /
+            sum(rate(mlsdm_aphasia_detected_total[5m]))
+          ) > 0.2
+        for: 5m
+        labels:
+          severity: warning
+          component: aphasia
+        annotations:
+          summary: "High rate of critical aphasia detections"
+          description: "Critical aphasia detections are {{ $value | humanizePercentage }} of total detections, indicating output quality issues."
+          runbook_url: "https://github.com/neuron7x/mlsdm/blob/main/RUNBOOK.md#high-aphasia-rate"
+
+      # Alert when overall aphasia detection rate is unusually high
+      - alert: MLSDMHighAphasiaRate
+        expr: |
+          (
+            sum(rate(mlsdm_aphasia_events_total{is_aphasic="True"}[5m]))
+            /
+            sum(rate(mlsdm_aphasia_events_total[5m]))
+          ) > 0.3
+        for: 10m
+        labels:
+          severity: warning
+          component: aphasia
+        annotations:
+          summary: "High aphasia detection rate"
+          description: "Aphasia is being detected in {{ $value | humanizePercentage }} of processed responses."
+
+      # Alert when aphasia repairs are failing (detection without repair)
+      - alert: MLSDMAphasiaRepairFailure
+        expr: |
+          (
+            sum(rate(mlsdm_aphasia_events_total{is_aphasic="True", repair_applied="False"}[5m]))
+            /
+            sum(rate(mlsdm_aphasia_events_total{is_aphasic="True"}[5m]))
+          ) > 0.5
+        for: 10m
+        labels:
+          severity: warning
+          component: aphasia
+        annotations:
+          summary: "Aphasia repair success rate is low"
+          description: "{{ $value | humanizePercentage }} of detected aphasia cases are not being repaired."
+
+      # Alert when high severity aphasia is sustained
+      - alert: MLSDMHighSeverityAphasia
+        expr: |
+          histogram_quantile(0.95, sum(rate(mlsdm_aphasia_severity_bucket[5m])) by (le)) > 0.7
+        for: 5m
+        labels:
+          severity: warning
+          component: aphasia
+        annotations:
+          summary: "Sustained high severity aphasia detections"
+          description: "P95 aphasia severity is {{ $value | printf \"%.2f\" }} which indicates persistent quality issues."
+
+  # ===========================================================================
+  # Business Metrics Alerts
+  # ===========================================================================
+  - name: mlsdm_business
+    rules:
+      # Alert when moral filter effectiveness drops
+      - alert: MLSDMMoralFilterEffectiveness
+        expr: |
+          (
+            sum(rate(mlsdm_moral_rejections_total[5m]))
+            /
+            (sum(rate(mlsdm_moral_rejections_total[5m])) + sum(rate(mlsdm_events_processed_total[5m])))
+          ) < 0.01
+        for: 30m
+        labels:
+          severity: info
+          component: business
+        annotations:
+          summary: "Moral filter may be too permissive"
+          description: "Moral rejection rate is only {{ $value | humanizePercentage }}. Consider reviewing filter threshold."
+
+      # Alert when secure mode usage spikes
+      - alert: MLSDMHighSecureModeUsage
+        expr: |
+          (
+            sum(rate(mlsdm_secure_mode_requests_total[5m]))
+            /
+            sum(rate(mlsdm_requests_total[5m]))
+          ) > 0.3
+        for: 15m
+        labels:
+          severity: info
+          component: business
+        annotations:
+          summary: "High secure mode usage"
+          description: "{{ $value | humanizePercentage }} of requests are using secure mode, which may indicate elevated security concerns."
+
+      # Alert when phase distribution is abnormal
+      - alert: MLSDMAbnormalPhaseDistribution
+        expr: |
+          (
+            sum(rate(mlsdm_phase_events_total{phase="sleep"}[1h]))
+            /
+            sum(rate(mlsdm_phase_events_total[1h]))
+          ) > 0.7
+        for: 30m
+        labels:
+          severity: warning
+          component: business
+        annotations:
+          summary: "Abnormal cognitive phase distribution"
+          description: "{{ $value | humanizePercentage }} of events processed in sleep phase, which may affect response quality."
+
+      # Alert when requests inflight are consistently high
+      - alert: MLSDMHighConcurrentRequests
+        expr: |
+          mlsdm_requests_inflight > 100
+        for: 5m
+        labels:
+          severity: warning
+          component: capacity
+        annotations:
+          summary: "High number of concurrent requests"
+          description: "{{ $value }} requests are currently in-flight, consider scaling."
+
+  # ===========================================================================
+  # Cognitive Emergency Alerts
+  # ===========================================================================
+  - name: mlsdm_cognitive_emergency
+    rules:
+      # Alert on any cognitive emergency (aggregate counter)
+      - alert: MLSDMCognitiveEmergency
+        expr: |
+          increase(mlsdm_cognitive_emergency_total[5m]) > 0
+        for: 0m
+        labels:
+          severity: critical
+          component: cognitive
+        annotations:
+          summary: "MLSDM cognitive emergency triggered"
+          description: "{{ $value }} cognitive emergency events in the last 5 minutes."
+          runbook_url: "https://github.com/neuron7x/mlsdm/blob/main/RUNBOOK.md#cognitive-emergency"
+
+      # Alert when stateless mode is active
+      - alert: MLSDMStatelessModeActive
+        expr: mlsdm_stateless_mode == 1
+        for: 5m
+        labels:
+          severity: warning
+          component: cognitive
+        annotations:
+          summary: "MLSDM is running in stateless/degraded mode"
+          description: "System has been in stateless mode for over 5 minutes. Memory-dependent features may be unavailable."

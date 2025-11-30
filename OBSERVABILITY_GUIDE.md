@@ -420,6 +420,8 @@ All logs are JSON-formatted with mandatory fields:
   "level": "INFO",
   "event_type": "request_completed",
   "correlation_id": "abc-123",
+  "trace_id": "4bf92f3577b34da6a3ce929d0e0e4736",
+  "span_id": "00f067aa0ba902b7",
   "metrics": {
     "request_id": "abc-123",
     "phase": "wake",
@@ -432,6 +434,36 @@ All logs are JSON-formatted with mandatory fields:
   }
 }
 ```
+
+### Log-Trace Correlation
+
+MLSDM automatically injects `trace_id` and `span_id` from the current OpenTelemetry context into all structured logs. This enables powerful cross-referencing between logs and distributed traces.
+
+**Fields:**
+- `trace_id`: 32-character hex string (W3C Trace Context format)
+- `span_id`: 16-character hex string (W3C Trace Context format)
+
+**Benefits:**
+- Click through from logs to traces in Jaeger/Zipkin/Tempo
+- Filter logs by trace_id to see all log entries for a single request
+- Correlate errors in logs with specific spans in traces
+
+**Example query in Grafana Loki:**
+```logql
+{job="mlsdm"} |= `trace_id` | json | trace_id="4bf92f3577b34da6a3ce929d0e0e4736"
+```
+
+**Programmatic access:**
+```python
+from mlsdm.observability import get_current_trace_context
+
+# Within an active span:
+context = get_current_trace_context()
+print(f"trace_id: {context['trace_id']}")  # 32 hex chars
+print(f"span_id: {context['span_id']}")    # 16 hex chars
+```
+
+**Note:** `trace_id` and `span_id` fields are only present when logging within an active OpenTelemetry span. When tracing is disabled, these fields are omitted.
 
 ### Privacy Invariant
 
