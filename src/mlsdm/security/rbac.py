@@ -406,16 +406,9 @@ class RBACMiddleware(BaseHTTPMiddleware):
         if path in self.skip_paths:
             return True
 
-        # Prefix match for paths ending with /* or health-related paths
-        for skip_path in self.skip_paths:
-            # Match /health and all sub-paths like /health/live, /health/ready
-            if skip_path.endswith("/") and path.startswith(skip_path):
-                return True
-            # Also match /health/* pattern when skip_path is /health
-            if path.startswith(skip_path + "/"):
-                return True
-
-        return False
+        # Prefix match: /health matches /health/live but not /healthy
+        # The path must start with skip_path followed by '/' to be a sub-path
+        return any(path.startswith(skip_path + "/") for skip_path in self.skip_paths)
 
     def _get_required_roles(self, path: str) -> set[Role] | None:
         """Get required roles for a path.
