@@ -1,7 +1,11 @@
 """Observability module for MLSDM Governed Cognitive Memory.
 
 This module provides structured logging and monitoring capabilities
-for the cognitive architecture system.
+for the cognitive architecture system, including:
+- Trace context correlation (trace_id/span_id in logs)
+- OpenTelemetry distributed tracing
+- Prometheus metrics
+- Structured JSON logging
 """
 
 from .aphasia_logging import (
@@ -21,8 +25,11 @@ from .aphasia_metrics import (
 )
 from .logger import (
     EventType,
+    JSONFormatter,
     ObservabilityLogger,
     RejectionReason,
+    TraceContextFilter,
+    get_current_trace_context,
     get_observability_logger,
     payload_scrubber,
     scrub_for_log,
@@ -66,12 +73,15 @@ __all__ = [
     "AphasiaMetricsExporter",
     # General observability
     "EventType",
+    "JSONFormatter",
     "MetricsExporter",
     "ObservabilityLogger",
     "PhaseType",
     "RejectionReason",
+    "TraceContextFilter",
     "get_aphasia_logger",
     "get_aphasia_metrics_exporter",
+    "get_current_trace_context",
     "get_metrics_exporter",
     "get_observability_logger",
     "log_aphasia_event",

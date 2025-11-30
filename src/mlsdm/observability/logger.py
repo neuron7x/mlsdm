@@ -7,6 +7,7 @@ Key features:
 - Payload scrubbing to prevent PII/sensitive data in logs
 - Mandatory fields for full observability (request_id, phase, etc.)
 - Thread-safe singleton pattern
+- Trace context correlation (trace_id, span_id) from OpenTelemetry
 """
 
 import json
@@ -19,6 +20,67 @@ from logging.handlers import RotatingFileHandler, TimedRotatingFileHandler
 from pathlib import Path
 from threading import Lock
 from typing import Any
+
+from opentelemetry import trace
+from opentelemetry.trace import INVALID_SPAN_ID, INVALID_TRACE_ID
+
+# ---------------------------------------------------------------------------
+# Trace Context Helpers
+# ---------------------------------------------------------------------------
+
+
+def get_current_trace_context() -> dict[str, str]:
+    """Get current OpenTelemetry trace context.
+
+    Returns a dictionary with trace_id and span_id if a span is active,
+    otherwise returns empty strings for both fields.
+
+    Returns:
+        Dictionary with trace_id and span_id as hex strings
+    """
+    span = trace.get_current_span()
+    span_context = span.get_span_context()
+
+    if span_context.trace_id != INVALID_TRACE_ID:
+        trace_id = format(span_context.trace_id, "032x")
+    else:
+        trace_id = ""
+
+    if span_context.span_id != INVALID_SPAN_ID:
+        span_id = format(span_context.span_id, "016x")
+    else:
+        span_id = ""
+
+    return {"trace_id": trace_id, "span_id": span_id}
+
+
+class TraceContextFilter(logging.Filter):
+    """Logging filter that injects OpenTelemetry trace context into log records.
+
+    This filter adds trace_id and span_id attributes to every log record,
+    enabling correlation between logs and distributed traces.
+
+    Example:
+        >>> logger = logging.getLogger("mlsdm")
+        >>> logger.addFilter(TraceContextFilter())
+        >>> with tracer.start_as_current_span("my_span"):
+        ...     logger.info("This log has trace context")
+    """
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        """Add trace context to log record.
+
+        Args:
+            record: The log record to enrich
+
+        Returns:
+            Always True (all records pass through)
+        """
+        ctx = get_current_trace_context()
+        record.trace_id = ctx["trace_id"]
+        record.span_id = ctx["span_id"]
+        return True
+
 
 # ---------------------------------------------------------------------------
 # Payload Scrubbing
@@ -150,7 +212,11 @@ class RejectionReason(Enum):
 
 
 class JSONFormatter(logging.Formatter):
-    """Custom JSON formatter for structured logging."""
+    """Custom JSON formatter for structured logging.
+
+    Includes trace_id and span_id from OpenTelemetry when available,
+    enabling correlation between logs and distributed traces.
+    """
 
     def format(self, record: logging.LogRecord) -> str:
         """Format log record as JSON.
@@ -166,8 +232,12 @@ class JSONFormatter(logging.Formatter):
         correlation_id = getattr(record, "correlation_id", str(uuid.uuid4()))
         metrics = getattr(record, "metrics", {})
 
+        # Extract trace context (injected by TraceContextFilter or manually)
+        trace_id = getattr(record, "trace_id", "")
+        span_id = getattr(record, "span_id", "")
+
         # Use the record's timestamp for consistency
-        log_entry = {
+        log_entry: dict[str, Any] = {
             "timestamp": datetime.fromtimestamp(record.created, timezone.utc).isoformat(),
             "timestamp_unix": record.created,
             "level": record.levelname,
@@ -177,6 +247,12 @@ class JSONFormatter(logging.Formatter):
             "message": record.getMessage(),
             "metrics": metrics,  # Always include metrics (even if empty)
         }
+
+        # Add trace context if available (enables log-trace correlation)
+        if trace_id:
+            log_entry["trace_id"] = trace_id
+        if span_id:
+            log_entry["span_id"] = span_id
 
         # Add exception info if present
         if record.exc_info:
@@ -209,6 +285,8 @@ class JSONFormatter(logging.Formatter):
                 "event_type",
                 "correlation_id",
                 "metrics",
+                "trace_id",
+                "span_id",
             ]:
                 log_entry[key] = value
 
@@ -224,6 +302,7 @@ class ObservabilityLogger:
     - Log rotation by size and age
     - Thread-safe operation
     - Correlation IDs for request tracking
+    - Trace context correlation (trace_id, span_id) from OpenTelemetry
     - Production-grade error handling
     """
 
@@ -237,6 +316,7 @@ class ObservabilityLogger:
         max_age_days: int = 7,
         console_output: bool = True,
         min_level: int = logging.INFO,
+        enable_trace_context: bool = True,
     ):
         """Initialize observability logger.
 
@@ -249,6 +329,7 @@ class ObservabilityLogger:
             max_age_days: Maximum age of log files in days
             console_output: Whether to output logs to console
             min_level: Minimum logging level (DEBUG, INFO, WARNING, ERROR)
+            enable_trace_context: Whether to inject OpenTelemetry trace context into logs
         """
         self.logger = logging.getLogger(logger_name)
         self.logger.setLevel(logging.DEBUG)  # Set to DEBUG to allow all levels
@@ -256,6 +337,10 @@ class ObservabilityLogger:
 
         # Remove existing handlers to avoid duplicates
         self.logger.handlers.clear()
+
+        # Add TraceContextFilter for log-trace correlation
+        if enable_trace_context:
+            self.logger.addFilter(TraceContextFilter())
 
         # Create log directory if specified
         if log_dir:
