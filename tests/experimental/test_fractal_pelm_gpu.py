@@ -524,8 +524,10 @@ class TestFractalPELMGPUScoringMonotonicity:
         # cos_sim=1.0, phase_sim=1.0, so score should be 1.0
         assert score > 0.95, f"Expected score near 1.0 for identical match, got {score}"
 
-        # Retrieved vector should match
-        np.testing.assert_array_almost_equal(retrieved_vec, vec, decimal=4)
+        # Retrieved vector should match (decimal=3 for float16 storage tolerance)
+        # FractalPELMGPU stores vectors in float16 for memory efficiency,
+        # which introduces ~1e-3 to 1e-4 precision loss on round-trip
+        np.testing.assert_array_almost_equal(retrieved_vec, vec, decimal=3)
 
 
 class TestFractalPELMGPUTorchImportBehavior:
