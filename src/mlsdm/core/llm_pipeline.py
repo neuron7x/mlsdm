@@ -270,24 +270,38 @@ class ThreatPreFilter:
     before engaging higher cognitive processes.
     """
 
-    def __init__(self, sensitivity: float = 0.5) -> None:
+    # Default risk keywords - can be overridden via constructor
+    DEFAULT_RISK_KEYWORDS: frozenset[str] = frozenset({
+        "hack",
+        "exploit",
+        "bypass",
+        "override",
+        "inject",
+        "attack",
+        "malicious",
+    })
+
+    # Score increment per detected keyword (0.2 = 5 keywords to reach max)
+    KEYWORD_SCORE_INCREMENT: float = 0.2
+
+    def __init__(
+        self,
+        sensitivity: float = 0.5,
+        risk_keywords: set[str] | frozenset[str] | None = None,
+    ) -> None:
         """Initialize threat pre-filter.
 
         Args:
             sensitivity: Threat detection sensitivity (0.0-1.0).
                         Higher values = more sensitive (more blocks).
+            risk_keywords: Custom set of risk keywords. If None, uses defaults.
         """
         self._sensitivity = sensitivity
-        # Placeholder: list of high-risk keywords for basic detection
-        self._risk_keywords = {
-            "hack",
-            "exploit",
-            "bypass",
-            "override",
-            "inject",
-            "attack",
-            "malicious",
-        }
+        self._risk_keywords = (
+            frozenset(risk_keywords)
+            if risk_keywords is not None
+            else self.DEFAULT_RISK_KEYWORDS
+        )
 
     def evaluate(self, prompt: str, context: dict[str, Any]) -> FilterResult:
         """Evaluate threat level.
@@ -304,7 +318,7 @@ class ThreatPreFilter:
 
         # Calculate basic threat score
         if detected_keywords:
-            threat_score = len(detected_keywords) * 0.2
+            threat_score = len(detected_keywords) * self.KEYWORD_SCORE_INCREMENT
             threat_score = min(1.0, threat_score)
         else:
             threat_score = 0.0
@@ -341,11 +355,21 @@ class AphasiaPostFilter:
     speech production errors analogous to Broca's area dysfunction.
     """
 
+    # Default repair prompt template - can be overridden via constructor
+    DEFAULT_REPAIR_PROMPT_TEMPLATE: str = (
+        "{prompt}\n\n"
+        "The following draft answer shows Broca-like aphasia "
+        "(telegraphic style, broken syntax). Rewrite it in coherent, full "
+        "sentences, preserving all technical details and reasoning steps.\n\n"
+        "Draft answer:\n{response}"
+    )
+
     def __init__(
         self,
         repair_enabled: bool = True,
         severity_threshold: float = 0.3,
         llm_repair_fn: Callable[[str, int], str] | None = None,
+        repair_prompt_template: str | None = None,
     ) -> None:
         """Initialize aphasia post-filter.
 
@@ -353,6 +377,8 @@ class AphasiaPostFilter:
             repair_enabled: Whether to attempt automatic repair.
             severity_threshold: Minimum severity to trigger repair.
             llm_repair_fn: LLM function for repair (required if repair_enabled).
+            repair_prompt_template: Custom repair prompt template with {prompt}
+                and {response} placeholders. If None, uses default template.
         """
         from mlsdm.extensions.neuro_lang_extension import AphasiaBrocaDetector
 
@@ -360,6 +386,26 @@ class AphasiaPostFilter:
         self._repair_enabled = repair_enabled
         self._severity_threshold = severity_threshold
         self._llm_repair_fn = llm_repair_fn
+        self._repair_prompt_template = (
+            repair_prompt_template
+            if repair_prompt_template is not None
+            else self.DEFAULT_REPAIR_PROMPT_TEMPLATE
+        )
+
+    def _build_repair_prompt(self, prompt: str, response: str) -> str:
+        """Build the repair prompt from template.
+
+        Args:
+            prompt: Original user prompt.
+            response: LLM response to repair.
+
+        Returns:
+            Formatted repair prompt string.
+        """
+        return self._repair_prompt_template.format(
+            prompt=prompt,
+            response=response,
+        )
 
     def evaluate(self, response: str, context: dict[str, Any]) -> FilterResult:
         """Evaluate response for aphasia patterns.
@@ -390,13 +436,7 @@ class AphasiaPostFilter:
             prompt = context.get("prompt", "")
             max_tokens = context.get("max_tokens", 512)
 
-            repair_prompt = (
-                f"{prompt}\n\n"
-                "The following draft answer shows Broca-like aphasia "
-                "(telegraphic style, broken syntax). Rewrite it in coherent, full "
-                "sentences, preserving all technical details and reasoning steps.\n\n"
-                f"Draft answer:\n{response}"
-            )
+            repair_prompt = self._build_repair_prompt(prompt, response)
 
             try:
                 repaired_text = self._llm_repair_fn(repair_prompt, max_tokens)
