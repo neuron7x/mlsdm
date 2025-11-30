@@ -391,6 +391,25 @@ class RBACMiddleware(BaseHTTPMiddleware):
         self.permissions = endpoint_permissions or DEFAULT_ENDPOINT_PERMISSIONS
         self.skip_paths = set(skip_paths or ["/", "/health", "/docs", "/redoc", "/openapi.json"])
 
+    def _should_skip_path(self, path: str) -> bool:
+        """Check if a path should skip RBAC checks.
+
+        Uses both exact matching and prefix matching for paths like /health/*
+
+        Args:
+            path: Request path
+
+        Returns:
+            True if path should skip RBAC checks
+        """
+        # Exact match
+        if path in self.skip_paths:
+            return True
+
+        # Prefix match: /health matches /health/live but not /healthy
+        # The path must start with skip_path followed by '/' to be a sub-path
+        return any(path.startswith(skip_path + "/") for skip_path in self.skip_paths)
+
     def _get_required_roles(self, path: str) -> set[Role] | None:
         """Get required roles for a path.
 
@@ -450,8 +469,8 @@ class RBACMiddleware(BaseHTTPMiddleware):
         """
         path = request.url.path
 
-        # Skip RBAC for excluded paths
-        if path in self.skip_paths:
+        # Skip RBAC for excluded paths (exact or prefix match)
+        if self._should_skip_path(path):
             return await call_next(request)
 
         # Get required roles
