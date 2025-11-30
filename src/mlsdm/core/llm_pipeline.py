@@ -44,13 +44,12 @@ import time
 from dataclasses import dataclass, field
 from enum import Enum
 from threading import Lock
-from typing import TYPE_CHECKING, Any, Callable, Protocol
-
-import numpy as np
+from typing import TYPE_CHECKING, Any, Protocol
 
 if TYPE_CHECKING:
-    from mlsdm.cognition.moral_filter_v2 import MoralFilterV2
-    from mlsdm.extensions.neuro_lang_extension import AphasiaBrocaDetector
+    from collections.abc import Callable
+
+    import numpy as np
 
 
 _logger = logging.getLogger(__name__)
