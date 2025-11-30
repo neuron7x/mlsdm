@@ -149,8 +149,6 @@ class TestBulkheadConcurrencyLimits:
             with lock:
                 results.append(result)
 
-        start_time = time.time()
-
         with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
             futures = [executor.submit(worker, i) for i in range(N)]
             for future in as_completed(futures, timeout=30.0):
@@ -158,8 +156,6 @@ class TestBulkheadConcurrencyLimits:
                     future.result()
                 except Exception:
                     pass
-
-        elapsed = time.time() - start_time
 
         # Should have all results (some may be rejected by bulkhead)
         assert len(results) == N
