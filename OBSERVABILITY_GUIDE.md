@@ -420,6 +420,8 @@ All logs are JSON-formatted with mandatory fields:
   "level": "INFO",
   "event_type": "request_completed",
   "correlation_id": "abc-123",
+  "trace_id": "0af7651916cd43dd8448eb211c80319c",
+  "span_id": "b7ad6b7169203331",
   "metrics": {
     "request_id": "abc-123",
     "phase": "wake",
@@ -431,6 +433,41 @@ All logs are JSON-formatted with mandatory fields:
     "latency_ms": 150.5
   }
 }
+```
+
+### Trace Context Correlation
+
+When OpenTelemetry tracing is enabled, all logs automatically include `trace_id` and `span_id` fields from the current span context. This enables correlation between logs and distributed traces in your observability backend (e.g., Jaeger, Grafana Tempo).
+
+**How it works:**
+- The `TraceContextFilter` is automatically added to `ObservabilityLogger`
+- Each log record is enriched with the current `trace_id` (32 hex chars) and `span_id` (16 hex chars)
+- If no span is active, these fields are omitted from the log output
+
+**Example: Correlating logs with traces:**
+
+```python
+from mlsdm.observability import span, get_observability_logger
+
+logger = get_observability_logger()
+
+with span("mlsdm.generate", phase="wake"):
+    # This log will include trace_id and span_id
+    logger.info(EventType.REQUEST_STARTED, "Processing request")
+```
+
+**Querying correlated logs in Grafana Loki:**
+
+```logql
+{job="mlsdm"} | json | trace_id="0af7651916cd43dd8448eb211c80319c"
+```
+
+**Disabling trace context injection:**
+
+```python
+logger = ObservabilityLogger(
+    enable_trace_context=False  # Disable trace context injection
+)
 ```
 
 ### Privacy Invariant
