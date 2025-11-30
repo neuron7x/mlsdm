@@ -34,6 +34,12 @@ from typing import TYPE_CHECKING, Any, Literal
 
 from mlsdm.core.llm_wrapper import LLMWrapper
 from mlsdm.observability.tracing import get_tracer_manager
+from mlsdm.utils.bulkhead import (
+    Bulkhead,
+    BulkheadCompartment,
+    BulkheadConfig,
+    BulkheadFullError,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -149,6 +155,15 @@ class NeuroEngineConfig:
         "min_requests_before_decision": 100
     })
     rule_based_config: dict[str, str] = field(default_factory=dict)
+
+    # Bulkhead / Fault Isolation (Reliability)
+    # Controls concurrent operation limits per subsystem to prevent cascading failures.
+    enable_bulkhead: bool = True
+    bulkhead_timeout: float = 5.0  # Max wait time (seconds) to acquire bulkhead slot
+    bulkhead_llm_limit: int = 10   # Max concurrent LLM generation calls
+    bulkhead_embedding_limit: int = 20  # Max concurrent embedding operations
+    bulkhead_memory_limit: int = 50  # Max concurrent memory operations
+    bulkhead_cognitive_limit: int = 100  # Max concurrent cognitive operations
 
 
 # ---------------------------------------------------------------------------
@@ -273,6 +288,22 @@ class NeuroCognitiveEngine:
             from mlsdm.observability.metrics import MetricsRegistry
 
             self._metrics = MetricsRegistry()
+
+        # Bulkhead for fault isolation (Reliability)
+        # Prevents cascading failures by limiting concurrent operations per subsystem
+        self._bulkhead: Bulkhead | None = None
+        if self.config.enable_bulkhead:
+            bulkhead_config = BulkheadConfig(
+                max_concurrent={
+                    BulkheadCompartment.LLM_GENERATION: self.config.bulkhead_llm_limit,
+                    BulkheadCompartment.EMBEDDING: self.config.bulkhead_embedding_limit,
+                    BulkheadCompartment.MEMORY: self.config.bulkhead_memory_limit,
+                    BulkheadCompartment.COGNITIVE: self.config.bulkhead_cognitive_limit,
+                },
+                timeout_seconds=self.config.bulkhead_timeout,
+                enable_metrics=self.config.enable_metrics,
+            )
+            self._bulkhead = Bulkhead(config=bulkhead_config)
 
     # ------------------------------------------------------------------ #
     # Internal builders                                                   #
@@ -511,6 +542,20 @@ class NeuroCognitiveEngine:
                         validation_steps=validation_steps,
                         record_generation_metrics=True,
                     )
+                except BulkheadFullError as e:
+                    # Bulkhead is at capacity - graceful rejection
+                    pipeline_span.set_attribute("mlsdm.error_type", "bulkhead_full")
+                    pipeline_span.set_attribute("mlsdm.bulkhead_compartment", e.compartment.value)
+                    return self._build_error_response(
+                        error_type="bulkhead_full",
+                        message=f"System at capacity: {e.compartment.value} bulkhead full",
+                        rejected_at="generation",
+                        mlsdm_state=self._last_mlsdm_state,
+                        fslgs_result=fslgs_result,
+                        timing=timing,
+                        validation_steps=validation_steps,
+                        record_generation_metrics=False,
+                    )
 
                 # Mark pipeline as successful
                 pipeline_span.set_attribute("mlsdm.accepted", True)
@@ -731,45 +776,86 @@ class NeuroCognitiveEngine:
     ) -> tuple[str, dict[str, Any] | None, dict[str, Any] | None]:
         """Run the core LLM/FSLGS generation.
 
+        Applies bulkhead pattern to isolate LLM operations and prevent
+        cascading failures from overload.
+
         Returns:
             Tuple of (response_text, mlsdm_state, fslgs_result).
 
         Raises:
             MLSDMRejectionError: If MLSDM rejects the request.
             EmptyResponseError: If MLSDM returns empty response.
+            BulkheadFullError: If LLM bulkhead is at capacity.
         """
         mlsdm_state: dict[str, Any] | None = None
         fslgs_result: dict[str, Any] | None = None
 
         with TimingContext(timing, "generation"):
-            if self._fslgs is not None:
-                # Повний governance-пайплайн
-                fslgs_result = self._fslgs.generate(
-                    prompt=prompt,
-                    cognitive_load=cognitive_load,
-                    max_tokens=max_tokens,
-                    user_intent=user_intent,
-                    enable_diagnostics=enable_diagnostics,
-                )
-                response_text = fslgs_result.get("response", "")
-                mlsdm_state = self._last_mlsdm_state
+            # Wrap LLM generation in bulkhead for fault isolation
+            # This limits concurrent LLM calls to prevent resource exhaustion
+            if self._bulkhead is not None:
+                with self._bulkhead.acquire(
+                    BulkheadCompartment.LLM_GENERATION,
+                    timeout=self.config.bulkhead_timeout,
+                ):
+                    response_text, mlsdm_state, fslgs_result = self._execute_generation(
+                        prompt, max_tokens, cognitive_load, user_intent,
+                        moral_value, context_top_k, enable_diagnostics
+                    )
             else:
-                # Фолбек: лише MLSDM без FSLGS
-                mlsdm_state = self._mlsdm.generate(
-                    prompt=prompt,
-                    moral_value=moral_value,
-                    max_tokens=max_tokens,
-                    context_top_k=context_top_k,
+                response_text, mlsdm_state, fslgs_result = self._execute_generation(
+                    prompt, max_tokens, cognitive_load, user_intent,
+                    moral_value, context_top_k, enable_diagnostics
                 )
-                self._last_mlsdm_state = mlsdm_state
 
-                if not mlsdm_state.get("accepted", True):
-                    note = mlsdm_state.get("note", "rejected")
-                    raise MLSDMRejectionError(f"MLSDM rejected: {note}")
+        return response_text, mlsdm_state, fslgs_result
 
-                response_text = mlsdm_state.get("response", "")
-                if not isinstance(response_text, str) or not response_text.strip():
-                    raise EmptyResponseError("MLSDM returned empty response")
+    def _execute_generation(
+        self,
+        prompt: str,
+        max_tokens: int,
+        cognitive_load: float,
+        user_intent: str,
+        moral_value: float,
+        context_top_k: int,
+        enable_diagnostics: bool,
+    ) -> tuple[str, dict[str, Any] | None, dict[str, Any] | None]:
+        """Execute the actual LLM generation (called within bulkhead).
+
+        Returns:
+            Tuple of (response_text, mlsdm_state, fslgs_result).
+        """
+        mlsdm_state: dict[str, Any] | None = None
+        fslgs_result: dict[str, Any] | None = None
+
+        if self._fslgs is not None:
+            # Повний governance-пайплайн
+            fslgs_result = self._fslgs.generate(
+                prompt=prompt,
+                cognitive_load=cognitive_load,
+                max_tokens=max_tokens,
+                user_intent=user_intent,
+                enable_diagnostics=enable_diagnostics,
+            )
+            response_text = fslgs_result.get("response", "")
+            mlsdm_state = self._last_mlsdm_state
+        else:
+            # Фолбек: лише MLSDM без FSLGS
+            mlsdm_state = self._mlsdm.generate(
+                prompt=prompt,
+                moral_value=moral_value,
+                max_tokens=max_tokens,
+                context_top_k=context_top_k,
+            )
+            self._last_mlsdm_state = mlsdm_state
+
+            if not mlsdm_state.get("accepted", True):
+                note = mlsdm_state.get("note", "rejected")
+                raise MLSDMRejectionError(f"MLSDM rejected: {note}")
+
+            response_text = mlsdm_state.get("response", "")
+            if not isinstance(response_text, str) or not response_text.strip():
+                raise EmptyResponseError("MLSDM returned empty response")
 
         return response_text, mlsdm_state, fslgs_result
 
@@ -1005,6 +1091,30 @@ class NeuroCognitiveEngine:
             MetricsRegistry instance or None if metrics are disabled
         """
         return self._metrics
+
+    def get_bulkhead(self) -> Bulkhead | None:
+        """Get Bulkhead instance if bulkhead is enabled.
+
+        Returns:
+            Bulkhead instance or None if bulkhead is disabled
+        """
+        return self._bulkhead
+
+    def get_bulkhead_state(self) -> dict[str, Any]:
+        """Get bulkhead state for observability.
+
+        Returns comprehensive state of all bulkhead compartments including
+        current active connections, limits, and statistics.
+
+        Returns:
+            Dictionary with bulkhead state or empty dict if disabled
+        """
+        if self._bulkhead is None:
+            return {"enabled": False}
+
+        state = self._bulkhead.get_state()
+        state["enabled"] = True
+        return state
 
     # ------------------------------------------------------------------ #
     # Factory Methods                                                     #
