@@ -230,8 +230,11 @@ class TestBulkheadStatistics:
         bulkhead.try_acquire(BulkheadCompartment.MEMORY, timeout=0.01)
 
         # Schedule a release after a delay
+        RELEASE_DELAY_MS = 100  # 100ms delay before releasing
+        EXPECTED_MIN_WAIT_MS = RELEASE_DELAY_MS / 2  # Expect at least 50% of delay
+
         def delayed_release():
-            time.sleep(0.1)
+            time.sleep(RELEASE_DELAY_MS / 1000.0)
             bulkhead.release(BulkheadCompartment.MEMORY)
 
         thread = threading.Thread(target=delayed_release)
@@ -245,7 +248,11 @@ class TestBulkheadStatistics:
 
         stats = bulkhead.get_stats(BulkheadCompartment.MEMORY)
         # Average wait should include the wait for second acquire
-        assert stats.avg_wait_ms > 50  # At least 50ms (100ms delay minus tolerance)
+        # First acquire is near-instant, second waits for release (RELEASE_DELAY_MS)
+        # With two acquisitions, average should be at least EXPECTED_MIN_WAIT_MS
+        assert stats.avg_wait_ms > EXPECTED_MIN_WAIT_MS, (
+            f"Expected avg_wait_ms > {EXPECTED_MIN_WAIT_MS}, got {stats.avg_wait_ms}"
+        )
 
     def test_get_all_stats(self):
         """Test getting stats for all compartments."""

@@ -277,6 +277,15 @@ class Bulkhead:
         state = self._compartments[compartment]
 
         with state.lock:
+            # Detect potential double-release or release without acquire
+            if state.current_active <= 0:
+                _logger.warning(
+                    "Bulkhead release called with no active acquisitions: "
+                    "compartment=%s, current_active=%d. This may indicate a bug "
+                    "(double release or release without acquire).",
+                    compartment.value,
+                    state.current_active,
+                )
             state.current_active = max(0, state.current_active - 1)
             state.total_released += 1
 
