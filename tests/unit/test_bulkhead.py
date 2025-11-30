@@ -21,7 +21,6 @@ from mlsdm.utils.bulkhead import (
     BulkheadCompartment,
     BulkheadConfig,
     BulkheadFullError,
-    BulkheadStats,
 )
 
 
@@ -110,7 +109,7 @@ class TestBulkheadConcurrencyLimits:
         bulkhead.try_acquire(BulkheadCompartment.EMBEDDING, timeout=0.1)
 
         # Second acquisition via context manager should raise
-        with pytest.raises(BulkheadFullError) as exc_info:
+        with pytest.raises(BulkheadFullError) as exc_info:  # noqa: SIM117
             with bulkhead.acquire(BulkheadCompartment.EMBEDDING, timeout=0.1):
                 pass
 
