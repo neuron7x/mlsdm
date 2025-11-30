@@ -35,16 +35,16 @@ jobs:
       - name: Generate CycloneDX SBOM (JSON)
         run: |
           cyclonedx-py environment \
-            --output sbom.json \
-            --format json \
-            --schema-version 1.6
+            --output-file sbom.json \
+            --output-format JSON \
+            --spec-version 1.6
       
       - name: Generate CycloneDX SBOM (XML)
         run: |
           cyclonedx-py environment \
-            --output sbom.xml \
-            --format xml \
-            --schema-version 1.6
+            --output-file sbom.xml \
+            --output-format XML \
+            --spec-version 1.6
       
       - name: Upload SBOM artifacts
         uses: actions/upload-artifact@v4
