@@ -32,7 +32,7 @@ We will implement Phase-Entangled Lattice Memory (PELM) as the primary semantic 
 
 **Data Structure**:
 - Fixed-capacity ring buffer for embedding storage
-- Parallel array for phase values (0.0 = wake, 1.0 = sleep)
+- Parallel array for phase values (continuous 0.0–1.0 range; typical values: wake≈0.1, sleep≈0.9)
 - Pre-normalized vectors for fast similarity computation
 
 **Phase Entanglement**:
@@ -95,7 +95,7 @@ For default values: `20,000 * (384 + 2) * 4 ≈ 30.88 MB`
 ### Neutral
 
 - Ring buffer means FIFO eviction policy
-- Phase values are continuous, not discrete (wake=0.1, sleep=0.9 typical)
+- Phase values are continuous in [0.0, 1.0] range (implementation uses wake=0.1, sleep=0.9 for typical operation)
 
 ## Alternatives Considered
 

@@ -96,8 +96,8 @@ The algorithm resists common attacks:
 
 - **Self-tuning**: Adapts to input distribution without manual tuning
 - **Bounded behavior**: Cannot be pushed to unsafe states
-- **Low false positive rate**: 37.5% FPR trades for high recall
 - **High toxic rejection**: 93.3% true positive rate on toxic content
+- **Acceptable false positive rate**: 37.5% FPR is a deliberate trade-off for safety
 - **Fast evaluation**: <1ms per decision
 - **Simple implementation**: <50 lines of code
 - **Testable**: Deterministic, property-based tests verify invariants

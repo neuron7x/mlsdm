@@ -108,8 +108,9 @@ With default settings, memory usage is well under the 1.4 GB bound.
 ### Configuration
 
 ```python
-# Default max memory bytes: 1.4 GB
-_DEFAULT_MAX_MEMORY_BYTES = int(1.4 * 1024**3)
+# Default max memory bytes: 1.4 GiB (~1.5 GB)
+# Uses binary units (1024^3) for consistency with container memory limits
+_DEFAULT_MAX_MEMORY_BYTES = int(1.4 * 1024**3)  # 1,503,238,553 bytes
 
 class CognitiveController:
     def __init__(
