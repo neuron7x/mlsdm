@@ -212,6 +212,26 @@ class PipelineMetadata(BaseModel):
         description="Number of steps that failed with errors",
     )
 
+    @staticmethod
+    def _get_str(d: dict[str, object], key: str) -> str | None:
+        """Safely get a string value from a dict."""
+        val = d.get(key)
+        return str(val) if val is not None else None
+
+    @staticmethod
+    def _get_dict(d: dict[str, object], key: str) -> dict[str, object] | None:
+        """Safely get a dict value from a dict."""
+        val = d.get(key)
+        if isinstance(val, dict):
+            return dict(val)
+        elif hasattr(val, "items"):
+            # Handle dict-like objects (e.g., custom mappings)
+            try:
+                return dict(val)  # type: ignore[arg-type]
+            except TypeError:
+                return None
+        return None
+
     @classmethod
     def from_history(
         cls,
@@ -245,23 +265,13 @@ class PipelineMetadata(BaseModel):
                 status = str(raw_status)
                 error_msg = None
 
-            # Safely get string values from dict
-            def _get_str(d: dict[str, object], key: str) -> str | None:
-                val = d.get(key)
-                return str(val) if val is not None else None
-
-            # Safely get dict values
-            def _get_dict(d: dict[str, object], key: str) -> dict[str, object] | None:
-                val = d.get(key)
-                return dict(val) if isinstance(val, dict) else None
-
             if status == "ok":
                 step = PipelineStepResult(
                     name=str(step_dict.get("name", "unknown")),
                     status="ok",
-                    raw_text=_get_str(step_dict, "raw_text"),
-                    final_text=_get_str(step_dict, "final_text"),
-                    metadata=_get_dict(step_dict, "metadata"),
+                    raw_text=cls._get_str(step_dict, "raw_text"),
+                    final_text=cls._get_str(step_dict, "final_text"),
+                    metadata=cls._get_dict(step_dict, "metadata"),
                     error_type=None,
                     error_message=None,
                 )
@@ -272,8 +282,8 @@ class PipelineMetadata(BaseModel):
                     raw_text=None,
                     final_text=None,
                     metadata=None,
-                    error_type=_get_str(step_dict, "error_type"),
-                    error_message=error_msg or _get_str(step_dict, "error_message"),
+                    error_type=cls._get_str(step_dict, "error_type"),
+                    error_message=error_msg or cls._get_str(step_dict, "error_message"),
                 )
 
             steps.append(step)
