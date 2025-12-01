@@ -103,6 +103,9 @@ class GovernanceMetrics:
             elif action == "escalate":
                 self._counters.escalated_total += 1
 
+            # Validate action before per-mode tracking
+            valid_actions = {"allow", "block", "modify", "escalate"}
+
             # Increment per-mode counter
             if mode not in self._counters.per_mode:
                 self._counters.per_mode[mode] = {
@@ -113,9 +116,19 @@ class GovernanceMetrics:
                     "escalated": 0,
                 }
             self._counters.per_mode[mode]["total"] += 1
-            self._counters.per_mode[mode][action] = (
-                self._counters.per_mode[mode].get(action, 0) + 1
-            )
+            # Only increment known action keys
+            if action in valid_actions:
+                # Map action to counter key (allow -> allowed, etc.)
+                action_key = f"{action}ed" if action != "allow" else "allowed"
+                if action == "modify":
+                    action_key = "modified"
+                elif action == "escalate":
+                    action_key = "escalated"
+                elif action == "block":
+                    action_key = "blocked"
+                self._counters.per_mode[mode][action_key] = (
+                    self._counters.per_mode[mode].get(action_key, 0) + 1
+                )
 
             # Increment per-rule counter
             if rule_id:

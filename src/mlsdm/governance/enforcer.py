@@ -104,6 +104,16 @@ class PolicyLoader:
             cls._instance = super().__new__(cls)
         return cls._instance
 
+    @classmethod
+    def reset_for_testing(cls) -> None:
+        """Reset singleton state for testing.
+
+        This method is provided for test fixtures to reset the singleton
+        between tests, ensuring test isolation.
+        """
+        cls._instance = None
+        cls._policy = None
+
     def load(self, policy_path: Path | None = None) -> dict[str, Any]:
         """Load policy configuration from YAML file.
 
@@ -614,6 +624,12 @@ def evaluate(
     else:
         reason = "No rules matched - default action applied"
 
+    # Validate action is a valid ActionType
+    valid_actions = ("allow", "block", "modify", "escalate")
+    if action not in valid_actions:
+        logger.warning("Invalid action '%s', defaulting to 'block'", action)
+        action = "block"
+
     # Log decision
     log_level = metadata.get("log_level", "info")
     log_func = getattr(logger, log_level, logger.info)
@@ -626,7 +642,7 @@ def evaluate(
     )
 
     return GovernanceDecision(
-        action=action,  # type: ignore[arg-type]
+        action=action,  # type: ignore[arg-type]  # Validated above
         reason=reason,
         rule_id=rule_id,
         mode=mode,

@@ -182,6 +182,9 @@ class NeuroEngineConfig:
     enable_governance: bool = True
     governance_mode: str | None = None  # None = auto-select based on context
     governance_risk_level: float = 0.0  # Default risk level (0.0-1.0)
+    governance_sensitive_domains: list[str] = field(
+        default_factory=lambda: ["medical", "financial", "legal"]
+    )  # Domains that trigger cautious mode
 
 
 # ---------------------------------------------------------------------------
@@ -832,7 +835,7 @@ class NeuroCognitiveEngine:
             context = GovernanceContext(
                 mode=self.config.governance_mode,
                 risk_level=self.config.governance_risk_level,
-                sensitive_domain=user_intent in ("medical", "financial", "legal"),
+                sensitive_domain=self._is_sensitive_domain(user_intent),
                 user_type="authenticated",
             )
 
@@ -928,7 +931,7 @@ class NeuroCognitiveEngine:
             context = GovernanceContext(
                 mode=self.config.governance_mode,
                 risk_level=self.config.governance_risk_level,
-                sensitive_domain=user_intent in ("medical", "financial", "legal"),
+                sensitive_domain=self._is_sensitive_domain(user_intent),
                 user_type="authenticated",
             )
 
@@ -1159,6 +1162,19 @@ class NeuroCognitiveEngine:
         if self._selected_variant is not None:
             meta["variant"] = self._selected_variant
         return meta
+
+    def _is_sensitive_domain(self, user_intent: str) -> bool:
+        """Check if user intent indicates a sensitive domain.
+
+        Uses the configurable list of sensitive domains from NeuroEngineConfig.
+
+        Args:
+            user_intent: The user intent category
+
+        Returns:
+            True if the user intent matches a sensitive domain
+        """
+        return user_intent in self.config.governance_sensitive_domains
 
     def _build_error_response(
         self,

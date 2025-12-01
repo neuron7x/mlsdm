@@ -29,8 +29,7 @@ def reset_singletons() -> None:
     from mlsdm.governance.enforcer import PolicyLoader
     from mlsdm.governance.metrics import GovernanceMetrics
 
-    PolicyLoader._instance = None
-    PolicyLoader._policy = None
+    PolicyLoader.reset_for_testing()
     GovernanceMetrics.reset()
 
 
