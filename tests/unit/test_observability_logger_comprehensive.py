@@ -304,7 +304,6 @@ class TestJSONFormatter:
             raise ValueError("Test exception")
         except ValueError:
             import sys
-
             exc_info = sys.exc_info()
 
         record = logging.LogRecord(

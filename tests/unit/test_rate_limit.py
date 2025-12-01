@@ -244,7 +244,6 @@ class TestGlobalRateLimiter:
         """Test that get_rate_limiter returns a RateLimiter."""
         # Reset global state for testing
         import mlsdm.security.rate_limit as rate_limit_module
-
         rate_limit_module._global_rate_limiter = None
 
         limiter = get_rate_limiter()
@@ -253,7 +252,6 @@ class TestGlobalRateLimiter:
     def test_get_rate_limiter_singleton(self):
         """Test that get_rate_limiter returns the same instance."""
         import mlsdm.security.rate_limit as rate_limit_module
-
         rate_limit_module._global_rate_limiter = None
 
         limiter1 = get_rate_limiter()
@@ -263,7 +261,6 @@ class TestGlobalRateLimiter:
     def test_get_rate_limiter_custom_params(self):
         """Test that custom params are used on first call."""
         import mlsdm.security.rate_limit as rate_limit_module
-
         rate_limit_module._global_rate_limiter = None
 
         limiter = get_rate_limiter(requests_per_window=50, window_seconds=30)

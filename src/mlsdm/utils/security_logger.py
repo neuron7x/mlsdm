@@ -62,7 +62,7 @@ class SecurityLogger:
         if not self.logger.handlers:
             handler = logging.StreamHandler()
             handler.setFormatter(
-                logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+                logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
             )
             self.logger.addHandler(handler)
 
@@ -73,7 +73,7 @@ class SecurityLogger:
         message: str,
         correlation_id: str | None = None,
         client_id: str | None = None,
-        additional_data: dict[str, Any] | None = None,
+        additional_data: dict[str, Any] | None = None
     ) -> str:
         """Internal method to log security event.
 
@@ -108,9 +108,8 @@ class SecurityLogger:
         if additional_data:
             # Filter out any potential PII
             filtered_data = {
-                k: v
-                for k, v in additional_data.items()
-                if k not in ["email", "username", "password", "token"]
+                k: v for k, v in additional_data.items()
+                if k not in ['email', 'username', 'password', 'token']
             }
             log_entry["data"] = filtered_data
 
@@ -120,7 +119,11 @@ class SecurityLogger:
 
         return correlation_id
 
-    def log_auth_success(self, client_id: str, correlation_id: str | None = None) -> str:
+    def log_auth_success(
+        self,
+        client_id: str,
+        correlation_id: str | None = None
+    ) -> str:
         """Log successful authentication.
 
         Args:
@@ -135,11 +138,14 @@ class SecurityLogger:
             logging.INFO,
             "Authentication successful",
             correlation_id=correlation_id,
-            client_id=client_id,
+            client_id=client_id
         )
 
     def log_auth_failure(
-        self, client_id: str, reason: str = "Invalid credentials", correlation_id: str | None = None
+        self,
+        client_id: str,
+        reason: str = "Invalid credentials",
+        correlation_id: str | None = None
     ) -> str:
         """Log failed authentication attempt.
 
@@ -157,10 +163,14 @@ class SecurityLogger:
             f"Authentication failed: {reason}",
             correlation_id=correlation_id,
             client_id=client_id,
-            additional_data={"reason": reason},
+            additional_data={"reason": reason}
         )
 
-    def log_rate_limit_exceeded(self, client_id: str, correlation_id: str | None = None) -> str:
+    def log_rate_limit_exceeded(
+        self,
+        client_id: str,
+        correlation_id: str | None = None
+    ) -> str:
         """Log rate limit exceeded event.
 
         Args:
@@ -175,11 +185,14 @@ class SecurityLogger:
             logging.WARNING,
             "Rate limit exceeded",
             correlation_id=correlation_id,
-            client_id=client_id,
+            client_id=client_id
         )
 
     def log_invalid_input(
-        self, client_id: str, error_message: str, correlation_id: str | None = None
+        self,
+        client_id: str,
+        error_message: str,
+        correlation_id: str | None = None
     ) -> str:
         """Log invalid input validation error.
 
@@ -197,11 +210,14 @@ class SecurityLogger:
             f"Invalid input: {error_message}",
             correlation_id=correlation_id,
             client_id=client_id,
-            additional_data={"error": error_message},
+            additional_data={"error": error_message}
         )
 
     def log_state_change(
-        self, change_type: str, details: dict[str, Any], correlation_id: str | None = None
+        self,
+        change_type: str,
+        details: dict[str, Any],
+        correlation_id: str | None = None
     ) -> str:
         """Log important state change.
 
@@ -218,7 +234,7 @@ class SecurityLogger:
             logging.INFO,
             f"State change: {change_type}",
             correlation_id=correlation_id,
-            additional_data={"change_type": change_type, "details": details},
+            additional_data={"change_type": change_type, "details": details}
         )
 
     def log_anomaly(
@@ -226,7 +242,7 @@ class SecurityLogger:
         anomaly_type: str,
         description: str,
         severity: str = "medium",
-        correlation_id: str | None = None,
+        correlation_id: str | None = None
     ) -> str:
         """Log anomaly detection event.
 
@@ -249,15 +265,15 @@ class SecurityLogger:
             additional_data={
                 "anomaly_type": anomaly_type,
                 "description": description,
-                "severity": severity,
-            },
+                "severity": severity
+            }
         )
 
     def log_system_event(
         self,
         event_type: SecurityEventType,
         message: str,
-        additional_data: dict[str, Any] | None = None,
+        additional_data: dict[str, Any] | None = None
     ) -> str:
         """Log system-level event.
 
@@ -269,7 +285,12 @@ class SecurityLogger:
         Returns:
             Correlation ID
         """
-        return self._log_event(event_type, logging.INFO, message, additional_data=additional_data)
+        return self._log_event(
+            event_type,
+            logging.INFO,
+            message,
+            additional_data=additional_data
+        )
 
 
 # Global instance for convenience

@@ -60,7 +60,6 @@ class TestE2EHappyPathGovernedChat:
         # Soft latency check - warn via pytest but don't fail
         if latency_ms > 100:
             import warnings
-
             warnings.warn(
                 f"Latency {latency_ms:.2f}ms exceeds soft limit of 100ms",
                 stacklevel=2,
@@ -195,9 +194,8 @@ class TestE2EAphasiaRepair:
 
             assert result["is_aphasic"] is True, f"Expected aphasic: {text}"
             assert result["severity"] > 0, f"Expected positive severity for: {text}"
-            assert result["avg_sentence_len"] < min_sentence_len, (
+            assert result["avg_sentence_len"] < min_sentence_len, \
                 f"Expected short sentence length (< {min_sentence_len}) for: {text}"
-            )
 
     def test_e2e_aphasia_healthy_text(
         self,
@@ -221,9 +219,8 @@ class TestE2EAphasiaRepair:
             result = detector.analyze(text)
 
             assert result["is_aphasic"] is False, f"Unexpected aphasic flag: {text}"
-            assert result["avg_sentence_len"] >= min_sentence_len, (
+            assert result["avg_sentence_len"] >= min_sentence_len, \
                 f"Expected longer sentences (>= {min_sentence_len})"
-            )
 
     def test_e2e_aphasia_repair_flow(
         self,
@@ -396,9 +393,8 @@ class TestE2EMemoryPhaseRhythm:
 
         # Verify phase alternation occurred
         phase_changes = sum(
-            1
-            for i in range(1, len(phases_observed))
-            if phases_observed[i] != phases_observed[i - 1]
+            1 for i in range(1, len(phases_observed))
+            if phases_observed[i] != phases_observed[i-1]
         )
         assert phase_changes >= 2, f"Expected at least 2 phase changes, got {phase_changes}"
 
@@ -557,7 +553,7 @@ class TestE2EMetricsExposed:
             json={
                 "prompt": "What is machine learning?",
                 "moral_value": 0.5,
-            },
+            }
         )
 
         assert response.status_code == 200

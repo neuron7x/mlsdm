@@ -1,5 +1,4 @@
 """Additional tests to improve coverage for remaining components."""
-
 import numpy as np
 import pytest
 

@@ -29,7 +29,6 @@ from mlsdm.utils.input_validator import InputValidator
 # Adversarial Payload Tests
 # ============================================================================
 
-
 class TestAdversarialPayloads:
     """Tests for adversarial payload handling."""
 
@@ -64,7 +63,7 @@ class TestAdversarialPayloads:
         test_strings = [
             "café",  # NFC form
             "cafe\u0301",  # NFD form (combining acute accent)
-            "\u202ehidden\u202c",  # Right-to-left override
+            "\u202Ehidden\u202C",  # Right-to-left override
         ]
 
         for text in test_strings:
@@ -121,7 +120,6 @@ class TestAdversarialPayloads:
 # ============================================================================
 # Mathematical Boundary Tests
 # ============================================================================
-
 
 class TestMathematicalBoundaries:
     """Tests for mathematical boundary conditions."""
@@ -216,7 +214,6 @@ class TestMathematicalBoundaries:
 # Type Confusion Tests
 # ============================================================================
 
-
 class TestTypeConfusion:
     """Tests for type confusion attacks."""
 
@@ -294,7 +291,6 @@ class TestTypeConfusion:
 # Rate Limiter Security Tests
 # ============================================================================
 
-
 class TestRateLimiterSecurity:
     """Security tests for rate limiter."""
 
@@ -312,7 +308,8 @@ class TestRateLimiterSecurity:
             if limiter.is_allowed("attacker"):
                 allowed_count += 1
 
-        assert allowed_count == 5, f"Rate limiter allowed {allowed_count} requests, expected 5"
+        assert allowed_count == 5, \
+            f"Rate limiter allowed {allowed_count} requests, expected 5"
 
     def test_rate_limiter_client_isolation(self):
         """
@@ -332,7 +329,8 @@ class TestRateLimiterSecurity:
             if limiter.is_allowed("client_b"):
                 allowed_count += 1
 
-        assert allowed_count == 5, "Client isolation failed - client B affected by client A's usage"
+        assert allowed_count == 5, \
+            "Client isolation failed - client B affected by client A's usage"
 
     def test_rate_limiter_reset_works(self):
         """
@@ -360,7 +358,6 @@ class TestRateLimiterSecurity:
 # Secret Scrubbing Security Tests
 # ============================================================================
 
-
 class TestSecretScrubbingSecurity:
     """Security tests for secret scrubbing."""
 
@@ -379,7 +376,8 @@ class TestSecretScrubbingSecurity:
         for payload, expected_pattern in test_cases:
             result = scrub_text(payload)
             # The secret should be redacted
-            assert "REDACTED" in result, f"Pattern {expected_pattern} not scrubbed in: {payload}"
+            assert "REDACTED" in result, \
+                f"Pattern {expected_pattern} not scrubbed in: {payload}"
 
     def test_password_patterns_scrubbed(self):
         """
@@ -395,7 +393,8 @@ class TestSecretScrubbingSecurity:
 
         for payload in test_cases:
             result = scrub_text(payload)
-            assert "REDACTED" in result, f"Password not scrubbed in: {payload}"
+            assert "REDACTED" in result, \
+                f"Password not scrubbed in: {payload}"
 
     def test_aws_key_patterns_scrubbed(self):
         """
@@ -412,8 +411,10 @@ class TestSecretScrubbingSecurity:
             result = scrub_text(payload)
             # The scrubber preserves "AKIA" prefix but redacts the rest
             # Expected output: "AKIA***REDACTED***"
-            assert "REDACTED" in result, f"AWS key not properly scrubbed: {result}"
-            assert "1234567890123456" not in result, f"AWS key ID not redacted: {result}"
+            assert "REDACTED" in result, \
+                f"AWS key not properly scrubbed: {result}"
+            assert "1234567890123456" not in result, \
+                f"AWS key ID not redacted: {result}"
 
     def test_private_key_patterns_scrubbed(self):
         """
@@ -432,7 +433,6 @@ MIIEowIBAAKCAQEA1234567890...
 # ============================================================================
 # Moral Filter Attack Resistance
 # ============================================================================
-
 
 class TestMoralFilterAttackResistance:
     """Tests for moral filter resistance to manipulation attacks."""
@@ -495,7 +495,6 @@ class TestMoralFilterAttackResistance:
 # ============================================================================
 # Memory Safety Tests
 # ============================================================================
-
 
 class TestMemorySafety:
     """Tests for memory safety guarantees."""

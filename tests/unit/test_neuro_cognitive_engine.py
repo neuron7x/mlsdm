@@ -632,9 +632,7 @@ class TestNeuroCognitiveEngineExceptionHandling:
         )
 
         # Force an unexpected exception in internal method
-        with patch.object(
-            engine, "_prepare_request_context", side_effect=RuntimeError("unexpected")
-        ):
+        with patch.object(engine, "_prepare_request_context", side_effect=RuntimeError("unexpected")):
             result = engine.generate("Test prompt")
 
             assert result["response"] == ""
@@ -663,6 +661,5 @@ class TestNeuroCognitiveEngineExceptionHandling:
         # Error should indicate empty response (type='empty_response' is used by engine)
         error_type = result["error"].get("type", "")
         error_message = result["error"].get("message", "")
-        assert error_type == "empty_response" or "empty" in error_message.lower(), (
+        assert error_type == "empty_response" or "empty" in error_message.lower(), \
             f"Expected empty_response error, got type='{error_type}', message='{error_message}'"
-        )

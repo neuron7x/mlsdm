@@ -181,7 +181,9 @@ class TestRuleBasedRouterIntentAndPriority:
         }
         router = RuleBasedRouter(providers, rules, default="conversational")
 
-        selected = router.select_provider("test", metadata={"user_intent": "analytical"})
+        selected = router.select_provider(
+            "test", metadata={"user_intent": "analytical"}
+        )
         assert selected == "analytical"
 
     def test_priority_tier_routing(self) -> None:
@@ -196,7 +198,9 @@ class TestRuleBasedRouterIntentAndPriority:
         }
         router = RuleBasedRouter(providers, rules, default="low")
 
-        selected = router.select_provider("test", metadata={"priority_tier": "high"})
+        selected = router.select_provider(
+            "test", metadata={"priority_tier": "high"}
+        )
         assert selected == "high"
 
 

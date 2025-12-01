@@ -778,7 +778,10 @@ class MetricsRegistry:
         self._latency_by_variant: dict[str, list[float]] = {}
 
     def increment_requests_total(
-        self, count: int = 1, provider_id: str | None = None, variant: str | None = None
+        self,
+        count: int = 1,
+        provider_id: str | None = None,
+        variant: str | None = None
     ) -> None:
         """Increment total requests counter.
 
@@ -841,7 +844,10 @@ class MetricsRegistry:
             self._latency_pre_flight_ms.append(latency_ms)
 
     def record_latency_generation(
-        self, latency_ms: float, provider_id: str | None = None, variant: str | None = None
+        self,
+        latency_ms: float,
+        provider_id: str | None = None,
+        variant: str | None = None
     ) -> None:
         """Record generation latency.
 
@@ -882,8 +888,12 @@ class MetricsRegistry:
                 # Multi-LLM metrics (Phase 8)
                 "requests_by_provider": dict(self._requests_by_provider),
                 "requests_by_variant": dict(self._requests_by_variant),
-                "latency_by_provider": {k: list(v) for k, v in self._latency_by_provider.items()},
-                "latency_by_variant": {k: list(v) for k, v in self._latency_by_variant.items()},
+                "latency_by_provider": {
+                    k: list(v) for k, v in self._latency_by_provider.items()
+                },
+                "latency_by_variant": {
+                    k: list(v) for k, v in self._latency_by_variant.items()
+                },
             }
 
     def get_summary(self) -> dict[str, Any]:

@@ -59,7 +59,6 @@ class TestLLMPipelineIntegration:
 
     def test_pipeline_aphasia_detection_flow(self):
         """Test complete aphasia detection flow."""
-
         # Create an LLM that returns telegraphic text
         def telegraphic_llm(prompt: str, max_tokens: int) -> str:
             return "Me go. Store now. Bad."
@@ -190,13 +189,11 @@ class TestLLMPipelineIntegration:
         events = []
 
         def telemetry_handler(result):
-            events.append(
-                {
-                    "accepted": result.accepted,
-                    "duration": result.total_duration_ms,
-                    "stages": len(result.stages),
-                }
-            )
+            events.append({
+                "accepted": result.accepted,
+                "duration": result.total_duration_ms,
+                "stages": len(result.stages),
+            })
 
         config = PipelineConfig(
             moral_filter_enabled=True,
@@ -289,7 +286,6 @@ class TestLLMPipelineWithEmbedding:
 
     def test_pipeline_with_embedding_fn(self):
         """Test pipeline accepts embedding function."""
-
         def embedding_fn(text: str) -> np.ndarray:
             return np.random.randn(384).astype(np.float32)
 
@@ -322,7 +318,6 @@ class TestLLMPipelineFactory:
 
     def test_factory_with_custom_llm(self):
         """Test factory accepts custom LLM function."""
-
         def my_llm(prompt: str, max_tokens: int) -> str:
             return "Custom response"
 

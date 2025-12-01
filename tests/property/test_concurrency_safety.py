@@ -90,7 +90,8 @@ class TestPELMConcurrency:
         writes_per_worker = 30  # Total: 150 > capacity 50
 
         threads = [
-            threading.Thread(target=writer, args=(i, writes_per_worker)) for i in range(num_workers)
+            threading.Thread(target=writer, args=(i, writes_per_worker))
+            for i in range(num_workers)
         ]
 
         for t in threads:
@@ -127,14 +128,16 @@ class TestPELMConcurrency:
         def corrupter() -> None:
             """Periodically corrupt and let auto-recovery handle it."""
             import time
-
             for _ in range(3):
                 time.sleep(0.01)
                 with lock:
                     pelm.pointer = 9999  # Corrupt
                 time.sleep(0.01)
 
-        threads = [threading.Thread(target=writer, args=(i, 30)) for i in range(3)]
+        threads = [
+            threading.Thread(target=writer, args=(i, 30))
+            for i in range(3)
+        ]
         threads.append(threading.Thread(target=corrupter))
 
         for t in threads:
@@ -172,7 +175,10 @@ class TestMultiLevelMemoryConcurrency:
             except Exception as e:
                 errors.put((worker_id, str(e)))
 
-        threads = [threading.Thread(target=update_worker, args=(i, 50)) for i in range(5)]
+        threads = [
+            threading.Thread(target=update_worker, args=(i, 50))
+            for i in range(5)
+        ]
 
         for t in threads:
             t.start()
@@ -255,7 +261,10 @@ class TestCognitiveControllerConcurrency:
             except Exception as e:
                 errors.put((worker_id, str(e)))
 
-        threads = [threading.Thread(target=process_worker, args=(i, 20)) for i in range(5)]
+        threads = [
+            threading.Thread(target=process_worker, args=(i, 20))
+            for i in range(5)
+        ]
 
         for t in threads:
             t.start()
@@ -295,7 +304,10 @@ class TestRateLimiterConcurrency:
                         blocked_count[0] += 1
 
         # Many concurrent requests from same client
-        threads = [threading.Thread(target=requester, args=("client1", 20)) for _ in range(5)]
+        threads = [
+            threading.Thread(target=requester, args=("client1", 20))
+            for _ in range(5)
+        ]
 
         for t in threads:
             t.start()
@@ -346,7 +358,10 @@ class TestStressConditions:
                     errors.put((worker_id, i, str(e)))
 
         # 10 concurrent workers, each doing 100 ops
-        threads = [threading.Thread(target=worker, args=(i,)) for i in range(10)]
+        threads = [
+            threading.Thread(target=worker, args=(i,))
+            for i in range(10)
+        ]
 
         for t in threads:
             t.start()
@@ -377,7 +392,10 @@ class TestStressConditions:
             except Exception as e:
                 errors.put((worker_id, str(e)))
 
-        threads = [threading.Thread(target=adapter, args=(i,)) for i in range(10)]
+        threads = [
+            threading.Thread(target=adapter, args=(i,))
+            for i in range(10)
+        ]
 
         for t in threads:
             t.start()

@@ -143,7 +143,9 @@ def test_thread_safety():
 def test_custom_thresholds():
     """Test AphasiaBrocaDetector with custom thresholds."""
     detector = AphasiaBrocaDetector(
-        min_sentence_len=8.0, min_function_word_ratio=0.20, max_fragment_ratio=0.3
+        min_sentence_len=8.0,
+        min_function_word_ratio=0.20,
+        max_fragment_ratio=0.3
     )
 
     assert detector.min_sentence_len == 8.0

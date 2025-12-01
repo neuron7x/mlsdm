@@ -34,7 +34,6 @@ class AphasiaLogEvent:
         repair_enabled: Whether aphasia repair was enabled
         severity_threshold: Severity threshold for triggering repair
     """
-
     decision: str
     is_aphasic: bool
     severity: float

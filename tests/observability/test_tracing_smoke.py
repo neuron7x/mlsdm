@@ -5,6 +5,7 @@ These tests verify that the tracing infrastructure is properly configured
 and creates spans for key operations.
 """
 
+
 import pytest
 
 from mlsdm.observability.tracing import (

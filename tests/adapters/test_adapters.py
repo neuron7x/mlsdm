@@ -116,7 +116,12 @@ class TestLocalStubProvider:
         """Test that provider accepts and ignores extra kwargs."""
         provider = LocalStubProvider()
         # Should not raise even with extra kwargs
-        result = provider.generate("Test", 100, moral_value=0.5, user_intent="test")
+        result = provider.generate(
+            "Test",
+            100,
+            moral_value=0.5,
+            user_intent="test"
+        )
         assert isinstance(result, str)
 
     def test_provider_response_format(self):
@@ -169,7 +174,6 @@ class TestOpenAIAdapterContract:
             import importlib
 
             import mlsdm.adapters.openai_adapter as oa_module
-
             importlib.reload(oa_module)
 
             adapter = oa_module.build_openai_llm_adapter()
@@ -204,7 +208,6 @@ class TestOpenAIAdapterContract:
             import importlib
 
             import mlsdm.adapters.llm_provider as lp_module
-
             importlib.reload(lp_module)
 
             provider = lp_module.OpenAIProvider(api_key="sk-test-key", model="gpt-4")
@@ -244,7 +247,10 @@ class TestProviderFactory:
 
     def test_custom_provider_id_for_stub(self):
         """Test custom provider_id for local stub."""
-        provider = build_provider_from_env(backend="local_stub", provider_id="custom_id")
+        provider = build_provider_from_env(
+            backend="local_stub",
+            provider_id="custom_id"
+        )
         assert provider.provider_id == "custom_id"
 
 
@@ -257,7 +263,6 @@ class TestAdapterTyping:
 
         # Should accept (str, int) -> str
         import inspect
-
         sig = inspect.signature(adapter)
         params = list(sig.parameters.keys())
         assert "prompt" in params
@@ -268,7 +273,6 @@ class TestAdapterTyping:
         provider = LocalStubProvider()
 
         import inspect
-
         sig = inspect.signature(provider.generate)
         params = sig.parameters
 
@@ -339,7 +343,7 @@ class TestAdapterStableBehavior:
             "Tab\tSeparated",
             "Unicode: 日本語",
             "Emoji: 🔥🎉",
-            "Quotes: \"test\" and 'test'",
+            'Quotes: "test" and \'test\'',
         ]
 
         for prompt in special_prompts:

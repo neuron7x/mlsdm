@@ -110,7 +110,10 @@ class UserContext:
         Returns:
             True if user has the role
         """
-        return any(role in ROLE_HIERARCHY.get(user_role, set()) for user_role in self.roles)
+        return any(
+            role in ROLE_HIERARCHY.get(user_role, set())
+            for user_role in self.roles
+        )
 
     def has_any_role(self, roles: Sequence[Role]) -> bool:
         """Check if user has any of the specified roles.
@@ -557,7 +560,10 @@ def require_role(
         ...     return {"status": "ok"}
     """
     # Convert string roles to Role enums
-    role_enums = [Role(r) if isinstance(r, str) else r for r in roles]
+    role_enums = [
+        Role(r) if isinstance(r, str) else r
+        for r in roles
+    ]
 
     def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
         @wraps(func)
@@ -578,7 +584,9 @@ def require_role(
                 )
 
             # Check if user context exists (set by middleware)
-            user_context: UserContext | None = getattr(request.state, "user_context", None)
+            user_context: UserContext | None = getattr(
+                request.state, "user_context", None
+            )
 
             if user_context is None:
                 # Try to validate from request

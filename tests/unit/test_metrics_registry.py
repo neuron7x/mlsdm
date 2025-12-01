@@ -1,5 +1,6 @@
 """Unit tests for MetricsRegistry."""
 
+
 from mlsdm.observability.metrics import MetricsRegistry
 
 

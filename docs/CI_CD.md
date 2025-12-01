@@ -26,7 +26,7 @@ The CI workflow runs on every pull request and push to main branch. It ensures c
 
 | Job | Description | Required |
 |-----|-------------|----------|
-| `lint` | Ruff linter and format check | ✅ |
+| `lint` | Ruff linter check | ✅ |
 | `type-check` | Mypy type checking | ✅ |
 | `security-scan` | pip-audit and bandit | ⚠️ (continues on error) |
 | `unit-tests` | Unit tests (Python 3.10, 3.11, 3.12) | ✅ |

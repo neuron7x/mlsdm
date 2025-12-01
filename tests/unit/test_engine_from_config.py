@@ -52,7 +52,9 @@ class TestFromConfig:
 
     def test_from_config_invalid_yaml(self) -> None:
         """Test error handling for invalid YAML content."""
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".yaml", delete=False
+        ) as f:
             f.write("invalid: yaml: content: {{{}}")
             f.flush()
 
@@ -63,7 +65,9 @@ class TestFromConfig:
 
     def test_from_config_invalid_config_values(self) -> None:
         """Test error handling for invalid configuration values."""
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".yaml", delete=False
+        ) as f:
             # Invalid dimension value (too small)
             f.write("dimension: 1\n")
             f.flush()
@@ -121,7 +125,9 @@ class TestFromConfigValidation:
 
     def test_invalid_moral_threshold(self) -> None:
         """Test validation of moral threshold bounds."""
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".yaml", delete=False
+        ) as f:
             # Invalid threshold (too high)
             f.write("""
 dimension: 10
@@ -139,7 +145,9 @@ moral_filter:
 
     def test_valid_minimal_config(self) -> None:
         """Test that minimal valid config works."""
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".yaml", delete=False
+        ) as f:
             # Minimal valid config
             f.write("""
 dimension: 10

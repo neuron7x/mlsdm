@@ -110,16 +110,10 @@ class TestCLIDemo:
         """Test demo with low moral value gets rejected."""
         result = subprocess.run(
             [
-                sys.executable,
-                "-m",
-                "mlsdm.cli",
-                "demo",
-                "-p",
-                "Test",
-                "-m",
-                "0.1",  # Very low moral value
-                "--moral-threshold",
-                "0.9",  # High threshold
+                sys.executable, "-m", "mlsdm.cli", "demo",
+                "-p", "Test",
+                "-m", "0.1",  # Very low moral value
+                "--moral-threshold", "0.9",  # High threshold
             ],
             capture_output=True,
             text=True,
@@ -202,7 +196,6 @@ class TestCLIModule:
     def test_import_cli_module(self):
         """Test that CLI module can be imported."""
         from mlsdm import cli
-
         assert hasattr(cli, "main")
         assert callable(cli.main)
 

@@ -411,7 +411,9 @@ class TestBulkheadThreadSafety:
                     with lock:
                         errors.append(("stats", e))
 
-        threads = [threading.Thread(target=acquire_worker) for _ in range(5)] + [
+        threads = [
+            threading.Thread(target=acquire_worker) for _ in range(5)
+        ] + [
             threading.Thread(target=stats_worker) for _ in range(3)
         ]
 

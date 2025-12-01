@@ -50,10 +50,15 @@ def test_aphasia_logs_do_not_contain_prompt_text(caplog):
 
     # Generate with a prompt containing a secret token
     prompt_with_secret = f"Tell me about {SECRET_PROMPT_TOKEN} in detail."
-    _ = wrapper.generate(prompt=prompt_with_secret, moral_value=0.7, max_tokens=50)
+    _ = wrapper.generate(
+        prompt=prompt_with_secret,
+        moral_value=0.7,
+        max_tokens=50
+    )
 
     # Verify the secret prompt token is NOT in any log messages
-    assert SECRET_PROMPT_TOKEN not in caplog.text, "Prompt text leaked into aphasia logs!"
+    assert SECRET_PROMPT_TOKEN not in caplog.text, \
+        "Prompt text leaked into aphasia logs!"
 
 
 @pytest.mark.security
@@ -70,10 +75,15 @@ def test_aphasia_logs_do_not_contain_response_text(caplog):
     )
 
     # Generate - the response will contain SECRET_RESPONSE_TOKEN
-    _ = wrapper.generate(prompt="Tell me something", moral_value=0.7, max_tokens=50)
+    _ = wrapper.generate(
+        prompt="Tell me something",
+        moral_value=0.7,
+        max_tokens=50
+    )
 
     # Verify the secret response token is NOT in any log messages
-    assert SECRET_RESPONSE_TOKEN not in caplog.text, "Response text leaked into aphasia logs!"
+    assert SECRET_RESPONSE_TOKEN not in caplog.text, \
+        "Response text leaked into aphasia logs!"
 
 
 @pytest.mark.security
@@ -91,7 +101,9 @@ def test_aphasia_logs_only_contain_metadata(caplog):
     )
 
     _ = wrapper.generate(
-        prompt=f"Question about {SECRET_PROMPT_TOKEN}", moral_value=0.7, max_tokens=50
+        prompt=f"Question about {SECRET_PROMPT_TOKEN}",
+        moral_value=0.7,
+        max_tokens=50
     )
 
     # Get all aphasia log records
@@ -134,7 +146,11 @@ def test_aphasia_logs_with_repair_do_not_leak_content(caplog):
         aphasia_severity_threshold=0.1,  # Low threshold to trigger repair
     )
 
-    _ = wrapper.generate(prompt=f"Explain {SECRET_PROMPT_TOKEN}", moral_value=0.7, max_tokens=50)
+    _ = wrapper.generate(
+        prompt=f"Explain {SECRET_PROMPT_TOKEN}",
+        moral_value=0.7,
+        max_tokens=50
+    )
 
     # Verify neither the prompt secret nor the response secret leaked
     assert SECRET_PROMPT_TOKEN not in caplog.text
@@ -155,7 +171,9 @@ def test_aphasia_logs_do_not_leak_even_with_disabled_detection(caplog):
     )
 
     _ = wrapper.generate(
-        prompt=f"Secret query: {SECRET_PROMPT_TOKEN}", moral_value=0.7, max_tokens=50
+        prompt=f"Secret query: {SECRET_PROMPT_TOKEN}",
+        moral_value=0.7,
+        max_tokens=50
     )
 
     # When detection is disabled, there should be no aphasia logs at all
@@ -188,7 +206,11 @@ def test_multiple_generations_do_not_leak_any_secrets(caplog):
     ]
 
     for secret in secrets:
-        _ = wrapper.generate(prompt=f"Query about {secret}", moral_value=0.7, max_tokens=50)
+        _ = wrapper.generate(
+            prompt=f"Query about {secret}",
+            moral_value=0.7,
+            max_tokens=50
+        )
 
     # Verify none of the secrets leaked
     for secret in secrets:

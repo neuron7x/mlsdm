@@ -231,7 +231,8 @@ class TestNeuroCognitiveEnginePerformance:
             concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor,
         ):
             futures = [
-                executor.submit(engine.generate, f"Prompt {i}", moral_value=0.0) for i in range(3)
+                executor.submit(engine.generate, f"Prompt {i}", moral_value=0.0)
+                for i in range(3)
             ]
             results = [f.result() for f in futures]
 
@@ -356,7 +357,10 @@ class TestNeuroCognitiveEngineIntegration:
 class TestNeuroCognitiveEngineFSLGSIntegration:
     """FSLGS-specific integration tests."""
 
-    @pytest.mark.skipif("fslgs" not in dir(), reason="FSLGS not available in this environment")
+    @pytest.mark.skipif(
+        "fslgs" not in dir(),
+        reason="FSLGS not available in this environment"
+    )
     def test_fslgs_grammar_precheck(self):
         """FSLGS grammar pre-check працює коректно."""
         llm_mock = Mock(return_value="Response")

@@ -25,7 +25,6 @@ import numpy as np
 # Mock Embedding and LLM Functions
 # ============================================================================
 
-
 def mock_embedding_fn(text: str) -> np.ndarray:
     """Mock embedding function."""
     seed = sum(ord(c) for c in text) % (2**32)
@@ -52,12 +51,13 @@ def mock_llm_generate(prompt: str, max_tokens: int = 100) -> str:
 # Baseline 1: Simple RAG (No Governance)
 # ============================================================================
 
-
 class SimpleRAG:
     """Simple RAG without governance or moral filtering."""
 
     def __init__(
-        self, llm_generate_fn: Callable[[str, int], str], embedding_fn: Callable[[str], np.ndarray]
+        self,
+        llm_generate_fn: Callable[[str, int], str],
+        embedding_fn: Callable[[str], np.ndarray]
     ):
         self.llm_generate_fn = llm_generate_fn
         self.embedding_fn = embedding_fn
@@ -74,7 +74,9 @@ class SimpleRAG:
         # Simple retrieval: find most similar
         context = ""
         if self.memory:
-            similarities = [np.dot(query_vec, mem_vec) for mem_vec, _ in self.memory]
+            similarities = [
+                np.dot(query_vec, mem_vec) for mem_vec, _ in self.memory
+            ]
             if similarities:
                 best_idx = np.argmax(similarities)
                 context = self.memory[best_idx][1]
@@ -94,7 +96,7 @@ class SimpleRAG:
             "response": response,
             "latency_ms": latency,
             "filtered": False,  # No filtering
-            "context_used": len(context) > 0,
+            "context_used": len(context) > 0
         }
 
 
@@ -102,12 +104,13 @@ class SimpleRAG:
 # Baseline 2: Vector DB Only
 # ============================================================================
 
-
 class VectorDBOnly:
     """Vector database only, no cognitive features."""
 
     def __init__(
-        self, llm_generate_fn: Callable[[str, int], str], embedding_fn: Callable[[str], np.ndarray]
+        self,
+        llm_generate_fn: Callable[[str, int], str],
+        embedding_fn: Callable[[str], np.ndarray]
     ):
         self.llm_generate_fn = llm_generate_fn
         self.embedding_fn = embedding_fn
@@ -150,7 +153,7 @@ class VectorDBOnly:
             "response": response,
             "latency_ms": latency,
             "filtered": False,
-            "context_used": len(context) > 0,
+            "context_used": len(context) > 0
         }
 
 
@@ -158,12 +161,13 @@ class VectorDBOnly:
 # Baseline 3: Stateless Mode
 # ============================================================================
 
-
 class StatelessMode:
     """Stateless mode with no memory."""
 
     def __init__(
-        self, llm_generate_fn: Callable[[str, int], str], embedding_fn: Callable[[str], np.ndarray]
+        self,
+        llm_generate_fn: Callable[[str, int], str],
+        embedding_fn: Callable[[str], np.ndarray]
     ):
         self.llm_generate_fn = llm_generate_fn
         self.embedding_fn = embedding_fn
@@ -181,7 +185,7 @@ class StatelessMode:
             "response": response,
             "latency_ms": latency,
             "filtered": False,
-            "context_used": False,
+            "context_used": False
         }
 
 
@@ -189,12 +193,13 @@ class StatelessMode:
 # Full MLSDM System
 # ============================================================================
 
-
 class FullMLSDM:
     """Full MLSDM system with all governance features."""
 
     def __init__(
-        self, llm_generate_fn: Callable[[str, int], str], embedding_fn: Callable[[str], np.ndarray]
+        self,
+        llm_generate_fn: Callable[[str, int], str],
+        embedding_fn: Callable[[str], np.ndarray]
     ):
         # Import here to ensure baseline classes are defined first
         # and to avoid importing mlsdm when comparing non-MLSDM baselines only
@@ -205,12 +210,10 @@ class FullMLSDM:
             embedding_fn=embedding_fn,
             dim=384,
             wake_duration=100,  # Long wake for benchmark
-            initial_moral_threshold=0.50,
+            initial_moral_threshold=0.50
         )
 
-    def generate(
-        self, prompt: str, moral_value: float = 0.9, max_tokens: int = 100
-    ) -> dict[str, Any]:
+    def generate(self, prompt: str, moral_value: float = 0.9, max_tokens: int = 100) -> dict[str, Any]:
         """Generate with full governance."""
         start = time.time()
 
@@ -222,14 +225,13 @@ class FullMLSDM:
             "response": result.get("response", ""),
             "latency_ms": latency,
             "filtered": not result["accepted"],
-            "context_used": result.get("context_items", 0) > 0,
+            "context_used": result.get("context_items", 0) > 0
         }
 
 
 # ============================================================================
 # Benchmark Suite
 # ============================================================================
-
 
 class BenchmarkSuite:
     """Comprehensive benchmark suite."""
@@ -244,9 +246,9 @@ class BenchmarkSuite:
 
     def run_latency_benchmark(self, num_requests: int = 100) -> None:
         """Benchmark latency for all baselines."""
-        print("\n" + "=" * 80)
+        print("\n" + "="*80)
         print("LATENCY BENCHMARK")
-        print("=" * 80)
+        print("="*80)
 
         test_prompts = [
             "Tell me about artificial intelligence",
@@ -268,7 +270,7 @@ class BenchmarkSuite:
 
                 try:
                     # Handle different baseline interfaces
-                    if hasattr(baseline, "generate"):
+                    if hasattr(baseline, 'generate'):
                         if name == "Full MLSDM":
                             result = baseline.generate(prompt, moral_value=0.9)
                         else:
@@ -287,7 +289,7 @@ class BenchmarkSuite:
                     "mean": float(np.mean(latencies_arr)),
                     "std": float(np.std(latencies_arr)),
                     "min": float(np.min(latencies_arr)),
-                    "max": float(np.max(latencies_arr)),
+                    "max": float(np.max(latencies_arr))
                 }
 
                 if name not in self.results:
@@ -301,9 +303,9 @@ class BenchmarkSuite:
 
     def run_toxicity_benchmark(self) -> None:
         """Benchmark toxicity filtering effectiveness."""
-        print("\n" + "=" * 80)
+        print("\n" + "="*80)
         print("TOXICITY FILTERING BENCHMARK")
-        print("=" * 80)
+        print("="*80)
 
         # Test cases with varying toxicity
         test_cases = [
@@ -354,7 +356,7 @@ class BenchmarkSuite:
                 "correctly_filtered": correctly_filtered,
                 "precision": precision,
                 "recall": recall,
-                "total_cases": total_cases,
+                "total_cases": total_cases
             }
 
             if name not in self.results:
@@ -369,9 +371,9 @@ class BenchmarkSuite:
 
     def run_coherence_benchmark(self) -> None:
         """Benchmark response coherence."""
-        print("\n" + "=" * 80)
+        print("\n" + "="*80)
         print("COHERENCE BENCHMARK")
-        print("=" * 80)
+        print("="*80)
 
         # Conversation sequence to test coherence
         conversation = [
@@ -407,7 +409,7 @@ class BenchmarkSuite:
             metrics = {
                 "responses_generated": len(responses),
                 "non_empty_responses": has_context,
-                "response_rate": has_context / len(conversation),
+                "response_rate": has_context / len(conversation)
             }
 
             if name not in self.results:
@@ -422,16 +424,16 @@ class BenchmarkSuite:
         report = {
             "timestamp": datetime.now().isoformat(),
             "baselines": list(self.baselines.keys()),
-            "results": self.results,
+            "results": self.results
         }
 
         # Write JSON report
-        with open(output_path, "w") as f:
+        with open(output_path, 'w') as f:
             json.dump(report, f, indent=2)
 
-        print("\n" + "=" * 80)
+        print("\n" + "="*80)
         print("BASELINE COMPARISON SUMMARY")
-        print("=" * 80)
+        print("="*80)
 
         # Latency comparison
         print("\nLatency Comparison (P50/P95/P99 in ms):")
@@ -454,9 +456,9 @@ class BenchmarkSuite:
                 coh = self.results[name]["coherence"]
                 print(f"  {name:20s}: {coh['response_rate']:5.1%}")
 
-        print("\n" + "=" * 80)
+        print("\n" + "="*80)
         print(f"Report saved to: {output_path}")
-        print("=" * 80 + "\n")
+        print("="*80 + "\n")
 
     def generate_visualization(self, output_path: str = "baseline_comparison.png") -> None:
         """Generate visualization of comparison results."""
@@ -511,8 +513,8 @@ class BenchmarkSuite:
                 x = np.arange(len(names))
                 width = 0.35
 
-                ax.bar(x - width / 2, precision_values, width, label="Precision")
-                ax.bar(x + width / 2, recall_values, width, label="Recall")
+                ax.bar(x - width/2, precision_values, width, label="Precision")
+                ax.bar(x + width/2, recall_values, width, label="Recall")
 
                 ax.set_ylabel("Percentage (%)")
                 ax.set_title("Toxicity Filtering")
@@ -542,7 +544,7 @@ class BenchmarkSuite:
                 ax.set_xticklabels(names, fontsize=8)
 
             plt.tight_layout()
-            plt.savefig(output_path, dpi=150, bbox_inches="tight")
+            plt.savefig(output_path, dpi=150, bbox_inches='tight')
             print(f"\nVisualization saved to: {output_path}")
 
         except ImportError:
@@ -553,25 +555,36 @@ class BenchmarkSuite:
 # Main Execution
 # ============================================================================
 
-
 def run_baseline_comparison() -> None:
     """Run complete baseline comparison."""
-    print("\n" + "=" * 80)
+    print("\n" + "="*80)
     print("MLSDM BASELINE COMPARISON")
-    print("=" * 80)
+    print("="*80)
     print("\nInitializing baselines...")
 
     # Create benchmark suite
     suite = BenchmarkSuite()
 
     # Register baselines
-    suite.register_baseline("Simple RAG", SimpleRAG(mock_llm_generate, mock_embedding_fn))
+    suite.register_baseline(
+        "Simple RAG",
+        SimpleRAG(mock_llm_generate, mock_embedding_fn)
+    )
 
-    suite.register_baseline("Vector DB Only", VectorDBOnly(mock_llm_generate, mock_embedding_fn))
+    suite.register_baseline(
+        "Vector DB Only",
+        VectorDBOnly(mock_llm_generate, mock_embedding_fn)
+    )
 
-    suite.register_baseline("Stateless Mode", StatelessMode(mock_llm_generate, mock_embedding_fn))
+    suite.register_baseline(
+        "Stateless Mode",
+        StatelessMode(mock_llm_generate, mock_embedding_fn)
+    )
 
-    suite.register_baseline("Full MLSDM", FullMLSDM(mock_llm_generate, mock_embedding_fn))
+    suite.register_baseline(
+        "Full MLSDM",
+        FullMLSDM(mock_llm_generate, mock_embedding_fn)
+    )
 
     print("Baselines registered:")
     for name in suite.baselines:

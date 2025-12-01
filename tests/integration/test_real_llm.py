@@ -21,7 +21,6 @@ from mlsdm.core.llm_wrapper import LLMWrapper
 # Mock Embedding Function
 # ============================================================================
 
-
 def mock_embedding_fn(text: str) -> np.ndarray:
     """Mock embedding function that creates deterministic embeddings."""
     seed = sum(ord(c) for c in text) % (2**32)
@@ -34,7 +33,6 @@ def mock_embedding_fn(text: str) -> np.ndarray:
 # ============================================================================
 # OpenAI API Tests
 # ============================================================================
-
 
 class TestOpenAIIntegration:
     """Test integration with OpenAI API."""
@@ -55,11 +53,15 @@ class TestOpenAIIntegration:
             response = openai_mock.chat.completions.create(
                 model="gpt-3.5-turbo",
                 messages=[{"role": "user", "content": prompt}],
-                max_tokens=max_tokens,
+                max_tokens=max_tokens
             )
             return response.choices[0].message.content
 
-        wrapper = LLMWrapper(llm_generate_fn=llm_generate, embedding_fn=mock_embedding_fn, dim=384)
+        wrapper = LLMWrapper(
+            llm_generate_fn=llm_generate,
+            embedding_fn=mock_embedding_fn,
+            dim=384
+        )
 
         result = wrapper.generate("Hello, how are you?", moral_value=0.9)
 
@@ -72,7 +74,6 @@ class TestOpenAIIntegration:
 
         # Simulate rate limit error with eventual success
         call_count = 0
-
         def llm_generate_with_retry(prompt: str, max_tokens: int = 100) -> str:
             nonlocal call_count
             call_count += 1
@@ -82,7 +83,9 @@ class TestOpenAIIntegration:
             return "Success after retry"
 
         wrapper = LLMWrapper(
-            llm_generate_fn=llm_generate_with_retry, embedding_fn=mock_embedding_fn, dim=384
+            llm_generate_fn=llm_generate_with_retry,
+            embedding_fn=mock_embedding_fn,
+            dim=384
         )
 
         # Should handle rate limit with retries
@@ -103,7 +106,7 @@ class TestOpenAIIntegration:
             llm_generate_fn=llm_generate_timeout,
             embedding_fn=mock_embedding_fn,
             dim=384,
-            wake_duration=10,
+            wake_duration=10
         )
 
         # Wrapper catches timeout and returns error response
@@ -120,7 +123,9 @@ class TestOpenAIIntegration:
             raise Exception("Authentication failed: Invalid API key")
 
         wrapper = LLMWrapper(
-            llm_generate_fn=llm_generate_auth_error, embedding_fn=mock_embedding_fn, dim=384
+            llm_generate_fn=llm_generate_auth_error,
+            embedding_fn=mock_embedding_fn,
+            dim=384
         )
 
         # Wrapper catches auth errors and returns error response
@@ -133,7 +138,6 @@ class TestOpenAIIntegration:
 # ============================================================================
 # Local Model Tests (Ollama/llama.cpp)
 # ============================================================================
-
 
 class TestLocalModelIntegration:
     """Test integration with local models."""
@@ -151,7 +155,9 @@ class TestLocalModelIntegration:
             return "I understand your question."
 
         wrapper = LLMWrapper(
-            llm_generate_fn=llm_generate_local, embedding_fn=mock_embedding_fn, dim=384
+            llm_generate_fn=llm_generate_local,
+            embedding_fn=mock_embedding_fn,
+            dim=384
         )
 
         result = wrapper.generate("Hello, tell me about Python", moral_value=0.9)
@@ -175,7 +181,7 @@ class TestLocalModelIntegration:
             llm_generate_fn=llm_generate_with_latency,
             embedding_fn=mock_embedding_fn,
             dim=384,
-            wake_duration=20,
+            wake_duration=20
         )
 
         # Generate multiple requests
@@ -198,7 +204,7 @@ class TestLocalModelIntegration:
             llm_generate_fn=llm_generate_local,
             embedding_fn=mock_embedding_fn,
             capacity=100,
-            wake_duration=50,
+            wake_duration=50
         )
 
         # Process many requests
@@ -215,7 +221,6 @@ class TestLocalModelIntegration:
 # ============================================================================
 # Anthropic Claude API Tests
 # ============================================================================
-
 
 class TestAnthropicIntegration:
     """Test integration with Anthropic Claude API."""
@@ -236,11 +241,15 @@ class TestAnthropicIntegration:
             response = claude_mock.messages.create(
                 model="claude-3-sonnet-20240229",
                 max_tokens=max_tokens,
-                messages=[{"role": "user", "content": prompt}],
+                messages=[{"role": "user", "content": prompt}]
             )
             return response.content[0].text
 
-        wrapper = LLMWrapper(llm_generate_fn=llm_generate, embedding_fn=mock_embedding_fn, dim=384)
+        wrapper = LLMWrapper(
+            llm_generate_fn=llm_generate,
+            embedding_fn=mock_embedding_fn,
+            dim=384
+        )
 
         result = wrapper.generate("Hello Claude", moral_value=0.9)
 
@@ -252,7 +261,6 @@ class TestAnthropicIntegration:
         """Test handling of Claude API overload errors."""
 
         call_count = 0
-
         def llm_generate_with_overload(prompt: str, max_tokens: int = 100) -> str:
             nonlocal call_count
             call_count += 1
@@ -262,7 +270,9 @@ class TestAnthropicIntegration:
             return "Success after overload"
 
         wrapper = LLMWrapper(
-            llm_generate_fn=llm_generate_with_overload, embedding_fn=mock_embedding_fn, dim=384
+            llm_generate_fn=llm_generate_with_overload,
+            embedding_fn=mock_embedding_fn,
+            dim=384
         )
 
         result = wrapper.generate("Test prompt", moral_value=0.9)
@@ -286,7 +296,9 @@ class TestAnthropicIntegration:
             return full_response
 
         wrapper = LLMWrapper(
-            llm_generate_fn=llm_generate_streaming, embedding_fn=mock_embedding_fn, dim=384
+            llm_generate_fn=llm_generate_streaming,
+            embedding_fn=mock_embedding_fn,
+            dim=384
         )
 
         result = wrapper.generate("Test streaming", moral_value=0.9)
@@ -298,7 +310,6 @@ class TestAnthropicIntegration:
 # ============================================================================
 # Latency Distribution Tests
 # ============================================================================
-
 
 class TestLatencyDistribution:
     """Test and measure latency distributions."""
@@ -318,7 +329,7 @@ class TestLatencyDistribution:
             llm_generate_fn=llm_generate_timed,
             embedding_fn=mock_embedding_fn,
             dim=384,
-            wake_duration=50,
+            wake_duration=50
         )
 
         # Collect latency data
@@ -337,9 +348,9 @@ class TestLatencyDistribution:
         p99 = np.percentile(latencies_arr, 99)
 
         print("\nLatency Distribution:")
-        print(f"  P50: {p50 * 1000:.2f}ms")
-        print(f"  P95: {p95 * 1000:.2f}ms")
-        print(f"  P99: {p99 * 1000:.2f}ms")
+        print(f"  P50: {p50*1000:.2f}ms")
+        print(f"  P95: {p95*1000:.2f}ms")
+        print(f"  P99: {p99*1000:.2f}ms")
 
         # Verify reasonable latency
         assert p50 < 1.0  # P50 should be under 1s
@@ -363,7 +374,7 @@ class TestLatencyDistribution:
             llm_generate_fn=llm_generate_variable,
             embedding_fn=mock_embedding_fn,
             dim=384,
-            wake_duration=100,
+            wake_duration=100
         )
 
         # Process requests
@@ -385,7 +396,6 @@ class TestLatencyDistribution:
 # ============================================================================
 # Moral Filter with Toxic Inputs
 # ============================================================================
-
 
 class TestMoralFilterToxicity:
     """Test moral filter with real toxic inputs."""
@@ -412,7 +422,7 @@ class TestMoralFilterToxicity:
             llm_generate_fn=llm_generate,
             embedding_fn=mock_embedding_fn,
             initial_moral_threshold=0.50,
-            dim=384,
+            dim=384
         )
 
         toxic_samples = self.get_toxic_samples()
@@ -441,7 +451,7 @@ class TestMoralFilterToxicity:
             embedding_fn=mock_embedding_fn,
             initial_moral_threshold=0.50,
             dim=384,
-            wake_duration=100,
+            wake_duration=100
         )
 
         # Feed sequence of varying toxicity
@@ -471,7 +481,7 @@ class TestMoralFilterToxicity:
             embedding_fn=mock_embedding_fn,
             initial_moral_threshold=0.50,
             dim=384,
-            wake_duration=100,
+            wake_duration=100
         )
 
         toxic_samples = self.get_toxic_samples()
@@ -496,7 +506,7 @@ class TestMoralFilterToxicity:
         print("\nMoral Filter Statistics:")
         print(f"  Accepted: {accepted_count}")
         print(f"  Rejected: {rejected_count}")
-        print(f"  Rejection Rate: {rejected_count / len(toxic_samples) * 100:.1f}%")
+        print(f"  Rejection Rate: {rejected_count/len(toxic_samples)*100:.1f}%")
         print(f"  Final Threshold: {state['moral_threshold']:.3f}")
 
 
