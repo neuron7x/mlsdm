@@ -632,6 +632,12 @@ class ErrorDetail(BaseModel):
 
 ---
 
+## Related Contracts
+
+- **[API_event.md](API_event.md)** - Detailed contract for `/v1/process_event/` and `/v1/state/` endpoints with strict Pydantic models and standardized error handling.
+
+---
+
 ## Document Maintenance
 
 This API contract should be updated when:

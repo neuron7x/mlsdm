@@ -15,6 +15,8 @@ from pydantic import BaseModel, Field
 from mlsdm.api import health
 from mlsdm.api.lifecycle import cleanup_memory_manager, get_lifecycle_manager
 from mlsdm.api.middleware import RequestIDMiddleware, SecurityHeadersMiddleware
+from mlsdm.contracts.errors import ApiError, ApiErrorResponse
+from mlsdm.contracts.event_models import EventInput, StateResponse
 from mlsdm.core.memory_manager import MemoryManager
 from mlsdm.engine import NeuroEngineConfig, build_neuro_engine_from_env
 from mlsdm.observability.tracing import (
@@ -155,20 +157,8 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> str:
     return token
 
 
-class EventInput(BaseModel):
-    event_vector: list[float]
-    moral_value: float
-
-
-class StateResponse(BaseModel):
-    L1_norm: float
-    L2_norm: float
-    L3_norm: float
-    current_phase: str
-    latent_events_count: int
-    accepted_events_count: int
-    total_events_processed: int
-    moral_filter_threshold: float
+# Note: EventInput and StateResponse are now imported from mlsdm.contracts.event_models
+# to ensure consistent validation and documentation across the codebase.
 
 
 # Request/Response models for /generate endpoint
@@ -319,28 +309,79 @@ class ErrorResponse(BaseModel):
     error: ErrorDetail
 
 
-@app.post("/v1/process_event/", response_model=StateResponse)
+def _build_api_error_response(
+    status_code: int,
+    code: str,
+    message: str,
+    details: dict[str, Any] | None = None,
+) -> JSONResponse:
+    """Build a standardized API error response.
+
+    Args:
+        status_code: HTTP status code.
+        code: Machine-readable error code.
+        message: Human-readable error message.
+        details: Optional additional error context.
+
+    Returns:
+        JSONResponse with ApiErrorResponse structure.
+    """
+    error = ApiError(code=code, message=message, details=details)
+    response = ApiErrorResponse(error=error)
+    return JSONResponse(
+        status_code=status_code,
+        content=response.model_dump(),
+    )
+
+
+@app.post(
+    "/v1/process_event/",
+    response_model=StateResponse,
+    responses={
+        400: {"model": ApiErrorResponse, "description": "Invalid input"},
+        429: {"model": ApiErrorResponse, "description": "Rate limit exceeded"},
+        500: {"model": ApiErrorResponse, "description": "Internal server error"},
+    },
+    tags=["Event Processing"],
+)
 async def process_event(
     event: EventInput,
     request: Request,
     user: str = Depends(get_current_user)
-) -> StateResponse:
-    """Process event with comprehensive security validation.
+) -> StateResponse | JSONResponse:
+    """Process a cognitive event with comprehensive security validation.
 
-    Implements rate limiting, input validation, and audit logging
-    as specified in SECURITY_POLICY.md.
+    This endpoint accepts an embedding vector and moral value, processes it through
+    the cognitive pipeline including moral filtering and memory updates.
+
+    CONTRACT: Request and response schemas are defined in mlsdm.contracts.event_models.
+
+    Args:
+        event: EventInput with event_vector and moral_value.
+        request: FastAPI request object.
+        user: Authenticated user token.
+
+    Returns:
+        StateResponse with current system state including memory norms and phase.
+
+    Raises:
+        400: Invalid input (dimension mismatch, moral value out of range).
+        429: Rate limit exceeded.
+        500: Internal server error.
     """
     client_id = _get_client_id(request)
 
     # Rate limiting check (can be disabled for testing)
     if _rate_limiting_enabled and not _rate_limiter.is_allowed(client_id):
         security_logger.log_rate_limit_exceeded(client_id=client_id)
-        raise HTTPException(
-            status_code=429,
-            detail="Rate limit exceeded. Maximum 5 requests per second."
+        return _build_api_error_response(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            code="rate_limit_exceeded",
+            message="Rate limit exceeded. Maximum 5 requests per second.",
+            details={"client_id": client_id},
         )
 
-    # Validate moral value
+    # Validate moral value (Pydantic already validates [0.0, 1.0] range)
     try:
         moral_value = _validator.validate_moral_value(event.moral_value)
     except ValueError as e:
@@ -348,7 +389,33 @@ async def process_event(
             client_id=client_id,
             error_message=str(e)
         )
-        raise HTTPException(status_code=400, detail=str(e)) from e
+        return _build_api_error_response(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            code="moral_value_invalid",
+            message=str(e),
+            details={"field": "moral_value", "value": event.moral_value},
+        )
+
+    # Validate vector dimension
+    if len(event.event_vector) != _manager.dimension:
+        error_msg = (
+            f"Vector dimension mismatch: expected {_manager.dimension}, "
+            f"got {len(event.event_vector)}"
+        )
+        security_logger.log_invalid_input(
+            client_id=client_id,
+            error_message=error_msg
+        )
+        return _build_api_error_response(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            code="dimension_mismatch",
+            message=error_msg,
+            details={
+                "field": "event_vector",
+                "expected_dimension": _manager.dimension,
+                "actual_dimension": len(event.event_vector),
+            },
+        )
 
     # Validate and convert vector
     try:
@@ -362,42 +429,98 @@ async def process_event(
             client_id=client_id,
             error_message=str(e)
         )
-        raise HTTPException(status_code=400, detail=str(e)) from e
+        return _build_api_error_response(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            code="vector_validation_failed",
+            message=str(e),
+            details={"field": "event_vector"},
+        )
 
     # Process the event
-    await _manager.process_event(vec, moral_value)
+    try:
+        await _manager.process_event(vec, moral_value)
+    except Exception:
+        logger.exception("Error processing event")
+        return _build_api_error_response(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            code="processing_error",
+            message="An error occurred while processing the event.",
+            details=None,  # Don't expose internal error details
+        )
 
     return await get_state(request, user)
 
 
-@app.get("/v1/state/", response_model=StateResponse)
+@app.get(
+    "/v1/state/",
+    response_model=StateResponse,
+    responses={
+        429: {"model": ApiErrorResponse, "description": "Rate limit exceeded"},
+        500: {"model": ApiErrorResponse, "description": "Internal server error"},
+    },
+    tags=["Event Processing"],
+)
 async def get_state(
     request: Request,
     user: str = Depends(get_current_user)
-) -> StateResponse:
-    """Get system state with rate limiting."""
+) -> StateResponse | JSONResponse:
+    """Get the current system state.
+
+    Returns a snapshot of the cognitive system state including memory layer norms,
+    current phase, and event processing statistics.
+
+    CONTRACT: Response schema is defined in mlsdm.contracts.event_models.StateResponse.
+
+    Args:
+        request: FastAPI request object.
+        user: Authenticated user token.
+
+    Returns:
+        StateResponse with current system state.
+
+    Raises:
+        429: Rate limit exceeded.
+        500: Internal server error.
+    """
     client_id = _get_client_id(request)
 
     # Rate limiting check (can be disabled for testing)
     if _rate_limiting_enabled and not _rate_limiter.is_allowed(client_id):
         security_logger.log_rate_limit_exceeded(client_id=client_id)
-        raise HTTPException(
-            status_code=429,
-            detail="Rate limit exceeded. Maximum 5 requests per second."
+        return _build_api_error_response(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            code="rate_limit_exceeded",
+            message="Rate limit exceeded. Maximum 5 requests per second.",
+            details={"client_id": client_id},
         )
 
-    L1, L2, L3 = _manager.memory.get_state()
-    metrics = _manager.metrics_collector.get_metrics()
-    return StateResponse(
-        L1_norm=float(np.linalg.norm(L1)),
-        L2_norm=float(np.linalg.norm(L2)),
-        L3_norm=float(np.linalg.norm(L3)),
-        current_phase=_manager.rhythm.get_current_phase(),
-        latent_events_count=int(metrics["latent_events_count"]),
-        accepted_events_count=int(metrics["accepted_events_count"]),
-        total_events_processed=int(metrics["total_events_processed"]),
-        moral_filter_threshold=float(_manager.filter.threshold),
-    )
+    try:
+        L1, L2, L3 = _manager.memory.get_state()
+        metrics = _manager.metrics_collector.get_metrics()
+        current_phase = _manager.rhythm.get_current_phase()
+
+        # Validate phase matches contract (Literal["wake", "sleep"])
+        if current_phase not in ("wake", "sleep"):
+            current_phase = "wake"  # Safe default
+
+        return StateResponse(
+            L1_norm=float(np.linalg.norm(L1)),
+            L2_norm=float(np.linalg.norm(L2)),
+            L3_norm=float(np.linalg.norm(L3)),
+            current_phase=current_phase,
+            latent_events_count=int(metrics["latent_events_count"]),
+            accepted_events_count=int(metrics["accepted_events_count"]),
+            total_events_processed=int(metrics["total_events_processed"]),
+            moral_filter_threshold=float(_manager.filter.threshold),
+        )
+    except Exception:
+        logger.exception("Error getting system state")
+        return _build_api_error_response(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            code="state_retrieval_error",
+            message="An error occurred while retrieving system state.",
+            details=None,
+        )
 
 
 @app.post(
