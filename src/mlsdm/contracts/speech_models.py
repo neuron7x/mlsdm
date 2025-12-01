@@ -226,22 +226,56 @@ class PipelineMetadata(BaseModel):
 
         Returns:
             PipelineMetadata with converted step results.
+
+        Note:
+            Steps with missing 'status' field are treated as errors with
+            status='error' and a note in error_message.
         """
         steps: list[PipelineStepResult] = []
         successful = 0
         failed = 0
 
         for step_dict in history:
-            status = str(step_dict.get("status", "ok"))
-            step = PipelineStepResult(
-                name=str(step_dict.get("name", "unknown")),
-                status="ok" if status == "ok" else "error",
-                raw_text=step_dict.get("raw_text") if status == "ok" else None,  # type: ignore[arg-type]
-                final_text=step_dict.get("final_text") if status == "ok" else None,  # type: ignore[arg-type]
-                metadata=step_dict.get("metadata") if status == "ok" else None,  # type: ignore[arg-type]
-                error_type=step_dict.get("error_type") if status == "error" else None,  # type: ignore[arg-type]
-                error_message=step_dict.get("error_message") if status == "error" else None,  # type: ignore[arg-type]
-            )
+            raw_status = step_dict.get("status")
+            # Explicit handling for missing status - treat as error
+            if raw_status is None:
+                status = "error"
+                error_msg = "missing status field"
+            else:
+                status = str(raw_status)
+                error_msg = None
+
+            # Safely get string values from dict
+            def _get_str(d: dict[str, object], key: str) -> str | None:
+                val = d.get(key)
+                return str(val) if val is not None else None
+
+            # Safely get dict values
+            def _get_dict(d: dict[str, object], key: str) -> dict[str, object] | None:
+                val = d.get(key)
+                return dict(val) if isinstance(val, dict) else None
+
+            if status == "ok":
+                step = PipelineStepResult(
+                    name=str(step_dict.get("name", "unknown")),
+                    status="ok",
+                    raw_text=_get_str(step_dict, "raw_text"),
+                    final_text=_get_str(step_dict, "final_text"),
+                    metadata=_get_dict(step_dict, "metadata"),
+                    error_type=None,
+                    error_message=None,
+                )
+            else:
+                step = PipelineStepResult(
+                    name=str(step_dict.get("name", "unknown")),
+                    status="error",
+                    raw_text=None,
+                    final_text=None,
+                    metadata=None,
+                    error_type=_get_str(step_dict, "error_type"),
+                    error_message=error_msg or _get_str(step_dict, "error_message"),
+                )
+
             steps.append(step)
             if step.is_success:
                 successful += 1

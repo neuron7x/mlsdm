@@ -241,6 +241,20 @@ class TestPipelineMetadata:
         assert meta.aphasia_report.is_aphasic is True
         assert meta.aphasia_report.severity == 0.5
 
+    def test_metadata_from_history_missing_status(self) -> None:
+        """PipelineMetadata.from_history treats missing status as error."""
+        history = [
+            {"name": "missing_status_step"},  # No status field
+        ]
+        meta = PipelineMetadata.from_history(history)
+
+        assert meta.total_steps == 1
+        assert meta.successful_steps == 0
+        assert meta.failed_steps == 1
+        assert meta.pipeline[0].name == "missing_status_step"
+        assert meta.pipeline[0].status == "error"
+        assert meta.pipeline[0].error_message == "missing status field"
+
 
 class TestAphasiaMetadata:
     """Test AphasiaMetadata model contract (API response format)."""
