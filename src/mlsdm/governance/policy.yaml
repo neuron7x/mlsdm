@@ -1,0 +1,246 @@
+# MLSDM Governance Policy Configuration
+# Version: 1.0.0
+# Last Updated: December 2025
+# Owner: Governance & Cognitive Safety Team
+
+# =============================================================================
+# OPERATIONAL MODES
+# =============================================================================
+# Each mode defines different strictness levels for content governance.
+# Mode selection is based on context signals (risk level, user type, content sensitivity).
+
+modes:
+  normal:
+    description: "Standard operating mode for general requests"
+    moral_threshold: 0.50
+    pii_check: true
+    toxicity_check: true
+    market_risk_check: false
+    uncertainty_escalation_threshold: 0.8
+    allow_modification: true
+    log_level: "info"
+
+  cautious:
+    description: "Elevated scrutiny for sensitive contexts"
+    moral_threshold: 0.70
+    pii_check: true
+    toxicity_check: true
+    market_risk_check: true
+    uncertainty_escalation_threshold: 0.6
+    allow_modification: true
+    log_level: "warning"
+
+  emergency:
+    description: "Maximum safety mode - reject uncertain content"
+    moral_threshold: 0.90
+    pii_check: true
+    toxicity_check: true
+    market_risk_check: true
+    uncertainty_escalation_threshold: 0.3
+    allow_modification: false
+    log_level: "error"
+
+# =============================================================================
+# DEFAULT MODE SELECTION
+# =============================================================================
+defaults:
+  mode: "normal"
+  fallback_action: "block"
+
+# =============================================================================
+# MODE SELECTION RULES
+# =============================================================================
+# Rules to automatically select mode based on context signals.
+
+mode_selection:
+  - condition:
+      context_key: "risk_level"
+      operator: "gte"
+      value: 0.8
+    mode: "emergency"
+
+  - condition:
+      context_key: "risk_level"
+      operator: "gte"
+      value: 0.5
+    mode: "cautious"
+
+  - condition:
+      context_key: "sensitive_domain"
+      operator: "eq"
+      value: true
+    mode: "cautious"
+
+  - condition:
+      context_key: "user_type"
+      operator: "eq"
+      value: "anonymous"
+    mode: "cautious"
+
+# =============================================================================
+# GOVERNANCE RULES
+# =============================================================================
+# Each rule specifies trigger conditions and corresponding actions.
+# Rules are evaluated in order; first matching rule is applied.
+
+rules:
+  # ---------------------------------------------------------------------------
+  # R001: PII Detection - Block requests containing personal identifiable info
+  # ---------------------------------------------------------------------------
+  - id: "R001"
+    description: "Block content containing PII patterns"
+    priority: 100
+    enabled: true
+    trigger:
+      type: "pattern"
+      signals:
+        - "pii_detected"
+      patterns:
+        - "email"
+        - "phone"
+        - "ssn"
+        - "credit_card"
+    action: "block"
+    log: "error"
+    response_message: "Content blocked: Personal information detected"
+
+  # ---------------------------------------------------------------------------
+  # R002: High Toxicity - Block toxic content
+  # ---------------------------------------------------------------------------
+  - id: "R002"
+    description: "Block highly toxic content"
+    priority: 90
+    enabled: true
+    trigger:
+      type: "threshold"
+      signal: "toxicity_score"
+      operator: "gte"
+      value: 0.8
+    action: "block"
+    log: "error"
+    response_message: "Content blocked: Toxicity threshold exceeded"
+
+  # ---------------------------------------------------------------------------
+  # R003: Moderate Toxicity - Modify response
+  # ---------------------------------------------------------------------------
+  - id: "R003"
+    description: "Modify moderately toxic content"
+    priority: 80
+    enabled: true
+    trigger:
+      type: "threshold"
+      signal: "toxicity_score"
+      operator: "gte"
+      value: 0.5
+    action: "modify"
+    log: "warning"
+    modification:
+      type: "append_disclaimer"
+      disclaimer: "Note: This response has been modified for safety."
+
+  # ---------------------------------------------------------------------------
+  # R004: High Uncertainty - Escalate for review
+  # ---------------------------------------------------------------------------
+  - id: "R004"
+    description: "Escalate high-uncertainty responses"
+    priority: 70
+    enabled: true
+    trigger:
+      type: "threshold"
+      signal: "uncertainty_score"
+      operator: "gte"
+      value: 0.7
+    action: "escalate"
+    log: "warning"
+    escalation:
+      channel: "review_queue"
+      priority: "high"
+
+  # ---------------------------------------------------------------------------
+  # R005: Market Risk Content - Block in cautious/emergency modes
+  # ---------------------------------------------------------------------------
+  - id: "R005"
+    description: "Block market-sensitive content in elevated modes"
+    priority: 60
+    enabled: true
+    trigger:
+      type: "compound"
+      conditions:
+        - signal: "market_risk_detected"
+          operator: "eq"
+          value: true
+        - context_key: "mode"
+          operator: "in"
+          value: ["cautious", "emergency"]
+    action: "block"
+    log: "warning"
+    response_message: "Content blocked: Market-sensitive information"
+
+  # ---------------------------------------------------------------------------
+  # R006: Low Moral Score - Block below threshold
+  # ---------------------------------------------------------------------------
+  - id: "R006"
+    description: "Block content below moral threshold"
+    priority: 50
+    enabled: true
+    trigger:
+      type: "threshold"
+      signal: "moral_score"
+      operator: "lt"
+      mode_threshold: true  # Use mode's moral_threshold
+    action: "block"
+    log: "warning"
+    response_message: "Content blocked: Below moral threshold"
+
+  # ---------------------------------------------------------------------------
+  # R007: Default Allow - Pass through safe content
+  # ---------------------------------------------------------------------------
+  - id: "R007"
+    description: "Allow content that passes all checks"
+    priority: 0
+    enabled: true
+    trigger:
+      type: "default"
+    action: "allow"
+    log: "info"
+
+# =============================================================================
+# SIGNAL EXTRACTORS
+# =============================================================================
+# Configuration for extracting governance signals from input/output payloads.
+
+signals:
+  toxicity_score:
+    source: "output"
+    path: "metadata.toxicity"
+    default: 0.0
+
+  moral_score:
+    source: "input"
+    path: "moral_value"
+    default: 0.5
+
+  uncertainty_score:
+    source: "output"
+    path: "metadata.uncertainty"
+    default: 0.0
+
+  pii_detected:
+    source: "computed"
+    extractor: "pii_pattern_matcher"
+
+  market_risk_detected:
+    source: "output"
+    path: "metadata.market_risk"
+    default: false
+
+# =============================================================================
+# LOGGING & AUDIT
+# =============================================================================
+logging:
+  include_decision: true
+  include_rule_id: true
+  include_mode: true
+  include_reason: true
+  redact_content: true
+  audit_retention_days: 90

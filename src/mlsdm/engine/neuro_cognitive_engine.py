@@ -33,6 +33,13 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Literal
 
 from mlsdm.core.llm_wrapper import LLMWrapper
+from mlsdm.governance import (
+    GovernanceContext,
+    GovernanceDecision,
+    apply_decision,
+    evaluate as governance_evaluate,
+    record_decision as record_governance_decision,
+)
 from mlsdm.observability.tracing import get_tracer_manager
 from mlsdm.utils.bulkhead import (
     Bulkhead,
@@ -65,6 +72,11 @@ class MLSDMRejectionError(Exception):
 
 class EmptyResponseError(Exception):
     """LLM/MLSDM повернули порожню відповідь."""
+    pass
+
+
+class GovernanceRejectionError(Exception):
+    """Governance enforcer відхилив запит (PII, toxicity, etc.)."""
     pass
 
 
@@ -164,6 +176,12 @@ class NeuroEngineConfig:
     bulkhead_embedding_limit: int = 20  # Max concurrent embedding operations
     bulkhead_memory_limit: int = 50  # Max concurrent memory operations
     bulkhead_cognitive_limit: int = 100  # Max concurrent cognitive operations
+
+    # Governance Enforcer Settings
+    # Policy-based content governance (PII, toxicity, mode-based rules)
+    enable_governance: bool = True
+    governance_mode: str | None = None  # None = auto-select based on context
+    governance_risk_level: float = 0.0  # Default risk level (0.0-1.0)
 
 
 # ---------------------------------------------------------------------------
@@ -491,6 +509,16 @@ class NeuroCognitiveEngine:
                         pipeline_span.set_attribute("mlsdm.rejected_at", "pre_flight")
                         return rejection
 
+                # Step 4.5: PRE-FLIGHT governance check (PII, toxicity, policy rules)
+                with tracer_manager.start_span("engine.governance_precheck") as gov_pre_span:
+                    rejection = self._run_governance_precheck(
+                        prompt, moral_value, user_intent, timing, validation_steps
+                    )
+                    if rejection is not None:
+                        gov_pre_span.set_attribute("mlsdm.rejected", True)
+                        pipeline_span.set_attribute("mlsdm.rejected_at", "governance")
+                        return rejection
+
                 # Step 5: MAIN generation pipeline
                 self._runtime_moral_value = moral_value
                 self._runtime_context_top_k = context_top_k
@@ -512,6 +540,17 @@ class NeuroCognitiveEngine:
                         if rejection is not None:
                             post_span.set_attribute("mlsdm.rejected", True)
                             pipeline_span.set_attribute("mlsdm.rejected_at", "pre_moral")
+                            return rejection
+
+                    # Step 6.5: POST-generation governance check (output validation)
+                    with tracer_manager.start_span("engine.governance_postcheck") as gov_post_span:
+                        response_text, rejection = self._run_governance_postcheck(
+                            response_text, prompt, moral_value, user_intent,
+                            mlsdm_state, fslgs_result, timing, validation_steps
+                        )
+                        if rejection is not None:
+                            gov_post_span.set_attribute("mlsdm.rejected", True)
+                            pipeline_span.set_attribute("mlsdm.rejected_at", "governance")
                             return rejection
 
                 except MLSDMRejectionError as e:
@@ -762,6 +801,195 @@ class NeuroCognitiveEngine:
                 )
 
         return None
+
+    def _run_governance_precheck(
+        self,
+        prompt: str,
+        moral_value: float,
+        user_intent: str,
+        timing: dict[str, float],
+        validation_steps: list[dict[str, Any]],
+    ) -> dict[str, Any] | None:
+        """Run pre-flight governance check on the input.
+
+        Evaluates input against policy rules (PII, toxicity, etc.) before
+        LLM generation to fail fast on clearly problematic requests.
+
+        Returns:
+            Rejection response dict if check fails, None if passed.
+        """
+        if not self.config.enable_governance:
+            validation_steps.append({
+                "step": "governance_precheck",
+                "passed": True,
+                "skipped": True,
+                "reason": "governance_disabled",
+            })
+            return None
+
+        with TimingContext(timing, "governance_precheck"):
+            # Build governance context
+            context = GovernanceContext(
+                mode=self.config.governance_mode,
+                risk_level=self.config.governance_risk_level,
+                sensitive_domain=user_intent in ("medical", "financial", "legal"),
+                user_type="authenticated",
+            )
+
+            # Build input payload for governance evaluation
+            input_payload = {
+                "prompt": prompt,
+                "moral_value": moral_value,
+                "user_intent": user_intent,
+            }
+
+            # Evaluate governance rules on input (no output yet)
+            decision = governance_evaluate(input_payload, None, context)
+
+            # Record metrics
+            record_governance_decision(
+                decision.action,
+                decision.rule_id,
+                decision.mode,
+                decision.reason,
+            )
+
+            validation_steps.append({
+                "step": "governance_precheck",
+                "passed": decision.action in ("allow", "modify"),
+                "action": decision.action,
+                "rule_id": decision.rule_id,
+                "mode": decision.mode,
+            })
+
+            if decision.action == "block":
+                # Record metrics for rejection
+                if self._metrics is not None:
+                    self._metrics.increment_requests_total(
+                        provider_id=self._selected_provider_id,
+                        variant=self._selected_variant,
+                    )
+                    self._metrics.increment_rejections_total("governance_precheck")
+                    if "governance_precheck" in timing:
+                        self._metrics.record_latency_pre_flight(
+                            timing["governance_precheck"]
+                        )
+
+                return {
+                    "response": "",
+                    "governance": {"decision": decision.action, "rule_id": decision.rule_id},
+                    "mlsdm": {},
+                    "timing": timing,
+                    "validation_steps": validation_steps,
+                    "error": {
+                        "type": "governance_precheck",
+                        "action": decision.action,
+                        "rule_id": decision.rule_id,
+                        "reason": decision.reason,
+                    },
+                    "rejected_at": "pre_flight",
+                    "meta": self._build_meta(),
+                }
+
+        return None
+
+    def _run_governance_postcheck(
+        self,
+        response_text: str,
+        prompt: str,
+        moral_value: float,
+        user_intent: str,
+        mlsdm_state: dict[str, Any] | None,
+        fslgs_result: dict[str, Any] | None,
+        timing: dict[str, float],
+        validation_steps: list[dict[str, Any]],
+    ) -> tuple[str | None, dict[str, Any] | None]:
+        """Run post-generation governance check on the output.
+
+        Evaluates output against policy rules and applies decisions
+        (block, modify, escalate).
+
+        Returns:
+            Tuple of (response_text, rejection_response).
+            If rejection_response is not None, the request was blocked.
+            Otherwise, response_text may be modified based on governance decision.
+        """
+        if not self.config.enable_governance:
+            validation_steps.append({
+                "step": "governance_postcheck",
+                "passed": True,
+                "skipped": True,
+                "reason": "governance_disabled",
+            })
+            return response_text, None
+
+        with TimingContext(timing, "governance_postcheck"):
+            # Build governance context
+            context = GovernanceContext(
+                mode=self.config.governance_mode,
+                risk_level=self.config.governance_risk_level,
+                sensitive_domain=user_intent in ("medical", "financial", "legal"),
+                user_type="authenticated",
+            )
+
+            # Build payloads for governance evaluation
+            input_payload = {
+                "prompt": prompt,
+                "moral_value": moral_value,
+                "user_intent": user_intent,
+            }
+            output_payload = {
+                "response": response_text,
+                "metadata": mlsdm_state if mlsdm_state else {},
+            }
+
+            # Evaluate governance rules on output
+            decision = governance_evaluate(input_payload, output_payload, context)
+
+            # Record metrics
+            record_governance_decision(
+                decision.action,
+                decision.rule_id,
+                decision.mode,
+                decision.reason,
+            )
+
+            validation_steps.append({
+                "step": "governance_postcheck",
+                "passed": decision.action in ("allow", "modify", "escalate"),
+                "action": decision.action,
+                "rule_id": decision.rule_id,
+                "mode": decision.mode,
+            })
+
+            if decision.action == "block":
+                # Record metrics for rejection
+                if self._metrics is not None:
+                    self._metrics.increment_rejections_total("governance_postcheck")
+
+                rejection = {
+                    "response": "",
+                    "governance": {"decision": decision.action, "rule_id": decision.rule_id},
+                    "mlsdm": mlsdm_state if mlsdm_state else {},
+                    "timing": timing,
+                    "validation_steps": validation_steps,
+                    "error": {
+                        "type": "governance_postcheck",
+                        "action": decision.action,
+                        "rule_id": decision.rule_id,
+                        "reason": decision.reason,
+                    },
+                    "rejected_at": "governance",
+                    "meta": self._build_meta(),
+                }
+                return None, rejection
+
+            # Apply decision (may modify response)
+            modified_output = apply_decision(decision, output_payload)
+            if modified_output is not None:
+                response_text = modified_output.get("response", response_text)
+
+        return response_text, None
 
     def _run_llm_generation(
         self,

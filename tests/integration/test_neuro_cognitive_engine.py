@@ -218,6 +218,7 @@ class TestNeuroCognitiveEnginePerformance:
         config = NeuroEngineConfig(
             enable_fslgs=False,
             initial_moral_threshold=0.0,  # Accept all requests
+            enable_governance=False,  # Disable governance for isolation test
         )
         engine = NeuroCognitiveEngine(
             llm_generate_fn=counting_llm,
