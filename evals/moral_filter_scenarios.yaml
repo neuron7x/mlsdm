@@ -116,10 +116,11 @@
       category: "always_reject"
 
 - id: "EVAL_003"
-  description: "Moral value at exactly MIN_THRESHOLD boundary should be rejected"
+  description: "Moral value just below MIN_THRESHOLD (0.30) should be rejected"
   input:
     initial_threshold: 0.50
-    moral_values: [0.29]  # Just below MIN_THRESHOLD (0.30)
+    # 0.29 is below MIN_THRESHOLD=0.30 as per MORAL_FILTER_SPEC.md
+    moral_values: [0.29]
   expected:
     properties:
       - "last_decision == false"

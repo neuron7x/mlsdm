@@ -12,6 +12,7 @@ Usage:
 from __future__ import annotations
 
 import json
+import logging
 import random
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -20,6 +21,9 @@ from typing import Any
 import yaml
 
 from mlsdm.cognition.moral_filter_v2 import MoralFilterV2
+
+# Configure module logger
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -123,8 +127,9 @@ class MoralFilterEvalRunner:
         iterations = scenario_input.get("iterations", 1)
 
         if values == "random_uniform_0_1":
-            # Generate random values for drift resistance testing
-            random.seed(42)  # Reproducible randomness
+            # Generate random values for drift resistance testing.
+            # Seed is fixed at 42 for reproducibility across test runs.
+            random.seed(42)
             return [random.uniform(0.0, 1.0) for _ in range(iterations)]
 
         if isinstance(values, list):
@@ -267,7 +272,8 @@ class MoralFilterEvalRunner:
                 except ValueError:
                     return False
 
-        # Unknown property - fail safe
+        # Unknown property - fail safe with warning
+        logger.warning("Unrecognized property expression: %s", prop)
         return False
 
     def run_scenario(self, scenario: dict[str, Any]) -> ScenarioResult:

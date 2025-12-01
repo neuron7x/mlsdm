@@ -13,8 +13,6 @@ Run with:
 
 from __future__ import annotations
 
-from pathlib import Path
-
 import pytest
 
 
@@ -29,10 +27,11 @@ class TestMoralFilterEvalSmoke:
 
     def test_scenarios_file_exists(self) -> None:
         """Verify scenarios YAML file exists."""
-        scenarios_path = (
-            Path(__file__).parent.parent.parent / "evals" / "moral_filter_scenarios.yaml"
-        )
-        assert scenarios_path.exists(), f"Scenarios file not found: {scenarios_path}"
+        from evals.moral_filter_runner import MoralFilterEvalRunner
+
+        # Use the runner's default path which is relative to its own location
+        runner = MoralFilterEvalRunner()
+        assert runner.scenarios_path.exists(), f"Scenarios file not found: {runner.scenarios_path}"
 
     def test_load_scenarios(self) -> None:
         """Verify scenarios can be loaded from YAML."""
