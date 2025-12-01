@@ -1,0 +1,245 @@
+# =============================================================================
+# MLSDM Governance Policy Configuration
+# =============================================================================
+# Version: 1.0.0
+# Last Updated: December 2025
+# Owner: Safety Team
+# =============================================================================
+
+metadata:
+  version: "1.0.0"
+  name: "MLSDM Governance Policy"
+  description: "Runtime governance policy for MLSDM cognitive memory system"
+
+# =============================================================================
+# OPERATING MODES
+# =============================================================================
+# Modes define the overall security posture of the system.
+# Each mode adjusts thresholds and behaviors for different risk contexts.
+# =============================================================================
+
+modes:
+  normal:
+    description: "Standard operating mode for typical usage"
+    moral_threshold: 0.50
+    block_on_uncertainty: false
+    escalation_enabled: false
+    pii_check_enabled: true
+    toxicity_threshold: 0.7
+    max_retries: 3
+    response_timeout_seconds: 30
+    log_level: "info"
+
+  cautious:
+    description: "Elevated security mode for sensitive contexts"
+    moral_threshold: 0.65
+    block_on_uncertainty: true
+    escalation_enabled: true
+    pii_check_enabled: true
+    toxicity_threshold: 0.5
+    max_retries: 2
+    response_timeout_seconds: 20
+    log_level: "warning"
+
+  emergency:
+    description: "Lockdown mode for critical security situations"
+    moral_threshold: 0.80
+    block_on_uncertainty: true
+    escalation_enabled: true
+    pii_check_enabled: true
+    toxicity_threshold: 0.3
+    max_retries: 1
+    response_timeout_seconds: 10
+    log_level: "error"
+
+# =============================================================================
+# GOVERNANCE RULES
+# =============================================================================
+# Rules define specific conditions and actions for content governance.
+# Rules are evaluated in order; first matching rule wins.
+# =============================================================================
+
+rules:
+  # ---------------------------------------------------------------------------
+  # R001: Block high toxicity content
+  # ---------------------------------------------------------------------------
+  - id: "R001"
+    description: "Block content with high toxicity score"
+    priority: 100
+    enabled: true
+    trigger:
+      condition: "toxicity_score >= mode.toxicity_threshold"
+      signals:
+        - "toxicity_score"
+    action: "block"
+    log_level: "error"
+    response_message: "This request cannot be processed due to safety concerns."
+    metadata:
+      category: "toxicity"
+
+  # ---------------------------------------------------------------------------
+  # R002: Block content below moral threshold
+  # ---------------------------------------------------------------------------
+  - id: "R002"
+    description: "Block content failing moral evaluation"
+    priority: 90
+    enabled: true
+    trigger:
+      condition: "moral_value < mode.moral_threshold"
+      signals:
+        - "moral_value"
+    action: "block"
+    log_level: "warning"
+    response_message: "This request was rejected by moral governance."
+    metadata:
+      category: "moral_filter"
+
+  # ---------------------------------------------------------------------------
+  # R003: Block PII exposure
+  # ---------------------------------------------------------------------------
+  - id: "R003"
+    description: "Block content containing personally identifiable information"
+    priority: 95
+    enabled: true
+    trigger:
+      condition: "pii_detected == true and mode.pii_check_enabled == true"
+      signals:
+        - "pii_detected"
+    action: "modify"
+    log_level: "warning"
+    modification: "redact_pii"
+    metadata:
+      category: "privacy"
+
+  # ---------------------------------------------------------------------------
+  # R004: Escalate high-risk content
+  # ---------------------------------------------------------------------------
+  - id: "R004"
+    description: "Escalate content matching high-risk patterns for human review"
+    priority: 80
+    enabled: true
+    trigger:
+      condition: "risk_score >= 0.8 and mode.escalation_enabled == true"
+      signals:
+        - "risk_score"
+    action: "escalate"
+    log_level: "error"
+    response_message: "This request requires human review."
+    metadata:
+      category: "high_risk"
+
+  # ---------------------------------------------------------------------------
+  # R005: Block during high uncertainty
+  # ---------------------------------------------------------------------------
+  - id: "R005"
+    description: "Block when uncertainty is high in cautious/emergency mode"
+    priority: 70
+    enabled: true
+    trigger:
+      condition: "uncertainty_score >= 0.7 and mode.block_on_uncertainty == true"
+      signals:
+        - "uncertainty_score"
+    action: "block"
+    log_level: "warning"
+    response_message: "Cannot process request due to high uncertainty."
+    metadata:
+      category: "uncertainty"
+
+  # ---------------------------------------------------------------------------
+  # R006: Modify misinformation content
+  # ---------------------------------------------------------------------------
+  - id: "R006"
+    description: "Add disclaimer to content flagged as potential misinformation"
+    priority: 60
+    enabled: true
+    trigger:
+      condition: "misinformation_score >= 0.6"
+      signals:
+        - "misinformation_score"
+    action: "modify"
+    log_level: "info"
+    modification: "add_disclaimer"
+    disclaimer_text: "Note: This response may contain unverified claims. Please consult authoritative sources."
+    metadata:
+      category: "misinformation"
+
+  # ---------------------------------------------------------------------------
+  # R007: Default allow
+  # ---------------------------------------------------------------------------
+  - id: "R007"
+    description: "Allow content that passes all checks"
+    priority: 0
+    enabled: true
+    trigger:
+      condition: "true"
+      signals: []
+    action: "allow"
+    log_level: "debug"
+    metadata:
+      category: "default"
+
+# =============================================================================
+# SIGNALS CONFIGURATION
+# =============================================================================
+# Signals are inputs to the governance rules.
+# Each signal has a type and optional default value.
+# =============================================================================
+
+signals:
+  moral_value:
+    type: "float"
+    range: [0.0, 1.0]
+    default: 0.5
+    description: "Moral score from moral filter (0=immoral, 1=moral)"
+
+  toxicity_score:
+    type: "float"
+    range: [0.0, 1.0]
+    default: 0.0
+    description: "Toxicity score from content analysis"
+
+  pii_detected:
+    type: "boolean"
+    default: false
+    description: "Whether PII was detected in content"
+
+  risk_score:
+    type: "float"
+    range: [0.0, 1.0]
+    default: 0.0
+    description: "Overall risk score from threat assessment"
+
+  uncertainty_score:
+    type: "float"
+    range: [0.0, 1.0]
+    default: 0.0
+    description: "Model uncertainty/confidence score"
+
+  misinformation_score:
+    type: "float"
+    range: [0.0, 1.0]
+    default: 0.0
+    description: "Probability of misinformation"
+
+# =============================================================================
+# MODE SELECTION CRITERIA
+# =============================================================================
+# Criteria for automatic mode selection based on context.
+# =============================================================================
+
+mode_selection:
+  # Switch to emergency mode if consecutive rejections exceed threshold
+  emergency_triggers:
+    consecutive_rejections: 100
+    rejection_rate_5min: 0.8
+    memory_usage_percent: 95
+
+  # Switch to cautious mode for sensitive contexts
+  cautious_contexts:
+    - "medical"
+    - "financial"
+    - "legal"
+    - "minors"
+
+  # Default mode when no specific context detected
+  default_mode: "normal"
