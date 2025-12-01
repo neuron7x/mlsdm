@@ -8,10 +8,12 @@ MLSDM cognitive memory system. It includes:
 - Rule-based evaluation engine
 - Decision enforcement (block/modify/escalate)
 - Governance metrics and logging
+- Pipeline filter integration
 
 Components:
     - enforcer: Core evaluation and decision logic
     - metrics: Prometheus-compatible metrics collection
+    - filters: Pre/post filters for LLMPipeline integration
     - policy.yaml: Declarative policy configuration
 
 Usage:
@@ -43,6 +45,10 @@ from mlsdm.governance.enforcer import (
     reload_policy,
     select_mode,
 )
+from mlsdm.governance.filters import (
+    GovernancePostFilter,
+    GovernancePreFilter,
+)
 from mlsdm.governance.metrics import (
     GovernanceMetrics,
     get_governance_metrics,
@@ -63,6 +69,9 @@ __all__ = [
     "select_mode",
     "reload_policy",
     "clear_policy_cache",
+    # Filters
+    "GovernancePreFilter",
+    "GovernancePostFilter",
     # Metrics
     "GovernanceMetrics",
     "get_governance_metrics",
