@@ -13,10 +13,18 @@ on:
         required: false
         default: 'all'
 
+# Minimal permissions for security
+permissions:
+  contents: read
+  checks: write
+
 jobs:
   chaos-tests:
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    permissions:
+      contents: read
+      checks: write
     
     strategy:
       fail-fast: false
@@ -76,6 +84,8 @@ jobs:
     runs-on: ubuntu-latest
     needs: chaos-tests
     if: always()
+    permissions:
+      contents: read
     
     steps:
       - name: Download all results

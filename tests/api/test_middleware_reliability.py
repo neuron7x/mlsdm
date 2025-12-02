@@ -9,12 +9,10 @@ Tests for:
 
 import asyncio
 import time
-from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi import FastAPI, Request
 from fastapi.testclient import TestClient
-from starlette.middleware.base import BaseHTTPMiddleware
 
 from mlsdm.api.middleware import (
     BulkheadMiddleware,
