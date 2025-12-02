@@ -568,10 +568,10 @@ class TestChecksumVerification:
             save_system_state(state, filepath)
 
             # Corrupt the file
-            with open(filepath) as f:
+            with open(filepath, encoding="utf-8") as f:
                 data = json.load(f)
             data["extra"] = "field"
-            with open(filepath, "w") as f:
+            with open(filepath, "w", encoding="utf-8") as f:
                 json.dump(data, f)
 
             # Should load without error when verification disabled

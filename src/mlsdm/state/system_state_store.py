@@ -102,7 +102,7 @@ def _convert_numpy_to_python(obj: Any) -> Any:
 
 @retry(
     stop=stop_after_attempt(3),
-    wait=wait_exponential(multiplier=0.1, max=1),
+    wait=wait_exponential(multiplier=0.5, max=10),
     reraise=True,
 )
 def _write_file_atomic(filepath: str, data: bytes) -> None:
@@ -191,7 +191,7 @@ def save_system_state(
             # Create a temporary file for npz
             temp_path = f"{filepath}.tmp"
             try:
-                np.savez(temp_path, **{"state": processed})
+                np.savez(temp_path, state=processed)
                 os.replace(temp_path, filepath)
             finally:
                 if os.path.exists(temp_path):

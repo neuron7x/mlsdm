@@ -78,7 +78,7 @@ class QILMStateRecord(BaseModel):
     """
 
     memory: list[list[float]] = Field(..., description="Memory vectors")
-    phases: list[float | Any] = Field(..., description="Phase values for each vector")
+    phases: list[float] = Field(..., description="Phase values for each vector")
 
     @model_validator(mode="after")
     def validate_lengths_match(self) -> QILMStateRecord:
