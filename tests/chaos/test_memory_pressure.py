@@ -14,10 +14,7 @@ import time
 import numpy as np
 import pytest
 
-from mlsdm.core.cognitive_controller import (
-    CognitiveController,
-    _CC_RECOVERY_COOLDOWN_STEPS,
-)
+from mlsdm.core.cognitive_controller import CognitiveController
 
 
 class TestMemoryPressureChaos:
@@ -80,7 +77,7 @@ class TestMemoryPressureChaos:
         time.sleep(0.15)
 
         # Process event - should trigger recovery
-        result = controller.process_event(vector, moral_value=0.8)
+        controller.process_event(vector, moral_value=0.8)
 
         # Verify recovery
         assert controller.emergency_shutdown is False

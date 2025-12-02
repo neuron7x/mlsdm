@@ -8,11 +8,9 @@ These tests are designed to run on a schedule (not on every PR)
 as they may be time-intensive.
 """
 
-import asyncio
 import threading
 import time
-from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
-from unittest.mock import MagicMock
+from concurrent.futures import ThreadPoolExecutor
 
 import numpy as np
 import pytest

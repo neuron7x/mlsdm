@@ -608,12 +608,12 @@ class TestCognitiveControllerTimeBasedRecovery:
 
         # Even with time passed, won't recover without step cooldown
         time.sleep(0.1)
-        result = controller.process_event(vector, moral_value=0.8)
+        controller.process_event(vector, moral_value=0.8)
         assert controller.emergency_shutdown is True
 
         # Now pass step-based cooldown
         controller.step_counter += _CC_RECOVERY_COOLDOWN_STEPS
-        result = controller.process_event(vector, moral_value=0.8)
+        controller.process_event(vector, moral_value=0.8)
         assert controller.emergency_shutdown is False
 
     def test_manual_reset_clears_time_tracking(self):

@@ -414,7 +414,7 @@ class PriorityQueueItem:
     timestamp: float
     request_id: str
 
-    def __lt__(self, other: "PriorityQueueItem") -> bool:
+    def __lt__(self, other: PriorityQueueItem) -> bool:
         """Compare items for priority queue ordering.
 
         Higher priority items should be processed first (lower sort value).

@@ -11,7 +11,6 @@ as they simulate network failures.
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
-from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pytest
@@ -341,8 +340,8 @@ class TestNetworkTimeoutChaos:
         # All requests should complete
         assert len(results) == N
 
-        # At least some should succeed
-        successes = [r for idx, r in results if r.get("error") is None and r.get("response")]
+        # At least some should succeed (verify computation doesn't crash)
+        _ = [r for idx, r in results if r.get("error") is None and r.get("response")]
         # With 30% failure rate and some luck, should have successes
         # If not, test still passes if no crashes
 

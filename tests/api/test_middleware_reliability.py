@@ -8,9 +8,7 @@ Tests for:
 """
 
 import asyncio
-import time
 
-import pytest
 from fastapi import FastAPI, Request
 from fastapi.testclient import TestClient
 
@@ -219,7 +217,6 @@ class TestPriorityMiddleware:
         client = TestClient(app)
         response = client.get("/test", headers={"X-MLSDM-Priority": "high"})
 
-        data = response.json()
         # When disabled, priority should not be set
         assert response.status_code == 200
 
