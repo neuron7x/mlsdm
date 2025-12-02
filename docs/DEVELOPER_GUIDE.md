@@ -1,7 +1,7 @@
 # Developer Guide
 
 **Document Version:** 1.0.0  
-**Project Version:** 1.2.0  
+**Project Version:** 1.0.0  
 **Last Updated:** December 2025  
 **Status:** Production
 
@@ -176,8 +176,8 @@ mlsdm/
 
 ```bash
 # 1. Clone repository
-git clone https://github.com/neuron7x/mlsdm.git
-cd mlsdm
+git clone https://github.com/neuron7x/mlsdm-governed-cognitive-memory.git
+cd mlsdm-governed-cognitive-memory
 
 # 2. Create virtual environment
 python -m venv venv
@@ -554,7 +554,7 @@ make cov
 
 ```python
 # src/mlsdm/adapters/anthropic_adapter.py
-from typing import Callable
+import anthropic
 
 class AnthropicAdapter:
     """Anthropic Claude API adapter."""
