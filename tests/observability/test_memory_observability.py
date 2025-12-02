@@ -8,6 +8,8 @@ These tests verify that the memory observability module correctly:
 INVARIANT: Tests verify that no raw vector data is logged (only metadata).
 """
 
+import time
+
 import numpy as np
 import pytest
 from prometheus_client import CollectorRegistry
@@ -294,8 +296,6 @@ class TestMemoryOperationTimer:
 
     def test_timer_measures_elapsed_time(self) -> None:
         """Test that timer measures elapsed time correctly."""
-        import time
-
         timer = MemoryOperationTimer()
         with timer:
             time.sleep(0.01)  # 10ms

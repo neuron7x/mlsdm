@@ -108,7 +108,7 @@ class PhaseEntangledLatticeMemory:
         Raises:
             RuntimeError: If corruption is detected and recovery fails.
         """
-        if self._detect_corruption_unsafe():  # noqa: SIM102
+        if self._detect_corruption_unsafe():
             recovered = self._auto_recover_unsafe()
             # Record corruption event
             if _OBSERVABILITY_AVAILABLE:
