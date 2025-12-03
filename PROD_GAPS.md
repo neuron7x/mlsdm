@@ -11,12 +11,12 @@
 | Block | Blockers | High | Medium | Low |
 |-------|----------|------|--------|-----|
 | Core Reliability | 0 | 0 | 0 | 0 |
-| Observability | 0 | 0 | 2 | 1 |
-| Security | 0 | 2 | 2 | 2 |
+| Observability | 0 | 0 | 1 | 1 |
+| Security | 0 | 1 | 2 | 2 |
 | Performance | 0 | 1 | 2 | 1 |
 | CI/CD | 0 | 4 | 2 | 1 |
 | Docs | 0 | 1 | 2 | 2 |
-| **Total** | **0** | **8** | **10** | **7** |
+| **Total** | **0** | **7** | **9** | **7** |
 
 ---
 
@@ -234,23 +234,38 @@ _All blockers resolved._
 
 ---
 
-### SEC-001: Implement RBAC for API endpoints
+### ~~SEC-001: Implement RBAC for API endpoints~~ ✅ COMPLETED
 
 **Block**: Security  
-**Criticality**: HIGH  
+**Criticality**: ~~HIGH~~ COMPLETED  
 **Type**: Code
 
-**Description**: Current authentication is binary (authenticated = authorized). Production needs role-based access control.
+**Description**: ~~Current authentication is binary (authenticated = authorized). Production needs role-based access control.~~ Implemented complete RBAC system with hierarchical roles.
+
+**Solution**: Implemented comprehensive RBAC in `src/mlsdm/security/rbac.py`:
+- **Roles defined**: `read`, `write`, `admin` with hierarchical permissions (admin includes write, write includes read)
+- **RoleValidator**: Thread-safe API key to role mapping with hash-based storage
+- **RBACMiddleware**: FastAPI middleware for role-based endpoint protection
+- **Endpoint permissions**: Configurable per-path role requirements (DEFAULT_ENDPOINT_PERMISSIONS)
+- **Key management**: Support for multiple keys via environment variables (API_KEY, ADMIN_API_KEY, API_KEY_{n}_*)
+- **Key expiration**: Built-in expiration support with logging
 
 **Acceptance Criteria**:
-- Define roles: `read`, `write`, `admin`
-- Add role validation middleware
-- Document role assignment process
+- ✅ Define roles: `read`, `write`, `admin`
+- ✅ Add role validation middleware
+- ✅ Document role assignment process
+
+**Implementation**:
+- `Role`: Enum with READ, WRITE, ADMIN values
+- `ROLE_HIERARCHY`: Mapping for permission inheritance
+- `UserContext`: Dataclass with role checking methods (`has_role`, `has_any_role`, `is_expired`)
+- `RoleValidator`: Key-to-role mapping with hash-based secure storage
+- `RBACMiddleware`: Endpoint protection middleware with skip paths support
+- `require_role`: Decorator for fine-grained endpoint control
 
 **Affected Files**:
-- `src/mlsdm/security/rbac.py` (new)
-- `src/mlsdm/api/app.py`
-- `SECURITY_POLICY.md`
+- `src/mlsdm/security/rbac.py`
+- `tests/unit/test_rbac.py`
 
 ---
 
@@ -497,22 +512,44 @@ _All blockers resolved._
 
 ---
 
-### OBS-004: Add structured error logging with error codes
+### ~~OBS-004: Add structured error logging with error codes~~ ✅ COMPLETED
 
 **Block**: Observability  
-**Criticality**: MEDIUM  
+**Criticality**: ~~MEDIUM~~ COMPLETED  
 **Type**: Code
 
-**Description**: Errors logged as strings. Need structured error codes for automated alerting.
+**Description**: ~~Errors logged as strings. Need structured error codes for automated alerting.~~ Implemented comprehensive error code system with structured logging.
+
+**Solution**: Implemented complete error code system in `src/mlsdm/utils/errors.py`:
+- **Error code enum**: `ErrorCode` with 9 categories (E1xx-E9xx) covering all system components
+- **Categories**:
+  - E1xx: Input validation errors (E100-E109)
+  - E2xx: Authentication/Authorization errors (E200-E206)
+  - E3xx: Moral filter errors (E300-E305)
+  - E4xx: Memory/PELM errors (E400-E406)
+  - E5xx: Cognitive rhythm errors (E500-E504)
+  - E6xx: LLM/Generation errors (E600-E608)
+  - E7xx: System/Infrastructure errors (E700-E706)
+  - E8xx: Configuration errors (E800-E804)
+  - E9xx: API/Request errors (E900-E907)
+- **Error classes**: `MLSDMError`, `ValidationError`, `AuthenticationError`, `MoralFilterError`, etc.
+- **Utilities**: `log_error`, `create_error_response`, `get_http_status_for_error`
 
 **Acceptance Criteria**:
-- Define error code enum (E001, E002, etc.)
-- Add error code to all error logs
-- Document error code meanings
+- ✅ Define error code enum (E001, E002, etc.)
+- ✅ Add error code to all error logs
+- ✅ Document error code meanings
+
+**Implementation**:
+- `ErrorCode`: Enum with ~50 error codes across 9 categories
+- `ERROR_MESSAGES`: Default messages for each error code
+- `ErrorDetails`: Dataclass for structured error information
+- `MLSDMError`: Base exception with logging integration and HTTP status mapping
+- Specific exception classes for each category
 
 **Affected Files**:
-- `src/mlsdm/utils/errors.py` (new)
-- `src/mlsdm/observability/logger.py`
+- `src/mlsdm/utils/errors.py`
+- `tests/unit/test_errors.py`
 
 ---
 
@@ -841,3 +878,5 @@ _Track completed items here:_
 | OBS-001 | Implement OpenTelemetry distributed tracing | 2025-12-03 | #186 |
 | OBS-002 | Deploy Alertmanager rules | 2025-12-03 | #186 |
 | OBS-003 | Create Grafana dashboard templates | 2025-12-03 | #186 |
+| SEC-001 | Implement RBAC for API endpoints | 2025-12-03 | #192 |
+| OBS-004 | Add structured error logging with error codes | 2025-12-03 | #192 |

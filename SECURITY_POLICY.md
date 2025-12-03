@@ -408,12 +408,69 @@ def sanitize_log_data(data: dict) -> dict:
 
 ### Authorization Model
 
-**Current**: Simple authentication (authenticated = authorized)
+**Implemented**: Role-Based Access Control (RBAC)
 
-**Future** (v1.1+): Role-Based Access Control (RBAC)
-- `read`: View state and metrics
-- `write`: Submit events for processing
-- `admin`: Configuration and system management
+MLSDM implements hierarchical role-based access control via `src/mlsdm/security/rbac.py`:
+
+#### Roles
+
+| Role | Permissions | Use Case |
+|------|-------------|----------|
+| `read` | View state, health, and metrics | Monitoring, dashboards |
+| `write` | Submit events, generate responses (includes read) | Application integration |
+| `admin` | Configuration, system management (includes write) | Operations, administration |
+
+#### Role Hierarchy
+
+Roles are hierarchical - higher roles inherit all permissions from lower roles:
+- `admin` → includes `write` and `read` permissions
+- `write` → includes `read` permissions
+- `read` → base level permissions
+
+#### Endpoint Protection
+
+| Endpoint Pattern | Allowed Roles |
+|-----------------|---------------|
+| `/health`, `/metrics`, `/docs` | `read`, `write`, `admin` |
+| `/v1/state/` | `read`, `write`, `admin` |
+| `/v1/process_event/`, `/generate` | `write`, `admin` |
+| `/admin/`, `/v1/admin/`, `/v1/reset/`, `/v1/config/` | `admin` only |
+
+#### API Key Configuration
+
+Configure API keys via environment variables:
+
+```bash
+# Single key with write role
+export API_KEY="your-api-key"
+
+# Admin key with full permissions
+export ADMIN_API_KEY="your-admin-key"
+
+# Multiple keys with custom roles
+export API_KEY_1_VALUE="key-for-user-1"
+export API_KEY_1_ROLES="read"
+export API_KEY_1_USER="monitoring-user"
+
+export API_KEY_2_VALUE="key-for-user-2"
+export API_KEY_2_ROLES="write"
+export API_KEY_2_USER="application-user"
+```
+
+#### Using RBACMiddleware
+
+```python
+from fastapi import FastAPI
+from mlsdm.security.rbac import RBACMiddleware, require_role
+
+app = FastAPI()
+app.add_middleware(RBACMiddleware)
+
+# Decorator for additional endpoint-level control
+@require_role(["admin"])
+async def admin_only_endpoint(request):
+    return {"status": "admin access granted"}
+```
 
 ---
 
@@ -812,11 +869,11 @@ HEALTHCHECK --interval=30s --timeout=3s \
 - ✅ Memory protection
 - ✅ Dependency scanning
 - ✅ Security logging
+- ✅ RBAC (role-based access control)
 
 ### v1.1 (Planned)
 - ⚠️ OAuth 2.0 / OpenID Connect
 - ⚠️ mTLS support
-- ⚠️ RBAC (role-based access control)
 - ⚠️ SBOM generation
 - ⚠️ Penetration testing
 - ⚠️ Security audit
@@ -1029,6 +1086,7 @@ Content-Security-Policy: default-src 'self'
 | Circuit Breaker | `llm_wrapper.py` | ✅ Implemented | `tests/unit/test_llm_wrapper_reliability.py` |
 | Moral Content Filter | `moral_filter_v2.py` | ✅ Implemented | `tests/property/test_moral_filter_properties.py` |
 | NeuroLang Checkpoint Security | `neuro_lang_extension.py` | ✅ Implemented | Path validation, weights_only=True |
+| RBAC | `security/rbac.py` | ✅ Implemented | `tests/unit/test_rbac.py` |
 
 ### ⚠️ Planned Security Enhancements (v1.3+)
 
@@ -1036,7 +1094,6 @@ Content-Security-Policy: default-src 'self'
 |-------------|--------|----------------|
 | Certificate Pinning | ⚠️ Planned | v1.3+ |
 | Log Integrity Signatures | ⚠️ Planned | v1.3+ |
-| RBAC (Role-Based Access Control) | ⚠️ Planned | v1.3+ |
 | Advanced Anomaly Detection | ⚠️ Planned | v1.3+ |
 | Differential Privacy | ⚠️ Planned | v1.3+ |
 | Digital Signatures on Logs | ⚠️ Planned | v1.3+ |
