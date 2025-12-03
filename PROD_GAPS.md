@@ -10,13 +10,25 @@
 
 | Block | Blockers | High | Medium | Low |
 |-------|----------|------|--------|-----|
-| Core Reliability | 0 | 2 | 2 | 1 |
+| Core Reliability | 0 | 0 | 0 | 0 |
 | Observability | 0 | 2 | 3 | 1 |
 | Security | 0 | 2 | 2 | 2 |
 | Performance | 0 | 1 | 2 | 1 |
 | CI/CD | 0 | 4 | 2 | 1 |
 | Docs | 0 | 1 | 2 | 2 |
-| **Total** | **0** | **12** | **13** | **8** |
+| **Total** | **0** | **10** | **11** | **7** |
+
+---
+
+## Core Reliability ✅ COMPLETE
+
+All Core Reliability tasks have been completed:
+
+- **REL-001**: Automated health-based recovery (time-based and step-based auto-recovery)
+- **REL-002**: Bulkhead pattern for request isolation (BulkheadMiddleware with metrics)
+- **REL-003**: Chaos engineering tests in CI (memory pressure, slow LLM, network timeout)
+- **REL-004**: Request timeout middleware (TimeoutMiddleware with 504 responses)
+- **REL-005**: Request prioritization (PriorityMiddleware with X-MLSDM-Priority header)
 
 ---
 
@@ -48,41 +60,44 @@ _All blockers resolved._
 
 ## HIGH Priority
 
-### REL-001: Implement automated health-based recovery
+### ~~REL-001: Implement automated health-based recovery~~ ✅ COMPLETED
 
 **Block**: Core Reliability  
-**Criticality**: HIGH  
+**Criticality**: ~~HIGH~~ COMPLETED  
 **Type**: Code
 
-**Description**: After `emergency_shutdown` is triggered due to memory threshold, manual intervention is required via `reset_emergency_shutdown()`. Production deployments need automated recovery.
+**Description**: ~~After `emergency_shutdown` is triggered due to memory threshold, manual intervention is required via `reset_emergency_shutdown()`. Production deployments need automated recovery.~~ Implemented time-based and step-based auto-recovery in CognitiveController.
 
 **Acceptance Criteria**:
-- Add optional auto-recovery after configurable cooldown period
-- Log recovery events
-- Add tests for recovery behavior
+- ✅ Add optional auto-recovery after configurable cooldown period
+- ✅ Log recovery events
+- ✅ Add tests for recovery behavior
 
 **Affected Files**:
 - `src/mlsdm/core/cognitive_controller.py`
 - `tests/unit/test_cognitive_controller.py`
+- `config/calibration.py`
+- `config/default_config.yaml`
 
 ---
 
-### REL-002: Add bulkhead pattern for request isolation
+### ~~REL-002: Add bulkhead pattern for request isolation~~ ✅ COMPLETED
 
 **Block**: Core Reliability  
-**Criticality**: HIGH  
+**Criticality**: ~~HIGH~~ COMPLETED  
 **Type**: Code
 
-**Description**: No resource isolation between concurrent requests. A slow request can impact all others.
+**Description**: ~~No resource isolation between concurrent requests. A slow request can impact all others.~~ Implemented semaphore-based BulkheadMiddleware with configurable concurrency limits and queue depth metrics.
 
 **Acceptance Criteria**:
-- Implement semaphore-based concurrency limiting
-- Configure max concurrent requests per endpoint
-- Add metrics for queue depth
+- ✅ Implement semaphore-based concurrency limiting
+- ✅ Configure max concurrent requests per endpoint
+- ✅ Add metrics for queue depth
 
 **Affected Files**:
 - `src/mlsdm/api/middleware.py`
 - `src/mlsdm/api/app.py`
+- `src/mlsdm/observability/metrics.py`
 
 ---
 
@@ -302,40 +317,44 @@ _All blockers resolved._
 
 ## MEDIUM Priority
 
-### REL-003: Add chaos engineering tests to CI
+### ~~REL-003: Add chaos engineering tests to CI~~ ✅ COMPLETED
 
 **Block**: Core Reliability  
-**Criticality**: MEDIUM  
+**Criticality**: ~~MEDIUM~~ COMPLETED  
 **Type**: Tests
 
-**Description**: No automated failure injection tests. System resilience not verified continuously.
+**Description**: ~~No automated failure injection tests. System resilience not verified continuously.~~ Implemented comprehensive chaos tests with memory pressure, slow LLM, and network timeout scenarios.
 
 **Acceptance Criteria**:
-- Add tests that inject: memory pressure, slow LLM, network timeouts
-- Verify graceful degradation
-- Run in scheduled CI (not every PR)
+- ✅ Add tests that inject: memory pressure, slow LLM, network timeouts
+- ✅ Verify graceful degradation
+- ✅ Run in scheduled CI (not every PR)
 
 **Affected Files**:
-- `tests/chaos/` (new directory)
-- `.github/workflows/chaos-tests.yml` (new)
+- `tests/chaos/test_memory_pressure.py`
+- `tests/chaos/test_slow_llm.py`
+- `tests/chaos/test_network_timeout.py`
+- `.github/workflows/chaos-tests.yml`
+- `TESTING_STRATEGY.md`
 
 ---
 
-### REL-004: Add request timeout middleware
+### ~~REL-004: Add request timeout middleware~~ ✅ COMPLETED
 
 **Block**: Core Reliability  
-**Criticality**: MEDIUM  
+**Criticality**: ~~MEDIUM~~ COMPLETED  
 **Type**: Code
 
-**Description**: No explicit request-level timeout in API layer. Long requests can block workers.
+**Description**: ~~No explicit request-level timeout in API layer. Long requests can block workers.~~ Implemented TimeoutMiddleware with configurable timeout and 504 responses.
 
 **Acceptance Criteria**:
-- Add configurable request timeout middleware
-- Return 504 on timeout
-- Log timeout events
+- ✅ Add configurable request timeout middleware
+- ✅ Return 504 on timeout
+- ✅ Log timeout events
 
 **Affected Files**:
 - `src/mlsdm/api/middleware.py`
+- `config/default_config.yaml`
 
 ---
 
@@ -547,18 +566,23 @@ _All blockers resolved._
 
 ## LOW Priority
 
-### REL-005: Add request prioritization
+### ~~REL-005: Add request prioritization~~ ✅ COMPLETED
 
 **Block**: Core Reliability  
-**Criticality**: LOW  
+**Criticality**: ~~LOW~~ COMPLETED  
 **Type**: Code
 
-**Description**: All requests treated equally. Production may need priority lanes.
+**Description**: ~~All requests treated equally. Production may need priority lanes.~~ Implemented PriorityMiddleware with X-MLSDM-Priority header support for high/normal/low priorities.
 
 **Acceptance Criteria**:
-- Add priority header support
-- Implement priority queue
-- Document usage
+- ✅ Add priority header support (X-MLSDM-Priority: high|normal|low)
+- ✅ Implement priority queue
+- ✅ Document usage
+
+**Affected Files**:
+- `src/mlsdm/api/middleware.py`
+- `API_REFERENCE.md`
+- `USAGE_GUIDE.md`
 
 ---
 
@@ -676,3 +700,8 @@ _Track completed items here:_
 | CICD-001 | Add linting and type checking to CI workflows | 2025-11-27 | #124 |
 | SEC-003 | Add dependency vulnerability scanning to PR workflow | 2025-11-27 | #124 |
 | DOC-001 | Create Architecture Decision Records (ADRs) | 2025-11-30 | #157 |
+| REL-001 | Implement automated health-based recovery | 2025-12-03 | - |
+| REL-002 | Add bulkhead pattern for request isolation | 2025-12-03 | - |
+| REL-003 | Add chaos engineering tests to CI | 2025-12-03 | - |
+| REL-004 | Add request timeout middleware | 2025-12-03 | - |
+| REL-005 | Add request prioritization | 2025-12-03 | - |
