@@ -459,11 +459,13 @@ class ApiReliabilityCalibration:
     priority_enabled: bool = True
 
     # Default priority when header is not provided
-    # Valid values: "high", "normal", "low"
+    # Valid values: "high", "normal", "low" - validated by RequestPriority.from_header()
+    # in src/mlsdm/api/middleware.py. Invalid values fall back to "normal".
     # Default: "normal" - standard priority for unspecified requests
     default_priority: str = "normal"
 
     # Priority weights (higher = processed first under load)
+    # Used by PriorityMiddleware and RequestPriority.WEIGHTS in middleware.py
     # Direction: ↑ higher relative priority, ↓ lower relative priority
     priority_weight_high: int = 3
     priority_weight_normal: int = 2
