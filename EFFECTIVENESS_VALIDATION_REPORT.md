@@ -2,7 +2,7 @@
 
 **Principal System Architect Level Analysis**  
 **Date**: 2025-11-19  
-**Repository**: neuron7x/mlsdm-governed-cognitive-memory
+**Repository**: neuron7x/mlsdm
 
 ---
 

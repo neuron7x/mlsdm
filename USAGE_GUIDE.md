@@ -1,8 +1,8 @@
 # Usage Guide
 
-**Document Version:** 1.0.0  
-**Project Version:** 1.0.0  
-**Last Updated:** November 2025  
+**Document Version:** 1.2.0  
+**Project Version:** 1.2.0  
+**Last Updated:** December 2025  
 **Status:** Production
 
 Comprehensive guide for using MLSDM Governed Cognitive Memory in your applications.
@@ -541,5 +541,5 @@ curl -X POST http://localhost:8000/generate \
 ## Support
 
 For issues, questions, or contributions:
-- GitHub Issues: https://github.com/neuron7x/mlsdm-governed-cognitive-memory/issues
+- GitHub Issues: https://github.com/neuron7x/mlsdm/issues
 - Documentation: See README.md and inline code documentation

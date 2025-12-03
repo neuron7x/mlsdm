@@ -1,8 +1,8 @@
 # Configuration Guide
 
-**Document Version:** 1.0.0  
-**Project Version:** 1.0.0  
-**Last Updated:** November 2025  
+**Document Version:** 1.2.0  
+**Project Version:** 1.2.0  
+**Last Updated:** December 2025  
 **Status:** Production
 
 Complete guide to configuring MLSDM Governed Cognitive Memory for different deployment scenarios.
@@ -917,4 +917,4 @@ Calibration defaults can be overridden at three levels (in order of precedence):
 
 ---
 
-**Need help?** Open an issue on [GitHub](https://github.com/neuron7x/mlsdm-governed-cognitive-memory/issues).
+**Need help?** Open an issue on [GitHub](https://github.com/neuron7x/mlsdm/issues).

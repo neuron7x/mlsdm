@@ -176,8 +176,8 @@ mlsdm/
 
 ```bash
 # 1. Clone repository
-git clone https://github.com/neuron7x/mlsdm-governed-cognitive-memory.git
-cd mlsdm-governed-cognitive-memory
+git clone https://github.com/neuron7x/mlsdm.git
+cd mlsdm
 
 # 2. Create virtual environment
 python -m venv venv

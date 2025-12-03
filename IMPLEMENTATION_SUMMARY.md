@@ -1,8 +1,8 @@
-# MLSDM Governed Cognitive Memory v1.0.0 - Implementation Summary
+# MLSDM Governed Cognitive Memory v1.2.0 - Implementation Summary
 
 ## Executive Summary
 
-This document summarizes the complete implementation of MLSDM Governed Cognitive Memory v1.0.0, a production-ready **neurobiologically-inspired cognitive architecture** for governing LLM memory and behavior with hard biological constraints.
+This document summarizes the complete implementation of MLSDM Governed Cognitive Memory v1.2.0, a production-ready **neurobiologically-inspired cognitive architecture** for governing LLM memory and behavior with hard biological constraints.
 
 > **Terminology Note:** MLSDM is not a neuro-symbolic system (which combines neural networks with symbolic reasoning). It is a **cognitive constraint framework** that applies neurobiological principles (circadian rhythms, multi-level memory consolidation, homeostatic regulation) to govern LLM behavior.
 
@@ -473,7 +473,7 @@ This implementation delivers a **complete, tested, documented, production-ready*
 ---
 
 **Implementation Date**: November 20, 2025  
-**Repository**: [neuron7x/mlsdm-governed-cognitive-memory](https://github.com/neuron7x/mlsdm-governed-cognitive-memory)  
+**Repository**: [neuron7x/mlsdm](https://github.com/neuron7x/mlsdm)  
 **Branch**: copilot/create-universal-llm-wrapper  
 **Author**: GitHub Copilot (Principal System Architect Level)
 

@@ -266,4 +266,4 @@ metrics = get_prometheus_metrics()
 
 ---
 
-**Questions?** Open an issue on [GitHub](https://github.com/neuron7x/mlsdm-governed-cognitive-memory/issues).
+**Questions?** Open an issue on [GitHub](https://github.com/neuron7x/mlsdm/issues).

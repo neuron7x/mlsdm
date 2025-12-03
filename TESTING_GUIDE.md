@@ -1,9 +1,9 @@
 # Testing Guide
 
-**Document Version:** 1.0.0  
-**Project Version:** 1.0.0  
-**Last Updated:** November 2025  
-**Test Coverage:** 97.63%
+**Document Version:** 1.2.0  
+**Project Version:** 1.2.0  
+**Last Updated:** December 2025  
+**Test Coverage:** 90.26%
 
 ## Table of Contents
 
@@ -229,7 +229,7 @@ addopts = "--cov=src --cov-report=html --cov-fail-under=90"
 Make sure you're running tests from the repository root:
 
 ```bash
-cd /path/to/mlsdm-governed-cognitive-memory
+cd /path/to/mlsdm
 pytest --cov=src tests/ src/tests/unit/
 ```
 

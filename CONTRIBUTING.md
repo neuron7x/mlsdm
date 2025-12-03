@@ -43,12 +43,12 @@ This project adheres to professional engineering standards. We expect:
 1. **Fork the repository** on GitHub
 2. **Clone your fork** locally:
    ```bash
-   git clone https://github.com/YOUR_USERNAME/mlsdm-governed-cognitive-memory.git
-   cd mlsdm-governed-cognitive-memory
+   git clone https://github.com/YOUR_USERNAME/mlsdm.git
+   cd mlsdm
    ```
 3. **Add upstream remote**:
    ```bash
-   git remote add upstream https://github.com/neuron7x/mlsdm-governed-cognitive-memory.git
+   git remote add upstream https://github.com/neuron7x/mlsdm.git
    ```
 
 ## Development Setup
