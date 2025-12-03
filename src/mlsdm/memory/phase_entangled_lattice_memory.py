@@ -98,6 +98,8 @@ class PhaseEntangledLatticeMemory:
         self.memory_bank = np.zeros((capacity, dimension), dtype=np.float32)
         self.phase_bank = np.zeros(capacity, dtype=np.float32)
         self.norms = np.zeros(capacity, dtype=np.float32)
+        # Optimization: Pre-allocate query buffer to reduce allocations during retrieval
+        self._query_buffer = np.zeros(dimension, dtype=np.float32)
         self._checksum = self._compute_checksum()
 
     def _ensure_integrity(self) -> None:
@@ -254,7 +256,16 @@ class PhaseEntangledLatticeMemory:
                         correlation_id=correlation_id,
                     )
                 return []
-            q_vec = np.array(query_vector, dtype=np.float32)
+
+            # Optimization: Use pre-allocated buffer with numpy copy
+            # Validate dimension first to avoid buffer overflow
+            if len(query_vector) != self.dimension:
+                raise ValueError(
+                    f"query_vector dimension mismatch: expected {self.dimension}, "
+                    f"got {len(query_vector)}"
+                )
+            self._query_buffer[:] = query_vector
+            q_vec = self._query_buffer
             q_norm = float(np.linalg.norm(q_vec))
             if q_norm < self.MIN_NORM_THRESHOLD:
                 q_norm = self.MIN_NORM_THRESHOLD
