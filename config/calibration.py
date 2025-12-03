@@ -382,6 +382,22 @@ class CognitiveControllerCalibration:
     # Conservative default: 3 - allow limited retries before requiring intervention
     recovery_max_attempts: int = 3
 
+    # -------------------------------------------------------------------------
+    # TIME-BASED AUTO-RECOVERY (REL-001)
+    # -------------------------------------------------------------------------
+    # These parameters control automatic time-based recovery after emergency_shutdown.
+    # When enabled, the controller will attempt recovery after cooldown_seconds have passed.
+
+    # Enable time-based auto-recovery after emergency shutdown
+    # Direction: True = enabled, False = only step-based recovery
+    # Default: True - enables time-based recovery for production deployments
+    auto_recovery_enabled: bool = True
+
+    # Cooldown period in seconds before attempting automatic recovery
+    # Direction: ↑ longer wait before recovery, ↓ faster recovery attempts
+    # Default: 60.0 seconds - provides sufficient time for conditions to stabilize
+    auto_recovery_cooldown_seconds: float = 60.0
+
 
 COGNITIVE_CONTROLLER_DEFAULTS = CognitiveControllerCalibration()
 
@@ -507,6 +523,8 @@ def get_calibration_summary() -> dict[str, dict[str, Any]]:
             "recovery_cooldown_steps": config.cognitive_controller.recovery_cooldown_steps,
             "recovery_memory_safety_ratio": config.cognitive_controller.recovery_memory_safety_ratio,
             "recovery_max_attempts": config.cognitive_controller.recovery_max_attempts,
+            "auto_recovery_enabled": config.cognitive_controller.auto_recovery_enabled,
+            "auto_recovery_cooldown_seconds": config.cognitive_controller.auto_recovery_cooldown_seconds,
         },
     }
 
