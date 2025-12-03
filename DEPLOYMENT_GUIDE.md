@@ -832,7 +832,7 @@ Before deploying to production:
 ## Support
 
 For deployment assistance:
-- GitHub Issues: https://github.com/neuron7x/mlsdm-governed-cognitive-memory/issues
+- GitHub Issues: https://github.com/neuron7x/mlsdm/issues
 - Documentation: See README.md and other guides
 - Email: Contact maintainer for enterprise support
 

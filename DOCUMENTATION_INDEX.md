@@ -392,9 +392,9 @@ When improving documentation:
 
 ### External Links
 
-- **GitHub Repository**: https://github.com/neuron7x/mlsdm-governed-cognitive-memory
-- **Issue Tracker**: https://github.com/neuron7x/mlsdm-governed-cognitive-memory/issues
-- **Releases**: https://github.com/neuron7x/mlsdm-governed-cognitive-memory/releases
+- **GitHub Repository**: https://github.com/neuron7x/mlsdm
+- **Issue Tracker**: https://github.com/neuron7x/mlsdm/issues
+- **Releases**: https://github.com/neuron7x/mlsdm/releases
 
 ### Community
 
@@ -419,7 +419,7 @@ If you can't find what you're looking for:
 
 1. Check the [FAQ section](#faq) above
 2. Search the documentation using Ctrl+F
-3. Check [GitHub Issues](https://github.com/neuron7x/mlsdm-governed-cognitive-memory/issues)
+3. Check [GitHub Issues](https://github.com/neuron7x/mlsdm/issues)
 4. Create a new issue with your question
 
 ---

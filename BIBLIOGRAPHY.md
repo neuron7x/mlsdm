@@ -335,7 +335,7 @@ Current focus is on neuroscience and AI safety foundations. Engineering best pra
   author       = {Yaroslav Vasylenko},
   title        = {MLSDM Governed Cognitive Memory v1.0.0},
   year         = {2025},
-  url          = {https://github.com/neuron7x/mlsdm-governed-cognitive-memory},
+  url          = {https://github.com/neuron7x/mlsdm},
   version      = {1.0.0},
   note         = {Asynchronous Python framework that wraps arbitrary LLMs with biologically-inspired constraints (MoralFilterV2, PELM, MultiLevelSynapticMemory, CognitiveRhythm, CognitiveController) to support long-term governed operation.}
 }

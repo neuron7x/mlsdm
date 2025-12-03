@@ -541,5 +541,5 @@ curl -X POST http://localhost:8000/generate \
 ## Support
 
 For issues, questions, or contributions:
-- GitHub Issues: https://github.com/neuron7x/mlsdm-governed-cognitive-memory/issues
+- GitHub Issues: https://github.com/neuron7x/mlsdm/issues
 - Documentation: See README.md and inline code documentation

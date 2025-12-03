@@ -238,4 +238,4 @@ The implementation meets **Principal System Architect** standards with:
 
 **Author**: Principal System Architect  
 **Date**: 2025-11-19  
-**Repository**: [neuron7x/mlsdm-governed-cognitive-memory](https://github.com/neuron7x/mlsdm-governed-cognitive-memory)
+**Repository**: [neuron7x/mlsdm](https://github.com/neuron7x/mlsdm)

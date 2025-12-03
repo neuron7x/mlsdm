@@ -48,7 +48,7 @@ This project adheres to professional engineering standards. We expect:
    ```
 3. **Add upstream remote**:
    ```bash
-   git remote add upstream https://github.com/neuron7x/mlsdm-governed-cognitive-memory.git
+   git remote add upstream https://github.com/neuron7x/mlsdm.git
    ```
 
 ## Development Setup

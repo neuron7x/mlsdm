@@ -917,4 +917,4 @@ Calibration defaults can be overridden at three levels (in order of precedence):
 
 ---
 
-**Need help?** Open an issue on [GitHub](https://github.com/neuron7x/mlsdm-governed-cognitive-memory/issues).
+**Need help?** Open an issue on [GitHub](https://github.com/neuron7x/mlsdm/issues).

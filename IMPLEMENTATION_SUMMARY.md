@@ -473,7 +473,7 @@ This implementation delivers a **complete, tested, documented, production-ready*
 ---
 
 **Implementation Date**: November 20, 2025  
-**Repository**: [neuron7x/mlsdm-governed-cognitive-memory](https://github.com/neuron7x/mlsdm-governed-cognitive-memory)  
+**Repository**: [neuron7x/mlsdm](https://github.com/neuron7x/mlsdm)  
 **Branch**: copilot/create-universal-llm-wrapper  
 **Author**: GitHub Copilot (Principal System Architect Level)
 
