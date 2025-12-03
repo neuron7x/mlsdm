@@ -403,6 +403,79 @@ COGNITIVE_CONTROLLER_DEFAULTS = CognitiveControllerCalibration()
 
 
 # =============================================================================
+# API RELIABILITY CALIBRATION (REL-002, REL-004, REL-005)
+# =============================================================================
+# Controls API-level reliability features: bulkhead, timeout, priority.
+# Role: RELIABILITY/PERFORMANCE - Prevents cascade failures and ensures SLOs
+
+@dataclass(frozen=True)
+class ApiReliabilityCalibration:
+    """API reliability calibrated parameters for production deployments.
+
+    Covers:
+    - REL-002: Bulkhead pattern for request isolation
+    - REL-004: Request timeout middleware
+    - REL-005: Request prioritization
+    """
+
+    # -------------------------------------------------------------------------
+    # BULKHEAD CONFIGURATION (REL-002)
+    # -------------------------------------------------------------------------
+    # Semaphore-based concurrency limiting to prevent cascade failures.
+
+    # Maximum concurrent requests allowed
+    # Direction: ↑ more throughput, higher resource usage; ↓ more isolation
+    # Default: 100 - suitable for typical production workloads
+    max_concurrent_requests: int = 100
+
+    # Timeout in seconds for waiting in bulkhead queue
+    # Direction: ↑ more patient waiting, ↓ faster rejection
+    # Default: 5.0 seconds - balances user experience and resource protection
+    queue_timeout_seconds: float = 5.0
+
+    # Enable Prometheus metrics for bulkhead
+    # Direction: True = export metrics, False = no metrics overhead
+    # Default: True - recommended for production observability
+    enable_bulkhead_metrics: bool = True
+
+    # -------------------------------------------------------------------------
+    # REQUEST TIMEOUT CONFIGURATION (REL-004)
+    # -------------------------------------------------------------------------
+    # Request-level timeout to prevent worker blocking.
+
+    # Request timeout in seconds (returns 504 Gateway Timeout)
+    # Direction: ↑ more patient, ↓ faster timeout
+    # Default: 30.0 seconds - matches LLM call timeout
+    request_timeout_seconds: float = 30.0
+
+    # -------------------------------------------------------------------------
+    # PRIORITY CONFIGURATION (REL-005)
+    # -------------------------------------------------------------------------
+    # Request prioritization for resource contention scenarios.
+
+    # Enable priority header support (X-MLSDM-Priority)
+    # Direction: True = enable priority handling, False = FIFO only
+    # Default: True - enables production priority lanes
+    priority_enabled: bool = True
+
+    # Default priority when header is not provided
+    # Valid values: "high", "normal", "low" - validated by RequestPriority.from_header()
+    # in src/mlsdm/api/middleware.py. Invalid values fall back to "normal".
+    # Default: "normal" - standard priority for unspecified requests
+    default_priority: str = "normal"
+
+    # Priority weights (higher = processed first under load)
+    # Used by PriorityMiddleware and RequestPriority.WEIGHTS in middleware.py
+    # Direction: ↑ higher relative priority, ↓ lower relative priority
+    priority_weight_high: int = 3
+    priority_weight_normal: int = 2
+    priority_weight_low: int = 1
+
+
+API_RELIABILITY_DEFAULTS = ApiReliabilityCalibration()
+
+
+# =============================================================================
 # AGGREGATE CALIBRATION CONFIG
 # =============================================================================
 
@@ -420,6 +493,7 @@ class CalibrationConfig:
     synergy_experience: SynergyExperienceCalibration = SynergyExperienceCalibration()
     rate_limit: RateLimitCalibration = RateLimitCalibration()
     cognitive_controller: CognitiveControllerCalibration = CognitiveControllerCalibration()
+    api_reliability: ApiReliabilityCalibration = ApiReliabilityCalibration()
 
 
 # Global default configuration
@@ -525,6 +599,17 @@ def get_calibration_summary() -> dict[str, dict[str, Any]]:
             "recovery_max_attempts": config.cognitive_controller.recovery_max_attempts,
             "auto_recovery_enabled": config.cognitive_controller.auto_recovery_enabled,
             "auto_recovery_cooldown_seconds": config.cognitive_controller.auto_recovery_cooldown_seconds,
+        },
+        "api_reliability": {
+            "max_concurrent_requests": config.api_reliability.max_concurrent_requests,
+            "queue_timeout_seconds": config.api_reliability.queue_timeout_seconds,
+            "enable_bulkhead_metrics": config.api_reliability.enable_bulkhead_metrics,
+            "request_timeout_seconds": config.api_reliability.request_timeout_seconds,
+            "priority_enabled": config.api_reliability.priority_enabled,
+            "default_priority": config.api_reliability.default_priority,
+            "priority_weight_high": config.api_reliability.priority_weight_high,
+            "priority_weight_normal": config.api_reliability.priority_weight_normal,
+            "priority_weight_low": config.api_reliability.priority_weight_low,
         },
     }
 
