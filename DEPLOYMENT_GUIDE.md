@@ -257,34 +257,78 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
 CMD ["uvicorn", "api_server:app", "--host", "0.0.0.0", "--port", "8000"]
 ```
 
+#### Local Docker Deployment
+
+The repository includes a production-ready docker-compose configuration:
+
+```bash
+# Quick start (uses Dockerfile.neuro-engine-service)
+docker compose -f docker/docker-compose.yaml up -d
+
+# Check health
+curl http://localhost:8000/health
+
+# Test generate endpoint
+curl -X POST http://localhost:8000/generate \
+  -H "Content-Type: application/json" \
+  -d '{"prompt": "Hello", "moral_value": 0.8}'
+
+# View logs
+docker compose -f docker/docker-compose.yaml logs -f
+
+# Stop
+docker compose -f docker/docker-compose.yaml down
+```
+
+Or use Make targets:
+
+```bash
+# Build image
+make docker-build-neuro-engine
+
+# Run container
+make docker-run-neuro-engine
+
+# Run smoke tests
+make docker-smoke-neuro-engine
+
+# Docker compose up
+make docker-compose-up
+
+# Docker compose down
+make docker-compose-down
+```
+
 #### docker-compose.yml
 
 ```yaml
-version: '3.8'
-
 services:
-  mlsdm-api:
-    build: .
+  neuro-engine:
+    build:
+      context: .
+      dockerfile: Dockerfile.neuro-engine-service
+    image: ghcr.io/neuron7x/mlsdm-neuro-engine:latest
     ports:
       - "8000:8000"
     environment:
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - LOG_LEVEL=INFO
-    volumes:
-      - ./logs:/app/logs
-    restart: unless-stopped
+      - LLM_BACKEND=${LLM_BACKEND:-local_stub}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - DISABLE_RATE_LIMIT=${DISABLE_RATE_LIMIT:-1}
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 15s
+    restart: unless-stopped
     deploy:
       resources:
         limits:
           cpus: '2.0'
-          memory: 1G
+          memory: 2G
         reservations:
-          cpus: '1.0'
+          cpus: '0.5'
           memory: 512M
 ```
 

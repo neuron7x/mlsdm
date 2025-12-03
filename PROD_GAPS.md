@@ -6,6 +6,24 @@
 
 ---
 
+## Production Artifacts Inventory
+
+| Artifact | Status | Location | Gaps / TODOs |
+|----------|--------|----------|--------------|
+| Python package | ✅ Ready | `pyproject.toml`, `src/mlsdm/**` | None - installable via `pip install -e .` |
+| SDK (python) | ✅ Ready | `src/mlsdm/sdk/**`, `sdk/python/**` | Integrated into main package as `mlsdm.sdk` |
+| CLI | ✅ Ready | `src/mlsdm/cli/**` | Commands: `info`, `serve`, `demo`, `check`, `eval` |
+| Docker: neuro-engine | ✅ Ready | `Dockerfile.neuro-engine-service` | Multi-stage, non-root, pinned base |
+| Local stack (compose) | ✅ Ready | `docker/docker-compose.yaml` | Includes health checks, resource limits |
+| K8s manifests | ✅ Ready | `deploy/k8s/**` | deployment, service, configmap, secrets, hpa, ingress |
+| Release workflow | ✅ Ready | `.github/workflows/release.yml` | All gates: tests, lint, type, coverage, docker, pypi |
+| CI workflow | ✅ Ready | `.github/workflows/ci-neuro-cognitive-engine.yml` | lint + type + tests |
+| Examples | ✅ Ready | `examples/**` | SDK, HTTP, wrapper examples |
+| Grafana dashboards | ✅ Ready | `deploy/grafana/**` | Observability + SLO dashboards |
+| Alertmanager rules | ✅ Ready | `deploy/k8s/alerts/**` | SLO-based alerts |
+
+---
+
 ## Summary
 
 | Block | Blockers | High | Medium | Low |

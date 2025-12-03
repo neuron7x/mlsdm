@@ -2,9 +2,11 @@
 MLSDM CLI - Command-line interface for the MLSDM system.
 
 Commands:
-- mlsdm demo: Interactive demo of the LLM wrapper
+- mlsdm info: Show version, status, and basic configuration
 - mlsdm serve: Start the HTTP API server
+- mlsdm demo: Interactive demo of the LLM wrapper
 - mlsdm check: Check environment and configuration
+- mlsdm eval: Run evaluation scenarios (if available)
 """
 
 import argparse
@@ -12,6 +14,60 @@ import json
 import os
 import sys
 from typing import Any
+
+
+def cmd_info(args: argparse.Namespace) -> int:
+    """Show version, status, and basic configuration."""
+    try:
+        from mlsdm import __version__
+    except ImportError:
+        print("Error: mlsdm package not installed", file=sys.stderr)
+        return 1
+
+    print("=" * 60)
+    print("MLSDM - Multi-Level Synaptic Dynamic Memory")
+    print("=" * 60)
+    print()
+    print(f"Version:     {__version__}")
+    print(f"Python:      {sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}")
+    print()
+
+    # Configuration
+    print("Configuration:")
+    config_path = os.environ.get("CONFIG_PATH", "config/default_config.yaml")
+    llm_backend = os.environ.get("LLM_BACKEND", "local_stub")
+    print(f"  Config:    {config_path}")
+    print(f"  Backend:   {llm_backend}")
+    print()
+
+    # Default parameters
+    print("Defaults:")
+    print("  Dimension:           384")
+    print("  Memory Capacity:     20,000 vectors")
+    print("  Memory Footprint:    ~29.37 MB")
+    print("  Wake Duration:       8 steps")
+    print("  Sleep Duration:      3 steps")
+    print("  Moral Threshold:     0.50 (range: 0.30-0.90)")
+    print()
+
+    # Available endpoints
+    print("HTTP Endpoints:")
+    print("  /health              - Health check")
+    print("  /health/live         - Liveness probe")
+    print("  /health/ready        - Readiness probe")
+    print("  /health/metrics      - Prometheus metrics")
+    print("  /generate            - Generate governed response")
+    print("  /infer               - Extended inference with governance")
+    print("  /status              - Service status")
+    print()
+
+    print("=" * 60)
+    print("Run 'mlsdm serve' to start the HTTP API server")
+    print("Run 'mlsdm demo -i' for interactive demo")
+    print("Run 'mlsdm check' to verify environment")
+    print("=" * 60)
+
+    return 0
 
 
 def cmd_demo(args: argparse.Namespace) -> int:
@@ -283,6 +339,84 @@ def cmd_check(args: argparse.Namespace) -> int:
     return 0 if error_count == 0 else 1
 
 
+def cmd_eval(args: argparse.Namespace) -> int:
+    """Run evaluation scenarios."""
+    print("=" * 60)
+    print("MLSDM Evaluation Suite")
+    print("=" * 60)
+    print()
+
+    # Check for evals directory
+    evals_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..", "evals")
+    if not os.path.exists(evals_dir):
+        evals_dir = "evals"
+
+    if not os.path.exists(evals_dir):
+        print("Evaluation scenarios not found.")
+        print("Expected location: evals/")
+        print()
+        print("Available evaluations:")
+        print("  - Moral Filter: pytest tests/validation/test_moral_filter_effectiveness.py -v")
+        print("  - Wake/Sleep: pytest tests/validation/test_wake_sleep_effectiveness.py -v")
+        print("  - Aphasia: pytest tests/eval/aphasia_eval_suite.py -v")
+        return 1
+
+    # List available evaluations
+    if args.list:
+        print("Available evaluations:")
+        for f in os.listdir(evals_dir):
+            if f.endswith(".py") and not f.startswith("_"):
+                print(f"  - {f}")
+        return 0
+
+    # Run specific evaluation
+    if args.scenario:
+        scenario_path = os.path.join(evals_dir, args.scenario)
+        if not os.path.exists(scenario_path):
+            scenario_path = os.path.join(evals_dir, f"{args.scenario}.py")
+
+        if not os.path.exists(scenario_path):
+            print(f"Error: Evaluation scenario not found: {args.scenario}")
+            return 1
+
+        print(f"Running: {args.scenario}")
+        print("-" * 60)
+
+        import subprocess
+        result = subprocess.run(
+            [sys.executable, scenario_path],
+            capture_output=not args.verbose,
+            text=True
+        )
+
+        if result.returncode == 0:
+            print("✓ Evaluation completed successfully")
+        else:
+            print("✗ Evaluation failed")
+            if not args.verbose and result.stderr:
+                print(result.stderr)
+
+        return result.returncode
+
+    # Default: run moral filter runner if it exists
+    moral_runner = os.path.join(evals_dir, "moral_filter_runner.py")
+    if os.path.exists(moral_runner):
+        print("Running default evaluation: moral_filter_runner")
+        print("-" * 60)
+
+        import subprocess
+        result = subprocess.run(
+            [sys.executable, "-m", "evals.moral_filter_runner"],
+            capture_output=not args.verbose,
+            text=True
+        )
+
+        return result.returncode
+
+    print("No default evaluation found. Use --list to see available options.")
+    return 1
+
+
 def main() -> int:
     """Main entry point for the CLI."""
     parser = argparse.ArgumentParser(
@@ -304,6 +438,9 @@ def main() -> int:
     )
 
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
+
+    # Info command
+    subparsers.add_parser("info", help="Show version, status, and configuration")
 
     # Demo command
     demo_parser = subparsers.add_parser("demo", help="Run interactive demo")
@@ -398,14 +535,36 @@ def main() -> int:
         help="Show verbose output",
     )
 
+    # Eval command
+    eval_parser = subparsers.add_parser("eval", help="Run evaluation scenarios")
+    eval_parser.add_argument(
+        "--list",
+        action="store_true",
+        help="List available evaluation scenarios",
+    )
+    eval_parser.add_argument(
+        "-s", "--scenario",
+        type=str,
+        help="Specific evaluation scenario to run",
+    )
+    eval_parser.add_argument(
+        "-v", "--verbose",
+        action="store_true",
+        help="Show verbose output",
+    )
+
     args = parser.parse_args()
 
-    if args.command == "demo":
+    if args.command == "info":
+        return cmd_info(args)
+    elif args.command == "demo":
         return cmd_demo(args)
     elif args.command == "serve":
         return cmd_serve(args)
     elif args.command == "check":
         return cmd_check(args)
+    elif args.command == "eval":
+        return cmd_eval(args)
     else:
         parser.print_help()
         return 0

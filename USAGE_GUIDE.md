@@ -466,6 +466,57 @@ result = wrapper.generate(
 )
 ```
 
+## Local Stack (docker-compose)
+
+The easiest way to run MLSDM locally is using docker-compose.
+
+### Quick Start
+
+```bash
+# 1. Navigate to project directory
+cd mlsdm
+
+# 2. Start the local stack
+docker compose -f docker/docker-compose.yaml up
+
+# 3. Verify it's running
+curl http://localhost:8000/health
+# Output: {"status": "healthy"}
+
+# 4. Test generation
+curl -X POST http://localhost:8000/generate \
+  -H "Content-Type: application/json" \
+  -d '{"prompt": "Hello, world!", "moral_value": 0.8}'
+```
+
+### Background Mode
+
+```bash
+# Start in background
+docker compose -f docker/docker-compose.yaml up -d
+
+# View logs
+docker compose -f docker/docker-compose.yaml logs -f
+
+# Stop
+docker compose -f docker/docker-compose.yaml down
+```
+
+### Environment Customization
+
+Create a `.env` file based on `env.dev.example`:
+
+```bash
+cp env.dev.example .env
+# Edit .env to customize settings
+```
+
+Available environment variables:
+- `LLM_BACKEND`: Backend type (`local_stub`, `openai`)
+- `OPENAI_API_KEY`: API key for OpenAI backend
+- `LOG_LEVEL`: Logging level (`DEBUG`, `INFO`, `WARNING`, `ERROR`)
+- `DISABLE_RATE_LIMIT`: Set to `1` to disable rate limiting
+
 ## Production Deployment
 
 ### Docker Example

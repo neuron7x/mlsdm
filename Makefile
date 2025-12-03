@@ -1,4 +1,6 @@
-.PHONY: test lint type cov help run-dev run-cloud-local run-agent health-check eval-moral_filter test-memory-obs
+.PHONY: test lint type cov help run-dev run-cloud-local run-agent health-check eval-moral_filter test-memory-obs \
+        build-package test-package docker-build-neuro-engine docker-run-neuro-engine docker-smoke-neuro-engine \
+        docker-compose-up docker-compose-down
 
 help:
 	@echo "MLSDM Governed Cognitive Memory - Development Commands"
@@ -8,6 +10,17 @@ help:
 	@echo "  make lint     - Run ruff linter on src and tests"
 	@echo "  make type     - Run mypy type checker on src/mlsdm"
 	@echo "  make cov      - Run tests with coverage report"
+	@echo ""
+	@echo "Package Building:"
+	@echo "  make build-package  - Build wheel and sdist distributions"
+	@echo "  make test-package   - Test package installation in fresh venv"
+	@echo ""
+	@echo "Docker:"
+	@echo "  make docker-build-neuro-engine  - Build neuro-engine Docker image"
+	@echo "  make docker-run-neuro-engine    - Run neuro-engine container locally"
+	@echo "  make docker-smoke-neuro-engine  - Run smoke test on container"
+	@echo "  make docker-compose-up          - Start local stack with docker-compose"
+	@echo "  make docker-compose-down        - Stop local stack"
 	@echo ""
 	@echo "Observability Tests:"
 	@echo "  make test-memory-obs - Run memory observability tests"
@@ -35,6 +48,57 @@ type:
 
 cov:
 	pytest --ignore=tests/load --cov=src --cov-report=html --cov-report=term-missing
+
+# Package Building
+build-package:
+	python -m build
+
+test-package:
+	@echo "Testing package installation in fresh venv..."
+	rm -rf /tmp/mlsdm-test-venv
+	python -m venv /tmp/mlsdm-test-venv
+	/tmp/mlsdm-test-venv/bin/pip install --upgrade pip
+	/tmp/mlsdm-test-venv/bin/pip install dist/*.whl
+	/tmp/mlsdm-test-venv/bin/python -c "from mlsdm import __version__, create_llm_wrapper; print(f'MLSDM v{__version__} installed OK'); w = create_llm_wrapper(); r = w.generate('test', moral_value=0.8); print(f'Smoke test: accepted={r[\"accepted\"]}')"
+	rm -rf /tmp/mlsdm-test-venv
+	@echo "✓ Package test passed"
+
+# Docker
+DOCKER_IMAGE_NAME ?= ghcr.io/neuron7x/mlsdm-neuro-engine
+DOCKER_IMAGE_TAG ?= latest
+
+docker-build-neuro-engine:
+	docker build -f Dockerfile.neuro-engine-service -t $(DOCKER_IMAGE_NAME):$(DOCKER_IMAGE_TAG) .
+
+docker-run-neuro-engine:
+	docker run --rm -p 8000:8000 \
+		-e LLM_BACKEND=local_stub \
+		-e ENABLE_METRICS=true \
+		--name mlsdm-neuro-engine \
+		$(DOCKER_IMAGE_NAME):$(DOCKER_IMAGE_TAG)
+
+docker-smoke-neuro-engine:
+	@echo "Starting container for smoke test..."
+	docker run -d --rm -p 8000:8000 \
+		-e LLM_BACKEND=local_stub \
+		-e DISABLE_RATE_LIMIT=1 \
+		--name mlsdm-smoke-test \
+		$(DOCKER_IMAGE_NAME):$(DOCKER_IMAGE_TAG)
+	@echo "Waiting for container to start..."
+	@sleep 10
+	@echo "Running smoke tests..."
+	curl -s http://localhost:8000/health | grep -q "healthy" && echo "✓ Health check passed" || (echo "✗ Health check failed" && docker stop mlsdm-smoke-test && exit 1)
+	curl -s http://localhost:8000/health/ready | grep -q "ready" && echo "✓ Readiness check passed" || (echo "✗ Readiness check failed" && docker stop mlsdm-smoke-test && exit 1)
+	curl -s -X POST http://localhost:8000/generate -H "Content-Type: application/json" -d '{"prompt": "Hello"}' | grep -q "response" && echo "✓ Generate endpoint passed" || (echo "✗ Generate test failed" && docker stop mlsdm-smoke-test && exit 1)
+	@echo "Stopping container..."
+	docker stop mlsdm-smoke-test
+	@echo "✓ All smoke tests passed"
+
+docker-compose-up:
+	docker compose -f docker/docker-compose.yaml up -d
+
+docker-compose-down:
+	docker compose -f docker/docker-compose.yaml down
 
 # Observability Tests
 test-memory-obs:
