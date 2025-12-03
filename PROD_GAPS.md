@@ -234,42 +234,56 @@ _All blockers resolved._
 
 ---
 
-### SEC-001: Implement RBAC for API endpoints
+### ~~SEC-001: Implement RBAC for API endpoints~~ ✅ COMPLETED
 
 **Block**: Security  
-**Criticality**: HIGH  
+**Criticality**: ~~HIGH~~ COMPLETED  
 **Type**: Code
 
-**Description**: Current authentication is binary (authenticated = authorized). Production needs role-based access control.
+**Description**: ~~Current authentication is binary (authenticated = authorized).~~ Production-ready role-based access control implemented.
+
+**Solution**: Implemented comprehensive RBAC system with hierarchical roles:
+- **Roles**: `read`, `write`, `admin` with hierarchy (admin > write > read)
+- **RBACMiddleware**: FastAPI middleware for endpoint protection
+- **RoleValidator**: API key to role mapping with expiration support
+- **@require_role decorator**: Fine-grained endpoint protection
 
 **Acceptance Criteria**:
-- Define roles: `read`, `write`, `admin`
-- Add role validation middleware
-- Document role assignment process
+- ✅ Define roles: `read`, `write`, `admin`
+- ✅ Add role validation middleware (`RBACMiddleware`)
+- ✅ Document role assignment process (`SECURITY_README.md`)
 
 **Affected Files**:
-- `src/mlsdm/security/rbac.py` (new)
-- `src/mlsdm/api/app.py`
-- `SECURITY_POLICY.md`
+- `src/mlsdm/security/rbac.py`
+- `src/mlsdm/security/__init__.py`
+- `tests/security/test_api_auth_rbac.py` (new)
+- `SECURITY_README.md`
 
 ---
 
-### SEC-002: Add automated secret rotation support
+### ~~SEC-002: Add automated secret rotation support~~ ✅ COMPLETED
 
 **Block**: Security  
-**Criticality**: HIGH  
+**Criticality**: ~~HIGH~~ COMPLETED  
 **Type**: Code/Docs
 
-**Description**: API keys are static. Production needs mechanism for rotation without downtime.
+**Description**: ~~API keys are static.~~ Production-ready secret rotation mechanism implemented.
+
+**Solution**: Implemented multi-key support with expiration:
+- **Multiple API keys**: Environment variables `API_KEY`, `ADMIN_API_KEY`, `API_KEY_n_VALUE`
+- **Key expiration**: `expires_at` timestamp support with automatic rejection
+- **Security logging**: `SECRET_ROTATION_EVENT`, `SECRET_EXPIRATION_WARNING` events
+- **Documentation**: Rotation procedure in `SECURITY_README.md`
 
 **Acceptance Criteria**:
-- Support multiple valid API keys simultaneously during rotation
-- Document rotation procedure
-- Add key expiration logging
+- ✅ Support multiple valid API keys simultaneously during rotation
+- ✅ Document rotation procedure
+- ✅ Add key expiration logging
 
 **Affected Files**:
-- `src/mlsdm/api/app.py`
-- `RUNBOOK.md`
+- `src/mlsdm/security/rbac.py`
+- `src/mlsdm/utils/security_logger.py`
+- `SECURITY_README.md`
 
 ---
 
@@ -330,21 +344,27 @@ _All blockers resolved._
 
 ---
 
-### CICD-004: Add SAST scanning to PR workflow
+### ~~CICD-004: Add SAST scanning to PR workflow~~ ✅ COMPLETED
 
 **Block**: CI/CD  
-**Criticality**: HIGH  
+**Criticality**: ~~HIGH~~ COMPLETED  
 **Type**: CI
 
-**Description**: No static application security testing (SAST) in CI. CodeQL or bandit should scan for security issues.
+**Description**: ~~No static application security testing (SAST) in CI.~~ Added Bandit and Semgrep scanning.
+
+**Solution**: Implemented comprehensive SAST workflow:
+- **Bandit**: Python security linter with SARIF output
+- **Semgrep**: Multi-language security scanning
+- **GitHub Security**: SARIF results uploaded to Security tab
+- **High severity blocking**: Workflow fails on high-severity issues
 
 **Acceptance Criteria**:
-- Add CodeQL or bandit scan to PR workflow
-- Fail on high-severity findings
-- Document false positive handling
+- ✅ Add CodeQL or bandit scan to PR workflow (`.github/workflows/sast-scan.yml`)
+- ✅ Fail on high-severity findings
+- ✅ Document false positive handling (via pyproject.toml Bandit config)
 
 **Affected Files**:
-- `.github/workflows/ci-neuro-cognitive-engine.yml` or new workflow
+- `.github/workflows/sast-scan.yml` (new)
 
 ---
 
@@ -555,21 +575,28 @@ _All blockers resolved._
 
 ---
 
-### SEC-005: Generate SBOM on release
+### ~~SEC-005: Generate SBOM on release~~ ✅ COMPLETED
 
 **Block**: Security  
-**Criticality**: MEDIUM  
+**Criticality**: ~~MEDIUM~~ COMPLETED  
 **Type**: CI
 
-**Description**: No Software Bill of Materials generated. Required for supply chain security.
+**Description**: ~~No Software Bill of Materials generated.~~ SBOM generated and attached to releases.
+
+**Solution**: Implemented SBOM generation for supply chain security:
+- **Script**: `scripts/generate_sbom.py` with CycloneDX format support
+- **Release workflow**: SBOM attached as release artifact
+- **Fallback**: Simple parser if cyclonedx-bom not installed
 
 **Acceptance Criteria**:
-- Add syft or cyclonedx-bom to release workflow
-- Attach SBOM to GitHub release
-- Document SBOM usage
+- ✅ Add syft or cyclonedx-bom to release workflow
+- ✅ Attach SBOM to GitHub release
+- ✅ Document SBOM usage (`SECURITY_README.md`)
 
 **Affected Files**:
 - `.github/workflows/release.yml`
+- `scripts/generate_sbom.py` (new)
+- `SECURITY_README.md`
 
 ---
 

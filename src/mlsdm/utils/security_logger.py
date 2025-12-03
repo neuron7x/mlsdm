@@ -20,8 +20,9 @@ class SecurityEventType(Enum):
     AUTH_FAILURE = "auth_failure"
     AUTH_MISSING = "auth_missing"
 
-    # Authorization events
+    # Authorization events (RBAC)
     AUTHZ_DENIED = "authorization_denied"
+    RBAC_DENY = "rbac_deny"
 
     # Rate limiting events
     RATE_LIMIT_EXCEEDED = "rate_limit_exceeded"
@@ -32,9 +33,22 @@ class SecurityEventType(Enum):
     DIMENSION_MISMATCH = "dimension_mismatch"
     MORAL_VALUE_OUT_OF_RANGE = "moral_value_out_of_range"
 
+    # LLM Safety events
+    MORAL_FILTER_BLOCK = "moral_filter_block"
+    PROMPT_INJECTION_DETECTED = "prompt_injection_detected"
+    CONTENT_FILTERED = "content_filtered"
+
     # State changes
     STATE_CHANGE = "state_change"
     CONFIG_CHANGE = "config_change"
+
+    # Emergency events
+    EMERGENCY_TRIGGERED = "emergency_triggered"
+    EMERGENCY_RECOVERED = "emergency_recovered"
+
+    # Secret management events
+    SECRET_ROTATION_EVENT = "secret_rotation_event"
+    SECRET_EXPIRATION_WARNING = "secret_expiration_warning"
 
     # Anomalies
     ANOMALY_DETECTED = "anomaly_detected"
@@ -290,6 +304,164 @@ class SecurityLogger:
             logging.INFO,
             message,
             additional_data=additional_data
+        )
+
+    def log_rbac_deny(
+        self,
+        client_id: str,
+        user_id: str | None,
+        required_roles: list[str],
+        user_roles: list[str],
+        path: str,
+        correlation_id: str | None = None
+    ) -> str:
+        """Log RBAC authorization denial.
+
+        Args:
+            client_id: Pseudonymized client identifier
+            user_id: User identifier (if available)
+            required_roles: Roles required for the endpoint
+            user_roles: Roles the user has
+            path: Request path that was denied
+            correlation_id: Optional correlation ID
+
+        Returns:
+            Correlation ID
+        """
+        return self._log_event(
+            SecurityEventType.RBAC_DENY,
+            logging.WARNING,
+            f"RBAC denied: insufficient permissions for {path}",
+            correlation_id=correlation_id,
+            client_id=client_id,
+            additional_data={
+                "user_id": user_id,
+                "required_roles": required_roles,
+                "user_roles": user_roles,
+                "path": path,
+            }
+        )
+
+    def log_moral_filter_block(
+        self,
+        client_id: str,
+        moral_score: float,
+        threshold: float,
+        correlation_id: str | None = None
+    ) -> str:
+        """Log moral filter content block.
+
+        Args:
+            client_id: Pseudonymized client identifier
+            moral_score: Score that triggered the block
+            threshold: Current moral threshold
+            correlation_id: Optional correlation ID
+
+        Returns:
+            Correlation ID
+        """
+        return self._log_event(
+            SecurityEventType.MORAL_FILTER_BLOCK,
+            logging.WARNING,
+            "Content blocked by moral filter",
+            correlation_id=correlation_id,
+            client_id=client_id,
+            additional_data={
+                "moral_score": moral_score,
+                "threshold": threshold,
+            }
+        )
+
+    def log_prompt_injection_detected(
+        self,
+        client_id: str,
+        risk_level: str,
+        patterns_matched: list[str],
+        blocked: bool,
+        correlation_id: str | None = None
+    ) -> str:
+        """Log prompt injection detection.
+
+        Args:
+            client_id: Pseudonymized client identifier
+            risk_level: Assessed risk level
+            patterns_matched: Names of patterns that matched
+            blocked: Whether the request was blocked
+            correlation_id: Optional correlation ID
+
+        Returns:
+            Correlation ID
+        """
+        level = logging.ERROR if blocked else logging.WARNING
+        return self._log_event(
+            SecurityEventType.PROMPT_INJECTION_DETECTED,
+            level,
+            f"Prompt injection detected: risk_level={risk_level}",
+            correlation_id=correlation_id,
+            client_id=client_id,
+            additional_data={
+                "risk_level": risk_level,
+                "patterns_matched": patterns_matched,
+                "blocked": blocked,
+            }
+        )
+
+    def log_emergency_event(
+        self,
+        event_type: str,
+        reason: str,
+        correlation_id: str | None = None
+    ) -> str:
+        """Log emergency shutdown or recovery event.
+
+        Args:
+            event_type: Either 'triggered' or 'recovered'
+            reason: Reason for the emergency event
+            correlation_id: Optional correlation ID
+
+        Returns:
+            Correlation ID
+        """
+        sec_event = (
+            SecurityEventType.EMERGENCY_TRIGGERED
+            if event_type == "triggered"
+            else SecurityEventType.EMERGENCY_RECOVERED
+        )
+        level = logging.ERROR if event_type == "triggered" else logging.INFO
+        return self._log_event(
+            sec_event,
+            level,
+            f"Emergency {event_type}: {reason}",
+            correlation_id=correlation_id,
+            additional_data={"reason": reason}
+        )
+
+    def log_secret_rotation(
+        self,
+        key_type: str,
+        status: str,
+        correlation_id: str | None = None
+    ) -> str:
+        """Log secret rotation event.
+
+        Args:
+            key_type: Type of key being rotated (e.g., 'api_key', 'llm_api_key')
+            status: Status of rotation (e.g., 'started', 'completed', 'failed')
+            correlation_id: Optional correlation ID
+
+        Returns:
+            Correlation ID
+        """
+        level = logging.INFO if status == "completed" else logging.WARNING
+        return self._log_event(
+            SecurityEventType.SECRET_ROTATION_EVENT,
+            level,
+            f"Secret rotation {status}: {key_type}",
+            correlation_id=correlation_id,
+            additional_data={
+                "key_type": key_type,
+                "status": status,
+            }
         )
 
 
