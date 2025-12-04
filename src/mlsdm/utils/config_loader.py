@@ -2,10 +2,17 @@
 
 This module provides utilities for loading and validating configuration files
 with comprehensive error messages and type safety.
+
+Optimization: Includes configuration caching to avoid repeated file I/O
+and validation for the same configuration files.
 """
 
 import configparser
+import hashlib
 import os
+import threading
+import time
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -14,14 +21,183 @@ import yaml
 from mlsdm.utils.config_schema import SystemConfig, validate_config_dict
 
 
+@dataclass
+class _CachedConfig:
+    """Internal cached configuration entry."""
+    config: dict[str, Any]
+    mtime: float
+    file_hash: str
+    timestamp: float
+
+
+class ConfigCache:
+    """Thread-safe cache for loaded configurations.
+
+    Caches configurations by file path with invalidation based on:
+    - File modification time
+    - File content hash (for reliability)
+    - TTL expiration
+
+    This reduces file I/O and validation overhead for repeated config loads.
+    """
+
+    def __init__(self, ttl_seconds: float = 300.0, max_entries: int = 100) -> None:
+        """Initialize the config cache.
+
+        Args:
+            ttl_seconds: Time-to-live for cached entries (default: 5 minutes)
+            max_entries: Maximum number of cached configurations
+        """
+        self._cache: dict[str, _CachedConfig] = {}
+        self._lock = threading.Lock()
+        self.ttl_seconds = ttl_seconds
+        self.max_entries = max_entries
+        self._hits = 0
+        self._misses = 0
+
+    def _compute_file_hash(self, path: str) -> str:
+        """Compute SHA-256 hash of file contents."""
+        hasher = hashlib.sha256()
+        with open(path, "rb") as f:
+            hasher.update(f.read())
+        return hasher.hexdigest()
+
+    def get(self, cache_key: str, file_path: str | None = None) -> dict[str, Any] | None:
+        """Get cached configuration if valid.
+
+        Args:
+            cache_key: Cache key (may be path or composite key)
+            file_path: Actual file path for mtime validation (optional)
+
+        Returns:
+            Cached configuration dict or None if not cached/expired
+        """
+        with self._lock:
+            if cache_key not in self._cache:
+                self._misses += 1
+                return None
+
+            entry = self._cache[cache_key]
+            current_time = time.time()
+
+            # Check TTL expiration
+            if current_time - entry.timestamp > self.ttl_seconds:
+                del self._cache[cache_key]
+                self._misses += 1
+                return None
+
+            # Check if file was modified (only if file_path provided)
+            if file_path is not None:
+                try:
+                    current_mtime = os.path.getmtime(file_path)
+                    if current_mtime != entry.mtime:
+                        del self._cache[cache_key]
+                        self._misses += 1
+                        return None
+                except OSError:
+                    del self._cache[cache_key]
+                    self._misses += 1
+                    return None
+
+            self._hits += 1
+            # Return a copy to prevent external modification
+            return entry.config.copy()
+
+    def put(self, cache_key: str, config: dict[str, Any], file_path: str | None = None) -> None:
+        """Store configuration in cache.
+
+        Args:
+            cache_key: Cache key (may be path or composite key)
+            config: Configuration dictionary to cache
+            file_path: Actual file path for mtime tracking (optional)
+        """
+        with self._lock:
+            # Evict oldest entries if cache is full
+            while len(self._cache) >= self.max_entries:
+                oldest_key = min(
+                    self._cache.keys(),
+                    key=lambda k: self._cache[k].timestamp
+                )
+                del self._cache[oldest_key]
+
+            # Use file_path for mtime and hash, or cache_key if not provided
+            path_for_metadata = file_path if file_path is not None else cache_key
+            try:
+                mtime = os.path.getmtime(path_for_metadata)
+                file_hash = self._compute_file_hash(path_for_metadata)
+            except OSError:
+                # If we can't read file metadata, use defaults
+                mtime = time.time()
+                file_hash = ""
+
+            self._cache[cache_key] = _CachedConfig(
+                config=config.copy(),
+                mtime=mtime,
+                file_hash=file_hash,
+                timestamp=time.time(),
+            )
+
+    def invalidate(self, path: str) -> bool:
+        """Invalidate a specific cached configuration.
+
+        Args:
+            path: Path to configuration file
+
+        Returns:
+            True if entry was removed, False if not found
+        """
+        with self._lock:
+            if path in self._cache:
+                del self._cache[path]
+                return True
+            return False
+
+    def clear(self) -> None:
+        """Clear all cached configurations."""
+        with self._lock:
+            self._cache.clear()
+
+    def get_stats(self) -> dict[str, Any]:
+        """Get cache statistics."""
+        with self._lock:
+            total = self._hits + self._misses
+            hit_rate = (self._hits / total * 100) if total > 0 else 0.0
+            return {
+                "hits": self._hits,
+                "misses": self._misses,
+                "hit_rate": round(hit_rate, 2),
+                "size": len(self._cache),
+            }
+
+
+# Global config cache instance
+_config_cache: ConfigCache | None = None
+_config_cache_lock = threading.Lock()
+
+
+def get_config_cache() -> ConfigCache:
+    """Get or create the global config cache."""
+    global _config_cache
+    if _config_cache is None:
+        with _config_cache_lock:
+            if _config_cache is None:
+                _config_cache = ConfigCache()
+    return _config_cache
+
+
 class ConfigLoader:
-    """Load and validate configuration files with schema validation."""
+    """Load and validate configuration files with schema validation.
+
+    Optimization: Uses ConfigCache for repeated loads of the same file,
+    reducing file I/O and validation overhead.
+    """
 
     @staticmethod
     def load_config(
         path: str,
         validate: bool = True,
-        env_override: bool = True
+        env_override: bool = True,
+        use_cache: bool = True,
     ) -> dict[str, Any]:
         """Load configuration from file with optional validation.
 
@@ -29,6 +205,7 @@ class ConfigLoader:
             path: Path to configuration file (YAML or INI)
             validate: If True, validate against schema
             env_override: If True, allow environment variable overrides
+            use_cache: If True, use configuration cache (default: True)
 
         Returns:
             Configuration dictionary
@@ -50,6 +227,14 @@ class ConfigLoader:
                 "Unsupported configuration file format. "
                 "Only YAML (.yaml, .yml) and INI (.ini) are supported."
             )
+
+        # Optimization: Try cache first (only for validated configs without env override)
+        cache_key = f"{path}:{validate}:{env_override}"
+        if use_cache and validate and not env_override:
+            cache = get_config_cache()
+            cached = cache.get(cache_key, file_path=path)
+            if cached is not None:
+                return cached
 
         config: dict[str, Any] = {}
 
@@ -75,6 +260,11 @@ class ConfigLoader:
                     f"Please check your configuration file against the schema "
                     f"documentation in src/utils/config_schema.py"
                 ) from e
+
+        # Optimization: Cache the result (only for validated configs without env override)
+        if use_cache and validate and not env_override:
+            cache = get_config_cache()
+            cache.put(cache_key, config, file_path=path)
 
         return config
 

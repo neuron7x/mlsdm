@@ -223,6 +223,123 @@ class PhaseEntangledLatticeMemory:
 
             return idx
 
+    def entangle_batch(
+        self,
+        vectors: list[list[float]],
+        phases: list[float],
+        correlation_id: str | None = None,
+    ) -> list[int]:
+        """Store multiple vectors with associated phases in memory (batch operation).
+
+        This is more efficient than calling entangle() multiple times because it:
+        - Acquires the lock only once
+        - Performs integrity check only once
+        - Updates checksum only once at the end
+        - Uses vectorized numpy operations where possible
+
+        Args:
+            vectors: List of embedding vectors to store (each must match dimension)
+            phases: List of phase values in [0.0, 1.0] (must match vectors length)
+            correlation_id: Optional correlation ID for observability tracking
+
+        Returns:
+            List of indices where the vectors were stored
+
+        Raises:
+            TypeError: If vectors/phases are not lists or contain invalid types
+            ValueError: If dimensions don't match, phases out of range,
+                       or vectors contain NaN/inf values
+        """
+        start_time = time.perf_counter() if _OBSERVABILITY_AVAILABLE else None
+
+        if not isinstance(vectors, list) or not isinstance(phases, list):
+            raise TypeError("vectors and phases must be lists")
+
+        if len(vectors) != len(phases):
+            raise ValueError(
+                f"vectors and phases must have same length: "
+                f"{len(vectors)} vectors, {len(phases)} phases"
+            )
+
+        if len(vectors) == 0:
+            return []
+
+        with self._lock:
+            # Ensure integrity before operation (only once for batch)
+            self._ensure_integrity()
+
+            indices: list[int] = []
+
+            for i, (vector, phase) in enumerate(zip(vectors, phases, strict=True)):
+                # Validate vector type
+                if not isinstance(vector, list):
+                    raise TypeError(
+                        f"vector at index {i} must be a list, got {type(vector).__name__}"
+                    )
+                if len(vector) != self.dimension:
+                    raise ValueError(
+                        f"vector at index {i} dimension mismatch: "
+                        f"expected {self.dimension}, got {len(vector)}"
+                    )
+
+                # Validate phase type and range
+                if not isinstance(phase, (int, float)):
+                    raise TypeError(
+                        f"phase at index {i} must be numeric, got {type(phase).__name__}"
+                    )
+                if math.isnan(phase) or math.isinf(phase):
+                    raise ValueError(
+                        f"phase at index {i} must be a finite number, got {phase}"
+                    )
+                if not (0.0 <= phase <= 1.0):
+                    raise ValueError(
+                        f"phase at index {i} must be in [0.0, 1.0], got {phase}"
+                    )
+
+                # Validate vector values using numpy (faster than element-by-element)
+                vec_np = np.array(vector, dtype=np.float32)
+                if not np.all(np.isfinite(vec_np)):
+                    raise ValueError(
+                        f"vector at index {i} contains NaN or infinity values"
+                    )
+
+                norm = float(np.linalg.norm(vec_np) or self.MIN_NORM_THRESHOLD)
+                idx = self.pointer
+                self.memory_bank[idx] = vec_np
+                self.phase_bank[idx] = phase
+                self.norms[idx] = norm
+
+                indices.append(idx)
+
+                # Update pointer with wraparound check
+                new_pointer = self.pointer + 1
+                if new_pointer >= self.capacity:
+                    new_pointer = 0
+                self.pointer = new_pointer
+
+            # Update size only once at the end (more efficient)
+            self.size = min(self.size + len(vectors), self.capacity)
+
+            # Update checksum only once after all modifications
+            self._checksum = self._compute_checksum()
+
+            # Record observability metrics for batch operation
+            if _OBSERVABILITY_AVAILABLE and start_time is not None:
+                latency_ms = (time.perf_counter() - start_time) * 1000
+                # Record as single batch operation
+                record_pelm_store(
+                    index=indices[-1] if indices else 0,
+                    phase=phases[-1] if phases else 0.0,
+                    vector_norm=float(self.norms[indices[-1]]) if indices else 0.0,
+                    capacity_used=self.size,
+                    capacity_total=self.capacity,
+                    memory_bytes=self.memory_usage_bytes(),
+                    latency_ms=latency_ms,
+                    correlation_id=correlation_id,
+                )
+
+            return indices
+
     def retrieve(
         self,
         query_vector: list[float],
