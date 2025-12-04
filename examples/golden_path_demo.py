@@ -17,6 +17,10 @@ Expected output: A governed response demonstrating MLSDM's cognitive wrapper.
 from mlsdm import create_llm_wrapper
 
 
+# Response preview length for display
+RESPONSE_PREVIEW_LENGTH = 150
+
+
 def main() -> int:
     """Run the Golden Path demo."""
     print("=" * 60)
@@ -45,7 +49,7 @@ def main() -> int:
     print("\n📤 Output:")
     print(f"   Accepted: {result['accepted']}")
     print(f"   Phase: {result['phase']}")
-    print(f"   Response: {result['response'][:150]}...")
+    print(f"   Response: {result['response'][:RESPONSE_PREVIEW_LENGTH]}...")
 
     # 4. Show system state
     state = wrapper.get_state()

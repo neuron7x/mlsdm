@@ -137,7 +137,7 @@ class TestGoldenPath:
         # 4. Verify state
         state = wrapper.get_state()
         assert state["step"] == 1
-        assert state["qilm_stats"]["used"] >= 1
+        assert state["qilm_stats"]["used"] == 1
         assert 0.3 <= state["moral_threshold"] <= 0.9
 
     @pytest.mark.golden_path
