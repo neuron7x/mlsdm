@@ -138,6 +138,10 @@ Use this checklist before deploying MLSDM to production to ensure all critical c
 
 ### ✅ Testing
 
+- [x] **Golden Path Verification**
+  - [x] `git clone → pip install -e . → python examples/golden_path_demo.py` works
+  - [x] Golden Path e2e test passes (`pytest tests/e2e/test_golden_path.py -v`)
+
 - [ ] **Unit Tests**
   - [ ] All 541+ tests passing
   - [ ] Test coverage > 90%

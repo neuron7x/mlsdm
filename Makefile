@@ -1,9 +1,14 @@
 .PHONY: test lint type cov help run-dev run-cloud-local run-agent health-check eval-moral_filter test-memory-obs \
         build-package test-package docker-build-neuro-engine docker-run-neuro-engine docker-smoke-neuro-engine \
-        docker-compose-up docker-compose-down
+        docker-compose-up docker-compose-down setup run-golden-path test-golden-path
 
 help:
 	@echo "MLSDM Governed Cognitive Memory - Development Commands"
+	@echo ""
+	@echo "🔹 Golden Path (Quick Start):"
+	@echo "  make setup            - Install dependencies (pip install -e .)"
+	@echo "  make run-golden-path  - Run the Golden Path demo"
+	@echo "  make test-golden-path - Run Golden Path e2e test"
 	@echo ""
 	@echo "Testing & Linting:"
 	@echo "  make test     - Run all tests (uses pytest.ini config)"
@@ -120,3 +125,13 @@ health-check:
 # Evaluation Suites
 eval-moral_filter:
 	python -m evals.moral_filter_runner
+
+# Golden Path
+setup:
+	pip install -e .
+
+run-golden-path:
+	python examples/golden_path_demo.py
+
+test-golden-path:
+	pytest tests/e2e/test_golden_path.py -v

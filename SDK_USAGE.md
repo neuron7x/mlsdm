@@ -8,6 +8,18 @@ This guide provides practical usage examples for the MLSDM SDK client (`NeuroCog
 
 ---
 
+## 🔹 Golden Path (Fastest Start)
+
+```bash
+git clone https://github.com/neuron7x/mlsdm.git && cd mlsdm
+pip install -e .
+python examples/golden_path_demo.py
+```
+
+See [`examples/golden_path_demo.py`](examples/golden_path_demo.py) for the canonical demo.
+
+---
+
 ## Table of Contents
 
 - [Installation](#installation)

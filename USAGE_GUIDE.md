@@ -9,6 +9,20 @@ Comprehensive guide for using MLSDM Governed Cognitive Memory in your applicatio
 
 ---
 
+## 🔹 Golden Path (Recommended Start)
+
+The fastest way to get MLSDM working:
+
+```bash
+git clone https://github.com/neuron7x/mlsdm.git && cd mlsdm
+pip install -e .
+python examples/golden_path_demo.py
+```
+
+This runs a complete demo showing MLSDM's cognitive governance in action.
+
+---
+
 ## Quick Start: Universal LLM Wrapper
 
 The MLSDM system provides a production-ready wrapper for any LLM that enforces biological constraints and prevents degradation.

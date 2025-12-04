@@ -33,6 +33,32 @@
 
 ---
 
+## 🔹 Golden Path: 3 Steps to Live Demo
+
+Get a working MLSDM response in under 2 minutes:
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/neuron7x/mlsdm.git
+cd mlsdm
+
+# 2. Install dependencies
+pip install -e .
+
+# 3. Run the demo
+python examples/golden_path_demo.py
+```
+
+**Expected result:** A governed LLM response with cognitive phase and memory state.
+
+For Make users:
+```bash
+make setup
+make run-golden-path
+```
+
+---
+
 ## 📋 Table of Contents
 
 - [What is MLSDM?](#-what-is-mlsdm)

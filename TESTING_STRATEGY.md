@@ -629,7 +629,51 @@ This:
 
 ---
 
+## 17. Golden Path Testing ✅ **Implemented**
+
+**Status**: ✅ **Fully Implemented**
+
+The Golden Path test verifies the canonical "clone → setup → run → success" workflow.
+
+### Golden Path Demo
+
+Location: `examples/golden_path_demo.py`
+
+Run the complete demo:
+```bash
+python examples/golden_path_demo.py
+```
+
+### Golden Path E2E Tests
+
+Location: `tests/e2e/test_golden_path.py`
+
+Tests cover:
+- `create_llm_wrapper()` initialization
+- `generate()` response validation
+- System state updates
+- Moral filtering behavior
+- Full demo flow
+- `NeuroCognitiveEngine` path
+- `NeuroCognitiveClient` SDK path
+
+**Run Golden Path Tests**:
+```bash
+# Run Golden Path e2e tests
+pytest tests/e2e/test_golden_path.py -v
+
+# Or use make target
+make test-golden-path
+
+# Run only golden_path marked tests
+pytest -m golden_path -v
+```
+
+This is the primary verification that MLSDM is working correctly after installation.
+
+---
+
 **Document Maintainer**: neuron7x  
 **Last Updated**: December 2025  
-**Document Version**: 2.1 (Package Verification Added)  
+**Document Version**: 2.2 (Golden Path Added)  
 **Status**: Production-Ready with Roadmap

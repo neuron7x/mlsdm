@@ -9,6 +9,7 @@ Complete documentation guide for MLSDM Governed Cognitive Memory v1.2.0.
 
 ## Quick Links
 
+- 🔹 **Golden Path**: Run [`examples/golden_path_demo.py`](examples/golden_path_demo.py) for the fastest start
 - 🚀 **New Users**: Start with [README.md](README.md) and [USAGE_GUIDE.md](USAGE_GUIDE.md)
 - 👩‍💻 **Core Developers**: See [docs/DEVELOPER_GUIDE.md](docs/DEVELOPER_GUIDE.md)
 - 📚 **API Reference**: See [API_REFERENCE.md](API_REFERENCE.md)
@@ -22,6 +23,13 @@ Complete documentation guide for MLSDM Governed Cognitive Memory v1.2.0.
 ## Documentation Structure
 
 ### 🎯 Getting Started
+
+**Golden Path (Fastest Start):**
+```bash
+git clone https://github.com/neuron7x/mlsdm.git && cd mlsdm
+pip install -e .
+python examples/golden_path_demo.py
+```
 
 **For Users:**
 1. [README.md](README.md) - Project overview, features, quick start
