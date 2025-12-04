@@ -476,6 +476,77 @@ wrapper = create_llm_wrapper(wake_duration=20, sleep_duration=2)
 
 ---
 
+## End-to-End Examples
+
+Ready-to-run example scripts are available in the `examples/` directory:
+
+### SDK Examples
+
+**Basic SDK Usage** (`examples/example_basic_sdk.py`):
+```bash
+python examples/example_basic_sdk.py
+```
+
+Demonstrates:
+- NeuroCognitiveClient usage
+- LLMWrapper generation
+- NeuroCognitiveEngine
+- Moral filtering behavior
+
+### HTTP API Examples
+
+**HTTP Client** (`examples/example_http_client.py`):
+```bash
+# Start server first
+mlsdm serve
+
+# In another terminal
+python examples/example_http_client.py
+```
+
+Demonstrates:
+- Health check endpoints
+- Generate endpoint
+- Extended inference with governance options
+- Prometheus metrics
+
+### Additional Examples
+
+| Example | Description |
+|---------|-------------|
+| `llm_wrapper_example.py` | Detailed LLM wrapper usage with mock LLM |
+| `http_inference_example.py` | HTTP API interaction patterns |
+| `production_chatbot_example.py` | Full chatbot integration |
+| `observability_metrics_example.py` | Prometheus metrics usage |
+
+### Sample Response
+
+Calling `/infer` endpoint:
+
+```json
+{
+  "response": "Machine learning is a subset of artificial intelligence...",
+  "accepted": true,
+  "phase": "wake",
+  "moral_metadata": {
+    "threshold": 0.5,
+    "secure_mode": false,
+    "applied_moral_value": 0.8
+  },
+  "rag_metadata": {
+    "enabled": true,
+    "context_items_retrieved": 3,
+    "top_k": 5
+  },
+  "timing": {
+    "total": 15.2,
+    "generation": 12.1
+  }
+}
+```
+
+---
+
 ## Next Steps
 
 - [API_REFERENCE.md](API_REFERENCE.md) - Complete API documentation
@@ -485,4 +556,4 @@ wrapper = create_llm_wrapper(wake_duration=20, sleep_duration=2)
 
 ---
 
-**Version:** 1.2.0 | **Updated:** November 2025
+**Version:** 1.2.0 | **Updated:** December 2025

@@ -1,85 +1,89 @@
 # Docker Compose for MLSDM Governed Cognitive Memory
 # ====================================================
-# Production-ready compose configuration with best practices
+# Local development and demo stack
 #
 # Usage:
-#   Development: docker-compose up
-#   Production: docker-compose -f docker-compose.yaml -f docker-compose.prod.yaml up -d
-
-version: "3.8"
+#   Development: docker compose up
+#   Background:  docker compose up -d
+#   Stop:        docker compose down
+#
+# Prerequisites:
+#   1. Copy env.dev.example to .env and customize
+#   2. Run: docker compose up
 
 services:
-  memory-system:
+  neuro-engine:
     build:
       context: ..
-      dockerfile: docker/Dockerfile
-    image: mlsdm-governed-cognitive-memory:latest
-    container_name: mlsdm-memory-system
-    
+      dockerfile: Dockerfile.neuro-engine-service
+    image: ghcr.io/neuron7x/mlsdm-neuro-engine:latest
+    container_name: mlsdm-neuro-engine
+
     # Port mapping
     ports:
       - "8000:8000"
-    
+
     # Environment configuration
     environment:
-      # API Configuration
-      - API_KEY=${API_KEY:-your-secret-key-change-in-production}
-      - CONFIG_PATH=${CONFIG_PATH:-config/production.yaml}
-      
-      # System Configuration
-      - MLSDM_DIMENSION=${DIMENSION:-384}
-      - MLSDM_STRICT_MODE=${STRICT_MODE:-false}
-      
-      # Moral Filter
-      - MLSDM_MORAL_FILTER__THRESHOLD=${MORAL_THRESHOLD:-0.5}
-      - MLSDM_MORAL_FILTER__MIN_THRESHOLD=${MORAL_MIN_THRESHOLD:-0.3}
-      - MLSDM_MORAL_FILTER__MAX_THRESHOLD=${MORAL_MAX_THRESHOLD:-0.9}
-      
-      # Cognitive Rhythm
-      - MLSDM_COGNITIVE_RHYTHM__WAKE_DURATION=${WAKE_DURATION:-8}
-      - MLSDM_COGNITIVE_RHYTHM__SLEEP_DURATION=${SLEEP_DURATION:-3}
-      
-      # Logging
+      # Server Configuration
+      - HOST=0.0.0.0
+      - PORT=8000
+
+      # LLM Backend (local_stub for demo, openai for production)
+      - LLM_BACKEND=${LLM_BACKEND:-local_stub}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - OPENAI_MODEL=${OPENAI_MODEL:-gpt-3.5-turbo}
+
+      # Security (disable for local development)
+      - DISABLE_RATE_LIMIT=${DISABLE_RATE_LIMIT:-1}
+      - MLSDM_SECURE_MODE=${MLSDM_SECURE_MODE:-0}
+
+      # Engine Configuration
+      - EMBEDDING_DIM=${EMBEDDING_DIM:-384}
+      - ENABLE_FSLGS=${ENABLE_FSLGS:-true}
+      - ENABLE_METRICS=${ENABLE_METRICS:-true}
+
+      # Observability
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
-      - JSON_LOGGING=${JSON_LOGGING:-true}
-    
-    # Environment file (optional, overrides above)
-    env_file:
-      - ../.env
-    
-    # Resource limits (adjust based on your needs)
+      - JSON_LOGGING=${JSON_LOGGING:-false}
+      - OTEL_SDK_DISABLED=${OTEL_SDK_DISABLED:-true}
+      - OTEL_EXPORTER_TYPE=${OTEL_EXPORTER_TYPE:-none}
+
+      # Config path
+      - CONFIG_PATH=${CONFIG_PATH:-config/default_config.yaml}
+
+    # Health check using proper endpoints
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+    # Resource limits
     deploy:
       resources:
         limits:
           cpus: '2.0'
-          memory: 4G
-        reservations:
-          cpus: '1.0'
           memory: 2G
-    
-    # Health check
-    healthcheck:
-      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8000/health')"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 10s
-    
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
     # Restart policy
     restart: unless-stopped
-    
+
     # Logging configuration
     logging:
       driver: "json-file"
       options:
         max-size: "10m"
         max-file: "3"
-    
+
     # Security
     security_opt:
       - no-new-privileges:true
-    read_only: false  # Set to true if you want immutable filesystem
-    
+
     # Networks
     networks:
       - mlsdm-network
@@ -89,28 +93,28 @@ networks:
     driver: bridge
 
 # ====================================================
-# Production Notes
+# Usage Examples
 # ====================================================
-# 
-# 1. Security:
-#    - Change default API_KEY
-#    - Use secrets management (Docker secrets, AWS Secrets Manager)
-#    - Enable read_only filesystem if possible
-#    - Review and harden security_opt settings
 #
-# 2. Monitoring:
-#    - Add Prometheus/Grafana services
-#    - Configure log aggregation (ELK, Loki)
-#    - Set up alerts for health check failures
+# Start the stack:
+#   docker compose -f docker/docker-compose.yaml up
 #
-# 3. Scaling:
-#    - Use docker-compose scale or Kubernetes for horizontal scaling
-#    - Configure load balancer for multiple instances
-#    - Ensure stateless design or add persistent storage
+# Test health endpoint:
+#   curl http://localhost:8000/health
 #
-# 4. Configuration:
-#    - Create .env file from env.example
-#    - Review resource limits based on workload
-#    - Adjust health check parameters for your environment
+# Test generate endpoint:
+#   curl -X POST http://localhost:8000/generate \
+#     -H "Content-Type: application/json" \
+#     -d '{"prompt": "Hello, world!"}'
 #
-# See DEPLOYMENT_GUIDE.md for detailed instructions.
+# View logs:
+#   docker compose -f docker/docker-compose.yaml logs -f
+#
+# Stop the stack:
+#   docker compose -f docker/docker-compose.yaml down
+#
+# ====================================================
+# For production deployment, see:
+# - deploy/k8s/ for Kubernetes manifests
+# - DEPLOYMENT_GUIDE.md for detailed instructions
+# ====================================================
