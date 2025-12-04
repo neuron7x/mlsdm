@@ -44,12 +44,11 @@ jobs:
       
       - name: Check for high severity issues
         run: |
-          # Run again with only high severity for strict check
+          # Run with high severity to display issues
           bandit -r src/mlsdm \
             -f txt \
             --severity-level high \
-            --confidence-level high \
-            -ll  # Show only high severity
+            --confidence-level high
           
           # This will fail if high severity issues are found
           bandit -r src/mlsdm \

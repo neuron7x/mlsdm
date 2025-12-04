@@ -186,8 +186,9 @@ jobs:
           done
       
       - name: Check changelog has version entry
+        env:
+          VERSION: ${{ github.event.inputs.version || github.ref_name }}
         run: |
-          VERSION=${{ github.event.inputs.version || github.ref_name }}
           if grep -q "## \[${VERSION}\]" CHANGELOG.md 2>/dev/null || grep -q "## ${VERSION}" CHANGELOG.md 2>/dev/null; then
             echo "✓ CHANGELOG.md has entry for version $VERSION"
           else
@@ -204,9 +205,11 @@ jobs:
     
     steps:
       - name: Approval received
+        env:
+          VERSION: ${{ github.event.inputs.version || github.ref_name }}
         run: |
           echo "✓ Production deployment approved"
-          echo "Version: ${{ github.event.inputs.version || github.ref_name }}"
+          echo "Version: $VERSION"
           echo "Approved at: $(date -u)"
 
   # Final gate check
