@@ -24,6 +24,10 @@ from mlsdm.utils.security_logger import get_security_logger
 logger = logging.getLogger(__name__)
 security_logger = get_security_logger()
 
+# Display length for truncated vector content in memory query results
+# Used for human-readable representation of stored vectors
+VECTOR_DISPLAY_LENGTH = 10
+
 router = APIRouter(prefix="/v1/memory", tags=["Memory"])
 
 # Rate limiter (can be disabled for testing)
@@ -410,7 +414,7 @@ async def query_memory(
         results = []
         for retrieval in retrievals:
             item = MemoryItem(
-                content=str(retrieval.vector.tolist()[:10]) + "...",  # Truncated for display
+                content=str(retrieval.vector.tolist()[:VECTOR_DISPLAY_LENGTH]) + "...",
                 similarity=retrieval.resonance,  # Use resonance (cosine similarity)
                 phase=retrieval.phase,
                 metadata=None if not request_body.include_metadata else {},

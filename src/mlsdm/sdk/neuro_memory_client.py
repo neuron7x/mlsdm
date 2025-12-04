@@ -37,6 +37,10 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+# Display length for truncated vector content in memory results
+# Used for human-readable representation of stored vectors
+VECTOR_DISPLAY_LENGTH = 5
+
 
 # ============================================================
 # Data Transfer Objects
@@ -463,7 +467,7 @@ class NeuroMemoryClient:
         results = []
         for retrieval in retrievals:
             item = MemoryItem(
-                content=str(retrieval.vector.tolist()[:5]) + "...",
+                content=str(retrieval.vector.tolist()[:VECTOR_DISPLAY_LENGTH]) + "...",
                 similarity=retrieval.resonance,  # Use resonance (cosine similarity)
                 phase=retrieval.phase,
                 metadata=None if not include_metadata else {},

@@ -322,7 +322,7 @@ class TestHealthCheck:
 class TestErrorHandling:
     """Test error handling."""
 
-    def test_uninitalized_engine_raises_error(self):
+    def test_uninitialized_engine_raises_error(self):
         """Test that uninitialized engine raises appropriate error."""
         # This would require mocking, but we can test that the exception exists
         from mlsdm.sdk import NeuroMemoryError
