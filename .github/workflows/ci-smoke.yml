@@ -51,7 +51,7 @@ jobs:
           from mlsdm.api.middleware import BulkheadMiddleware, TimeoutMiddleware
           from mlsdm.security.rbac import RBACMiddleware, Role, RoleValidator
           from mlsdm.observability.logger import ObservabilityLogger
-          from mlsdm.observability.metrics import MetricsCollector
+          from mlsdm.observability.metrics import MetricsExporter
           print('✓ All critical imports successful')
           "
       
