@@ -75,8 +75,8 @@ class TestGoldenPath:
 
         wrapper = create_llm_wrapper()
 
-        # Generate first response
-        result1 = wrapper.generate(prompt="Hello", moral_value=0.9)
+        # Generate first response (result used for side effects on state)
+        wrapper.generate(prompt="Hello", moral_value=0.9)
 
         state = wrapper.get_state()
 
@@ -85,8 +85,8 @@ class TestGoldenPath:
         assert state["qilm_stats"]["used"] == 1
         assert state["accepted_count"] == 1
 
-        # Generate second response
-        result2 = wrapper.generate(prompt="World", moral_value=0.9)
+        # Generate second response (result used for side effects on state)
+        wrapper.generate(prompt="World", moral_value=0.9)
 
         state2 = wrapper.get_state()
         assert state2["step"] == 2
