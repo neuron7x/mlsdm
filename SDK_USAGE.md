@@ -14,6 +14,7 @@ This guide provides practical usage examples for the MLSDM SDK client (`NeuroCog
 - [Quick Start](#quick-start)
 - [Client Initialization](#client-initialization)
 - [Generation Methods](#generation-methods)
+- [NeuroMemoryClient (Extended SDK)](#neuromemoryclient-extended-sdk)
 - [Error Handling](#error-handling)
 - [Response Structure](#response-structure)
 - [Configuration](#configuration)
@@ -233,6 +234,104 @@ MLSDMError (base)
 | `validation_steps` | list | Validation steps |
 | `error` | dict \| None | Error info |
 | `rejected_at` | str \| None | Rejection stage |
+
+---
+
+## NeuroMemoryClient (Extended SDK)
+
+The `NeuroMemoryClient` provides an extended interface with Memory, Decision, and Agent APIs.
+
+### Initialization
+
+```python
+from mlsdm.sdk import NeuroMemoryClient
+
+# Local mode (no HTTP server needed)
+client = NeuroMemoryClient(mode="local")
+
+# Remote mode (connects to HTTP API)
+client = NeuroMemoryClient(
+    mode="remote",
+    base_url="http://localhost:8000",
+    user_id="my-user",
+    session_id="my-session"
+)
+```
+
+### Memory Operations
+
+```python
+from mlsdm.sdk import NeuroMemoryClient
+
+client = NeuroMemoryClient(mode="local")
+
+# Append memory
+result = client.append_memory(
+    content="User prefers morning meetings.",
+    moral_value=0.9,
+    metadata={"category": "preference"}
+)
+print(f"Stored: {result.memory_id}")
+
+# Query memory
+result = client.query_memory(
+    query="What are the user's preferences?",
+    top_k=5
+)
+for item in result.results:
+    print(f"  - {item.content} (similarity: {item.similarity:.2f})")
+```
+
+### Decision Making
+
+```python
+from mlsdm.sdk import NeuroMemoryClient
+
+client = NeuroMemoryClient(mode="local")
+
+# Make a governed decision
+result = client.decide(
+    prompt="Should I schedule this meeting?",
+    context="User has busy mornings.",
+    risk_level="low",
+    mode="standard"
+)
+
+print(f"Decision: {result.response}")
+print(f"Accepted: {result.accepted}")
+for contour in result.contour_decisions:
+    print(f"  {contour.contour}: {'✓' if contour.passed else '✗'}")
+```
+
+### Agent Step Protocol
+
+```python
+from mlsdm.sdk import NeuroMemoryClient
+
+client = NeuroMemoryClient(mode="local")
+
+# Process agent steps
+internal_state = {"goal": "Assist user"}
+
+result = client.agent_step(
+    agent_id="assistant-1",
+    observation="User asked for help with scheduling.",
+    internal_state=internal_state
+)
+
+print(f"Action: {result.action.action_type}")
+print(f"Response: {result.response}")
+print(f"Next state: {result.updated_state}")
+```
+
+### Examples
+
+See the examples directory for complete demonstrations:
+
+- `examples/example_sdk_local.py` - Local mode usage
+- `examples/example_sdk_remote.py` - Remote HTTP mode usage
+- `examples/example_agent_integration.py` - Agent integration
+- `examples/example_conversational_assistant.py` - End-to-end use case
 
 ---
 

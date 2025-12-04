@@ -12,6 +12,13 @@ Complete API reference for MLSDM Governed Cognitive Memory v1.2.0.
 - [HTTP API Endpoints](#http-api-endpoints)
   - [Health Check](#health-check)
   - [Generate](#generate)
+- [Memory API](#memory-api)
+  - [Memory Append](#memory-append)
+  - [Memory Query](#memory-query)
+- [Decision API](#decision-api)
+  - [Decide](#decide)
+- [Agent Step API](#agent-step-api)
+  - [Agent Step](#agent-step)
 - [LLMWrapper](#llmwrapper)
 - [CognitiveController](#cognitivecontroller)
 - [Memory Components](#memory-components)
@@ -178,6 +185,304 @@ curl -X POST http://localhost:8000/generate \
 curl -X POST http://localhost:8000/generate \
   -H "Content-Type: application/json" \
   -d '{"prompt": "Explain machine learning", "max_tokens": 200, "moral_value": 0.8}'
+```
+
+---
+
+## Memory API
+
+The Memory API provides endpoints for storing and retrieving cognitive memory.
+
+### Memory Append
+
+Store content in cognitive memory.
+
+**Endpoint:** `POST /v1/memory/append`
+
+**Request Body:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `content` | string | Yes | Text content to store (1-10000 chars) |
+| `user_id` | string | No | User identifier for memory scoping |
+| `session_id` | string | No | Session identifier for memory scoping |
+| `agent_id` | string | No | Agent identifier for multi-agent scenarios |
+| `moral_value` | float | No | Moral value (0.0-1.0), default: 0.8 |
+| `metadata` | object | No | Additional metadata to store |
+
+**Response Model:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `success` | boolean | Whether append succeeded |
+| `memory_id` | string \| null | Unique ID for stored memory |
+| `phase` | string | Current cognitive phase |
+| `accepted` | boolean | Whether moral filter accepted |
+| `memory_stats` | object | Memory statistics |
+| `message` | string | Status message |
+
+**Example:**
+
+```bash
+curl -X POST http://localhost:8000/v1/memory/append \
+  -H "Content-Type: application/json" \
+  -d '{
+    "content": "User prefers morning meetings",
+    "user_id": "user-123",
+    "moral_value": 0.9
+  }'
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "memory_id": "a1b2c3d4e5f6",
+  "phase": "wake",
+  "accepted": true,
+  "memory_stats": {
+    "capacity": 20000,
+    "used": 42,
+    "memory_mb": 1.5
+  },
+  "message": "Memory stored successfully"
+}
+```
+
+### Memory Query
+
+Query cognitive memory for relevant content.
+
+**Endpoint:** `POST /v1/memory/query`
+
+**Request Body:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `query` | string | Yes | Query text (1-5000 chars) |
+| `user_id` | string | No | User identifier to scope query |
+| `session_id` | string | No | Session identifier to scope query |
+| `agent_id` | string | No | Agent identifier to scope query |
+| `top_k` | integer | No | Number of results (1-100), default: 5 |
+| `include_metadata` | boolean | No | Include metadata in results, default: true |
+
+**Response Model:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `success` | boolean | Whether query succeeded |
+| `results` | array | List of memory items |
+| `query_phase` | string | Cognitive phase during query |
+| `total_results` | integer | Total results found |
+| `message` | string | Status message |
+
+**Memory Item:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `content` | string | Memory content |
+| `similarity` | float | Similarity score (0.0-1.0) |
+| `phase` | float | Phase value when stored |
+| `metadata` | object | Associated metadata |
+
+**Example:**
+
+```bash
+curl -X POST http://localhost:8000/v1/memory/query \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "What are the users preferences?",
+    "top_k": 5
+  }'
+```
+
+---
+
+## Decision API
+
+The Decision API provides governed decision-making with moral/risk governance.
+
+### Decide
+
+Make a governed decision using the cognitive engine.
+
+**Endpoint:** `POST /v1/decide`
+
+**Request Body:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `prompt` | string | Yes | Decision prompt (1-20000 chars) |
+| `context` | string | No | Additional context |
+| `user_id` | string | No | User identifier |
+| `session_id` | string | No | Session identifier |
+| `agent_id` | string | No | Agent identifier |
+| `risk_level` | string | No | Risk level: "low", "medium", "high", "critical" |
+| `priority` | string | No | Priority: "low", "normal", "high", "urgent" |
+| `mode` | string | No | Mode: "standard", "cautious", "confident", "emergency" |
+| `max_tokens` | integer | No | Max tokens (1-4096), default: 512 |
+| `use_memory` | boolean | No | Use memory for context, default: true |
+| `context_top_k` | integer | No | Context items (0-100), default: 5 |
+| `metadata` | object | No | Additional metadata |
+
+**Response Model:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `response` | string | Generated response |
+| `accepted` | boolean | Whether decision was accepted |
+| `phase` | string | Current cognitive phase |
+| `contour_decisions` | array | Governance contour results |
+| `memory_context_used` | integer | Memory items used |
+| `risk_assessment` | object | Risk assessment details |
+| `timing` | object | Timing metrics |
+| `decision_id` | string | Unique decision ID |
+| `message` | string | Status message |
+
+**Contour Decision:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `contour` | string | Contour name (moral_filter, risk_assessment, etc.) |
+| `passed` | boolean | Whether check passed |
+| `score` | float | Score from contour |
+| `threshold` | float | Threshold applied |
+| `notes` | string | Additional notes |
+
+**Example:**
+
+```bash
+curl -X POST http://localhost:8000/v1/decide \
+  -H "Content-Type: application/json" \
+  -d '{
+    "prompt": "Should I proceed with this action?",
+    "context": "Previous actions were successful.",
+    "risk_level": "medium",
+    "mode": "cautious"
+  }'
+```
+
+**Response:**
+```json
+{
+  "response": "Based on the context, proceeding is advisable...",
+  "accepted": true,
+  "phase": "wake",
+  "contour_decisions": [
+    {
+      "contour": "moral_filter",
+      "passed": true,
+      "score": 0.7,
+      "threshold": 0.5,
+      "notes": "mode=cautious, risk=medium"
+    },
+    {
+      "contour": "risk_assessment",
+      "passed": true,
+      "score": 0.8,
+      "threshold": 0.5,
+      "notes": "risk_level=medium"
+    }
+  ],
+  "memory_context_used": 3,
+  "risk_assessment": {
+    "level": "medium",
+    "mode": "cautious",
+    "computed_moral_value": 0.7
+  },
+  "timing": {
+    "total_endpoint": 25.3
+  },
+  "decision_id": "abc123def456",
+  "message": "Decision processed"
+}
+```
+
+---
+
+## Agent Step API
+
+The Agent Step API provides a protocol for integrating external LLM agents with MLSDM.
+
+### Agent Step
+
+Process a single step for an external agent.
+
+**Endpoint:** `POST /v1/agent/step`
+
+**Request Body:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `agent_id` | string | Yes | Unique agent identifier (1-100 chars) |
+| `observation` | string | Yes | Current observation (1-50000 chars) |
+| `user_id` | string | No | User identifier |
+| `session_id` | string | No | Session identifier |
+| `internal_state` | object | No | Agent's internal state |
+| `tool_calls` | array | No | Tool calls from previous step |
+| `tool_results` | array | No | Results from tool calls |
+| `max_tokens` | integer | No | Max tokens (1-4096), default: 512 |
+| `moral_value` | float | No | Moral value (0.0-1.0), default: 0.8 |
+
+**Response Model:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `action` | object | Action for agent to take |
+| `response` | string | Full response text |
+| `phase` | string | Current cognitive phase |
+| `accepted` | boolean | Whether step was accepted |
+| `updated_state` | object | Updated internal state |
+| `memory_updated` | boolean | Whether memory was updated |
+| `memory_context_used` | integer | Memory items used |
+| `step_id` | string | Unique step ID |
+| `timing` | object | Timing metrics |
+| `message` | string | Status message |
+
+**Action Object:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `action_type` | string | Type: "respond", "tool_call", "wait", "terminate" |
+| `content` | string | Response content (if action_type is "respond") |
+| `tool_calls` | array | Tool calls (if action_type is "tool_call") |
+
+**Example:**
+
+```bash
+curl -X POST http://localhost:8000/v1/agent/step \
+  -H "Content-Type: application/json" \
+  -d '{
+    "agent_id": "assistant-1",
+    "observation": "User asked for help with scheduling",
+    "internal_state": {"goal": "assist user"},
+    "max_tokens": 256
+  }'
+```
+
+**Response:**
+```json
+{
+  "action": {
+    "action_type": "respond",
+    "content": "I can help you with scheduling..."
+  },
+  "response": "I can help you with scheduling...",
+  "phase": "wake",
+  "accepted": true,
+  "updated_state": {
+    "goal": "assist user",
+    "last_step_id": "step123",
+    "step_count": 1
+  },
+  "memory_updated": true,
+  "memory_context_used": 2,
+  "step_id": "step123abc",
+  "timing": {
+    "total_endpoint": 18.5
+  },
+  "message": "Step processed"
+}
 ```
 
 ---

@@ -407,6 +407,80 @@ result = wrapper.generate("Test", moral_value=0.9)
 print(result["speech_governance"])
 ```
 
+### Example 5: Agent Integration Protocol
+
+Use MLSDM as a memory/decision backend for external LLM agents:
+
+```python
+from mlsdm.sdk import NeuroMemoryClient
+
+# Initialize client
+client = NeuroMemoryClient(mode="local", agent_id="my-agent")
+
+# Agent state
+internal_state = {"goal": "assist user", "step_count": 0}
+
+# Agent loop
+observations = [
+    "User asks: What's the weather?",
+    "User says: Thanks, can you help with scheduling?",
+]
+
+for observation in observations:
+    # 1. Store observation in memory
+    client.append_memory(observation, moral_value=0.9)
+    
+    # 2. Get relevant context
+    context = client.query_memory(observation, top_k=3)
+    
+    # 3. Process step with governance
+    result = client.agent_step(
+        agent_id="my-agent",
+        observation=observation,
+        internal_state=internal_state,
+    )
+    
+    # 4. Update state
+    internal_state = result.updated_state
+    
+    # 5. Execute action
+    if result.action.action_type == "respond":
+        print(f"Agent: {result.action.content[:100]}...")
+    elif result.action.action_type == "tool_call":
+        print(f"Agent calling tools: {result.action.tool_calls}")
+```
+
+### Example 6: Neuro Memory Assistant
+
+Complete conversational assistant with memory:
+
+```python
+from mlsdm.sdk import NeuroMemoryClient
+
+client = NeuroMemoryClient(
+    mode="local",
+    user_id="user-123",
+    session_id="session-abc"
+)
+
+# Store user preferences
+client.append_memory("User prefers dark roast coffee")
+client.append_memory("User has meetings on Tuesday mornings")
+
+# Make decisions
+decision = client.decide(
+    prompt="Should I suggest a coffee meeting?",
+    context="User mentioned they're free Thursday.",
+    risk_level="low",
+    mode="standard"
+)
+
+print(f"Decision: {decision.response}")
+print(f"Contours: {[c.contour for c in decision.contour_decisions]}")
+```
+
+See `examples/example_conversational_assistant.py` for a complete implementation.
+
 ---
 
 ## Configuration

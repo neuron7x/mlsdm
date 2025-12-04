@@ -582,6 +582,107 @@ curl -X POST http://localhost:8000/generate \
 - Use `low` for batch processing, analytics, and non-time-sensitive tasks
 - Default `normal` is appropriate for most interactive requests
 
+## End-to-End Example: Neuro Memory Assistant
+
+A complete example of using MLSDM as a memory backend for a conversational assistant.
+
+### Start the Service
+
+```bash
+# Option 1: Using CLI
+mlsdm serve
+
+# Option 2: Using uvicorn directly
+uvicorn mlsdm.api.app:app --host 0.0.0.0 --port 8000
+```
+
+### Run the Scripted Demo
+
+```bash
+python examples/example_conversational_assistant.py --scripted
+```
+
+Output:
+```
+Session ID: abc12345
+--- Conversation Start ---
+
+User: Hello! I'm planning a birthday party for my friend.
+Assistant: I'd be happy to help you plan a birthday party...
+
+User: She loves chocolate cake and Italian food.
+Assistant: Great choices! I've noted that your friend loves...
+```
+
+### Interactive Mode
+
+```bash
+python examples/example_conversational_assistant.py
+```
+
+Commands:
+- `/info` - Show session information
+- `/clear` - Clear conversation and start fresh
+- `/quit` - Exit
+
+### Memory API Usage
+
+```bash
+# Store a fact
+curl -X POST http://localhost:8000/v1/memory/append \
+  -H "Content-Type: application/json" \
+  -d '{
+    "content": "User prefers morning meetings",
+    "user_id": "user-123",
+    "moral_value": 0.9
+  }'
+
+# Query memories
+curl -X POST http://localhost:8000/v1/memory/query \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "What are the users preferences?",
+    "top_k": 5
+  }'
+```
+
+### Decision API Usage
+
+```bash
+# Make a governed decision
+curl -X POST http://localhost:8000/v1/decide \
+  -H "Content-Type: application/json" \
+  -d '{
+    "prompt": "Should I schedule this meeting?",
+    "context": "User prefers mornings",
+    "risk_level": "low",
+    "mode": "standard"
+  }'
+```
+
+### Agent Step API Usage
+
+```bash
+# Process an agent step
+curl -X POST http://localhost:8000/v1/agent/step \
+  -H "Content-Type: application/json" \
+  -d '{
+    "agent_id": "my-assistant",
+    "observation": "User asked for help",
+    "internal_state": {"step_count": 0}
+  }'
+```
+
+### Features Demonstrated
+
+- ✅ **Session-based memory**: Facts persist within a session
+- ✅ **Moral filtering**: Inappropriate content is filtered
+- ✅ **Cognitive rhythm**: Aware of wake/sleep phases
+- ✅ **Context retrieval**: Relevant memories inform responses
+- ✅ **Risk-aware decisions**: Adjusts behavior based on risk level
+
+See `examples/example_conversational_assistant.py` for the complete implementation.
+
 ## See Also
 
 - [README.md](README.md) - Project overview
