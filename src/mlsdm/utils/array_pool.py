@@ -113,10 +113,7 @@ class ArrayPool:
         """
         if not self.config.enabled:
             arr = np.empty(shape, dtype=dtype)
-            if fill_value is not None:
-                arr.fill(fill_value)
-            elif fill_value is None:
-                arr.fill(0)
+            self._fill_array(arr, fill_value)
             return arr
 
         # Ensure dtype is a numpy dtype object
@@ -130,21 +127,28 @@ class ArrayPool:
                 self._total_bytes -= arr.nbytes
                 self._hits += 1
                 # Reset array contents
-                if fill_value is not None:
-                    arr.fill(fill_value)
-                else:
-                    arr.fill(0)
+                self._fill_array(arr, fill_value)
                 return arr
 
             self._misses += 1
 
         # Allocate outside lock
         arr = np.empty(shape, dtype=dtype_obj)
+        self._fill_array(arr, fill_value)
+        return arr
+
+    @staticmethod
+    def _fill_array(arr: np.ndarray, fill_value: float | None) -> None:
+        """Fill array with specified value or zeros.
+
+        Args:
+            arr: Array to fill
+            fill_value: Value to fill with (None = zeros)
+        """
         if fill_value is not None:
             arr.fill(fill_value)
         else:
             arr.fill(0)
-        return arr
 
     def put(self, arr: np.ndarray) -> bool:
         """Return an array to the pool for reuse.
