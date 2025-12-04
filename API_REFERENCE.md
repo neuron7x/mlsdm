@@ -3,27 +3,145 @@
 **Document Version:** 1.2.0  
 **Project Version:** 1.2.0  
 **Last Updated:** December 2025  
-**Status:** Production
+**Status:** Beta
 
-Complete API reference for MLSDM Governed Cognitive Memory v1.2.0.
+API reference for MLSDM v1.2.0.
 
 ## Table of Contents
 
+- [Public API (Stable)](#public-api-stable)
+  - [NeuroCognitiveClient](#neurocognitiveclient)
+  - [create_llm_wrapper](#create_llm_wrapper)
+  - [create_neuro_engine](#create_neuro_engine)
 - [HTTP API Endpoints](#http-api-endpoints)
   - [Health Check](#health-check)
   - [Generate](#generate)
-- [LLMWrapper](#llmwrapper)
-- [CognitiveController](#cognitivecontroller)
-- [Memory Components](#memory-components)
-  - [PELM](#qilm_v2)
-  - [MultiLevelSynapticMemory](#multilevelsyn apticmemory)
-- [Filtering Components](#filtering-components)
-  - [MoralFilterV2](#moralfilterv2)
-  - [OntologyMatcher](#ontologymatcher)
-- [Rhythm Components](#rhythm-components)
-  - [CognitiveRhythm](#cognitiverhythm)
-- [Utilities](#utilities)
-  - [MetricsCollector](#metricscollector)
+  - [Infer (Extended)](#infer-extended)
+- [Extended API (Internal)](#extended-api-internal)
+  - [LLMWrapper](#llmwrapper)
+  - [LLMWrapper.generate](#llmwrappergenerate)
+  - [LLMWrapper.get_state](#llmwrapperget_state)
+
+> **Note:** Internal components (Memory, Filter, Rhythm) are documented below for advanced use but are not part of the stable public API.
+
+---
+
+## Public API (Stable)
+
+The public API is the minimal, stable interface for using MLSDM.
+
+### NeuroCognitiveClient
+
+SDK client for generating governed responses.
+
+```python
+from mlsdm import NeuroCognitiveClient
+
+# Initialize with local stub backend (no API key required)
+client = NeuroCognitiveClient(backend="local_stub")
+
+# Or with OpenAI backend
+client = NeuroCognitiveClient(
+    backend="openai",
+    api_key="sk-...",
+    model="gpt-4"
+)
+
+# Generate a response
+result = client.generate("What is consciousness?")
+print(result["response"])
+
+# Typed response
+from mlsdm.sdk import GenerateResponseDTO
+result: GenerateResponseDTO = client.generate_typed("What is consciousness?")
+print(result.response)
+print(result.phase)
+```
+
+**Constructor Parameters:**
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `backend` | str | "local_stub" | Backend: "local_stub" or "openai" |
+| `api_key` | str | None | API key for OpenAI backend |
+| `model` | str | None | Model name for OpenAI backend |
+| `config` | NeuroEngineConfig | None | Engine configuration |
+
+**Methods:**
+
+| Method | Description |
+|--------|-------------|
+| `generate(prompt, **kwargs)` | Generate response, returns dict |
+| `generate_typed(prompt, **kwargs)` | Generate response, returns GenerateResponseDTO |
+
+**generate() Parameters:**
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `prompt` | str | Required | Input text prompt |
+| `max_tokens` | int | None | Maximum tokens to generate |
+| `moral_value` | float | None | Moral threshold (0.0-1.0) |
+| `user_intent` | str | None | Intent category |
+| `cognitive_load` | float | None | Cognitive load (0.0-1.0) |
+| `context_top_k` | int | None | Context items to retrieve |
+
+---
+
+### create_llm_wrapper
+
+Factory function for creating LLMWrapper instances.
+
+```python
+from mlsdm import create_llm_wrapper
+
+# Create with default settings
+wrapper = create_llm_wrapper()
+
+# Create with custom settings
+wrapper = create_llm_wrapper(
+    wake_duration=10,
+    sleep_duration=2,
+    initial_moral_threshold=0.6
+)
+
+# Generate
+result = wrapper.generate(prompt="Hello", moral_value=0.8)
+if result["accepted"]:
+    print(result["response"])
+```
+
+**Parameters:**
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `wake_duration` | int | 8 | Wake phase steps |
+| `sleep_duration` | int | 3 | Sleep phase steps |
+| `initial_moral_threshold` | float | 0.5 | Starting moral threshold |
+| `dim` | int | 384 | Embedding dimension |
+| `capacity` | int | 20000 | Memory capacity |
+
+---
+
+### create_neuro_engine
+
+Factory function for creating NeuroCognitiveEngine instances.
+
+```python
+from mlsdm import create_neuro_engine
+
+# Create with default settings
+engine = create_neuro_engine()
+
+# Generate
+result = engine.generate("Explain machine learning")
+print(result["response"])
+```
+
+**Parameters:**
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `config` | NeuroEngineConfig | None | Engine configuration |
 
 ---
 
@@ -34,53 +152,12 @@ The MLSDM HTTP API provides RESTful endpoints for text generation with cognitive
 ### Starting the Server
 
 ```bash
-# Start with uvicorn
+# Start with CLI
+python -m mlsdm.cli serve --port 8000
+
+# Or with uvicorn directly
 uvicorn mlsdm.api.app:app --host 0.0.0.0 --port 8000
-
-# With environment variables
-CONFIG_PATH=config/production.yaml uvicorn mlsdm.api.app:app --host 0.0.0.0 --port 8000
 ```
-
-### Request Headers
-
-#### X-MLSDM-Priority (REL-005)
-
-Priority header for request prioritization. High-priority requests are processed before lower-priority ones when the system is under load.
-
-**Header:** `X-MLSDM-Priority`
-
-**Values:**
-| Value | Weight | Description |
-|-------|--------|-------------|
-| `high` | 3 | High priority - processed first under load |
-| `normal` | 2 | Normal priority (default) |
-| `low` | 1 | Low priority - processed last under load |
-| `1-3` | - | Numeric alias for `low` |
-| `4-6` | - | Numeric alias for `normal` |
-| `7-10` | - | Numeric alias for `high` |
-
-**Example:**
-```bash
-# High priority request
-curl -X POST http://localhost:8000/generate \
-  -H "Content-Type: application/json" \
-  -H "X-MLSDM-Priority: high" \
-  -d '{"prompt": "Critical request"}'
-
-# Using numeric priority
-curl -X POST http://localhost:8000/generate \
-  -H "Content-Type: application/json" \
-  -H "X-MLSDM-Priority: 9" \
-  -d '{"prompt": "High priority"}'
-```
-
-**Response Header:**
-- `X-MLSDM-Priority-Applied`: Returns the applied priority level
-
-**Notes:**
-- Default priority is `normal` when header is not provided
-- Priority only affects request ordering under load (when bulkhead is full)
-- All priority levels have the same timeout and quality guarantees
 
 ### Health Check
 
@@ -104,6 +181,11 @@ Simple health check endpoint to verify service is running.
 ```bash
 curl http://localhost:8000/health
 ```
+
+**Additional Endpoints:**
+- `GET /health/live` - Liveness probe
+- `GET /health/ready` - Readiness probe
+- `GET /health/metrics` - Prometheus metrics
 
 ### Generate
 
@@ -179,6 +261,12 @@ curl -X POST http://localhost:8000/generate \
   -H "Content-Type: application/json" \
   -d '{"prompt": "Explain machine learning", "max_tokens": 200, "moral_value": 0.8}'
 ```
+
+---
+
+## Extended API (Internal)
+
+> **Note:** The following components are internal implementation details. They are stable and usable, but the public factory functions (`create_llm_wrapper`, `create_neuro_engine`) provide a simpler, more stable interface.
 
 ---
 

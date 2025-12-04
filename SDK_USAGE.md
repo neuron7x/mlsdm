@@ -2,36 +2,16 @@
 
 **Document Version:** 1.2.0  
 **Last Updated:** December 2025  
-**Status:** Production
+**Status:** Beta
 
-This guide provides practical usage examples for the MLSDM SDK client (`NeuroCognitiveClient`).
-
----
-
-## Table of Contents
-
-- [Installation](#installation)
-- [Quick Start](#quick-start)
-- [Client Initialization](#client-initialization)
-- [Generation Methods](#generation-methods)
-- [Error Handling](#error-handling)
-- [Response Structure](#response-structure)
-- [Configuration](#configuration)
-
----
-
-## Installation
-
-```bash
-pip install mlsdm-governed-cognitive-memory
-```
+This guide covers the SDK client (`NeuroCognitiveClient`), part of the public API.
 
 ---
 
 ## Quick Start
 
 ```python
-from mlsdm.sdk import NeuroCognitiveClient
+from mlsdm import NeuroCognitiveClient
 
 # Initialize with local stub backend (no API key required)
 client = NeuroCognitiveClient(backend="local_stub")
@@ -43,6 +23,16 @@ print(result["response"])
 
 ---
 
+## Installation
+
+```bash
+git clone https://github.com/neuron7x/mlsdm.git
+cd mlsdm
+pip install -r requirements.txt
+```
+
+---
+
 ## Client Initialization
 
 ### Local Stub Backend (Default)
@@ -50,17 +40,17 @@ print(result["response"])
 For testing and development without external API dependencies:
 
 ```python
-from mlsdm.sdk import NeuroCognitiveClient
+from mlsdm import NeuroCognitiveClient
 
 client = NeuroCognitiveClient(backend="local_stub")
 ```
 
 ### OpenAI Backend
 
-For production use with OpenAI:
+For use with OpenAI:
 
 ```python
-from mlsdm.sdk import NeuroCognitiveClient
+from mlsdm import NeuroCognitiveClient
 
 client = NeuroCognitiveClient(
     backend="openai",
@@ -72,7 +62,7 @@ client = NeuroCognitiveClient(
 ### Custom Configuration
 
 ```python
-from mlsdm.sdk import NeuroCognitiveClient
+from mlsdm import NeuroCognitiveClient
 from mlsdm.engine import NeuroEngineConfig
 
 config = NeuroEngineConfig(
@@ -121,7 +111,8 @@ print(f"Timing: {result['timing']}")
 Returns a strongly-typed `GenerateResponseDTO`:
 
 ```python
-from mlsdm.sdk import NeuroCognitiveClient, GenerateResponseDTO
+from mlsdm import NeuroCognitiveClient
+from mlsdm.sdk import GenerateResponseDTO
 
 client = NeuroCognitiveClient()
 result: GenerateResponseDTO = client.generate_typed(
@@ -148,8 +139,8 @@ if result.cognitive_state:
 The SDK provides specific exception types for different error scenarios:
 
 ```python
+from mlsdm import NeuroCognitiveClient
 from mlsdm.sdk import (
-    NeuroCognitiveClient,
     MLSDMError,
     MLSDMClientError,
     MLSDMServerError,
