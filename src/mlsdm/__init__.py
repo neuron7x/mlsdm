@@ -1,39 +1,33 @@
 """
-MLSDM Governed Cognitive Memory.
+MLSDM - Multi-Level Synaptic Dynamic Memory.
 
-NeuroCognitiveEngine with moral governance, FSLGS integration, and production-ready features.
+A cognitive wrapper for LLMs that enforces memory bounds,
+adaptive moral filtering, and wake/sleep cognitive cycles.
 
 Public API:
 -----------
-- LLMWrapper: Universal wrapper for any LLM with cognitive governance
-- LLMPipeline: Unified pipeline with integrated pre/post filters
-- NeuroCognitiveEngine: High-level orchestration of MLSDM + FSLGS
-- NeuroCognitiveClient: Convenient SDK client for generating responses
-- SpeechGovernor: Protocol for pluggable speech governance policies
-- SpeechGovernanceResult: Result type for speech governance
-- create_llm_wrapper: Factory function for creating LLMWrapper instances
-- create_neuro_engine: Factory function for creating NeuroCognitiveEngine instances
-- create_llm_pipeline: Factory function for creating LLMPipeline instances
-
-Configuration:
---------------
->>> from mlsdm.config import get_calibration_config
->>> config = get_calibration_config()
->>> config.moral_filter.threshold
-0.50
+- NeuroCognitiveClient: SDK client for generating governed responses
+- create_neuro_engine: Factory for creating NeuroCognitiveEngine instances
+- create_llm_wrapper: Factory for creating LLMWrapper instances
+- __version__: Package version string
 
 Quick Start:
 -----------
->>> from mlsdm import create_llm_wrapper, create_neuro_engine, create_llm_pipeline
->>> engine = create_neuro_engine()
->>> result = engine.generate("Hello, world!")
+>>> from mlsdm import NeuroCognitiveClient
+>>> client = NeuroCognitiveClient(backend="local_stub")
+>>> result = client.generate("Hello, world!")
 >>> print(result["response"])
 
->>> # Using the unified pipeline
->>> from mlsdm import create_llm_pipeline
->>> pipeline = create_llm_pipeline()
->>> result = pipeline.process("Hello, world!", moral_value=0.8)
->>> print(result.response)
+For direct LLM wrapping:
+>>> from mlsdm import create_llm_wrapper
+>>> wrapper = create_llm_wrapper()
+>>> result = wrapper.generate("Hello", moral_value=0.8)
+>>> print(result["response"])
+
+Extended (internal) API available in submodules:
+- mlsdm.core: LLMWrapper, LLMPipeline components
+- mlsdm.engine: NeuroCognitiveEngine, NeuroEngineConfig
+- mlsdm.speech: Speech governance protocols
 """
 
 from __future__ import annotations
@@ -210,31 +204,18 @@ def create_llm_pipeline(
 __all__ = [
     # Version
     "__version__",
-    # Core classes
-    "LLMWrapper",
-    "LLMPipeline",
-    "NeuroCognitiveEngine",
-    "NeuroEngineConfig",
+    # Public API - SDK Client (primary interface)
     "NeuroCognitiveClient",
-    # Pipeline components
-    "PipelineConfig",
-    "PipelineResult",
-    "PipelineStageResult",
-    "FilterDecision",
-    "FilterResult",
-    "PreFilter",
-    "PostFilter",
-    "MoralPreFilter",
-    "ThreatPreFilter",
-    "AphasiaPostFilter",
-    # Speech governance
-    "SpeechGovernor",
-    "SpeechGovernanceResult",
-    "PipelineSpeechGovernor",
-    # Factory functions
+    # Public API - Factory functions
     "create_llm_wrapper",
     "create_neuro_engine",
-    "create_llm_pipeline",
-    "build_neuro_engine_from_env",
-    "build_stub_embedding_fn",
 ]
+
+# For backward compatibility and advanced usage, these are still importable
+# but not part of the minimal public API surface:
+# - LLMWrapper (use create_llm_wrapper factory instead)
+# - LLMPipeline, PipelineConfig, PipelineResult, etc.
+# - NeuroCognitiveEngine, NeuroEngineConfig (use create_neuro_engine factory)
+# - SpeechGovernor, SpeechGovernanceResult, PipelineSpeechGovernor
+# - build_neuro_engine_from_env, build_stub_embedding_fn
+# - Filter components: PreFilter, PostFilter, MoralPreFilter, etc.

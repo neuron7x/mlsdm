@@ -8,15 +8,71 @@ We do not only test whether the code works; we test how the system degrades, how
 
 ---
 ## 2. Pillars
-1. Invariant Verification (Property-Based + Formal Specs)
-2. Resilience & Chaos Robustness
-3. AI Governance & Safety Hardening
-4. Performance & Saturation Profiling
-5. Drift & Alignment Stability
-6. Tail Failure Mode Observability
+1. **Public API Contract** (new)
+2. Invariant Verification (Property-Based + Formal Specs)
+3. Resilience & Chaos Robustness
+4. AI Governance & Safety Hardening
+5. Performance & Saturation Profiling
+6. Drift & Alignment Stability
+7. Tail Failure Mode Observability
 
 ---
-## 3. Invariant & Property-Based Testing
+## 3. Public API Contract
+
+**Status**: ✅ **Fully Implemented**
+
+### Overview
+
+The public API is the stable interface that users depend on. Contract tests verify that:
+- All public exports are available and correctly typed
+- SDK client interface is stable
+- HTTP endpoints return expected schemas
+- Response structures match documentation
+
+### Public API Surface
+
+The minimal public API (`mlsdm/__init__.py.__all__`):
+
+| Export | Type | Description |
+|--------|------|-------------|
+| `__version__` | str | Package version |
+| `NeuroCognitiveClient` | class | SDK client for generating governed responses |
+| `create_llm_wrapper` | function | Factory for LLMWrapper instances |
+| `create_neuro_engine` | function | Factory for NeuroCognitiveEngine instances |
+
+### Test Structure
+
+```
+tests/api/test_public_api_contract.py    # API export and HTTP contract tests
+tests/sdk/test_public_client_api.py      # SDK client interface tests
+```
+
+### Running Public API Tests
+
+```bash
+# Run all public API contract tests
+pytest tests/api/test_public_api_contract.py tests/sdk/test_public_client_api.py -v
+
+# Run API contract tests only
+pytest tests/api/test_public_api_contract.py -v
+
+# Run SDK contract tests only
+pytest tests/sdk/test_public_client_api.py -v
+```
+
+### Contract Stability Rules
+
+1. **Never remove exports from `__all__`** without major version bump
+2. **Never change method signatures** without deprecation period
+3. **Response schema fields** are additive only (new fields allowed, removal requires major bump)
+4. **HTTP status codes** must match documented behavior
+
+### CI Integration
+
+Public API contract tests run on every PR to catch breaking changes early.
+
+---
+## 4. Invariant & Property-Based Testing
 
 **Status**: ✅ **Fully Implemented**
 
@@ -124,7 +180,7 @@ Example counterexample entry:
 ```
 
 ---
-## 4. Formal Verification (Roadmap)
+## 5. Formal Verification (Roadmap)
 
 **Status**: ⚠️ **Not yet implemented** - Planned for future versions (v1.x+)
 
@@ -147,7 +203,7 @@ Example counterexample entry:
 **Current State**: The system uses property-based testing (Hypothesis) and comprehensive unit/integration tests as the primary verification methods. Formal verification remains a planned enhancement for strengthening mathematical correctness guarantees.
 
 ---
-## 5. Resilience & Chaos Engineering
+## 6. Resilience & Chaos Engineering
 
 **Status**: ✅ **Implemented** (REL-003)
 
@@ -216,7 +272,7 @@ def test_emergency_shutdown_on_memory_pressure(self):
 ```
 
 ---
-## 6. Soak & Endurance Testing (Roadmap)
+## 7. Soak & Endurance Testing (Roadmap)
 
 **Status**: ⚠️ **Planned for future versions (v1.3+)**
 
@@ -232,7 +288,7 @@ def test_emergency_shutdown_on_memory_pressure(self):
 - Basic memory leak detection via property tests (20 cycle tests)
 
 ---
-## 7. Load Shedding & Backpressure (Partially Implemented)
+## 8. Load Shedding & Backpressure (Partially Implemented)
 
 **Status**: ✅ **Partially Implemented** - Rate limiting exists, stress testing planned
 
@@ -253,7 +309,7 @@ def test_emergency_shutdown_on_memory_pressure(self):
 - Basic rate limiting tested in API integration tests
 
 ---
-## 8. Performance & Saturation Testing (Partially Implemented)
+## 9. Performance & Saturation Testing (Partially Implemented)
 
 **Status**: ✅ **Partially Implemented** - Benchmarks exist, full profiling planned
 
@@ -276,7 +332,7 @@ def test_emergency_shutdown_on_memory_pressure(self):
 - Full observability stack integration (OpenTelemetry traces) planned for v1.3+
 
 ---
-## 9. Tail Latency Audits (Roadmap)
+## 10. Tail Latency Audits (Roadmap)
 
 **Status**: ⚠️ **Planned for v1.3+**
 
@@ -291,7 +347,7 @@ def test_emergency_shutdown_on_memory_pressure(self):
 - Manual analysis via benchmark reports
 
 ---
-## 10. AI Safety & Governance (Partially Implemented)
+## 11. AI Safety & Governance (Partially Implemented)
 
 **Status**: ✅ **Core implemented**, ⚠️ **Advanced features planned**
 
@@ -344,7 +400,7 @@ def test_emergency_shutdown_on_memory_pressure(self):
 - Structured policy override events not yet implemented
 
 ---
-## 11. Drift & Alignment Monitoring (Roadmap)
+## 12. Drift & Alignment Monitoring (Roadmap)
 
 **Status**: ⚠️ **Planned for v1.3+**
 
@@ -359,7 +415,7 @@ def test_emergency_shutdown_on_memory_pressure(self):
 - Recalibration logic planned for future versions
 
 ---
-## 12. Observability ✅ **Production-Ready**
+## 13. Observability ✅ **Production-Ready**
 
 **Status**: ✅ **Fully Implemented**
 
@@ -436,7 +492,7 @@ export OTEL_EXPORTER_TYPE=otlp
 ```
 
 ---
-## 13. Toolchain Summary
+## 14. Toolchain Summary
 
 | Purpose | Tool | Status | Coverage |
 |---------|------|--------|----------|
@@ -458,7 +514,7 @@ export OTEL_EXPORTER_TYPE=otlp
 | CI | GitHub Actions | ✅ Implemented | 4 workflows |
 
 ---
-## 14. CI Integration
+## 15. CI Integration
 
 **Current Workflows**:
 1. **ci-neuro-cognitive-engine.yml**: Core tests + benchmarks + eval (✅ Implemented)
@@ -494,7 +550,7 @@ invariant-coverage:
 **Future Gate**: Will include formal_verify and safety_suite when implemented
 
 ---
-## 15. Exit Criteria for "Production-Ready"
+## 16. Exit Criteria for "Production-Ready"
 
 **Current v1.2+ Criteria** (✅ Met):
 - All core invariants hold (no Hypothesis counterexamples for 100+ runs each) ✅
@@ -520,7 +576,7 @@ invariant-coverage:
 - Full observability stack with OpenTelemetry traces (⚠️ Planned - Prometheus metrics exist)
 
 ---
-## 16. Future Extensions (Roadmap for v1.3+)
+## 17. Future Extensions (Roadmap for v1.3+)
 
 **Planned Testing Enhancements**:
 - Symbolic execution for critical moral logic paths
@@ -535,7 +591,7 @@ invariant-coverage:
 **Current State**: Core testing methodology is production-ready. Advanced testing features are enhancements for increased confidence at scale.
 
 ---
-## 17. Implemented vs Planned Methodology Summary
+## 18. Implemented vs Planned Methodology Summary
 
 ### ✅ Fully Implemented (Production-Ready)
 
@@ -579,7 +635,7 @@ invariant-coverage:
 
 ---
 
-## 16. Package Verification ✅ **Implemented**
+## 19. Package Verification ✅ **Implemented**
 
 **Status**: ✅ **Fully Implemented**
 

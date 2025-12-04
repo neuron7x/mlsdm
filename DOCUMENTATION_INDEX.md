@@ -3,13 +3,32 @@
 **Document Version:** 1.2.0  
 **Project Version:** 1.2.0  
 **Last Updated:** December 2025  
-**Total Documents:** 25+
 
-Complete documentation guide for MLSDM Governed Cognitive Memory v1.2.0.
+Complete documentation guide for MLSDM v1.2.0.
+
+---
+
+## 🎯 Public API (Start Here)
+
+The minimal public API surface:
+
+| Document | Description |
+|----------|-------------|
+| [README.md](README.md) | Quick start, public API overview |
+| [SDK_USAGE.md](SDK_USAGE.md) | SDK client usage guide |
+| [API_REFERENCE.md](API_REFERENCE.md) | HTTP API and Python API reference |
+| [INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md) | Integration patterns |
+
+**Public API exports:**
+- `NeuroCognitiveClient` - SDK client for generating governed responses
+- `create_llm_wrapper` - Factory for creating LLMWrapper instances
+- `create_neuro_engine` - Factory for creating NeuroCognitiveEngine instances
+
+---
 
 ## Quick Links
 
-- 🚀 **New Users**: Start with [README.md](README.md) and [USAGE_GUIDE.md](USAGE_GUIDE.md)
+- 🚀 **New Users**: Start with [README.md](README.md) and [SDK_USAGE.md](SDK_USAGE.md)
 - 👩‍💻 **Core Developers**: See [docs/DEVELOPER_GUIDE.md](docs/DEVELOPER_GUIDE.md)
 - 📚 **API Reference**: See [API_REFERENCE.md](API_REFERENCE.md)
 - 🏗️ **Architecture**: See [ARCHITECTURE_SPEC.md](ARCHITECTURE_SPEC.md)
@@ -24,12 +43,13 @@ Complete documentation guide for MLSDM Governed Cognitive Memory v1.2.0.
 ### 🎯 Getting Started
 
 **For Users:**
-1. [README.md](README.md) - Project overview, features, quick start
-2. [USAGE_GUIDE.md](USAGE_GUIDE.md) - Detailed usage examples and best practices
-3. [examples/](examples/) - Working code examples
+1. [README.md](README.md) - Project overview, quick start
+2. [SDK_USAGE.md](SDK_USAGE.md) - SDK client usage
+3. [USAGE_GUIDE.md](USAGE_GUIDE.md) - Detailed usage examples
+4. [examples/](examples/) - Working code examples
 
 **For Developers:**
-1. [CONTRIBUTING.md](CONTRIBUTING.md) - How to contribute to the project
+1. [CONTRIBUTING.md](CONTRIBUTING.md) - How to contribute
 2. [API_REFERENCE.md](API_REFERENCE.md) - Complete API documentation
 3. [ARCHITECTURE_SPEC.md](ARCHITECTURE_SPEC.md) - System architecture
 
@@ -47,10 +67,9 @@ Complete documentation guide for MLSDM Governed Cognitive Memory v1.2.0.
 | Document | Purpose | Audience | Time to Read |
 |----------|---------|----------|--------------|
 | [README.md](README.md) | High-level overview | Everyone | 10 min |
+| [SDK_USAGE.md](SDK_USAGE.md) | SDK client usage | Developers | 15 min |
 | [ARCHITECTURE_SPEC.md](ARCHITECTURE_SPEC.md) | System design | Technical | 5 min |
-| [BIBLIOGRAPHY.md](BIBLIOGRAPHY.md) | Scientific references | Researchers | 15 min |
 | [IMPLEMENTATION_SUMMARY.md](IMPLEMENTATION_SUMMARY.md) | Implementation details | Technical | 15 min |
-| [EFFECTIVENESS_VALIDATION_REPORT.md](EFFECTIVENESS_VALIDATION_REPORT.md) | Validation results | Technical | 20 min |
 
 ### 🛠️ Building & Integration
 
@@ -71,7 +90,6 @@ Complete documentation guide for MLSDM Governed Cognitive Memory v1.2.0.
 | [CONFIGURATION_GUIDE.md](CONFIGURATION_GUIDE.md) | Configuration reference | DevOps | 25 min |
 | [SLO_SPEC.md](SLO_SPEC.md) | Service objectives | SRE/DevOps | 5 min |
 | [SECURITY_POLICY.md](SECURITY_POLICY.md) | Security practices | Security/DevOps | 5 min |
-| [docs/APHASIA_OBSERVABILITY.md](docs/APHASIA_OBSERVABILITY.md) | Aphasia monitoring | SRE/DevOps | 10 min |
 
 ### 🧪 Testing & Validation
 
@@ -366,7 +384,39 @@ When improving documentation:
 
 ### Q: Is this production-ready?
 
-**A:** Yes! See [IMPLEMENTATION_SUMMARY.md](IMPLEMENTATION_SUMMARY.md) and [EFFECTIVENESS_VALIDATION_REPORT.md](EFFECTIVENESS_VALIDATION_REPORT.md) for proof.
+**A:** The core API is stable (beta). See [TESTING_STRATEGY.md](TESTING_STRATEGY.md) for test coverage and [IMPLEMENTATION_SUMMARY.md](IMPLEMENTATION_SUMMARY.md) for implementation details. Additional hardening may be needed for mission-critical production use.
+
+---
+
+## 🔬 Experimental / R&D Documentation
+
+> **Note:** The following documents describe research, theoretical foundations, and experimental features. They are not part of the stable public API.
+
+### Scientific Foundation (Research)
+
+| Document | Purpose | Status |
+|----------|---------|--------|
+| [docs/SCIENTIFIC_RATIONALE.md](docs/SCIENTIFIC_RATIONALE.md) | Core hypothesis and theory | Research |
+| [docs/NEURO_FOUNDATIONS.md](docs/NEURO_FOUNDATIONS.md) | Neuroscience basis for each module | Research |
+| [docs/ALIGNMENT_AND_SAFETY_FOUNDATIONS.md](docs/ALIGNMENT_AND_SAFETY_FOUNDATIONS.md) | AI safety principles | Research |
+| [BIBLIOGRAPHY.md](BIBLIOGRAPHY.md) | Peer-reviewed references | Research |
+
+### Experimental Features
+
+| Document | Purpose | Status |
+|----------|---------|--------|
+| [docs/APHASIA_OBSERVABILITY.md](docs/APHASIA_OBSERVABILITY.md) | Aphasia monitoring | Experimental |
+| [MORAL_FILTER_SPEC.md](MORAL_FILTER_SPEC.md) | Moral governance details | Internal |
+| [EFFECTIVENESS_VALIDATION_REPORT.md](EFFECTIVENESS_VALIDATION_REPORT.md) | Validation methodology | Internal |
+
+### Internal Analysis
+
+| Document | Purpose | Status |
+|----------|---------|--------|
+| [CLAIMS_TRACEABILITY.md](CLAIMS_TRACEABILITY.md) | Metric → Test mapping | Internal |
+| [OPTIMIZATION_SUMMARY.md](OPTIMIZATION_SUMMARY.md) | Performance tuning | Internal |
+| [THREAT_MODEL.md](THREAT_MODEL.md) | Security threats | Internal |
+| [RISK_REGISTER.md](RISK_REGISTER.md) | AI safety risk register | Internal |
 
 ---
 
