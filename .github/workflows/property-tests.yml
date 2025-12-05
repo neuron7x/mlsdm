@@ -56,7 +56,8 @@ jobs:
         uses: actions/cache@v4
         with:
           path: .hypothesis
-          key: hypothesis-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('tests/property/**') }}
+          # Use a stable key based on source code to preserve counterexample history
+          key: hypothesis-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('src/mlsdm/**/*.py') }}
           restore-keys: |
             hypothesis-${{ runner.os }}-${{ matrix.python-version }}-
       
