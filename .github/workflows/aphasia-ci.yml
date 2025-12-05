@@ -17,6 +17,11 @@ on:
       - "scripts/run_aphasia_eval.py"
       - ".github/workflows/aphasia-ci.yml"
 
+# Cancel in-progress runs on same ref
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   aphasia-neurolang:
     runs-on: ubuntu-latest
@@ -30,6 +35,14 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+
+      - name: Cache pip dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-aphasia-${{ runner.os }}-${{ hashFiles('requirements.txt', 'pyproject.toml') }}
+          restore-keys: |
+            pip-aphasia-${{ runner.os }}-
 
       - name: Install dependencies (core + neurolang extra)
         run: |
