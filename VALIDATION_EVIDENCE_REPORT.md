@@ -26,8 +26,8 @@
 | Claim | Evidence Type | Source | Verified |
 |-------|---------------|--------|----------|
 | Repository size ~10 MB | Command | `du -sh .` → 9.8M | ✅ |
-| 118 source Python files | Command | `find src -name "*.py" \| wc -l` → 118 | ✅ |
-| 185 test Python files | Command | `find tests -name "*.py" \| wc -l` → 185 | ✅ |
+| 118 source Python files | Command | `find src -name "*.py" | wc -l` → 118 | ✅ |
+| 185 test Python files | Command | `find tests -name "*.py" | wc -l` → 185 | ✅ |
 | 2,979 tests collected | Command | `pytest --collect-only` → 2979 | ✅ |
 | 90.26% coverage | Document | COVERAGE_REPORT_2025.md | ✅ |
 | Moral filter exists | File | `src/mlsdm/cognition/moral_filter_v2.py` | ✅ |
@@ -203,8 +203,8 @@ ls *.md | wc -l  # → 49
 | Source Files | 118 | `find src -name "*.py"` |
 | Test Files | 185 | `find tests -name "*.py"` |
 | Tests Collected | 2,979 | `pytest --collect-only` |
-| Source Lines of Code | ~32,860 | `wc -l` on src Python files |
-| Markdown Docs | 49 | `ls *.md \| wc -l` |
+| Source Lines of Code | ~32,860 | `wc -l src/mlsdm/*/*.py src/mlsdm/*/*/*.py` |
+| Markdown Docs | 49 | `ls *.md | wc -l` |
 | Repository Size | 9.8 MB | `du -sh .` |
 | PELM Memory Footprint | 29.37 MB | Calculated |
 | Claimed Coverage | 90.26% | COVERAGE_REPORT_2025.md |
@@ -281,8 +281,8 @@ find tests -name "*.py" | wc -l            # Should return ~185
 du -sh .                                    # Should return ~10 MB
 
 # Verify test collection
-PYTHONPATH=src pytest tests/ --collect-only -q 2>&1 | tail -5
-# Should show "2979 tests collected"
+PYTHONPATH=src pytest tests/ --ignore=tests/load/locust_load_test.py --collect-only -q 2>&1 | tail -3
+# Should show "2979 tests collected in X.XXs"
 
 # Verify features exist
 ls src/mlsdm/cognition/moral_filter_v2.py  # Should exist
