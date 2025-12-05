@@ -49,10 +49,44 @@ deny[msg] {
     not startswith(uses, "actions/")
     not startswith(uses, "github/")
     
-    # Check if it uses a mutable reference (main, master, or missing SHA)
+    # Check if it's missing a version pin entirely
     not str_contains(uses, "@")
     
     msg := sprintf("Job '%s' uses unpinned action '%s'. Pin to a specific SHA for security.", [job_name, uses])
+}
+
+# STRIDE: Tampering
+# Block third-party actions with mutable references (@main, @master)
+deny[msg] {
+    job := input.jobs[job_name]
+    step := job.steps[_]
+    uses := step.uses
+    uses != null
+    
+    # Check if it's a third-party action (not github/* or actions/*)
+    not startswith(uses, "actions/")
+    not startswith(uses, "github/")
+    
+    # Check for mutable references
+    str_contains(uses, "@main")
+    
+    msg := sprintf("Job '%s' uses mutable reference @main in '%s'. Pin to a SHA for security.", [job_name, uses])
+}
+
+deny[msg] {
+    job := input.jobs[job_name]
+    step := job.steps[_]
+    uses := step.uses
+    uses != null
+    
+    # Check if it's a third-party action (not github/* or actions/*)
+    not startswith(uses, "actions/")
+    not startswith(uses, "github/")
+    
+    # Check for mutable references
+    str_contains(uses, "@master")
+    
+    msg := sprintf("Job '%s' uses mutable reference @master in '%s'. Pin to a SHA for security.", [job_name, uses])
 }
 
 # STRIDE: Information Disclosure

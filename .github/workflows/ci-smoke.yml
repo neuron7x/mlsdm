@@ -125,6 +125,5 @@ jobs:
       - name: Run policy checks on CI workflows
         run: |
           echo "Checking CI workflow policies..."
-          conftest test .github/workflows/*.yml -p policies/ci/ --all-namespaces || true
-          # Currently running in warn mode to allow CI to pass while policies are tuned
-          # TODO: Remove '|| true' once policies are validated
+          # Use --fail-on-warn=false to allow warnings but fail on denies
+          conftest test .github/workflows/*.yml -p policies/ci/ --all-namespaces --fail-on-warn=false
