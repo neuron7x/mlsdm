@@ -10,6 +10,11 @@ on:
       - main
       - 'feature/*'
 
+# Cancel in-progress runs on same ref
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
@@ -33,6 +38,14 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install -e ".[test]"
+      
+      - name: Cache pytest cache
+        uses: actions/cache@v4
+        with:
+          path: .pytest_cache
+          key: pytest-${{ runner.os }}-${{ hashFiles('tests/unit/**') }}
+          restore-keys: |
+            pytest-${{ runner.os }}-
       
       - name: Run smoke tests (fast unit tests only)
         run: |

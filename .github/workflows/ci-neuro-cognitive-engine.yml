@@ -10,6 +10,11 @@ on:
       - main
       - 'feature/*'
 
+# Cancel in-progress runs on same ref
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
@@ -28,11 +33,27 @@ jobs:
         with:
           python-version: '3.11'
       
+      - name: Cache pip dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-lint-${{ runner.os }}-${{ hashFiles('requirements.txt', 'pyproject.toml') }}
+          restore-keys: |
+            pip-lint-${{ runner.os }}-
+      
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install -e ".[dev]"
+      
+      - name: Cache mypy cache
+        uses: actions/cache@v4
+        with:
+          path: .mypy_cache
+          key: mypy-${{ runner.os }}-${{ hashFiles('src/mlsdm/**/*.py') }}
+          restore-keys: |
+            mypy-${{ runner.os }}-
       
       - name: Run ruff linter
         run: |
@@ -172,6 +193,14 @@ jobs:
         with:
           python-version: '3.11'
       
+      - name: Cache pip dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-bench-${{ runner.os }}-${{ hashFiles('requirements.txt', 'pyproject.toml') }}
+          restore-keys: |
+            pip-bench-${{ runner.os }}-
+      
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
@@ -181,7 +210,6 @@ jobs:
       - name: Run benchmarks
         run: |
           pytest benchmarks/test_neuro_engine_performance.py -v -s --tb=short
-        continue-on-error: true
       
       - name: Upload benchmark results
         if: always()
@@ -196,7 +224,6 @@ jobs:
     name: Cognitive Safety Evaluation
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    continue-on-error: true
     
     steps:
       - name: Checkout code
@@ -206,6 +233,14 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+      
+      - name: Cache pip dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-eval-${{ runner.os }}-${{ hashFiles('requirements.txt', 'pyproject.toml') }}
+          restore-keys: |
+            pip-eval-${{ runner.os }}-
       
       - name: Install dependencies
         run: |
@@ -220,7 +255,6 @@ jobs:
       - name: Run Sapolsky Validation Suite evaluation
         run: |
           python examples/run_sapolsky_eval.py --output sapolsky_eval_results.json --verbose
-        continue-on-error: true
       
       - name: Upload evaluation results
         if: always()

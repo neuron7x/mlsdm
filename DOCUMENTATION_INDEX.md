@@ -77,10 +77,17 @@ Complete documentation guide for MLSDM Governed Cognitive Memory v1.2.0.
 
 | Document | Purpose | Audience | Time to Read |
 |----------|---------|----------|--------------|
-| [TESTING_STRATEGY.md](TESTING_STRATEGY.md) | Testing approach | Engineers | 15 min |
+| [TESTING_STRATEGY.md](TESTING_STRATEGY.md) | Testing approach & CI integration | Engineers | 15 min |
 | [VALIDATION_SUMMARY.md](VALIDATION_SUMMARY.md) | Validation results | Engineers | 10 min |
 | [CLAIMS_TRACEABILITY.md](CLAIMS_TRACEABILITY.md) | Metric → Test mapping | Reviewers | 10 min |
 | [OPTIMIZATION_SUMMARY.md](OPTIMIZATION_SUMMARY.md) | Performance tuning | Engineers | 10 min |
+
+### 🔄 CI & Workflows
+
+| Document / File | Purpose | Audience | Time to Read |
+|-----------------|---------|----------|--------------|
+| [TESTING_STRATEGY.md#ci-integration](TESTING_STRATEGY.md#14-ci-integration) | CI workflow structure | Engineers/DevOps | 5 min |
+| [.github/workflows/](/.github/workflows/) | GitHub Actions definitions | Engineers/DevOps | 10 min |
 
 ### 📊 Analysis & Reports
 

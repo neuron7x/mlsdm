@@ -460,38 +460,104 @@ export OTEL_EXPORTER_TYPE=otlp
 ---
 ## 14. CI Integration
 
-**Current Workflows**:
-1. **ci-neuro-cognitive-engine.yml**: Core tests + benchmarks + eval (✅ Implemented)
-2. **property-tests.yml**: Property-based invariant tests (✅ Implemented)
-   - Runs on every PR touching `src/mlsdm/**` or `tests/**`
-   - Includes counterexamples regression
-   - Invariant coverage checks
+### Workflow Structure
 
-**Property Tests Job** (`.github/workflows/property-tests.yml`):
+MLSDM uses a tiered CI workflow structure to balance speed and thoroughness:
+
+| Workflow | Trigger | Purpose | Duration |
+|----------|---------|---------|----------|
+| `ci-smoke.yml` | PR/Push | Fast unit tests, imports, config validation | ~3 min |
+| `ci-neuro-cognitive-engine.yml` | PR/Push | Full unit tests, linting, type checking, security, e2e | ~15-20 min |
+| `property-tests.yml` | PR/Push (relevant paths) | Property-based invariant tests | ~15 min |
+| `chaos-tests.yml` | Schedule (daily) | Chaos engineering resilience tests | ~60 min |
+| `prod-gate.yml` | Manual/Release | Full pre-production gate checks | ~30 min |
+
+### Concurrency Control
+
+All test workflows use concurrency control to cancel in-progress runs when new commits are pushed:
+
 ```yaml
-property-tests:
-  - Run all property tests: pytest tests/property/ -v
-  - Timeout: 15 minutes
-  - Matrix: Python 3.10, 3.11
-
-counterexamples-regression:
-  - Run regression tests on known counterexamples
-  - Generate statistics report
-
-invariant-coverage:
-  - Verify FORMAL_INVARIANTS.md exists
-  - Verify all counterexample files present
-  - Count safety/liveness/metamorphic invariants
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 ```
 
-**Planned Workflow Stages** (v1.x+):
-1. **formal_verify**: TLA model check + Coq compile (⚠️ Planned)
-2. **chaos_smoke**: Optional nightly chaos scenarios in staging (⚠️ Planned)
-3. **performance_sample**: 15m load to capture latency histograms (⚠️ Planned)
-4. **safety_suite**: Adversarial prompt tests (⚠️ Planned)
+### Caching Strategy
 
-**Current Gate**: Tests, linting, type checking, and property tests must pass  
-**Future Gate**: Will include formal_verify and safety_suite when implemented
+Workflows cache:
+- **pip dependencies**: `~/.cache/pip`
+- **mypy cache**: `.mypy_cache/`
+- **pytest cache**: `.pytest_cache/`
+- **Hypothesis database**: `.hypothesis/`
+
+### Minimal Green Gates for main
+
+The following checks **must pass** for merge to `main`:
+1. ✅ Lint (ruff check)
+2. ✅ Type check (mypy)
+3. ✅ Security scan (pip-audit)
+4. ✅ Unit tests
+5. ✅ E2E tests
+6. ✅ Effectiveness validation
+
+### Current Workflows
+
+1. **ci-smoke.yml**: Fast feedback (~3 min)
+   - Unit tests (excluding slow)
+   - Critical module imports
+   - Config file validation
+
+2. **ci-neuro-cognitive-engine.yml**: Full CI (~15-20 min)
+   - Lint and type checking
+   - Security vulnerability scan
+   - Unit tests (matrix: Python 3.10, 3.11)
+   - E2E tests
+   - Effectiveness validation
+   - Benchmarks
+   - Cognitive safety evaluation
+
+3. **property-tests.yml**: Property-based tests
+   - Property-based tests (matrix: Python 3.10, 3.11)
+   - Counterexamples regression tests
+   - Invariant coverage checks
+
+4. **chaos-tests.yml**: Chaos engineering (daily at 3 AM UTC)
+   - Memory pressure tests
+   - Slow LLM tests
+   - Network timeout tests
+
+5. **prod-gate.yml**: Production gate (manual trigger)
+   - All pre-flight checks
+   - Property tests
+   - SLO validation
+   - Security analysis
+   - Documentation validation
+   - Manual approval gate
+
+### Running Tests Locally
+
+```bash
+# Fast smoke tests (~1 min)
+pytest tests/unit/ -v -m "not slow" --maxfail=5
+
+# Full unit tests (~5 min)
+pytest tests/unit/ -v
+
+# Integration tests (~3 min)
+pytest tests/integration/ -v
+
+# Property-based tests (~3 min)
+pytest tests/property/ -v
+
+# E2E tests (~2 min)
+pytest tests/e2e/ -v -m "not slow"
+
+# Chaos tests (~4 min)
+pytest tests/chaos/ -v -m chaos
+
+# All tests (~15 min)
+pytest --ignore=tests/load
+```
 
 ---
 ## 15. Exit Criteria for "Production-Ready"

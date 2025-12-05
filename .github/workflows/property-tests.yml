@@ -20,6 +20,11 @@ on:
       - 'tests/unit/**'
       - '.github/workflows/property-tests.yml'
 
+# Cancel in-progress runs on same ref
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
@@ -46,6 +51,14 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install -e ".[test]"
+
+      - name: Cache Hypothesis examples database
+        uses: actions/cache@v4
+        with:
+          path: .hypothesis
+          key: hypothesis-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('tests/property/**') }}
+          restore-keys: |
+            hypothesis-${{ runner.os }}-${{ matrix.python-version }}-
       
       - name: Run property-based tests
         run: |

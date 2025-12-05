@@ -1,6 +1,7 @@
 name: Chaos Engineering Tests
 
 # REL-003: Run chaos tests on schedule (not on every PR)
+# These are heavy tests that exercise failure modes and resilience
 on:
   schedule:
     # Run daily at 3:00 AM UTC
@@ -12,6 +13,11 @@ on:
         description: 'Test category to run (all, memory, llm, network)'
         required: false
         default: 'all'
+
+# Cancel in-progress runs on same ref
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 # Minimal permissions for security
 permissions:
@@ -40,28 +46,25 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
+      - name: Cache pip dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-chaos-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('requirements.txt', 'pyproject.toml') }}
+          restore-keys: |
+            pip-chaos-${{ runner.os }}-${{ matrix.python-version }}-
+            pip-chaos-${{ runner.os }}-
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -e ".[dev]"
 
-      - name: Run chaos tests - Memory Pressure
-        if: ${{ github.event.inputs.test_category == 'all' || github.event.inputs.test_category == 'memory' || github.event_name == 'schedule' }}
+      # Run all chaos tests in one step - they are designed to pass
+      # Chaos tests exercise failure modes but should still pass
+      - name: Run chaos tests
         run: |
-          pytest tests/chaos/test_memory_pressure.py -v -m chaos --tb=short --junitxml=chaos-memory-results.xml
-        continue-on-error: true
-
-      - name: Run chaos tests - Slow LLM
-        if: ${{ github.event.inputs.test_category == 'all' || github.event.inputs.test_category == 'llm' || github.event_name == 'schedule' }}
-        run: |
-          pytest tests/chaos/test_slow_llm.py -v -m chaos --tb=short --junitxml=chaos-llm-results.xml
-        continue-on-error: true
-
-      - name: Run chaos tests - Network Timeout
-        if: ${{ github.event.inputs.test_category == 'all' || github.event.inputs.test_category == 'network' || github.event_name == 'schedule' }}
-        run: |
-          pytest tests/chaos/test_network_timeout.py -v -m chaos --tb=short --junitxml=chaos-network-results.xml
-        continue-on-error: true
+          pytest tests/chaos/ -v -m chaos --tb=short --junitxml=chaos-results.xml
 
       - name: Upload test results
         uses: actions/upload-artifact@v4
@@ -78,7 +81,7 @@ jobs:
         with:
           report_paths: 'chaos-*.xml'
           check_name: Chaos Test Results (Python ${{ matrix.python-version }})
-          fail_on_failure: false  # Don't fail the workflow, chaos tests may have expected failures
+          fail_on_failure: true  # Chaos tests should pass - they test resilience, not breakage
 
   chaos-summary:
     runs-on: ubuntu-latest
