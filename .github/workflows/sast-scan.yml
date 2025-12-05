@@ -87,20 +87,20 @@ jobs:
     # Semgrep is optional for now - bandit is the primary SAST tool
     # Remove continue-on-error once semgrep rules are tuned to minimize false positives
     continue-on-error: true
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Run Semgrep
-        uses: returntocorp/semgrep-action@v1
+        uses: semgrep/semgrep-action@v1
         with:
           config: >-
             p/python
             p/security-audit
             p/owasp-top-ten
           generateSarif: "1"
-      
+
       - name: Upload Semgrep SARIF
         if: always()
         uses: github/codeql-action/upload-sarif@v3
