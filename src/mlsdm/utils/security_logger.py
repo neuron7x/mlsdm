@@ -22,19 +22,40 @@ class SecurityEventType(Enum):
 
     # Authorization events
     AUTHZ_DENIED = "authorization_denied"
+    RBAC_DENY = "rbac_deny"
 
     # Rate limiting events
     RATE_LIMIT_EXCEEDED = "rate_limit_exceeded"
     RATE_LIMIT_WARNING = "rate_limit_warning"
+    RATE_LIMIT_HIT = "rate_limit_hit"
 
     # Input validation events
     INVALID_INPUT = "invalid_input"
     DIMENSION_MISMATCH = "dimension_mismatch"
     MORAL_VALUE_OUT_OF_RANGE = "moral_value_out_of_range"
 
+    # LLM Safety events
+    PROMPT_INJECTION_DETECTED = "prompt_injection_detected"
+    JAILBREAK_ATTEMPT = "jailbreak_attempt"
+    SECRET_LEAK_PREVENTED = "secret_leak_prevented"
+
+    # Moral filter events
+    MORAL_FILTER_BLOCK = "moral_filter_block"
+    MORAL_FILTER_PASS = "moral_filter_pass"
+
     # State changes
     STATE_CHANGE = "state_change"
     CONFIG_CHANGE = "config_change"
+
+    # Secret management events
+    SECRET_ROTATION = "secret_rotation"
+    KEY_ADDED = "key_added"
+    KEY_REMOVED = "key_removed"
+    KEY_EXPIRED = "key_expired"
+
+    # Security configuration events
+    SECURITY_CONFIG_ERROR = "security_config_error"
+    SECURITY_CONFIG_LOADED = "security_config_loaded"
 
     # Anomalies
     ANOMALY_DETECTED = "anomaly_detected"
@@ -290,6 +311,211 @@ class SecurityLogger:
             logging.INFO,
             message,
             additional_data=additional_data
+        )
+
+    def log_prompt_injection_detected(
+        self,
+        client_id: str,
+        risk_level: str,
+        category: str,
+        is_blocked: bool = True,
+        correlation_id: str | None = None
+    ) -> str:
+        """Log prompt injection detection event.
+
+        Args:
+            client_id: Pseudonymized client identifier
+            risk_level: Risk level (low, medium, high, critical)
+            category: Category of injection detected
+            is_blocked: Whether the request was blocked
+            correlation_id: Optional correlation ID
+
+        Returns:
+            Correlation ID
+        """
+        return self._log_event(
+            SecurityEventType.PROMPT_INJECTION_DETECTED,
+            logging.WARNING,
+            f"Prompt injection detected: {category}",
+            correlation_id=correlation_id,
+            client_id=client_id,
+            additional_data={
+                "risk_level": risk_level,
+                "category": category,
+                "is_blocked": is_blocked,
+            }
+        )
+
+    def log_jailbreak_attempt(
+        self,
+        client_id: str,
+        risk_level: str,
+        is_blocked: bool = True,
+        correlation_id: str | None = None
+    ) -> str:
+        """Log jailbreak attempt detection.
+
+        Args:
+            client_id: Pseudonymized client identifier
+            risk_level: Risk level (low, medium, high, critical)
+            is_blocked: Whether the attempt was blocked
+            correlation_id: Optional correlation ID
+
+        Returns:
+            Correlation ID
+        """
+        return self._log_event(
+            SecurityEventType.JAILBREAK_ATTEMPT,
+            logging.WARNING,
+            "Jailbreak attempt detected",
+            correlation_id=correlation_id,
+            client_id=client_id,
+            additional_data={
+                "risk_level": risk_level,
+                "is_blocked": is_blocked,
+            }
+        )
+
+    def log_secret_leak_prevented(
+        self,
+        secret_type: str,
+        correlation_id: str | None = None
+    ) -> str:
+        """Log prevention of secret leakage in output.
+
+        Args:
+            secret_type: Type of secret that was redacted
+            correlation_id: Optional correlation ID
+
+        Returns:
+            Correlation ID
+        """
+        return self._log_event(
+            SecurityEventType.SECRET_LEAK_PREVENTED,
+            logging.INFO,
+            f"Secret leak prevented: {secret_type}",
+            correlation_id=correlation_id,
+            additional_data={"secret_type": secret_type}
+        )
+
+    def log_moral_filter_block(
+        self,
+        client_id: str,
+        moral_value: float,
+        threshold: float,
+        correlation_id: str | None = None
+    ) -> str:
+        """Log moral filter blocking a request.
+
+        Args:
+            client_id: Pseudonymized client identifier
+            moral_value: The moral value that was rejected
+            threshold: The threshold that was not met
+            correlation_id: Optional correlation ID
+
+        Returns:
+            Correlation ID
+        """
+        return self._log_event(
+            SecurityEventType.MORAL_FILTER_BLOCK,
+            logging.WARNING,
+            "Request blocked by moral filter",
+            correlation_id=correlation_id,
+            client_id=client_id,
+            additional_data={
+                "moral_value": moral_value,
+                "threshold": threshold,
+            }
+        )
+
+    def log_rbac_deny(
+        self,
+        client_id: str,
+        path: str,
+        method: str,
+        required_roles: list[str],
+        user_roles: list[str],
+        correlation_id: str | None = None
+    ) -> str:
+        """Log RBAC access denial.
+
+        Args:
+            client_id: Pseudonymized client identifier
+            path: Requested path
+            method: HTTP method
+            required_roles: Roles required for access
+            user_roles: Roles the user has
+            correlation_id: Optional correlation ID
+
+        Returns:
+            Correlation ID
+        """
+        return self._log_event(
+            SecurityEventType.RBAC_DENY,
+            logging.WARNING,
+            f"RBAC access denied: {method} {path}",
+            correlation_id=correlation_id,
+            client_id=client_id,
+            additional_data={
+                "path": path,
+                "method": method,
+                "required_roles": required_roles,
+                "user_roles": user_roles,
+            }
+        )
+
+    def log_secret_rotation(
+        self,
+        key_type: str,
+        user_id: str | None = None,
+        correlation_id: str | None = None
+    ) -> str:
+        """Log secret/key rotation event.
+
+        Args:
+            key_type: Type of key that was rotated
+            user_id: Associated user ID (if applicable)
+            correlation_id: Optional correlation ID
+
+        Returns:
+            Correlation ID
+        """
+        return self._log_event(
+            SecurityEventType.SECRET_ROTATION,
+            logging.INFO,
+            f"Secret rotated: {key_type}",
+            correlation_id=correlation_id,
+            additional_data={
+                "key_type": key_type,
+                "user_id": user_id,
+            }
+        )
+
+    def log_security_config_error(
+        self,
+        error_type: str,
+        message: str,
+        correlation_id: str | None = None
+    ) -> str:
+        """Log security configuration error.
+
+        Args:
+            error_type: Type of configuration error
+            message: Error message
+            correlation_id: Optional correlation ID
+
+        Returns:
+            Correlation ID
+        """
+        return self._log_event(
+            SecurityEventType.SECURITY_CONFIG_ERROR,
+            logging.ERROR,
+            f"Security config error: {message}",
+            correlation_id=correlation_id,
+            additional_data={
+                "error_type": error_type,
+                "message": message,
+            }
         )
 
 

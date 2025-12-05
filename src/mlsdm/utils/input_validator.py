@@ -368,3 +368,111 @@ class InputValidator:
             )
 
         return prompt
+
+
+# Pre-compiled patterns for injection detection
+_SQL_INJECTION_PATTERN = re.compile(
+    r"(?:--|;|\b(?:SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER|EXEC|UNION|OR|AND)\b\s+)",
+    re.IGNORECASE,
+)
+_SHELL_INJECTION_PATTERN = re.compile(
+    r"(?:\$\(|\`|;|\||&&|\|\||>\s*|<\s*)",
+    re.IGNORECASE,
+)
+_PATH_TRAVERSAL_PATTERN = re.compile(
+    r"(?:\.\./|\.\.\\|%2e%2e%2f|%2e%2e/|\.%2e/|%2e\.\/)",
+    re.IGNORECASE,
+)
+
+
+def sanitize_user_input(
+    text: str,
+    max_length: int = 10000,
+    check_injections: bool = True,
+    check_llm_safety: bool = False,
+) -> tuple[str, dict[str, Any]]:
+    """Centralized user input sanitization with comprehensive security checks.
+
+    Performs:
+    1. Basic string sanitization (control chars, length)
+    2. Injection pattern detection (SQL, shell, path traversal)
+    3. Optional LLM safety analysis (prompt injection, jailbreak)
+
+    Args:
+        text: Input text to sanitize
+        max_length: Maximum allowed length (default: 10000)
+        check_injections: Whether to check for SQL/shell/path injection patterns
+        check_llm_safety: Whether to run LLM safety analysis
+
+    Returns:
+        Tuple of (sanitized_text, security_metadata)
+
+    Raises:
+        ValueError: If input is invalid or contains critical security issues
+
+    Example:
+        >>> text, meta = sanitize_user_input("Hello world")
+        >>> print(meta["is_safe"])  # True
+        >>> text, meta = sanitize_user_input("DROP TABLE users;")
+        >>> print(meta["sql_injection"])  # True
+    """
+    if not isinstance(text, str):
+        raise ValueError(f"Input must be string, got {type(text)}")
+
+    # Initialize result metadata
+    metadata: dict[str, Any] = {
+        "is_safe": True,
+        "sql_injection": False,
+        "shell_injection": False,
+        "path_traversal": False,
+        "llm_safety": None,
+        "warnings": [],
+    }
+
+    # Early exit for empty strings
+    if not text:
+        return "", metadata
+
+    # Check length first
+    if len(text) > max_length:
+        raise ValueError(f"String length {len(text)} exceeds maximum {max_length}")
+
+    # Basic sanitization using InputValidator
+    sanitized = InputValidator.sanitize_string(text, max_length=max_length)
+
+    # Check for injection patterns if enabled
+    if check_injections:
+        # SQL injection check
+        if _SQL_INJECTION_PATTERN.search(text):
+            metadata["sql_injection"] = True
+            metadata["is_safe"] = False
+            metadata["warnings"].append("SQL injection pattern detected")
+
+        # Shell injection check
+        if _SHELL_INJECTION_PATTERN.search(text):
+            metadata["shell_injection"] = True
+            metadata["is_safe"] = False
+            metadata["warnings"].append("Shell injection pattern detected")
+
+        # Path traversal check
+        if _PATH_TRAVERSAL_PATTERN.search(text):
+            metadata["path_traversal"] = True
+            metadata["is_safe"] = False
+            metadata["warnings"].append("Path traversal pattern detected")
+
+    # LLM safety analysis if enabled
+    if check_llm_safety:
+        try:
+            from mlsdm.security.llm_safety import analyze_prompt
+
+            safety_result = analyze_prompt(text)
+            metadata["llm_safety"] = safety_result.to_dict()
+            if not safety_result.is_safe:
+                metadata["is_safe"] = False
+                metadata["warnings"].append(
+                    f"LLM safety violation: {safety_result.risk_level.value}"
+                )
+        except ImportError:
+            metadata["warnings"].append("LLM safety module not available")
+
+    return sanitized, metadata
