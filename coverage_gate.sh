@@ -66,7 +66,11 @@ echo ""
 
 # Build pytest command
 # We run unit tests as the primary gate, but allow PYTEST_ARGS to customize
-# Use PIPESTATUS to capture pytest exit code through the tee pipeline
+#
+# NOTE: We use `|| true` after the pipeline because with `set -e` and `pipefail`,
+# a non-zero exit from pytest would terminate the script before we can capture
+# PIPESTATUS. We explicitly check the exit code below to fail appropriately.
+#
 # shellcheck disable=SC2086
 python -m pytest tests/unit/ \
     --cov=src/mlsdm \
