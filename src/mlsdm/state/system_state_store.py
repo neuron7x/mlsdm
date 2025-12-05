@@ -256,6 +256,10 @@ def load_system_state(
             state_dict = json.loads(data.decode("utf-8"))
 
         elif ext == ".npz":
+            # nosemgrep: python.numpy.security.numpy-load-library.numpy-load-library
+            # Security note: allow_pickle=True is required here because np.savez stores
+            # complex Python dicts using pickle. These files are application-internal
+            # state files created by save_system_state(), not user-provided input.
             arrs = np.load(filepath, allow_pickle=True)
             if "state" in arrs:
                 state_data = arrs["state"]
@@ -373,6 +377,10 @@ def recover_system_state(filepath: str) -> SystemStateRecord:
                 data = f.read()
             state_dict = json.loads(data.decode("utf-8"))
         elif ext == ".npz":
+            # nosemgrep: python.numpy.security.numpy-load-library.numpy-load-library
+            # Security note: allow_pickle=True is required here because np.savez stores
+            # complex Python dicts using pickle. These backup files are application-internal
+            # state files created by save_system_state(), not user-provided input.
             arrs = np.load(backup_path, allow_pickle=True)
             if "state" in arrs:
                 state_data = arrs["state"]

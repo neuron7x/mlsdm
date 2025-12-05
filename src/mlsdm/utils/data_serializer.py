@@ -28,7 +28,8 @@ def _load_data(filepath: str) -> dict[str, Any]:
             data: dict[str, Any] = json.load(f)
             return data
     elif ext == ".npz":
-        arrs = np.load(filepath, allow_pickle=True)
+        # allow_pickle=False is secure since np.savez only stores numpy arrays
+        arrs = np.load(filepath, allow_pickle=False)
         # Convert NpzFile to dict - explicit type to satisfy mypy
         result: dict[str, Any] = {
             k: v.tolist() if isinstance(v, np.ndarray) else v
