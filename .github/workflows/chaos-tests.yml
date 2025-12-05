@@ -62,20 +62,25 @@ jobs:
 
       # Run chaos tests based on test_category input
       # Supports selective execution for debugging specific failures
+      # Note: Chaos tests exercise failure modes (slow LLM, network failures, memory pressure)
+      # but are designed to pass by validating graceful degradation behavior
       - name: Run chaos tests
         run: |
           CATEGORY="${{ github.event.inputs.test_category || 'all' }}"
-          if [ "$CATEGORY" = "all" ]; then
-            pytest tests/chaos/ -v -m chaos --tb=short --junitxml=chaos-results.xml
-          elif [ "$CATEGORY" = "memory" ]; then
-            pytest tests/chaos/test_memory_pressure.py -v -m chaos --tb=short --junitxml=chaos-results.xml
-          elif [ "$CATEGORY" = "llm" ]; then
-            pytest tests/chaos/test_slow_llm.py -v -m chaos --tb=short --junitxml=chaos-results.xml
-          elif [ "$CATEGORY" = "network" ]; then
-            pytest tests/chaos/test_network_timeout.py -v -m chaos --tb=short --junitxml=chaos-results.xml
-          else
-            pytest tests/chaos/ -v -m chaos --tb=short --junitxml=chaos-results.xml
-          fi
+          case "$CATEGORY" in
+            memory)
+              pytest tests/chaos/test_memory_pressure.py -v -m chaos --tb=short --junitxml=chaos-results.xml
+              ;;
+            llm)
+              pytest tests/chaos/test_slow_llm.py -v -m chaos --tb=short --junitxml=chaos-results.xml
+              ;;
+            network)
+              pytest tests/chaos/test_network_timeout.py -v -m chaos --tb=short --junitxml=chaos-results.xml
+              ;;
+            *)
+              pytest tests/chaos/ -v -m chaos --tb=short --junitxml=chaos-results.xml
+              ;;
+          esac
 
       - name: Upload test results
         uses: actions/upload-artifact@v4
@@ -92,7 +97,8 @@ jobs:
         with:
           report_paths: 'chaos-results.xml'
           check_name: Chaos Test Results (Python ${{ matrix.python-version }})
-          fail_on_failure: true  # Chaos tests should pass - they test resilience, not breakage
+          # Chaos tests validate graceful degradation - they should pass
+          fail_on_failure: true
 
   chaos-summary:
     runs-on: ubuntu-latest
