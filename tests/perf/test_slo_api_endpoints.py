@@ -191,11 +191,12 @@ class TestHealthEndpointSLO:
             concurrency=profile.concurrency,
         )
 
-        # Readiness checks should still be reasonably fast
-        # Relaxed to 120ms for CI environments (was 100ms)
-        assert results.p95_latency_ms < 120.0, (
+        # Readiness checks should be fast (<100ms P95)
+        # Optimized: Using psutil.cpu_percent(interval=0) instead of interval=0.1
+        # to avoid 100ms blocking delay
+        assert results.p95_latency_ms < 100.0, (
             f"Readiness check P95 latency {results.p95_latency_ms:.2f}ms too high "
-            "(should be < 120ms)"
+            "(should be < 100ms)"
         )
 
 
