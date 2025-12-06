@@ -13,6 +13,8 @@ from mlsdm.api.app import app
 from mlsdm.config.perf_slo import (
     DEFAULT_ERROR_RATE_SLO,
     DEFAULT_LATENCY_SLO,
+    MODERATE_LOAD_ERROR_MULTIPLIER,
+    MODERATE_LOAD_SLO_MULTIPLIER,
     get_load_profile,
 )
 from tests.perf.utils import run_load_test
@@ -221,12 +223,15 @@ class TestModerateLoadSLO:
         )
 
         # SLO should still be met under moderate load
-        assert results.p95_latency_ms < DEFAULT_LATENCY_SLO.api_p95_ms * 1.2, (
+        relaxed_latency_slo = DEFAULT_LATENCY_SLO.api_p95_ms * MODERATE_LOAD_SLO_MULTIPLIER
+        assert results.p95_latency_ms < relaxed_latency_slo, (
             f"P95 latency {results.p95_latency_ms:.2f}ms exceeds relaxed SLO "
-            f"under moderate load ({DEFAULT_LATENCY_SLO.api_p95_ms * 1.2}ms)"
+            f"under moderate load ({relaxed_latency_slo}ms)"
         )
 
         # Allow slightly higher error rate under load
-        assert results.error_rate_percent <= DEFAULT_ERROR_RATE_SLO.max_error_rate_percent * 1.5, (
-            f"Error rate {results.error_rate_percent:.2f}% too high under moderate load"
+        relaxed_error_slo = DEFAULT_ERROR_RATE_SLO.max_error_rate_percent * MODERATE_LOAD_ERROR_MULTIPLIER
+        assert results.error_rate_percent <= relaxed_error_slo, (
+            f"Error rate {results.error_rate_percent:.2f}% exceeds relaxed SLO "
+            f"under moderate load ({relaxed_error_slo}%)"
         )

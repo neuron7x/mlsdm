@@ -23,7 +23,8 @@ from mlsdm.utils.circuit_breaker import (
 def create_stub_embedder(dim: int = 384):
     """Create a deterministic stub embedding function."""
     def stub_embed(text: str) -> np.ndarray:
-        np.random.seed(hash(text) % (2**32))
+        # Use bitwise AND for uniform distribution across 32-bit range
+        np.random.seed(hash(text) & 0xFFFFFFFF)
         vec = np.random.randn(dim).astype(np.float32)
         norm = np.linalg.norm(vec)
         if norm < 1e-9:

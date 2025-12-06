@@ -80,6 +80,10 @@ class LoadProfile:
     description: str
 
 
+# SLO multipliers for different load conditions
+MODERATE_LOAD_SLO_MULTIPLIER = 1.2  # 20% relaxation under moderate load
+MODERATE_LOAD_ERROR_MULTIPLIER = 1.5  # 50% relaxation for error rate
+
 # Standard load profiles for testing
 LOAD_PROFILES: dict[str, LoadProfile] = {
     "light": LoadProfile(
