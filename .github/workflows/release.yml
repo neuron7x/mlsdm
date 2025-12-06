@@ -333,6 +333,20 @@ jobs:
           cosign attach sbom --sbom sbom-cyclonedx.json ghcr.io/${{ github.repository_owner }}/mlsdm-neuro-engine@${DIGEST}
           echo "✅ SBOM attached to container image"
       
+      # DOC-003: Auto-generate OpenAPI spec
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -e ".[test]"
+      
+      - name: Generate OpenAPI specification
+        run: |
+          python scripts/export_openapi.py --output docs/openapi.json
+          echo "✅ OpenAPI specification generated"
+        env:
+          DISABLE_RATE_LIMIT: "1"
+      
       - name: Create release notes
         run: |
           # Extract release notes from CHANGELOG.md
@@ -345,6 +359,7 @@ jobs:
           files: |
             sbom-cyclonedx.json
             sbom-spdx.json
+            docs/openapi.json
           draft: false
           prerelease: false
         env:

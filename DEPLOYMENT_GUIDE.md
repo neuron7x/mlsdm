@@ -913,6 +913,104 @@ processors:
            return v
    ```
 
+### OAuth 2.0 / OIDC Authentication (SEC-004)
+
+MLSDM supports OIDC authentication for enterprise deployments with identity providers like Auth0, Okta, Keycloak, Azure AD, and Google.
+
+#### Configuration
+
+Set environment variables to enable OIDC:
+
+```bash
+# Enable OIDC authentication
+export MLSDM_OIDC_ENABLED=true
+
+# OIDC issuer URL (your identity provider)
+export MLSDM_OIDC_ISSUER=https://your-domain.auth0.com/
+
+# Expected audience (API identifier or client ID)
+export MLSDM_OIDC_AUDIENCE=https://api.mlsdm.example.com
+
+# Optional: Custom roles claim (default: "roles")
+export MLSDM_OIDC_ROLES_CLAIM=https://mlsdm.example.com/roles
+
+# Optional: JWKS URI (auto-discovered if not set)
+export MLSDM_OIDC_JWKS_URI=https://your-domain.auth0.com/.well-known/jwks.json
+```
+
+#### Usage in FastAPI
+
+```python
+from fastapi import Depends
+from mlsdm.security import (
+    OIDCAuthenticator,
+    OIDCAuthMiddleware,
+    get_current_user,
+    get_optional_user,
+    require_oidc_auth,
+    UserInfo,
+)
+
+# Initialize authenticator
+authenticator = OIDCAuthenticator.from_env()
+
+# Add middleware for automatic authentication
+app.add_middleware(
+    OIDCAuthMiddleware,
+    authenticator=authenticator,
+    skip_paths=["/health", "/docs", "/openapi.json"],
+)
+
+# Use dependency injection for protected endpoints
+@app.get("/me")
+async def get_me(user: UserInfo = Depends(get_current_user)):
+    return {"subject": user.subject, "roles": user.roles}
+
+# Optional authentication
+@app.get("/public")
+async def public_endpoint(user: UserInfo | None = Depends(get_optional_user)):
+    if user:
+        return {"greeting": f"Hello, {user.name}"}
+    return {"greeting": "Hello, anonymous"}
+
+# Role-based access control with decorator
+@require_oidc_auth(roles=["admin", "operator"])
+@app.post("/admin/shutdown")
+async def admin_shutdown(request: Request):
+    return {"status": "shutdown initiated"}
+```
+
+#### Token Format
+
+OIDC tokens should be passed as Bearer tokens:
+
+```bash
+curl -X POST http://localhost:8000/generate \
+  -H "Authorization: Bearer eyJhbGciOiJSUzI1NiIs..." \
+  -H "Content-Type: application/json" \
+  -d '{"prompt": "Hello"}'
+```
+
+#### Identity Provider Configuration
+
+For Auth0:
+1. Create an API in Auth0 Dashboard
+2. Set identifier as `MLSDM_OIDC_AUDIENCE`
+3. Use your Auth0 domain as `MLSDM_OIDC_ISSUER`
+4. Add custom claims for roles if needed
+
+For Azure AD:
+1. Register an application in Azure AD
+2. Configure API permissions
+3. Set issuer to `https://login.microsoftonline.com/{tenant-id}/v2.0`
+4. Set audience to your application client ID
+
+For Keycloak:
+1. Create a realm and client
+2. Configure client for confidential access
+3. Set issuer to `https://keycloak.example.com/realms/{realm}`
+4. Enable role mapping in client scopes
+
 ### Network Security
 
 - Use HTTPS/TLS for all external communication
