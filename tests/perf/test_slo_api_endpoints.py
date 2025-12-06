@@ -6,6 +6,8 @@ controlled load conditions. Uses stub backends for deterministic results.
 
 from __future__ import annotations
 
+import os
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -18,6 +20,10 @@ from mlsdm.config.perf_slo import (
     get_load_profile,
 )
 from tests.perf.utils import run_load_test
+
+# Disable rate limiting for performance tests to avoid 429 errors
+# This allows us to test actual endpoint performance, not rate limiter behavior
+os.environ["DISABLE_RATE_LIMIT"] = "1"
 
 # Configure test client (synchronous for load testing)
 client = TestClient(app)

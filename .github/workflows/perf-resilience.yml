@@ -102,6 +102,8 @@ jobs:
             --tb=short \
             --maxfail=3 \
             --junit-xml=perf-slo-results.xml
+        env:
+          DISABLE_RATE_LIMIT: "1"
         continue-on-error: false
       
       - name: Generate performance summary
@@ -161,6 +163,8 @@ jobs:
             -m "benchmark" \
             --tb=short \
             --junit-xml=perf-comprehensive-results.xml
+        env:
+          DISABLE_RATE_LIMIT: "1"
         continue-on-error: true  # Don't block on slow tests
       
       - name: Upload comprehensive results
