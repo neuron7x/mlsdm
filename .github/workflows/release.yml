@@ -262,6 +262,11 @@ jobs:
       - code-quality
       - coverage-check
     
+    permissions:
+      contents: write
+      packages: write
+      id-token: write  # Required for OIDC cosign signing
+    
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -283,6 +288,7 @@ jobs:
           echo "TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
       
       - name: Build and push Docker image
+        id: docker_build
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -295,6 +301,38 @@ jobs:
           cache-to: type=gha,mode=max
           platforms: linux/amd64
       
+      # CICD-006: Container image signing with cosign
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3.8.0
+      
+      - name: Sign container image with cosign (OIDC keyless)
+        env:
+          COSIGN_EXPERIMENTAL: "true"
+          DIGEST: ${{ steps.docker_build.outputs.digest }}
+        run: |
+          echo "Signing image with digest: ${DIGEST}"
+          cosign sign --yes ghcr.io/${{ github.repository_owner }}/mlsdm-neuro-engine@${DIGEST}
+          echo "✅ Container image signed successfully"
+      
+      # SEC-005: Generate SBOM with syft
+      - name: Install syft
+        uses: anchore/sbom-action/download-syft@v0
+      
+      - name: Generate SBOM (CycloneDX format)
+        run: |
+          syft ghcr.io/${{ github.repository_owner }}/mlsdm-neuro-engine:${{ steps.get_version.outputs.VERSION }} \
+            -o cyclonedx-json=sbom-cyclonedx.json \
+            -o spdx-json=sbom-spdx.json
+          echo "✅ SBOM generated in CycloneDX and SPDX formats"
+      
+      - name: Attach SBOM to image with cosign
+        env:
+          COSIGN_EXPERIMENTAL: "true"
+          DIGEST: ${{ steps.docker_build.outputs.digest }}
+        run: |
+          cosign attach sbom --sbom sbom-cyclonedx.json ghcr.io/${{ github.repository_owner }}/mlsdm-neuro-engine@${DIGEST}
+          echo "✅ SBOM attached to container image"
+      
       - name: Create release notes
         run: |
           # Extract release notes from CHANGELOG.md
@@ -304,6 +342,9 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           body_path: release-notes.md
+          files: |
+            sbom-cyclonedx.json
+            sbom-spdx.json
           draft: false
           prerelease: false
         env:
