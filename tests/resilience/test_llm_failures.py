@@ -7,6 +7,7 @@ Validates circuit breaker, retry logic, and graceful degradation.
 from __future__ import annotations
 
 import time
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pytest
@@ -15,12 +16,14 @@ from mlsdm.core.llm_wrapper import LLMWrapper
 from mlsdm.utils.circuit_breaker import (
     CircuitBreaker,
     CircuitBreakerConfig,
-    CircuitOpenError,
     CircuitState,
 )
 
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
-def create_stub_embedder(dim: int = 384):
+
+def create_stub_embedder(dim: int = 384) -> Callable[[str], np.ndarray]:
     """Create a deterministic stub embedding function."""
     def stub_embed(text: str) -> np.ndarray:
         # Use bitwise AND for uniform distribution across 32-bit range
