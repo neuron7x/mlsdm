@@ -41,21 +41,19 @@ Note:
 
 from __future__ import annotations
 
-import hashlib
-import json
 import logging
 import os
 import time
 from dataclasses import dataclass, field
 from functools import wraps
 from threading import Lock
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any
 
 from fastapi import HTTPException, Request, Response, status
 from starlette.middleware.base import BaseHTTPMiddleware
 
 if TYPE_CHECKING:
-    from collections.abc import Awaitable, Callable, Sequence
+    from collections.abc import Awaitable, Callable
 
 logger = logging.getLogger(__name__)
 
@@ -360,12 +358,13 @@ class OIDCAuthenticator:
                 claims=payload,
             )
 
-        except ImportError:
+        except ImportError as err:
             logger.error("PyJWT not installed. Install with: pip install PyJWT")
+            # Preserve the original ImportError as the __cause__ so the root cause is not masked
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="OIDC authentication not available",
-            )
+            ) from err
         except Exception as e:
             logger.warning("JWT validation failed: %s", e)
             raise HTTPException(
