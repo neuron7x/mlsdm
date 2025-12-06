@@ -102,6 +102,24 @@ class OIDCConfig:
             cache_ttl=int(os.getenv("MLSDM_OIDC_CACHE_TTL", "3600")),
         )
 
+    def validate(self) -> None:
+        """Validate configuration when enabled.
+
+        Raises:
+            ValueError: If required fields are missing when enabled
+        """
+        if not self.enabled:
+            return
+
+        errors = []
+        if not self.issuer:
+            errors.append("MLSDM_OIDC_ISSUER is required when OIDC is enabled")
+        if not self.audience:
+            errors.append("MLSDM_OIDC_AUDIENCE is required when OIDC is enabled")
+
+        if errors:
+            raise ValueError("OIDC configuration error: " + "; ".join(errors))
+
 
 @dataclass
 class UserInfo:
@@ -209,7 +227,13 @@ class OIDCAuthenticator:
 
         Args:
             config: OIDC configuration
+
+        Raises:
+            ValueError: If configuration is invalid when OIDC is enabled
         """
+        # Validate configuration
+        config.validate()
+
         self.config = config
         self._jwks_cache = JWKSCache(cache_ttl=config.cache_ttl)
         self._discovery_cache: dict[str, Any] = {}
@@ -221,8 +245,12 @@ class OIDCAuthenticator:
 
         Returns:
             Configured OIDCAuthenticator instance
+
+        Raises:
+            ValueError: If configuration is invalid when OIDC is enabled
         """
-        return cls(OIDCConfig.from_env())
+        config = OIDCConfig.from_env()
+        return cls(config)
 
     @property
     def enabled(self) -> bool:

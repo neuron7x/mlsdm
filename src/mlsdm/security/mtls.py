@@ -84,11 +84,11 @@ class MTLSConfig:
         Returns:
             MTLSConfig instance
         """
+        require_cert = os.getenv("MLSDM_MTLS_REQUIRE_CLIENT_CERT", "true").lower() == "true"
         return cls(
             enabled=os.getenv("MLSDM_MTLS_ENABLED", "false").lower() == "true",
             ca_cert_path=os.getenv("MLSDM_MTLS_CA_CERT"),
-            require_client_cert=os.getenv("MLSDM_MTLS_REQUIRE_CLIENT_CERT", "true").lower()
-            == "true",
+            require_client_cert=require_cert,
             verify_depth=int(os.getenv("MLSDM_MTLS_VERIFY_DEPTH", "3")),
         )
 

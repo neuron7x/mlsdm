@@ -252,7 +252,19 @@ def verify_signature(
     """
     # Check timestamp (replay prevention)
     current_time = int(time.time())
-    age = abs(current_time - signature_info.timestamp)
+
+    # Reject requests from the future (with small clock skew allowance)
+    clock_skew_allowance = 30  # 30 seconds for clock drift
+    if signature_info.timestamp > current_time + clock_skew_allowance:
+        logger.warning(
+            "Signature timestamp in future: ts=%d, current=%d",
+            signature_info.timestamp,
+            current_time,
+        )
+        return False
+
+    # Reject requests that are too old
+    age = current_time - signature_info.timestamp
     if age > max_age_seconds:
         logger.warning("Signature expired: age=%d seconds", age)
         return False
