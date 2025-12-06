@@ -898,6 +898,60 @@ class MetricsExporter:
                 self.bulkhead_rejected_total.inc(rejected_increment)
 
     # ---------------------------------------------------------------------------
+    # Runtime Guardrails Metrics Methods (STRIDE-aligned)
+    # ---------------------------------------------------------------------------
+
+    def record_guardrail_decision(
+        self,
+        allowed: bool,
+        stride_categories: list[str],
+        checks_performed: list[str],
+    ) -> None:
+        """Record a guardrail decision with STRIDE category tracking.
+
+        Args:
+            allowed: Whether the request was allowed
+            stride_categories: List of STRIDE categories relevant to this decision
+            checks_performed: List of check types that were performed
+        """
+        with self._lock:
+            # Record overall decision
+            result = "allow" if allowed else "deny"
+            self.guardrail_decisions_total.labels(result=result).inc()
+
+            # Record STRIDE violations if denied
+            if not allowed:
+                for stride_cat in stride_categories:
+                    self.guardrail_stride_violations_total.labels(
+                        stride_category=stride_cat
+                    ).inc()
+
+    def record_guardrail_check(
+        self,
+        check_type: str,
+        passed: bool,
+        stride_category: str = "",
+    ) -> None:
+        """Record an individual guardrail check result.
+
+        Args:
+            check_type: Type of check (authentication, authorization, etc.)
+            passed: Whether the check passed
+            stride_category: STRIDE category for this check (optional)
+        """
+        with self._lock:
+            result = "pass" if passed else "fail"
+            self.guardrail_checks_total.labels(
+                check_type=check_type, result=result
+            ).inc()
+
+            # Record STRIDE violation if check failed
+            if not passed and stride_category:
+                self.guardrail_stride_violations_total.labels(
+                    stride_category=stride_category
+                ).inc()
+
+    # ---------------------------------------------------------------------------
     # HTTP-Level Metrics Methods (OBS-001 enhancement)
     # ---------------------------------------------------------------------------
 
@@ -1173,55 +1227,6 @@ class MetricsExporter:
     # ---------------------------------------------------------------------------
     # Runtime Guardrails Metrics Methods
     # ---------------------------------------------------------------------------
-
-    def record_guardrail_decision(
-        self,
-        allowed: bool,
-        stride_categories: list[str],
-        checks_performed: list[str],
-    ) -> None:
-        """Record a guardrail policy decision.
-
-        Args:
-            allowed: Whether the request was allowed
-            stride_categories: STRIDE categories that applied to this decision
-            checks_performed: List of check types performed
-        """
-        with self._lock:
-            result = "allow" if allowed else "deny"
-            self.guardrail_decisions_total.labels(result=result).inc()
-
-            # Record STRIDE category violations (only for denials)
-            if not allowed:
-                for category in stride_categories:
-                    self.guardrail_stride_violations_total.labels(
-                        stride_category=category
-                    ).inc()
-
-    def record_guardrail_check(
-        self,
-        check_type: str,
-        passed: bool,
-        stride_category: str = "",
-    ) -> None:
-        """Record an individual guardrail check result.
-
-        Args:
-            check_type: Type of check (authentication, authorization, etc.)
-            passed: Whether the check passed
-            stride_category: STRIDE category for this check
-        """
-        with self._lock:
-            result = "pass" if passed else "fail"
-            self.guardrail_checks_total.labels(
-                check_type=check_type, result=result
-            ).inc()
-
-            # Record STRIDE violation if check failed
-            if not passed and stride_category:
-                self.guardrail_stride_violations_total.labels(
-                    stride_category=stride_category
-                ).inc()
 
     def increment_auth_failures(self, method: str, count: int = 1) -> None:
         """Increment authentication failures counter.
