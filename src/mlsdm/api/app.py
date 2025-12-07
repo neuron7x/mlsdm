@@ -18,6 +18,7 @@ from mlsdm.api.middleware import (
     BulkheadMiddleware,
     PriorityMiddleware,
     RequestIDMiddleware,
+    RequestLoggingMiddleware,
     SecurityHeadersMiddleware,
     TimeoutMiddleware,
 )
@@ -145,17 +146,23 @@ app = FastAPI(
 # Add production middleware (order matters: outer to inner)
 # Security middleware should be outermost to protect all requests
 # 1. SecurityHeaders - adds security headers to all responses
-# 2. mTLS (optional) - verify client certificates (SEC-006)
-# 3. OIDC (optional) - authenticate users via OpenID Connect (SEC-004)
-# 4. RBAC (optional) - enforce role-based access control
-# 5. Signing (optional) - verify request signatures
-# 6. RequestID - adds request ID for tracking
-# 7. Timeout - enforces request-level timeouts (REL-004)
-# 8. Priority - parses priority header (REL-005)
-# 9. Bulkhead - limits concurrent requests (REL-002)
+# 2. RequestLogging (optional) - logs requests with PII scrubbing
+# 3. mTLS (optional) - verify client certificates (SEC-006)
+# 4. OIDC (optional) - authenticate users via OpenID Connect (SEC-004)
+# 5. RBAC (optional) - enforce role-based access control
+# 6. Signing (optional) - verify request signatures
+# 7. RequestID - adds request ID for tracking
+# 8. Timeout - enforces request-level timeouts (REL-004)
+# 9. Priority - parses priority header (REL-005)
+# 10. Bulkhead - limits concurrent requests (REL-002)
 
 # Always add security headers
 app.add_middleware(SecurityHeadersMiddleware)
+
+# Add request logging with PII scrubbing if enabled
+if _runtime_config.security.enable_pii_scrub_logs:
+    logger.info("Enabling request logging middleware with PII scrubbing")
+    app.add_middleware(RequestLoggingMiddleware)
 
 # Conditionally add advanced security middleware based on runtime config
 if _runtime_config.security.enable_mtls:

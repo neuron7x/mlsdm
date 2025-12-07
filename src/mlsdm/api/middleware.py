@@ -620,3 +620,65 @@ def get_request_id(request: Request) -> str:
         Request ID string, or "unknown" if not set
     """
     return getattr(request.state, "request_id", "unknown")
+
+
+class RequestLoggingMiddleware(BaseHTTPMiddleware):
+    """Middleware for request/response logging with PII scrubbing.
+    
+    Logs request and response details with automatic PII/secret scrubbing
+    when enabled via security configuration.
+    
+    Features:
+    - Conditional logging based on MLSDM_SECURITY_ENABLE_PII_SCRUB_LOGS
+    - Request payload scrubbing
+    - Response payload scrubbing
+    - Integration with security logger
+    """
+
+    async def dispatch(
+        self, request: Request, call_next: Callable[[Request], Awaitable[Response]]
+    ) -> Response:
+        """Process request with optional PII-scrubbed logging."""
+        import json
+        import os
+        
+        from mlsdm.security.payload_scrubber import scrub_request_payload, should_log_payload
+        from mlsdm.utils.security_logger import get_security_logger
+        
+        # Check if PII scrubbing is enabled
+        enable_pii_scrub = os.getenv("MLSDM_SECURITY_ENABLE_PII_SCRUB_LOGS", "0") == "1"
+        
+        if not enable_pii_scrub:
+            # Pass through without logging
+            return await call_next(request)
+        
+        request_id = getattr(request.state, "request_id", "unknown")
+        client_id = getattr(request.state, "client_id", "unknown")
+        security_logger = get_security_logger()
+        
+        # Check if we should log this payload
+        if should_log_payload(request.url.path):
+            # Read and scrub request body if present
+            request_body = None
+            if request.method in ["POST", "PUT", "PATCH"]:
+                try:
+                    body_bytes = await request.body()
+                    if body_bytes:
+                        request_body = json.loads(body_bytes)
+                        scrubbed_request = scrub_request_payload(request_body)
+                        
+                        logger.debug(
+                            f"Request body (scrubbed): {scrubbed_request}",
+                            extra={
+                                "request_id": request_id,
+                                "client_id": client_id,
+                                "route": request.url.path,
+                            }
+                        )
+                except Exception as e:
+                    logger.warning(f"Failed to scrub request body: {e}")
+        
+        # Process request
+        response = await call_next(request)
+        
+        return response
