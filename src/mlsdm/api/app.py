@@ -21,6 +21,12 @@ from mlsdm.api.middleware import (
     SecurityHeadersMiddleware,
     TimeoutMiddleware,
 )
+from mlsdm.api.security_integration import (
+    analyze_llm_safety_if_enabled,
+    apply_guardrails_if_enabled,
+    create_policy_context_from_request,
+    evaluate_request_policy_if_enabled,
+)
 from mlsdm.config_runtime import get_runtime_config
 from mlsdm.contracts import AphasiaMetadata
 from mlsdm.core.memory_manager import MemoryManager
@@ -546,14 +552,94 @@ async def generate(
             )
 
         try:
-            # Build kwargs for engine
+            # Phase 1: Policy Engine Evaluation (if enabled)
+            policy_context = create_policy_context_from_request(
+                request=request,
+                route="/generate",
+                prompt=request_body.prompt,
+                moral_value=request_body.moral_value,
+            )
+            policy_decision = evaluate_request_policy_if_enabled(policy_context)
+            
+            if policy_decision and not policy_decision.allow:
+                # Policy denied the request
+                security_logger.log_policy_violation(
+                    client_id=client_id,
+                    policy=policy_decision.policy_name or "unknown",
+                    reason=policy_decision.reasons[0] if policy_decision.reasons else "Policy denied"
+                )
+                span.set_attribute("mlsdm.policy_denied", True)
+                return JSONResponse(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    content={
+                        "error": {
+                            "error_type": "policy_violation",
+                            "message": "Request denied by security policy",
+                            "details": {"reasons": policy_decision.reasons},
+                        }
+                    },
+                )
+            
+            # Phase 2: Input Guardrails (if enabled)
+            input_guardrail_result = apply_guardrails_if_enabled(
+                prompt=request_body.prompt,
+                context={"route": "/generate", "client_id": client_id}
+            )
+            
+            if input_guardrail_result and input_guardrail_result.blocked:
+                security_logger.log_policy_violation(
+                    client_id=client_id,
+                    policy="input_guardrails",
+                    reason=input_guardrail_result.reason
+                )
+                span.set_attribute("mlsdm.guardrails_blocked", True)
+                return JSONResponse(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    content={
+                        "error": {
+                            "error_type": "guardrail_violation",
+                            "message": "Request blocked by input guardrails",
+                            "details": {"reason": input_guardrail_result.reason},
+                        }
+                    },
+                )
+            
+            # Phase 3: LLM Safety Analysis (if enabled)
+            safety_analysis = analyze_llm_safety_if_enabled(
+                text=request_body.prompt,
+                is_prompt=True
+            )
+            
+            if safety_analysis and safety_analysis.get("blocked"):
+                security_logger.log_policy_violation(
+                    client_id=client_id,
+                    policy="llm_safety",
+                    reason=f"Safety risk: {safety_analysis.get('risk_level')}"
+                )
+                span.set_attribute("mlsdm.safety_blocked", True)
+                span.set_attribute("mlsdm.safety_risk_level", safety_analysis.get("risk_level", "unknown"))
+                return JSONResponse(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    content={
+                        "error": {
+                            "error_type": "safety_violation",
+                            "message": "Request blocked by LLM safety analysis",
+                            "details": {
+                                "risk_level": safety_analysis.get("risk_level"),
+                                "violations": safety_analysis.get("violations", []),
+                            },
+                        }
+                    },
+                )
+            
+            # Phase 4: Build kwargs for engine
             kwargs: dict[str, Any] = {"prompt": request_body.prompt}
             if request_body.max_tokens is not None:
                 kwargs["max_tokens"] = request_body.max_tokens
             if request_body.moral_value is not None:
                 kwargs["moral_value"] = request_body.moral_value
 
-            # Generate response (engine has its own child spans)
+            # Phase 5: Generate response (engine has its own child spans)
             result: dict[str, Any] = _neuro_engine.generate(**kwargs)
 
             # Extract phase from mlsdm state if available
@@ -564,6 +650,59 @@ async def generate(
             rejected_at = result.get("rejected_at")
             error_info = result.get("error")
             accepted = rejected_at is None and error_info is None and bool(result.get("response"))
+            
+            # Phase 6: Output Guardrails (if enabled and response generated)
+            generated_response = result.get("response", "")
+            if generated_response and accepted:
+                output_guardrail_result = apply_guardrails_if_enabled(
+                    response=generated_response,
+                    context={
+                        "route": "/generate",
+                        "client_id": client_id,
+                        "prompt": request_body.prompt
+                    }
+                )
+                
+                if output_guardrail_result:
+                    if output_guardrail_result.blocked:
+                        # Block the response
+                        security_logger.log_policy_violation(
+                            client_id=client_id,
+                            policy="output_guardrails",
+                            reason=output_guardrail_result.reason
+                        )
+                        span.set_attribute("mlsdm.output_guardrails_blocked", True)
+                        # Return empty response with blocked flag
+                        result["response"] = ""
+                        result["rejected_at"] = "output_guardrails"
+                        result["rejection_reason"] = output_guardrail_result.reason
+                        accepted = False
+                    elif output_guardrail_result.modified_content:
+                        # Use modified content
+                        result["response"] = output_guardrail_result.modified_content
+                        span.set_attribute("mlsdm.output_guardrails_modified", True)
+                
+                # Phase 7: LLM Safety Analysis on Output (if enabled)
+                output_safety = analyze_llm_safety_if_enabled(
+                    text=result.get("response", ""),
+                    is_prompt=False
+                )
+                
+                if output_safety and output_safety.get("blocked"):
+                    security_logger.log_policy_violation(
+                        client_id=client_id,
+                        policy="llm_safety_output",
+                        reason=f"Output safety risk: {output_safety.get('risk_level')}"
+                    )
+                    span.set_attribute("mlsdm.output_safety_blocked", True)
+                    # Use filtered output if available
+                    if output_safety.get("filtered_output"):
+                        result["response"] = output_safety["filtered_output"]
+                    else:
+                        result["response"] = ""
+                        result["rejected_at"] = "llm_safety_output"
+                        result["rejection_reason"] = f"Output blocked by safety filter: {output_safety.get('risk_level')}"
+                        accepted = False
 
             # Add result attributes to span
             add_span_attributes(
