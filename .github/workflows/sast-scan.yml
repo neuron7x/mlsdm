@@ -49,13 +49,50 @@ jobs:
           # Verify SARIF file was created and is valid JSON
           if [ ! -f bandit-results.sarif ]; then
             echo "Error: bandit-results.sarif was not created"
-            echo '{"version":"2.1.0","$schema":"https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json","runs":[]}' > bandit-results.sarif
+            # Create minimal valid SARIF with proper structure
+            cat > bandit-results.sarif << 'EOF'
+          {
+            "version": "2.1.0",
+            "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+            "runs": [
+              {
+                "tool": {
+                  "driver": {
+                    "name": "Bandit",
+                    "version": "1.7.0",
+                    "informationUri": "https://bandit.readthedocs.io/"
+                  }
+                },
+                "results": []
+              }
+            ]
+          }
+          EOF
           elif ! python -m json.tool bandit-results.sarif > /dev/null 2>&1; then
             echo "Error: bandit-results.sarif is not valid JSON"
-            echo '{"version":"2.1.0","$schema":"https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json","runs":[]}' > bandit-results.sarif
+            # Create minimal valid SARIF with proper structure
+            cat > bandit-results.sarif << 'EOF'
+          {
+            "version": "2.1.0",
+            "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+            "runs": [
+              {
+                "tool": {
+                  "driver": {
+                    "name": "Bandit",
+                    "version": "1.7.0",
+                    "informationUri": "https://bandit.readthedocs.io/"
+                  }
+                },
+                "results": []
+              }
+            ]
+          }
+          EOF
           fi
           
           echo "Bandit scan completed with exit code: $BANDIT_EXIT_CODE"
+          echo "SARIF file size: $(wc -c < bandit-results.sarif) bytes"
       
       - name: Check for high/critical severity issues
         run: |
@@ -72,6 +109,23 @@ jobs:
             --severity-level high \
             --confidence-level high \
             -q  # Quiet mode, only returns exit code
+      
+      - name: Verify SARIF before upload
+        if: always()
+        run: |
+          echo "Verifying SARIF file before upload..."
+          if [ -f bandit-results.sarif ]; then
+            echo "✓ SARIF file exists"
+            echo "File size: $(wc -c < bandit-results.sarif) bytes"
+            echo "File location: $(pwd)/bandit-results.sarif"
+            echo "First 200 chars:"
+            head -c 200 bandit-results.sarif
+            echo ""
+          else
+            echo "✗ ERROR: SARIF file does not exist!"
+            ls -la
+            exit 1
+          fi
       
       - name: Upload SARIF file
         if: always()
