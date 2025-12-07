@@ -429,16 +429,17 @@ class CognitiveController:
         # Optimization: Use cached norm calculations when state hasn't changed
         # Only cache when not rejected (rejected responses are cheap anyway)
         if not rejected and self._state_cache_valid and self._state_cache:
-            # Use cached values but update step counter and note
-            result = self._state_cache.copy()
-            result["step"] = self.step_counter
-            result["rejected"] = rejected
-            result["accepted"] = not rejected
-            result["note"] = note
-            return result
+            # Update only the mutable fields in-place to avoid allocations
+            self._state_cache["step"] = self.step_counter
+            self._state_cache["note"] = note
+            # Return a shallow copy to prevent external mutations
+            return self._state_cache.copy()
 
         # Calculate fresh state
         l1, l2, l3 = self.synaptic.state()
+
+        # Compute pelm_used once
+        pelm_used = self.pelm.get_state_stats()["used"]
 
         # Optimization: Compute norms in a single pass when possible
         # Pre-allocate result dict to avoid resizing
@@ -452,17 +453,18 @@ class CognitiveController:
                 "L2": float(np.linalg.norm(l2)),
                 "L3": float(np.linalg.norm(l3))
             },
-            "pelm_used": self.pelm.get_state_stats()["used"],
+            "pelm_used": pelm_used,
             # Backward compatibility (deprecated)
-            "qilm_used": self.pelm.get_state_stats()["used"],
+            "qilm_used": pelm_used,
             "rejected": rejected,
             "accepted": not rejected,
             "note": note
         }
 
-        # Cache result for accepted events
+        # Cache result for accepted events - store reference, not copy
+        # This reduces allocation overhead
         if not rejected:
-            self._state_cache = result.copy()
+            self._state_cache = result
             self._state_cache_valid = True
 
         return result

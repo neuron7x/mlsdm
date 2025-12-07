@@ -98,6 +98,12 @@ _cognitive_controller: Any | None = None
 # Global neuro engine reference (to be set by the application)
 _neuro_engine: Any | None = None
 
+# Health check cache to reduce latency (readiness SLO optimization)
+# Cache is valid for 1 second to balance freshness and performance
+_health_cache: dict[str, Any] = {}
+_health_cache_ttl = 1.0  # seconds
+_health_cache_lock = None  # Will be initialized on first use
+
 
 def set_memory_manager(manager: Any) -> None:
     """Set the global memory manager reference for health checks.
@@ -308,12 +314,38 @@ async def ready(response: Response) -> ReadinessStatus:
 
     Returns 200 if all critical components healthy, 503 otherwise.
 
+    Optimizations:
+    - Caches health check results for 1 second to reduce latency
+    - Uses non-blocking CPU checks (interval=0)
+    
     Args:
         response: FastAPI response object to set status code
 
     Returns:
         ReadinessStatus with status, components, and details
     """
+    global _health_cache, _health_cache_lock
+    
+    # Initialize lock on first use (thread-safe)
+    if _health_cache_lock is None:
+        import threading
+        _health_cache_lock = threading.Lock()
+    
+    # Check cache first (SLO optimization)
+    current_time = time.time()
+    with _health_cache_lock:
+        if _health_cache and "timestamp" in _health_cache:
+            cache_age = current_time - _health_cache["timestamp"]
+            if cache_age < _health_cache_ttl:
+                # Return cached result for fast response
+                cached_status = _health_cache["status"]
+                response.status_code = (
+                    status.HTTP_200_OK if cached_status.ready
+                    else status.HTTP_503_SERVICE_UNAVAILABLE
+                )
+                return cached_status
+    
+    # Cache miss or expired - perform full health check
     components: dict[str, ComponentStatus] = {}
     checks: dict[str, bool] = {}  # Legacy format
     all_ready = True
@@ -404,14 +436,23 @@ async def ready(response: Response) -> ReadinessStatus:
         unhealthy = [k for k, v in components.items() if not v.healthy]
         details["unhealthy_components"] = unhealthy
 
-    return ReadinessStatus(
+    result = ReadinessStatus(
         ready=all_ready,
         status=status_str,
-        timestamp=time.time(),
+        timestamp=current_time,
         components=components,
         details=details if details else None,
         checks=checks,
     )
+    
+    # Cache the result for subsequent requests (SLO optimization)
+    with _health_cache_lock:
+        _health_cache = {
+            "timestamp": current_time,
+            "status": result,
+        }
+    
+    return result
 
 
 @router.get("/readiness", response_model=ReadinessStatus)
