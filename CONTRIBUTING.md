@@ -60,26 +60,31 @@ This project adheres to professional engineering standards. We expect:
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 
-# Install dependencies
-pip install -r requirements.txt
+# Install all development dependencies (includes core, test, and tools)
+pip install -r requirements-dev.txt
+
+# Alternative: Install with optional tracing support
+pip install -e ".[dev,tracing]"
 ```
+
+**Note on OpenTelemetry**: The project supports optional distributed tracing via OpenTelemetry. Core functionality works without it. For full observability features, OTEL packages are included in `requirements-dev.txt`. To run without OTEL, set `MLSDM_ENABLE_OTEL=false`.
 
 ### Verify Installation
 
 ```bash
-# Install with test dependencies
-pip install -e ".[test]"
+# Quick smoke test - runs the same tests as CI
+./scripts/dev_smoke_tests.sh
 
-# Run tests to ensure everything works
+# Or run tests manually with canonical command
+PYTHONPATH=src pytest -q --ignore=tests/load
+
+# Or using make
 make test
-
-# Or directly:
-pytest --ignore=tests/load
 ```
 
 ### Development Tools
 
-We use the following tools (all included in dev dependencies):
+We use the following tools (all included in `requirements-dev.txt`):
 
 - **pytest**: Testing framework
 - **pytest-cov**: Code coverage
@@ -87,15 +92,22 @@ We use the following tools (all included in dev dependencies):
 - **ruff**: Linting and formatting
 - **mypy**: Type checking
 - **httpx**: HTTP client for testing
+- **locust**: Load testing
+- **opentelemetry**: Distributed tracing (optional at runtime)
 
 ### Canonical Development Commands
 
 These commands match what CI runs. **Always run these before pushing:**
 
 ```bash
-# Run all tests (ignores load tests that require special setup)
+# Run all tests (canonical CI command)
+PYTHONPATH=src pytest -q --ignore=tests/load
+
+# Or use the smoke test script
+./scripts/dev_smoke_tests.sh
+
+# Or use make shortcuts
 make test
-# Or: pytest --ignore=tests/load
 
 # Run linter (ruff)
 make lint

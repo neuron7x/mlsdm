@@ -1,0 +1,34 @@
+# MLSDM Development Dependencies
+# This file includes all dependencies needed for local development and testing
+# Sync with CI workflows and pyproject.toml [project.optional-dependencies]
+
+# Core dependencies
+-r requirements.txt
+
+# Testing dependencies
+pytest>=8.0.0
+pytest-asyncio>=0.23.0
+pytest-cov>=4.1.0
+hypothesis>=6.98.3
+httpx>=0.27.0
+
+# Code quality tools
+ruff>=0.4.10
+mypy>=1.10.0
+
+# Performance testing
+locust>=2.29.1
+
+# Type stubs for mypy
+types-PyYAML>=6.0.1
+types-requests>=2.31.0
+
+# OpenTelemetry for full observability (optional at runtime, required for dev)
+# Note: These are required in dev environment for testing tracing functionality
+# At runtime, they are optional and code will gracefully degrade if not available
+opentelemetry-exporter-otlp>=1.24.0
+opentelemetry-exporter-otlp-proto-grpc>=1.24.0
+opentelemetry-exporter-otlp-proto-http>=1.24.0
+
+# Build tools (for package testing)
+build>=1.0.0

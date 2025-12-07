@@ -26,26 +26,183 @@ from functools import wraps
 from threading import Lock
 from typing import TYPE_CHECKING, Any, Literal
 
-from opentelemetry import trace
-from opentelemetry.sdk.resources import Resource
-from opentelemetry.sdk.trace import SpanProcessor, TracerProvider
-from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
-from opentelemetry.trace import SpanKind, Status, StatusCode
+# OpenTelemetry is optional - gracefully degrade if not available
+try:
+    from opentelemetry import trace
+    from opentelemetry.sdk.resources import Resource
+    from opentelemetry.sdk.trace import SpanProcessor, TracerProvider
+    from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
+    from opentelemetry.trace import SpanKind, Status, StatusCode
+
+    OTEL_AVAILABLE: bool = True
+except ImportError:
+    # OTEL not installed - define minimal stub types for type checking
+    trace = None  # type: ignore[assignment]
+    Resource = object  # type: ignore[assignment,misc]
+    SpanProcessor = object  # type: ignore[assignment,misc]
+    TracerProvider = object  # type: ignore[assignment,misc]
+    BatchSpanProcessor = object  # type: ignore[assignment,misc]
+    ConsoleSpanExporter = object  # type: ignore[assignment,misc]
+    
+    # Create minimal enum-like objects for SpanKind and StatusCode
+    class SpanKind:  # type: ignore[no-redef]
+        INTERNAL = 0
+        SERVER = 1
+        CLIENT = 2
+        PRODUCER = 3
+        CONSUMER = 4
+    
+    class StatusCode:  # type: ignore[no-redef]
+        UNSET = 0
+        OK = 1
+        ERROR = 2
+    
+    class Status:  # type: ignore[no-redef]
+        def __init__(self, status_code: int, description: str = "") -> None:
+            self.status_code = status_code
+            self.description = description
+    
+    OTEL_AVAILABLE = False
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
 
-    from opentelemetry.context import Context
-    from opentelemetry.trace import Span, Tracer
+    if OTEL_AVAILABLE:
+        from opentelemetry.context import Context
+        from opentelemetry.trace import Span, Tracer
+    else:
+        Context = Any  # type: ignore[misc]
+        Span = Any  # type: ignore[misc]
+        Tracer = Any  # type: ignore[misc]
 
 logger = logging.getLogger(__name__)
 
 # Version constant for consistency across the codebase
 MLSDM_VERSION = "1.0.0"
 
+
+# ---------------------------------------------------------------------------
+# No-op implementations for when OTEL is unavailable
+# ---------------------------------------------------------------------------
+
+
+class NoOpSpan:
+    """No-op span implementation when OpenTelemetry is not available."""
+    
+    def __enter__(self) -> NoOpSpan:
+        return self
+    
+    def __exit__(self, *args: Any) -> None:
+        pass
+    
+    def set_attribute(self, key: str, value: Any) -> None:
+        """No-op attribute setter."""
+        pass
+    
+    def set_attributes(self, attributes: dict[str, Any]) -> None:
+        """No-op attributes setter."""
+        pass
+    
+    def record_exception(
+        self,
+        exception: Exception,
+        attributes: dict[str, Any] | None = None,
+        timestamp: int | None = None,
+        escaped: bool = False,
+    ) -> None:
+        """No-op exception recorder."""
+        pass
+    
+    def set_status(self, status: Any, description: str | None = None) -> None:
+        """No-op status setter."""
+        pass
+    
+    def add_event(
+        self,
+        name: str,
+        attributes: dict[str, Any] | None = None,
+        timestamp: int | None = None,
+    ) -> None:
+        """No-op event adder."""
+        pass
+    
+    def is_recording(self) -> bool:
+        """Always returns False for no-op span."""
+        return False
+
+
+class NoOpTracer:
+    """No-op tracer implementation when OpenTelemetry is not available."""
+    
+    @contextmanager
+    def start_as_current_span(
+        self,
+        name: str,
+        context: Any = None,
+        kind: Any = None,
+        attributes: dict[str, Any] | None = None,
+        links: Any = None,
+        start_time: int | None = None,
+        record_exception: bool = True,
+        set_status_on_exception: bool = True,
+        end_on_exit: bool = True,
+    ) -> Iterator[NoOpSpan]:
+        """Context manager that yields a no-op span."""
+        yield NoOpSpan()
+    
+    def start_span(
+        self,
+        name: str,
+        context: Any = None,
+        kind: Any = None,
+        attributes: dict[str, Any] | None = None,
+        links: Any = None,
+        start_time: int | None = None,
+        record_exception: bool = True,
+        set_status_on_exception: bool = True,
+    ) -> NoOpSpan:
+        """Returns a no-op span."""
+        return NoOpSpan()
+
 # Span attribute prefix constants
 SPAN_ATTR_PREFIX_MLSDM = "mlsdm."
 SPAN_ATTR_PREFIX_HTTP = "http."
+
+
+# ---------------------------------------------------------------------------
+# OTEL Availability Check
+# ---------------------------------------------------------------------------
+
+
+def is_otel_available() -> bool:
+    """Check if OpenTelemetry SDK is available.
+    
+    Returns:
+        True if OTEL is installed and importable, False otherwise
+    """
+    return OTEL_AVAILABLE
+
+
+def is_otel_enabled() -> bool:
+    """Check if OpenTelemetry tracing is enabled.
+    
+    This checks both:
+    1. Whether OTEL SDK is available (installed)
+    2. Whether it's enabled via configuration/environment
+    
+    Returns:
+        True if OTEL is available and enabled, False otherwise
+    """
+    if not OTEL_AVAILABLE:
+        return False
+    
+    # Check for MLSDM-specific enable flag first
+    mlsdm_enabled = os.getenv("MLSDM_ENABLE_OTEL")
+    if mlsdm_enabled is not None:
+        return mlsdm_enabled.lower() == "true"
+    
+    # Fall back to standard OTEL env var
+    return os.getenv("OTEL_SDK_DISABLED", "false").lower() != "true"
 
 
 # ---------------------------------------------------------------------------
@@ -95,17 +252,30 @@ class TracingConfig:
         batch_max_export_batch_size: int = 512,
         batch_schedule_delay_millis: int = 5000,
     ) -> None:
-        """Initialize tracing configuration from environment or parameters."""
+        """Initialize tracing configuration from environment or parameters.
+        
+        Raises:
+            RuntimeError: If tracing is enabled but OpenTelemetry is not installed
+        """
         self.service_name: str = service_name or os.getenv("OTEL_SERVICE_NAME", "mlsdm") or "mlsdm"
 
         # Check for MLSDM-specific enable flag first, then fall back to OTEL standard
-        mlsdm_enabled = os.getenv("MLSDM_OTEL_ENABLED")
+        mlsdm_enabled = os.getenv("MLSDM_ENABLE_OTEL")
         if enabled is not None:
             self.enabled = enabled
         elif mlsdm_enabled is not None:
             self.enabled = mlsdm_enabled.lower() == "true"
         else:
             self.enabled = os.getenv("OTEL_SDK_DISABLED", "false").lower() != "true"
+        
+        # Validate that OTEL is available if enabled
+        if self.enabled and not OTEL_AVAILABLE:
+            raise RuntimeError(
+                "OpenTelemetry tracing is enabled in configuration, but the "
+                "`opentelemetry-sdk` package is not installed. "
+                "Install it with: pip install opentelemetry-sdk opentelemetry-exporter-otlp "
+                "or disable tracing by setting MLSDM_ENABLE_OTEL=false"
+            )
 
         self.exporter_type = exporter_type or os.getenv(
             "OTEL_EXPORTER_TYPE", "console"
@@ -203,8 +373,14 @@ class TracerManager:
 
         This method sets up the tracer provider with the configured exporter
         and registers it as the global tracer provider.
+        
+        If OpenTelemetry is not available, this is a no-op.
         """
         if self._initialized:
+            return
+        
+        if not OTEL_AVAILABLE:
+            logger.info("OpenTelemetry SDK not available - tracing disabled")
             return
 
         if not self._config.enabled:
@@ -315,18 +491,23 @@ class TracerManager:
                 self._initialized = False
 
     @property
-    def tracer(self) -> Tracer:
+    def tracer(self) -> Tracer | NoOpTracer:
         """Get the tracer instance, initializing if necessary.
 
         Returns:
-            OpenTelemetry Tracer instance
+            OpenTelemetry Tracer instance, or NoOpTracer if OTEL is not available
         """
+        if not OTEL_AVAILABLE:
+            return NoOpTracer()
+        
         if not self._initialized:
             self.initialize()
 
         if self._tracer is None:
             # Return a no-op tracer if not initialized
-            return trace.get_tracer("mlsdm", MLSDM_VERSION)
+            if trace is not None:
+                return trace.get_tracer("mlsdm", MLSDM_VERSION)
+            return NoOpTracer()
 
         return self._tracer
 
@@ -367,15 +548,18 @@ class TracerManager:
         ) as span:
             yield span
 
-    def record_exception(self, span: Span, exception: Exception) -> None:
+    def record_exception(self, span: Span | NoOpSpan, exception: Exception) -> None:
         """Record an exception on a span.
 
         Args:
             span: The span to record the exception on
             exception: The exception to record
         """
+        if isinstance(span, NoOpSpan):
+            return  # No-op for NoOpSpan
         span.record_exception(exception)
-        span.set_status(Status(StatusCode.ERROR, str(exception)))
+        if OTEL_AVAILABLE and Status is not None and StatusCode is not None:
+            span.set_status(Status(StatusCode.ERROR, str(exception)))
 
 
 # ---------------------------------------------------------------------------
@@ -792,13 +976,16 @@ def trace_full_pipeline(
     )
 
 
-def add_span_attributes(span: Span, **attributes: Any) -> None:
+def add_span_attributes(span: Span | NoOpSpan, **attributes: Any) -> None:
     """Add attributes to a span, handling type conversion.
 
     Args:
         span: The span to add attributes to
         **attributes: Key-value pairs to add as attributes
     """
+    if isinstance(span, NoOpSpan):
+        return  # No-op for NoOpSpan
+    
     for key, value in attributes.items():
         if value is None:
             continue
