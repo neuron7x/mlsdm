@@ -62,6 +62,24 @@
 | LOW | DOC-004 | Interactive API playground |
 | LOW | DOC-005 | Troubleshooting decision tree |
 
+### 2025-Q4 Foundation Hardening ✅ COMPLETE
+
+**Completed**: December 7, 2025
+
+| Priority | ID | Description | Status |
+|----------|-----|-------------|--------|
+| CRITICAL | HARD-001 | Policy-as-code foundation (`policy/security-baseline.yaml`, `policy/observability-slo.yaml`) | ✅ Complete |
+| CRITICAL | HARD-002 | Policy validator script with comprehensive tests (`scripts/validate_policy_config.py`) | ✅ Complete |
+| CRITICAL | HARD-003 | SLO Validation Protocol documentation (`SLO_VALIDATION_PROTOCOL.md`) | ✅ Complete |
+| HIGH | HARD-004 | Bandit SARIF JSON validation in CI workflow | ✅ Complete |
+| HIGH | HARD-005 | SECURITY_POLICY finalization - removed all TBD placeholders | ✅ Complete |
+| HIGH | HARD-006 | SECURITY_POLICY Policy-as-Code Integration section | ✅ Complete |
+| HIGH | HARD-007 | RUNBOOK enhancement - Symptom → Action tables | ✅ Complete |
+| HIGH | HARD-008 | RUNBOOK enhancement - Script reference table | ✅ Complete |
+| HIGH | HARD-009 | RUNBOOK enhancement - Test commands for SLO validation | ✅ Complete |
+| MEDIUM | HARD-010 | SECURITY_IMPLEMENTATION SAST documentation | ✅ Complete |
+| MEDIUM | HARD-011 | Tool test suite (`tests/tools/`) | ✅ Complete |
+
 ---
 
 ## Core Reliability ✅ COMPLETE
