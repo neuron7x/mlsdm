@@ -122,10 +122,19 @@ MLSDM implements defense-in-depth security across all 14 system layers:
    - Structured logging with security context
    - Audit trails for security events
 
-7. **Security Infrastructure**  
+7. **Security Infrastructure (v1.1 Enhanced)**  
    - Rate limiting (`rate_limit.py`)
    - Input validation (`input_validator.py`)
    - Security logging (`security_logger.py`)
+   - OIDC authentication (`oidc.py`) - SEC-004
+   - Mutual TLS (`mtls.py`) - SEC-006
+   - Role-based access control (`rbac.py`)
+   - Request signing (`signing.py`) - SEC-007
+   - Policy-as-code engine (`policy_engine.py`)
+   - LLM output guardrails (`guardrails.py`)
+   - LLM safety analysis (`llm_safety.py`)
+   - PII scrubbing (`payload_scrubber.py`)
+   - Multi-tenant isolation enforcement
 
 ### Threat Model
 
@@ -183,6 +192,136 @@ The system is designed to resist the following threat categories across all laye
     │   - Data Sanitization          │
     └────────────────────────────────┘
 ```
+
+---
+
+## Security Profiles (v1.1)
+
+MLSDM supports multiple security profiles to balance security requirements with operational flexibility across different deployment environments. Security features can be enabled/disabled via environment variables or the runtime mode.
+
+### Available Profiles
+
+#### 1. Development Profile (`dev`)
+**Mode**: `MLSDM_RUNTIME_MODE=dev`
+
+**Purpose**: Local development and testing
+
+**Security Features**:
+- ❌ OIDC Authentication - Disabled
+- ❌ mTLS - Disabled
+- ❌ RBAC - Disabled
+- ❌ Request Signing - Disabled
+- ❌ Policy Engine - Disabled
+- ❌ Guardrails - Disabled
+- ❌ LLM Safety Analysis - Disabled
+- ❌ PII Scrubbing - Disabled
+- ❌ Multi-Tenant Enforcement - Disabled
+- ❌ Rate Limiting - Disabled
+- ✅ Basic Security Headers - Enabled
+
+**Use Cases**: Local development, unit testing, integration testing
+
+#### 2. Local Production Profile (`local-prod`)
+**Mode**: `MLSDM_RUNTIME_MODE=local-prod`
+
+**Purpose**: Local production-like testing
+
+**Security Features**:
+- ❌ OIDC Authentication - Disabled (can enable via env)
+- ❌ mTLS - Disabled (can enable via env)
+- ❌ RBAC - Disabled (can enable via env)
+- ❌ Request Signing - Disabled (can enable via env)
+- ✅ Policy Engine - Enabled
+- ✅ Guardrails - Enabled
+- ✅ LLM Safety Analysis - Enabled
+- ✅ PII Scrubbing - Enabled
+- ❌ Multi-Tenant Enforcement - Disabled
+- ✅ Rate Limiting - Enabled
+- ✅ Secure Mode - Enabled
+
+**Use Cases**: Staging environments, pre-production validation
+
+#### 3. Cloud Production Profile (`cloud-prod`)
+**Mode**: `MLSDM_RUNTIME_MODE=cloud-prod`
+
+**Purpose**: Full production deployment
+
+**Security Features**:
+- ✅ OIDC Authentication - Enabled
+- ✅ mTLS - Enabled
+- ✅ RBAC - Enabled
+- ✅ Request Signing - Enabled
+- ✅ Policy Engine - Enabled
+- ✅ Guardrails - Enabled
+- ✅ LLM Safety Analysis - Enabled
+- ✅ PII Scrubbing - Enabled
+- ✅ Multi-Tenant Enforcement - Enabled
+- ✅ Rate Limiting - Enabled
+- ✅ Secure Mode - Enabled
+- ✅ Distributed Tracing - Enabled
+
+**Use Cases**: Production deployments, SaaS offerings, enterprise environments
+
+### Configuration
+
+#### Using Runtime Modes
+
+Set the `MLSDM_RUNTIME_MODE` environment variable:
+
+```bash
+# Development
+export MLSDM_RUNTIME_MODE=dev
+
+# Local production
+export MLSDM_RUNTIME_MODE=local-prod
+
+# Cloud production
+export MLSDM_RUNTIME_MODE=cloud-prod
+```
+
+#### Fine-Grained Control
+
+Override individual security features using environment variables:
+
+```bash
+# Enable specific features in dev mode
+export MLSDM_RUNTIME_MODE=dev
+export MLSDM_SECURITY_ENABLE_POLICY_ENGINE=1
+export MLSDM_SECURITY_ENABLE_LLM_SAFETY=1
+
+# Disable specific features in prod mode
+export MLSDM_RUNTIME_MODE=cloud-prod
+export MLSDM_SECURITY_ENABLE_RBAC=0  # Not recommended
+```
+
+### Configuration Files
+
+See example configuration files:
+- `env.dev.example` - Development profile
+- `env.example` - Generic configuration
+- `env.prod.example` - Production profile with all security features
+
+### Security Feature Details
+
+| Feature | Environment Variable | Default (dev) | Default (prod) | Description |
+|---------|---------------------|---------------|----------------|-------------|
+| OIDC Auth | `MLSDM_SECURITY_ENABLE_OIDC` | 0 | 1 | OpenID Connect authentication (SEC-004) |
+| mTLS | `MLSDM_SECURITY_ENABLE_MTLS` | 0 | 1 | Mutual TLS client certificates (SEC-006) |
+| RBAC | `MLSDM_SECURITY_ENABLE_RBAC` | 0 | 1 | Role-based access control |
+| Request Signing | `MLSDM_SECURITY_ENABLE_REQUEST_SIGNING` | 0 | 1 | HMAC request signature verification (SEC-007) |
+| Policy Engine | `MLSDM_SECURITY_ENABLE_POLICY_ENGINE` | 0 | 1 | Policy-as-code request evaluation |
+| Guardrails | `MLSDM_SECURITY_ENABLE_GUARDRAILS` | 0 | 1 | LLM input/output guardrails |
+| LLM Safety | `MLSDM_SECURITY_ENABLE_LLM_SAFETY` | 0 | 1 | LLM safety analysis (toxicity, bias) |
+| PII Scrubbing | `MLSDM_SECURITY_ENABLE_PII_SCRUB_LOGS` | 0 | 1 | PII redaction in logs |
+| Multi-Tenant | `MLSDM_SECURITY_ENABLE_MULTI_TENANT_ENFORCEMENT` | 0 | 1 | Tenant isolation enforcement |
+
+### Recommendations
+
+1. **Development**: Use `dev` profile for local development
+2. **Staging**: Use `local-prod` profile to test security features
+3. **Production**: Always use `cloud-prod` profile with all features enabled
+4. **Testing**: Create dedicated test profiles by overriding individual features
+5. **Compliance**: Enable all features for SOC 2, ISO 27001, HIPAA compliance
 
 ---
 
