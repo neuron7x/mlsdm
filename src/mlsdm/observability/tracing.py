@@ -43,7 +43,7 @@ except ImportError:
     TracerProvider = object  # type: ignore[assignment,misc]
     BatchSpanProcessor = object  # type: ignore[assignment,misc]
     ConsoleSpanExporter = object  # type: ignore[assignment,misc]
-    
+
     # Create minimal enum-like objects for SpanKind and StatusCode
     class SpanKind:  # type: ignore[no-redef]
         INTERNAL = 0
@@ -51,17 +51,17 @@ except ImportError:
         CLIENT = 2
         PRODUCER = 3
         CONSUMER = 4
-    
+
     class StatusCode:  # type: ignore[no-redef]
         UNSET = 0
         OK = 1
         ERROR = 2
-    
+
     class Status:  # type: ignore[no-redef]
         def __init__(self, status_code: int, description: str = "") -> None:
             self.status_code = status_code
             self.description = description
-    
+
     OTEL_AVAILABLE = False
 
 if TYPE_CHECKING:
@@ -71,9 +71,9 @@ if TYPE_CHECKING:
         from opentelemetry.context import Context
         from opentelemetry.trace import Span, Tracer
     else:
-        Context = Any  # type: ignore[misc]
-        Span = Any  # type: ignore[misc]
-        Tracer = Any  # type: ignore[misc]
+        Context = Any  # type: ignore[assignment,misc]
+        Span = Any  # type: ignore[assignment,misc]
+        Tracer = Any  # type: ignore[assignment,misc]
 
 logger = logging.getLogger(__name__)
 
@@ -88,21 +88,21 @@ MLSDM_VERSION = "1.0.0"
 
 class NoOpSpan:
     """No-op span implementation when OpenTelemetry is not available."""
-    
+
     def __enter__(self) -> NoOpSpan:
         return self
-    
+
     def __exit__(self, *args: Any) -> None:
         pass
-    
+
     def set_attribute(self, key: str, value: Any) -> None:
         """No-op attribute setter."""
         pass
-    
+
     def set_attributes(self, attributes: dict[str, Any]) -> None:
         """No-op attributes setter."""
         pass
-    
+
     def record_exception(
         self,
         exception: Exception,
@@ -112,11 +112,11 @@ class NoOpSpan:
     ) -> None:
         """No-op exception recorder."""
         pass
-    
+
     def set_status(self, status: Any, description: str | None = None) -> None:
         """No-op status setter."""
         pass
-    
+
     def add_event(
         self,
         name: str,
@@ -125,7 +125,7 @@ class NoOpSpan:
     ) -> None:
         """No-op event adder."""
         pass
-    
+
     def is_recording(self) -> bool:
         """Always returns False for no-op span."""
         return False
@@ -133,7 +133,7 @@ class NoOpSpan:
 
 class NoOpTracer:
     """No-op tracer implementation when OpenTelemetry is not available."""
-    
+
     @contextmanager
     def start_as_current_span(
         self,
@@ -149,7 +149,7 @@ class NoOpTracer:
     ) -> Iterator[NoOpSpan]:
         """Context manager that yields a no-op span."""
         yield NoOpSpan()
-    
+
     def start_span(
         self,
         name: str,
@@ -176,7 +176,7 @@ SPAN_ATTR_PREFIX_HTTP = "http."
 
 def is_otel_available() -> bool:
     """Check if OpenTelemetry SDK is available.
-    
+
     Returns:
         True if OTEL is installed and importable, False otherwise
     """
@@ -185,22 +185,22 @@ def is_otel_available() -> bool:
 
 def is_otel_enabled() -> bool:
     """Check if OpenTelemetry tracing is enabled.
-    
+
     This checks both:
     1. Whether OTEL SDK is available (installed)
     2. Whether it's enabled via configuration/environment
-    
+
     Returns:
         True if OTEL is available and enabled, False otherwise
     """
     if not OTEL_AVAILABLE:
         return False
-    
+
     # Check for MLSDM-specific enable flag first
     mlsdm_enabled = os.getenv("MLSDM_ENABLE_OTEL")
     if mlsdm_enabled is not None:
         return mlsdm_enabled.lower() == "true"
-    
+
     # Fall back to standard OTEL env var
     return os.getenv("OTEL_SDK_DISABLED", "false").lower() != "true"
 
@@ -253,7 +253,7 @@ class TracingConfig:
         batch_schedule_delay_millis: int = 5000,
     ) -> None:
         """Initialize tracing configuration from environment or parameters.
-        
+
         Raises:
             RuntimeError: If tracing is enabled but OpenTelemetry is not installed
         """
@@ -267,7 +267,7 @@ class TracingConfig:
             self.enabled = mlsdm_enabled.lower() == "true"
         else:
             self.enabled = os.getenv("OTEL_SDK_DISABLED", "false").lower() != "true"
-        
+
         # Validate that OTEL is available if enabled
         if self.enabled and not OTEL_AVAILABLE:
             raise RuntimeError(
@@ -373,12 +373,12 @@ class TracerManager:
 
         This method sets up the tracer provider with the configured exporter
         and registers it as the global tracer provider.
-        
+
         If OpenTelemetry is not available, this is a no-op.
         """
         if self._initialized:
             return
-        
+
         if not OTEL_AVAILABLE:
             logger.info("OpenTelemetry SDK not available - tracing disabled")
             return
@@ -449,16 +449,16 @@ class TracerManager:
             try:
                 if self._config.otlp_protocol == "grpc":
                     from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import (
-                        OTLPSpanExporter,
+                        OTLPSpanExporter as GrpcOTLPSpanExporter,
                     )
 
-                    return OTLPSpanExporter(endpoint=self._config.otlp_endpoint)
+                    return GrpcOTLPSpanExporter(endpoint=self._config.otlp_endpoint)
                 else:
                     from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
-                        OTLPSpanExporter,
+                        OTLPSpanExporter as HttpOTLPSpanExporter,
                     )
 
-                    return OTLPSpanExporter(endpoint=self._config.otlp_endpoint)
+                    return HttpOTLPSpanExporter(endpoint=self._config.otlp_endpoint)
             except ImportError:
                 logger.warning(
                     "OTLP exporter not available, falling back to console exporter"
@@ -491,7 +491,7 @@ class TracerManager:
                 self._initialized = False
 
     @property
-    def tracer(self) -> Tracer | NoOpTracer:
+    def tracer(self) -> Tracer | NoOpTracer:  # type: ignore[return]
         """Get the tracer instance, initializing if necessary.
 
         Returns:
@@ -499,7 +499,7 @@ class TracerManager:
         """
         if not OTEL_AVAILABLE:
             return NoOpTracer()
-        
+
         if not self._initialized:
             self.initialize()
 
@@ -523,7 +523,7 @@ class TracerManager:
         kind: SpanKind = SpanKind.INTERNAL,
         attributes: dict[str, Any] | None = None,
         context: Context | None = None,
-    ) -> Iterator[Span]:
+    ) -> Iterator[Span | NoOpSpan]:  # type: ignore[misc]
         """Start a new span as a context manager.
 
         Args:
@@ -582,11 +582,11 @@ def get_tracer_manager(config: TracingConfig | None = None) -> TracerManager:
     return TracerManager.get_instance(config)
 
 
-def get_tracer() -> Tracer:
+def get_tracer() -> Tracer:  # type: ignore[return]
     """Get the global tracer instance.
 
     Returns:
-        OpenTelemetry Tracer instance
+        OpenTelemetry Tracer instance or NoOpTracer if unavailable
     """
     return get_tracer_manager().tracer
 
@@ -612,7 +612,7 @@ def shutdown_tracing() -> None:
 
 
 @contextmanager
-def span(name: str, **attrs: Any) -> Iterator[Span]:
+def span(name: str, **attrs: Any) -> Iterator[Span]:  # type: ignore[misc]
     """Simple context manager for creating spans with attributes.
 
     This is a convenience wrapper around TracerManager.start_span() that
@@ -985,7 +985,7 @@ def add_span_attributes(span: Span | NoOpSpan, **attributes: Any) -> None:
     """
     if isinstance(span, NoOpSpan):
         return  # No-op for NoOpSpan
-    
+
     for key, value in attributes.items():
         if value is None:
             continue

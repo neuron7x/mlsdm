@@ -250,9 +250,9 @@ class TestTracingEnvironmentConfiguration:
     """Tests for environment-based tracing configuration."""
 
     def test_mlsdm_otel_enabled_true(self, monkeypatch):
-        """Test MLSDM_OTEL_ENABLED=true enables tracing."""
+        """Test MLSDM_ENABLE_OTEL=true enables tracing."""
         TracerManager.reset_instance()
-        monkeypatch.setenv("MLSDM_OTEL_ENABLED", "true")
+        monkeypatch.setenv("MLSDM_ENABLE_OTEL", "true")
 
         config = TracingConfig()
         assert config.enabled is True
@@ -260,9 +260,9 @@ class TestTracingEnvironmentConfiguration:
         TracerManager.reset_instance()
 
     def test_mlsdm_otel_enabled_false(self, monkeypatch):
-        """Test MLSDM_OTEL_ENABLED=false disables tracing."""
+        """Test MLSDM_ENABLE_OTEL=false disables tracing."""
         TracerManager.reset_instance()
-        monkeypatch.setenv("MLSDM_OTEL_ENABLED", "false")
+        monkeypatch.setenv("MLSDM_ENABLE_OTEL", "false")
 
         config = TracingConfig()
         assert config.enabled is False
@@ -272,8 +272,8 @@ class TestTracingEnvironmentConfiguration:
     def test_otel_sdk_disabled_true(self, monkeypatch):
         """Test OTEL_SDK_DISABLED=true disables tracing."""
         TracerManager.reset_instance()
-        # Clear MLSDM_OTEL_ENABLED to let OTEL_SDK_DISABLED take effect
-        monkeypatch.delenv("MLSDM_OTEL_ENABLED", raising=False)
+        # Clear MLSDM_ENABLE_OTEL to let OTEL_SDK_DISABLED take effect
+        monkeypatch.delenv("MLSDM_ENABLE_OTEL", raising=False)
         monkeypatch.setenv("OTEL_SDK_DISABLED", "true")
 
         config = TracingConfig()

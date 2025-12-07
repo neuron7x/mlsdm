@@ -162,9 +162,9 @@ class TestTracingConfiguration:
         TracerManager.reset_instance()
 
     def test_mlsdm_otel_enabled_env_var(self, monkeypatch):
-        """Test MLSDM_OTEL_ENABLED environment variable."""
+        """Test MLSDM_ENABLE_OTEL environment variable."""
         TracerManager.reset_instance()
-        monkeypatch.setenv("MLSDM_OTEL_ENABLED", "true")
+        monkeypatch.setenv("MLSDM_ENABLE_OTEL", "true")
 
         config = TracingConfig()
         assert config.enabled is True
@@ -172,9 +172,9 @@ class TestTracingConfiguration:
         TracerManager.reset_instance()
 
     def test_mlsdm_otel_enabled_false(self, monkeypatch):
-        """Test MLSDM_OTEL_ENABLED=false disables tracing."""
+        """Test MLSDM_ENABLE_OTEL=false disables tracing."""
         TracerManager.reset_instance()
-        monkeypatch.setenv("MLSDM_OTEL_ENABLED", "false")
+        monkeypatch.setenv("MLSDM_ENABLE_OTEL", "false")
 
         config = TracingConfig()
         assert config.enabled is False

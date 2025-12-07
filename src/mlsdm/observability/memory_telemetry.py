@@ -567,7 +567,7 @@ def trace_pelm_store(
     phase: float,
     dimension: int,
     correlation_id: str | None = None,
-) -> Iterator[Span]:
+) -> Iterator[Span]:  # type: ignore[misc]
     """Create a span for PELM store operations.
 
     Args:
@@ -598,7 +598,7 @@ def trace_pelm_retrieve(
     phase_tolerance: float,
     top_k: int,
     correlation_id: str | None = None,
-) -> Iterator[Span]:
+) -> Iterator[Span]:  # type: ignore[misc]
     """Create a span for PELM retrieve operations.
 
     Args:
@@ -629,7 +629,7 @@ def trace_pelm_retrieve(
 def trace_synaptic_update(
     dimension: int,
     correlation_id: str | None = None,
-) -> Iterator[Span]:
+) -> Iterator[Span]:  # type: ignore[misc]
     """Create a span for synaptic memory update operations.
 
     Args:

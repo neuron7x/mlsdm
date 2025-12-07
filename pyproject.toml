@@ -130,6 +130,20 @@ module = "mlsdm.tests.*"
 disallow_untyped_defs = false
 check_untyped_defs = false
 
+# Observability tracing module with optional OpenTelemetry
+# Has conditional imports and NoOp fallbacks that create type complexity
+[[tool.mypy.overrides]]
+module = "mlsdm.observability.tracing"
+warn_unused_ignores = false
+warn_return_any = false
+# Note: OpenTelemetry is optional; type system reflects runtime flexibility
+# Functions may return Union[RealType, NoOpType] which is intentional design
+
+[[tool.mypy.overrides]]
+module = "mlsdm.observability.memory_telemetry"
+warn_unused_ignores = false
+# Note: Uses optional tracing; may return NoOp types
+
 # NeuroLang extension is an optional PyTorch-based plugin
 # Torch typing is complex and unstable, so we use lenient checking
 [[tool.mypy.overrides]]
