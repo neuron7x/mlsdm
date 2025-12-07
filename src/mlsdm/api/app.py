@@ -21,6 +21,7 @@ from mlsdm.api.middleware import (
     SecurityHeadersMiddleware,
     TimeoutMiddleware,
 )
+from mlsdm.config_runtime import get_runtime_config
 from mlsdm.contracts import AphasiaMetadata
 from mlsdm.core.memory_manager import MemoryManager
 from mlsdm.engine import NeuroEngineConfig, build_neuro_engine_from_env
@@ -38,6 +39,10 @@ from mlsdm.utils.security_logger import SecurityEventType, get_security_logger
 
 logger = logging.getLogger(__name__)
 security_logger = get_security_logger()
+
+# Get runtime configuration for security features
+_runtime_config = get_runtime_config()
+logger.info(f"MLSDM starting in {_runtime_config.mode.value} mode")
 
 # Initialize OpenTelemetry tracing
 # Can be disabled via OTEL_SDK_DISABLED=true or OTEL_EXPORTER_TYPE=none
@@ -83,13 +88,25 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Register cleanup tasks
     lifecycle.register_cleanup(lambda: cleanup_memory_manager(_manager))
 
-    # Log system startup
+    # Log system startup with security configuration
     security_logger.log_system_event(
         SecurityEventType.STARTUP,
         "MLSDM Governed Cognitive Memory API started",
         additional_data={
             "version": "1.0.0",
-            "dimension": _manager.dimension
+            "dimension": _manager.dimension,
+            "runtime_mode": _runtime_config.mode.value,
+            "security_features": {
+                "oidc": _runtime_config.security.enable_oidc,
+                "mtls": _runtime_config.security.enable_mtls,
+                "rbac": _runtime_config.security.enable_rbac,
+                "request_signing": _runtime_config.security.enable_request_signing,
+                "policy_engine": _runtime_config.security.enable_policy_engine,
+                "guardrails": _runtime_config.security.enable_guardrails,
+                "llm_safety": _runtime_config.security.enable_llm_safety,
+                "pii_scrubbing": _runtime_config.security.enable_pii_scrub_logs,
+                "multi_tenant": _runtime_config.security.enable_multi_tenant_enforcement,
+            }
         }
     )
 
@@ -120,12 +137,42 @@ app = FastAPI(
 )
 
 # Add production middleware (order matters: outer to inner)
+# Security middleware should be outermost to protect all requests
 # 1. SecurityHeaders - adds security headers to all responses
-# 2. RequestID - adds request ID for tracking
-# 3. Timeout - enforces request-level timeouts (REL-004)
-# 4. Priority - parses priority header (REL-005)
-# 5. Bulkhead - limits concurrent requests (REL-002)
+# 2. mTLS (optional) - verify client certificates (SEC-006)
+# 3. OIDC (optional) - authenticate users via OpenID Connect (SEC-004)
+# 4. RBAC (optional) - enforce role-based access control
+# 5. Signing (optional) - verify request signatures
+# 6. RequestID - adds request ID for tracking
+# 7. Timeout - enforces request-level timeouts (REL-004)
+# 8. Priority - parses priority header (REL-005)
+# 9. Bulkhead - limits concurrent requests (REL-002)
+
+# Always add security headers
 app.add_middleware(SecurityHeadersMiddleware)
+
+# Conditionally add advanced security middleware based on runtime config
+if _runtime_config.security.enable_mtls:
+    logger.info("Enabling mTLS middleware (SEC-006)")
+    from mlsdm.security.mtls import MTLSMiddleware
+    app.add_middleware(MTLSMiddleware)
+
+if _runtime_config.security.enable_oidc:
+    logger.info("Enabling OIDC authentication middleware (SEC-004)")
+    from mlsdm.security.oidc import OIDCAuthMiddleware
+    app.add_middleware(OIDCAuthMiddleware)
+
+if _runtime_config.security.enable_rbac:
+    logger.info("Enabling RBAC middleware")
+    from mlsdm.security.rbac import RBACMiddleware
+    app.add_middleware(RBACMiddleware)
+
+if _runtime_config.security.enable_request_signing:
+    logger.info("Enabling request signing middleware")
+    from mlsdm.security.signing import SigningMiddleware
+    app.add_middleware(SigningMiddleware)
+
+# Add standard middleware
 app.add_middleware(RequestIDMiddleware)
 app.add_middleware(TimeoutMiddleware)
 app.add_middleware(PriorityMiddleware)
