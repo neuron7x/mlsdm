@@ -273,14 +273,16 @@ class MTLSMiddleware(BaseHTTPMiddleware):
         """
         path = request.url.path
 
+        # Initialize defaults
+        request.state.client_cert = None
+        request.state.has_mtls_cert = False
+        
         # Skip certain paths
         if any(path.startswith(skip) for skip in self.skip_paths):
-            request.state.client_cert = None
             return await call_next(request)
 
         # Skip if mTLS not enabled
         if not self.config.enabled:
-            request.state.client_cert = None
             return await call_next(request)
 
         # Get client certificate
@@ -294,9 +296,32 @@ class MTLSMiddleware(BaseHTTPMiddleware):
                 detail="Client certificate required",
             )
 
-        # Log client identity
-        if cert_info and cert_info.common_name:
-            logger.info("mTLS client: %s", cert_info.common_name)
+        # Set user identity and multi-tenant info from certificate
+        if cert_info:
+            # Use CN as user_id
+            request.state.user_id = cert_info.common_name
+            request.state.has_mtls_cert = True
+            
+            # Extract tenant_id from certificate subject (if present)
+            # Common patterns: O (organization), OU (organizational unit)
+            if cert_info.subject:
+                request.state.tenant_id = (
+                    cert_info.subject.get("organizationName") or
+                    cert_info.subject.get("O") or
+                    cert_info.subject.get("organizationalUnitName") or
+                    cert_info.subject.get("OU") or
+                    None
+                )
+            else:
+                request.state.tenant_id = None
+            
+            # Log client identity
+            if cert_info.common_name:
+                logger.info("mTLS client: %s (tenant: %s)", 
+                          cert_info.common_name, 
+                          request.state.tenant_id or "unknown")
+        else:
+            request.state.has_mtls_cert = False
 
         return await call_next(request)
 

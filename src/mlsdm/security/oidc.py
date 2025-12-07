@@ -131,6 +131,7 @@ class UserInfo:
         issuer: Token issuer
         audience: Token audience
         claims: Full token claims dictionary
+        custom_claims: Custom claims for tenant_id, org_id, etc.
     """
 
     subject: str
@@ -140,6 +141,7 @@ class UserInfo:
     issuer: str = ""
     audience: str | list[str] = ""
     claims: dict[str, Any] = field(default_factory=dict)
+    custom_claims: dict[str, Any] = field(default_factory=dict)
 
 
 class JWKSCache:
@@ -350,6 +352,13 @@ class OIDCAuthenticator:
             if isinstance(roles, str):
                 roles = [roles]
 
+            # Extract custom claims for multi-tenancy
+            custom_claims = {
+                k: v for k, v in payload.items()
+                if k not in {"sub", "email", "name", "iss", "aud", "exp", "iat", "nbf", "jti"}
+                and not k.startswith("_")
+            }
+            
             return UserInfo(
                 subject=payload["sub"],
                 email=payload.get("email"),
@@ -358,6 +367,7 @@ class OIDCAuthenticator:
                 issuer=payload["iss"],
                 audience=payload["aud"],
                 claims=payload,
+                custom_claims=custom_claims,
             )
 
         except ImportError as err:
@@ -441,6 +451,25 @@ class OIDCAuthMiddleware(BaseHTTPMiddleware):
         try:
             user_info = await self.authenticator.authenticate(request)
             request.state.user_info = user_info
+            
+            # Extract user identity and tenant for downstream middleware
+            if user_info:
+                request.state.user_id = user_info.subject
+                request.state.user_roles = user_info.roles
+                # Extract tenant_id from custom claims (common claim names)
+                request.state.tenant_id = (
+                    user_info.custom_claims.get("tenant_id") or
+                    user_info.custom_claims.get("tenantId") or
+                    user_info.custom_claims.get("organization_id") or
+                    user_info.custom_claims.get("org_id") or
+                    None
+                )
+                request.state.has_valid_token = True
+            else:
+                request.state.user_id = None
+                request.state.user_roles = []
+                request.state.tenant_id = None
+                request.state.has_valid_token = False
 
             # If require_auth_paths is set, check if path matches
             if self.require_auth_paths:
