@@ -35,13 +35,27 @@ jobs:
       - name: Run bandit scan (comprehensive)
         run: |
           # Run bandit with SARIF output for GitHub Security
+          # Bandit exits with code 1 if issues found, but we still want the SARIF
+          set +e  # Don't exit on error
           bandit -r src/mlsdm \
             -f sarif \
             -o bandit-results.sarif \
             --severity-level medium \
             --confidence-level medium \
-            -ll \
-            || true  # Don't fail yet, check results below
+            -ll
+          BANDIT_EXIT_CODE=$?
+          set -e  # Re-enable exit on error
+          
+          # Verify SARIF file was created and is valid JSON
+          if [ ! -f bandit-results.sarif ]; then
+            echo "Error: bandit-results.sarif was not created"
+            echo '{"version":"2.1.0","$schema":"https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json","runs":[]}' > bandit-results.sarif
+          elif ! python -m json.tool bandit-results.sarif > /dev/null 2>&1; then
+            echo "Error: bandit-results.sarif is not valid JSON"
+            echo '{"version":"2.1.0","$schema":"https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json","runs":[]}' > bandit-results.sarif
+          fi
+          
+          echo "Bandit scan completed with exit code: $BANDIT_EXIT_CODE"
       
       - name: Check for high/critical severity issues
         run: |
@@ -61,7 +75,7 @@ jobs:
       
       - name: Upload SARIF file
         if: always()
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: bandit-results.sarif
           category: bandit
@@ -106,7 +120,7 @@ jobs:
 
       - name: Upload Semgrep SARIF
         if: always()
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: semgrep.sarif
           category: semgrep
