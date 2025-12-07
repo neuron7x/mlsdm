@@ -5,7 +5,6 @@ Tests for scripts/validate_policy_config.py
 import subprocess
 import sys
 from pathlib import Path
-from typing import Tuple
 
 import pytest
 
@@ -35,7 +34,7 @@ class TestValidatePolicyConfig:
 
     def run_script(
         self, script_path: Path, cwd: Path = None, args: list = None
-    ) -> Tuple[int, str, str]:
+    ) -> tuple[int, str, str]:
         """Run the validation script and return (returncode, stdout, stderr)."""
         if cwd is None:
             cwd = script_path.parent.parent  # repo root
@@ -64,7 +63,7 @@ class TestValidatePolicyConfig:
             capture_output=True,
             text=True,
         )
-        
+
         # May fail if PyYAML not installed, but shouldn't have syntax errors
         if result.returncode != 0 and "yaml" not in result.stderr.lower():
             pytest.fail(f"Script has import errors: {result.stderr}")
@@ -106,8 +105,8 @@ class TestValidatePolicyConfig:
 
         for policy_file in ["security-baseline.yaml", "observability-slo.yaml"]:
             full_path = policy_dir / policy_file
-            
-            with open(full_path, "r", encoding="utf-8") as f:
+
+            with open(full_path, encoding="utf-8") as f:
                 try:
                     data = yaml.safe_load(f)
                     assert data is not None, f"{policy_file} is empty"
@@ -122,7 +121,7 @@ class TestValidatePolicyConfig:
         except ImportError:
             pytest.skip("PyYAML not installed")
 
-        with open(policy_dir / "security-baseline.yaml", "r", encoding="utf-8") as f:
+        with open(policy_dir / "security-baseline.yaml", encoding="utf-8") as f:
             data = yaml.safe_load(f)
 
         # Check required top-level keys
@@ -151,7 +150,7 @@ class TestValidatePolicyConfig:
         except ImportError:
             pytest.skip("PyYAML not installed")
 
-        with open(policy_dir / "observability-slo.yaml", "r", encoding="utf-8") as f:
+        with open(policy_dir / "observability-slo.yaml", encoding="utf-8") as f:
             data = yaml.safe_load(f)
 
         # Check required top-level keys
@@ -173,10 +172,9 @@ class TestValidatePolicyConfig:
         except ImportError:
             pytest.skip("PyYAML not installed")
 
-        with open(policy_dir / "security-baseline.yaml", "r", encoding="utf-8") as f:
+        with open(policy_dir / "security-baseline.yaml", encoding="utf-8") as f:
             data = yaml.safe_load(f)
 
-        workflows_dir = repo_root / ".github" / "workflows"
         required_checks = data.get("required_checks", [])
 
         for check in required_checks:
@@ -194,7 +192,7 @@ class TestValidatePolicyConfig:
         except ImportError:
             pytest.skip("PyYAML not installed")
 
-        with open(policy_dir / "security-baseline.yaml", "r", encoding="utf-8") as f:
+        with open(policy_dir / "security-baseline.yaml", encoding="utf-8") as f:
             data = yaml.safe_load(f)
 
         security_reqs = data.get("security_requirements", {})
@@ -209,7 +207,7 @@ class TestValidatePolicyConfig:
                 src_path = repo_root / "src" / "/".join(parts)
                 py_path = src_path.parent / f"{src_path.name}.py"
                 init_path = src_path / "__init__.py"
-                
+
                 assert py_path.exists() or init_path.exists(), (
                     f"LLM safety module not found: {llm_safety}"
                 )
@@ -222,7 +220,7 @@ class TestValidatePolicyConfig:
                 src_path = repo_root / "src" / "/".join(parts)
                 py_path = src_path.parent / f"{src_path.name}.py"
                 init_path = src_path / "__init__.py"
-                
+
                 assert py_path.exists() or init_path.exists(), (
                     f"Payload scrubber module not found: {scrubber}"
                 )
@@ -234,7 +232,7 @@ class TestValidatePolicyConfig:
         except ImportError:
             pytest.skip("PyYAML not installed")
 
-        with open(policy_dir / "observability-slo.yaml", "r", encoding="utf-8") as f:
+        with open(policy_dir / "observability-slo.yaml", encoding="utf-8") as f:
             data = yaml.safe_load(f)
 
         slos = data.get("slos", {})
@@ -251,10 +249,7 @@ class TestValidatePolicyConfig:
         # Verify each test location
         for name, test_loc in test_locations:
             # Extract file path (before ::)
-            if "::" in test_loc:
-                file_path = test_loc.split("::", 1)[0]
-            else:
-                file_path = test_loc
+            file_path = test_loc.split("::", 1)[0] if "::" in test_loc else test_loc
 
             full_path = repo_root / file_path
             assert full_path.exists(), (
@@ -317,7 +312,7 @@ else:
     def test_script_handles_missing_policy_dir(self, script_path: Path, tmp_path: Path):
         """Test that script handles missing policy directory gracefully."""
         non_existent = tmp_path / "non-existent-policy"
-        
+
         returncode, stdout, stderr = self.run_script(
             script_path,
             cwd=tmp_path,

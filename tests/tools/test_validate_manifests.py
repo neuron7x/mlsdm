@@ -4,7 +4,6 @@ Tests for deploy/scripts/validate-manifests.sh
 
 import subprocess
 from pathlib import Path
-from typing import Tuple
 
 import pytest
 
@@ -27,7 +26,7 @@ class TestValidateManifests:
         manifest_dir.mkdir()
         return manifest_dir
 
-    def run_script(self, script_path: Path, env: dict = None) -> Tuple[int, str, str]:
+    def run_script(self, script_path: Path, env: dict = None) -> tuple[int, str, str]:
         """Run the validation script and return (returncode, stdout, stderr)."""
         result = subprocess.run(
             [str(script_path)],
@@ -50,7 +49,7 @@ class TestValidateManifests:
         k8s_dir = deploy_dir / "k8s"
         monitoring_dir = deploy_dir / "monitoring"
         grafana_dir = deploy_dir / "grafana"
-        
+
         k8s_dir.mkdir(parents=True)
         monitoring_dir.mkdir(parents=True)
         grafana_dir.mkdir(parents=True)
@@ -182,15 +181,15 @@ EOF
 
         # Check that we have at least some manifests
         manifests = list(k8s_dir.glob("*.yaml")) + list(k8s_dir.glob("*.yml"))
-        
+
         if not manifests:
             pytest.skip("No YAML manifests found in deploy/k8s/")
 
         # Just verify they're valid YAML (don't run full script to avoid dependencies)
         import yaml
-        
+
         for manifest in manifests:
-            with open(manifest, "r") as f:
+            with open(manifest) as f:
                 try:
                     yaml.safe_load_all(f)
                 except yaml.YAMLError as e:

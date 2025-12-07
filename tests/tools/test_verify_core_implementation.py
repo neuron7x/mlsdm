@@ -4,7 +4,6 @@ Tests for scripts/verify_core_implementation.sh
 
 import subprocess
 from pathlib import Path
-from typing import Tuple
 
 import pytest
 
@@ -25,7 +24,7 @@ class TestVerifyCoreImplementation:
         """Get repository root path."""
         return Path(__file__).parent.parent.parent
 
-    def run_script(self, script_path: Path, cwd: Path = None) -> Tuple[int, str, str]:
+    def run_script(self, script_path: Path, cwd: Path = None) -> tuple[int, str, str]:
         """Run the verification script and return (returncode, stdout, stderr)."""
         if cwd is None:
             cwd = script_path.parent.parent  # repo root
