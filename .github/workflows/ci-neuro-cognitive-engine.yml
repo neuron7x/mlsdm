@@ -31,7 +31,6 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
           pip install -e ".[dev]"
       
       - name: Run ruff linter
@@ -59,7 +58,6 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pip-audit
           pip install -r requirements.txt
       
       - name: Run pip-audit for vulnerability scanning
@@ -70,6 +68,38 @@ jobs:
         if: failure()
         run: |
           echo "::error::Dependency vulnerabilities detected. Please update vulnerable packages."
+  
+  dependency-audit:
+    name: Dependency Health Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[security-audit]"
+      
+      - name: Check for unused or missing dependencies
+        run: |
+          deptry src
+      
+      - name: Verify no dependency conflicts
+        run: |
+          pip check
+      
+      - name: Report status
+        if: failure()
+        run: |
+          echo "::error::Dependency issues detected. Run 'deptry src' locally to diagnose."
 
   test:
     runs-on: ubuntu-latest
@@ -341,7 +371,7 @@ jobs:
     name: All CI Checks Passed
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    needs: [lint, security, test, e2e-tests, effectiveness-validation, benchmarks]
+    needs: [lint, security, dependency-audit, test, e2e-tests, effectiveness-validation, benchmarks]
     steps:
       - name: All checks passed
         run: echo "All CI checks passed successfully!"
