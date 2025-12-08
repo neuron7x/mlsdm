@@ -27,8 +27,6 @@ Requirements:
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 # Isolated torch import - fails gracefully if torch is not installed
 try:
     import torch
@@ -42,12 +40,15 @@ except ImportError as e:
         f"Original error: {e}"
     )
 
-# Import torch types for type checking only (doesn't execute at runtime)
-if TYPE_CHECKING:
-    import torch
-
 # Runtime import for numpy (always available)
 import numpy as np
+
+# Import torch - this is runtime, not just type checking
+# We need torch at runtime for tensor operations
+try:
+    import torch
+except ImportError:
+    torch = None  # type: ignore[assignment]
 
 # Numerical stability constant
 _EPS = 1e-12
