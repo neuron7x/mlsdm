@@ -74,8 +74,8 @@ def get_current_trace_context() -> dict[str, str]:
             span_id = ""
 
         return {"trace_id": trace_id, "span_id": span_id}
-    except Exception:
-        # If anything goes wrong with OTEL, just return empty strings
+    except (AttributeError, ImportError, TypeError):
+        # If OTEL context is not available or has wrong attributes, return empty
         return {"trace_id": "", "span_id": ""}
 
 

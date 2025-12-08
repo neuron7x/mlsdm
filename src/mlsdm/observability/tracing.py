@@ -46,12 +46,19 @@ try:
     OTEL_AVAILABLE = True
 except ImportError:
     # When OTEL is not installed, provide no-op stubs
+    # Use descriptive stub class for better debugging
+    class _NoOpOtelClass:
+        """Stub class for OpenTelemetry components when OTEL is not installed."""
+
+        def __init__(self, *args: Any, **kwargs: Any) -> None:
+            pass
+
     trace = None  # type: ignore
     Resource = None  # type: ignore
-    SpanProcessor = object  # type: ignore
-    TracerProvider = object  # type: ignore
-    BatchSpanProcessor = object  # type: ignore
-    ConsoleSpanExporter = object  # type: ignore
+    SpanProcessor = _NoOpOtelClass  # type: ignore
+    TracerProvider = _NoOpOtelClass  # type: ignore
+    BatchSpanProcessor = _NoOpOtelClass  # type: ignore
+    ConsoleSpanExporter = _NoOpOtelClass  # type: ignore
 
     # Create minimal stub classes for SpanKind, Status, StatusCode
     class SpanKind:  # type: ignore[no-redef]
@@ -82,7 +89,10 @@ if TYPE_CHECKING:
         from opentelemetry.context import Context  # noqa: F401
         from opentelemetry.trace import Span, Tracer
     except ImportError:
-        pass
+        # Fallback types when OTEL not available during type checking
+        Span = Any  # type: ignore
+        Tracer = Any  # type: ignore
+        Context = Any  # type: ignore
 
 logger = logging.getLogger(__name__)
 
