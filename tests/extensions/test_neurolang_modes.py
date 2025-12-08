@@ -7,15 +7,22 @@ This test suite validates the three operating modes of NeuroLangWrapper:
 - disabled: Skips NeuroLang entirely (Aphasia-Broca only)
 """
 
+import importlib.util
 import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pytest
-import torch
 
 from mlsdm.extensions import NeuroLangWrapper
+
+# Skip all tests in this module if torch is not available
+TORCH_AVAILABLE = importlib.util.find_spec("torch") is not None
+pytestmark = pytest.mark.skipif(
+    not TORCH_AVAILABLE,
+    reason="optional dependency 'torch' is not installed; skipping NeuroLang tests."
+)
 
 
 def dummy_llm(prompt: str, max_tokens: int) -> str:
@@ -178,6 +185,7 @@ def test_neurolang_uses_checkpoint_if_available():
             "actor": actor.state_dict(),
             "critic": critic.state_dict(),
         }
+        import torch
         torch.save(checkpoint, checkpoint_path)
 
         train_call_count = 0
@@ -267,6 +275,7 @@ def test_neurolang_checkpoint_invalid_format_raises_error():
     try:
         # Save invalid checkpoint (missing required keys)
         invalid_checkpoint = {"wrong_key": "wrong_value"}
+        import torch
         torch.save(invalid_checkpoint, checkpoint_path)
 
         # Should raise clear error about missing keys

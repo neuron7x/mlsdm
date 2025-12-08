@@ -2,16 +2,23 @@
 Tests for scripts/train_neurolang_grammar.py
 """
 
+import importlib.util
 import sys
 from pathlib import Path
 
 import pytest
-import torch
+
+# Skip all tests in this module if torch is not available
+TORCH_AVAILABLE = importlib.util.find_spec("torch") is not None
+pytestmark = pytest.mark.skipif(
+    not TORCH_AVAILABLE,
+    reason="optional dependency 'torch' is not installed; skipping NeuroLang training script tests."
+)
 
 # Add scripts to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "scripts"))
 
-import train_neurolang_grammar
+import train_neurolang_grammar  # noqa: E402
 
 
 def test_train_neurolang_creates_checkpoint(tmp_path, monkeypatch):
@@ -33,6 +40,7 @@ def test_train_neurolang_creates_checkpoint(tmp_path, monkeypatch):
     )
     assert exit_code == 0
     assert output.is_file()
+    import torch
     state = torch.load(output, map_location="cpu")
     assert isinstance(state, dict)
     assert "actor" in state

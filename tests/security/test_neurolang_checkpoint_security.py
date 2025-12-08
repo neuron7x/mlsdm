@@ -5,13 +5,20 @@ This test suite validates that checkpoint loading is restricted to allowed direc
 and properly validates checkpoint structure to prevent loading malicious files.
 """
 
+import importlib.util
 import tempfile
 from pathlib import Path
 
 import pytest
-import torch
 
-from mlsdm.extensions.neuro_lang_extension import (
+# Skip all tests in this module if torch is not available
+TORCH_AVAILABLE = importlib.util.find_spec("torch") is not None
+pytestmark = pytest.mark.skipif(
+    not TORCH_AVAILABLE,
+    reason="optional dependency 'torch' is not installed; skipping NeuroLang checkpoint security tests."
+)
+
+from mlsdm.extensions.neuro_lang_extension import (  # noqa: E402
     ALLOWED_CHECKPOINT_DIR,
     safe_load_neurolang_checkpoint,
 )
@@ -20,6 +27,7 @@ from mlsdm.extensions.neuro_lang_extension import (
 @pytest.mark.security
 def test_checkpoint_outside_allowed_dir_is_rejected():
     """Test that checkpoints outside ALLOWED_CHECKPOINT_DIR are rejected."""
+    import torch
     device = torch.device("cpu")
 
     # Try loading from /tmp (outside config/)
@@ -33,6 +41,7 @@ def test_checkpoint_outside_allowed_dir_is_rejected():
 @pytest.mark.security
 def test_nonexistent_checkpoint_raises_file_not_found():
     """Test that attempting to load a non-existent checkpoint raises FileNotFoundError."""
+    import torch
     device = torch.device("cpu")
 
     # Create a path within config/ that doesn't exist
@@ -47,6 +56,7 @@ def test_nonexistent_checkpoint_raises_file_not_found():
 @pytest.mark.security
 def test_invalid_checkpoint_structure_raises_value_error():
     """Test that checkpoints with invalid structure are rejected."""
+    import torch
     device = torch.device("cpu")
 
     # Create a temporary checkpoint file with invalid structure
@@ -85,6 +95,7 @@ def test_invalid_checkpoint_structure_raises_value_error():
 @pytest.mark.security
 def test_valid_checkpoint_loads_successfully():
     """Test that a valid checkpoint within allowed directory loads successfully."""
+    import torch
     device = torch.device("cpu")
 
     # Create a temporary valid checkpoint
@@ -120,6 +131,7 @@ def test_valid_checkpoint_loads_successfully():
 @pytest.mark.security
 def test_none_checkpoint_path_returns_none():
     """Test that passing None as checkpoint path returns None without error."""
+    import torch
     device = torch.device("cpu")
     result = safe_load_neurolang_checkpoint(None, device)
     assert result is None
