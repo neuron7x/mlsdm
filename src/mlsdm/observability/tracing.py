@@ -58,13 +58,14 @@ except ImportError:
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
 
-    if OTEL_AVAILABLE:
+    # Import OTEL types for type checking, with fallback to Any if not available
+    try:
         from opentelemetry.context import Context
         from opentelemetry.trace import Span, Tracer
-    else:
-        Context = Any  # type: ignore
-        Span = Any  # type: ignore
-        Tracer = Any  # type: ignore
+    except ImportError:
+        Context = Any  # type: ignore[misc]
+        Span = Any  # type: ignore[misc]
+        Tracer = Any  # type: ignore[misc]
 
 logger = logging.getLogger(__name__)
 

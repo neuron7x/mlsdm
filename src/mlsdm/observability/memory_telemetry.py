@@ -30,7 +30,12 @@ from .tracing import get_tracer_manager
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
-    from typing import Any as Span  # Use Any for Span type hint to avoid import issues
+    
+    # Import OTEL types only for type checking, not at runtime
+    try:
+        from opentelemetry.trace import Span
+    except ImportError:
+        Span = Any  # type: ignore[misc]
 
 # ---------------------------------------------------------------------------
 # Logger Configuration

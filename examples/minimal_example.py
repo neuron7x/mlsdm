@@ -5,14 +5,14 @@ Minimal MLSDM Example
 This example demonstrates using MLSDM with minimal dependencies.
 Works without OpenTelemetry installed.
 
-Run: python examples/minimal_example.py
+Installation:
+    pip install -e .
+
+Run:
+    python examples/minimal_example.py
 """
 
-import sys
 import numpy as np
-
-# Ensure mlsdm is importable
-sys.path.insert(0, 'src')
 
 from mlsdm.core.llm_wrapper import LLMWrapper
 
@@ -25,10 +25,14 @@ def stub_llm(prompt: str, max_tokens: int) -> str:
 
 # 2. Define a simple stub embedder for testing  
 def stub_embedder(text: str) -> np.ndarray:
-    """Simple stub embedder with random embeddings."""
-    # In production, use sentence-transformers or OpenAI embeddings
-    np.random.seed(hash(text) % (2**32))  # Deterministic for same text
-    return np.random.randn(384).astype(np.float32)
+    """Simple stub embedder with deterministic random embeddings.
+    
+    In production, use sentence-transformers or OpenAI embeddings.
+    """
+    # Create deterministic embeddings based on text hash
+    seed = abs(hash(text)) % (2**32)
+    rng = np.random.default_rng(seed)
+    return rng.standard_normal(384, dtype=np.float32)
 
 
 def main():
