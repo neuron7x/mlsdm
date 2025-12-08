@@ -4,9 +4,7 @@ This module tests that the tracing functionality works correctly both when
 OpenTelemetry is available and when it's not installed.
 """
 
-import importlib
 import os
-import sys
 from unittest import mock
 
 import pytest

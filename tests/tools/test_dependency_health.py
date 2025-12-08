@@ -4,7 +4,6 @@ This module provides tests that guard against accidental removal or misconfigura
 of essential development and production dependencies.
 """
 
-import os
 from pathlib import Path
 
 

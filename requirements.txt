@@ -1,5 +1,8 @@
-# MLSDM Core Dependencies
+# MLSDM Core Runtime Dependencies
+# These are the ONLY dependencies required to run MLSDM in production
 # Sync with pyproject.toml [project.dependencies]
+
+# Core libraries
 numpy>=2.0.0
 sentence-transformers>=3.0.0
 fastapi>=0.110.0
@@ -11,20 +14,6 @@ tenacity>=8.2.3
 requests>=2.32.3
 psutil>=5.9.0
 
-# Dev dependencies (from pyproject.toml [project.optional-dependencies].dev)
-pytest>=8.0.0
-pytest-asyncio>=0.23.0
-pytest-cov>=4.1.0
-hypothesis>=6.98.3
-ruff>=0.4.10
-mypy>=1.10.0
-locust>=2.29.1
-httpx>=0.27.0
-types-PyYAML>=6.0.1
-
-# Visualization (optional, from pyproject.toml [project.optional-dependencies].visualization)
-matplotlib>=3.8.4
-
 # Security: Pin minimum versions for indirect dependencies with known vulnerabilities
 certifi>=2024.7.4
 cryptography>=43.0.1
@@ -32,3 +21,7 @@ jinja2>=3.1.6
 urllib3>=2.2.2
 setuptools>=78.1.1
 idna>=3.7
+
+# NOTE: Development dependencies (pytest, mypy, ruff, etc.) are in requirements-dev.txt
+# NOTE: OpenTelemetry is optional - install with: pip install -e ".[tracing]"
+# NOTE: Visualization tools are optional - install with: pip install -e ".[visualization]"
