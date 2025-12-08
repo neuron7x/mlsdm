@@ -9,7 +9,19 @@ import tempfile
 from pathlib import Path
 
 import pytest
-import torch
+
+# Check if torch is available
+try:
+    import torch
+    TORCH_AVAILABLE = True
+except ImportError:
+    TORCH_AVAILABLE = False
+
+# Skip entire module if torch is not available
+pytestmark = pytest.mark.skipif(
+    not TORCH_AVAILABLE,
+    reason="torch not installed - install with 'pip install mlsdm[neurolang]'"
+)
 
 from mlsdm.extensions.neuro_lang_extension import (
     ALLOWED_CHECKPOINT_DIR,

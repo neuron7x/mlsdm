@@ -27,6 +27,8 @@ Requirements:
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 # Isolated torch import - fails gracefully if torch is not installed
 try:
     import torch
@@ -39,6 +41,10 @@ except ImportError as e:
         "Install with 'pip install mlsdm[neurolang]' or 'pip install torch>=2.0.0'. "
         f"Original error: {e}"
     )
+
+# Import torch types for type checking only (doesn't execute at runtime)
+if TYPE_CHECKING:
+    import torch
 
 # Runtime import for numpy (always available)
 import numpy as np
@@ -151,14 +157,16 @@ class FractalPELMGPU:
         return str(self._device)
 
     def _to_tensor(
-        self, data: np.ndarray | torch.Tensor, dtype: torch.dtype = torch.float32
+        self, data: np.ndarray | torch.Tensor, dtype: torch.dtype | None = None
     ) -> torch.Tensor:
         """Convert numpy array or tensor to device tensor with specified dtype."""
         if isinstance(data, np.ndarray):
             tensor = torch.from_numpy(np.ascontiguousarray(data))
         else:
             tensor = data.clone()
-        return tensor.to(device=self._device, dtype=dtype)
+        if dtype is not None:
+            return tensor.to(device=self._device, dtype=dtype)
+        return tensor.to(device=self._device)
 
     def _score_single(
         self,

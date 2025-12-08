@@ -227,6 +227,7 @@ markers = [
     "unit: marks tests as unit tests",
     "property: marks property-based tests",
     "security: marks security-related tests",
+    "neurolang: marks tests that require torch/neurolang dependencies",
 ]
 
 [tool.coverage.run]

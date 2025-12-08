@@ -6,12 +6,24 @@ import sys
 from pathlib import Path
 
 import pytest
-import torch
+
+# Check if torch is available
+try:
+    import torch
+    TORCH_AVAILABLE = True
+except ImportError:
+    TORCH_AVAILABLE = False
+
+# Skip entire module if torch is not available
+pytestmark = pytest.mark.skipif(
+    not TORCH_AVAILABLE,
+    reason="torch not installed - install with 'pip install mlsdm[neurolang]'"
+)
 
 # Add scripts to path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent.parent / "scripts"))
-
-import train_neurolang_grammar
+if TORCH_AVAILABLE:
+    sys.path.insert(0, str(Path(__file__).parent.parent.parent / "scripts"))
+    import train_neurolang_grammar
 
 
 def test_train_neurolang_creates_checkpoint(tmp_path, monkeypatch):

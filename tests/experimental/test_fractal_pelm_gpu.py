@@ -7,6 +7,19 @@ They validate the experimental GPU/CPU backend for phase-aware retrieval.
 import numpy as np
 import pytest
 
+# Check if torch is available
+try:
+    import torch
+    TORCH_AVAILABLE = True
+except ImportError:
+    TORCH_AVAILABLE = False
+
+# Skip entire module if torch is not available
+pytestmark = pytest.mark.skipif(
+    not TORCH_AVAILABLE,
+    reason="torch not installed - install with 'pip install mlsdm[neurolang]'"
+)
+
 from mlsdm.memory.experimental import FractalPELMGPU
 
 
