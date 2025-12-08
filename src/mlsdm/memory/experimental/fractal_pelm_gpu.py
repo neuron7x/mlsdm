@@ -48,7 +48,7 @@ import numpy as np
 try:
     import torch
 except ImportError:
-    torch = None  # type: ignore[assignment]
+    torch = None
 
 # Numerical stability constant
 _EPS = 1e-12

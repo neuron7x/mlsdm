@@ -37,12 +37,12 @@ except ImportError:
     TORCH_AVAILABLE = False
     # Provide None as placeholders when torch is not available
     # These will never be used at runtime due to TORCH_AVAILABLE checks
-    Dataset = None  # type: ignore
-    DataLoader = None  # type: ignore
-    Sampler = None  # type: ignore
-    nn = None  # type: ignore
-    optim = None  # type: ignore
-    torch = None  # type: ignore
+    Dataset = None
+    DataLoader = None
+    Sampler = None
+    nn = None
+    optim = None
+    torch = None
 
 
 ALLOWED_CHECKPOINT_DIR = Path("config").resolve()
@@ -198,7 +198,7 @@ if TORCH_AVAILABLE:
             return len(self.indices)
 
 
-    class TransformerBlock(nn.Module):
+    class TransformerBlock(nn.Module):  # type: ignore[misc]
         def __init__(self, embed_size, heads=4):
             super().__init__()
             self.attention = nn.MultiheadAttention(embed_size, heads, batch_first=True)
@@ -219,7 +219,7 @@ if TORCH_AVAILABLE:
             return self.norm2(x + ff_out)
 
 
-    class InnateGrammarModule(nn.Module):
+    class InnateGrammarModule(nn.Module):  # type: ignore[misc]
         def __init__(self, vocab_size, embed_size=64, layers=2):
             super().__init__()
             self.embedding = nn.Embedding(vocab_size, embed_size)

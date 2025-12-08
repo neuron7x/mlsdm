@@ -29,7 +29,7 @@ try:
 except ImportError:
     OTEL_AVAILABLE = False
     # When OTEL is not available, define fallback values
-    trace = None  # type: ignore
+    trace = None
     INVALID_SPAN_ID = 0
     INVALID_TRACE_ID = 0
 
