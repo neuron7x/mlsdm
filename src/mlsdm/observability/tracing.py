@@ -68,8 +68,12 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-# Version constant for consistency across the codebase
-MLSDM_VERSION = "1.0.0"
+# Version constant - import from parent package to avoid inconsistency
+try:
+    from mlsdm import __version__ as MLSDM_VERSION
+except ImportError:
+    # Fallback for when package not installed
+    MLSDM_VERSION = "1.2.0"
 
 # Span attribute prefix constants
 SPAN_ATTR_PREFIX_MLSDM = "mlsdm."
