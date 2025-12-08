@@ -1,5 +1,19 @@
-# NeuroLang + Aphasia-Broca Extension Dependencies
-# Install with: pip install -r requirements-neurolang.txt
-# Or use the optional dependency: pip install mlsdm[neurolang]
+# =============================================================================
+# MLSDM NeuroLang Extension Dependencies (Aphasia-Broca)
+# =============================================================================
+#
+# Neural language processing extension using PyTorch.
+# This extension provides neurobiologically-inspired language processing.
+#
+# INSTALLATION:
+#   Standalone:              pip install -r requirements-neurolang.txt
+#   With base library:       pip install -e ".[neurolang]"
+#   With dev environment:    pip install -e ".[all-dev,neurolang]"
+#
+# NOTE: PyTorch is a large dependency (~2GB+). Only install if you need
+#       the NeuroLang/Aphasia-Broca extension features.
+#
+# =============================================================================
 
-torch>=2.0.0
+# PyTorch for neural language models
+torch>=2.0.0,<3.0.0

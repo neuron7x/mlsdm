@@ -36,54 +36,114 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
-requires-python = ">=3.10"
+requires-python = ">=3.10,<3.13"
 dependencies = [
-    "numpy>=2.0.0",
-    "sentence-transformers>=3.0.0",
-    "fastapi>=0.110.0",
-    "uvicorn>=0.29.0",
-    "pyyaml>=6.0.1",
-    "pydantic>=2.0.0",
-    "prometheus-client>=0.20.0",
-    "tenacity>=8.2.3",
-    "requests>=2.32.3",
-    "psutil>=5.9.0",
+    # Core numerical computing
+    "numpy>=2.0.0,<3.0.0",
+    # Web framework and server
+    "fastapi>=0.110.0,<1.0.0",
+    "uvicorn>=0.29.0,<1.0.0",
+    "starlette>=0.37.0,<1.0.0",
+    # Data validation and configuration
+    "pydantic>=2.0.0,<3.0.0",
+    "pyyaml>=6.0.1,<7.0.0",
+    # Observability and monitoring
+    "prometheus-client>=0.20.0,<1.0.0",
+    # Resilience and utilities
+    "tenacity>=8.2.3,<9.0.0",
+    "psutil>=5.9.0,<6.0.0",
+    # HTTP client for LLM adapters and webhooks
+    "requests>=2.32.3,<3.0.0",
+    # Type extensions for backwards compatibility
+    "typing-extensions>=4.0.0,<5.0.0",
 ]
 
 [project.optional-dependencies]
+# Distributed tracing and telemetry
 observability = [
-    "opentelemetry-api>=1.24.0",
-    "opentelemetry-sdk>=1.24.0",
+    "opentelemetry-api>=1.24.0,<2.0.0",
+    "opentelemetry-sdk>=1.24.0,<2.0.0",
 ]
+
+# Neural language processing with PyTorch (Aphasia-Broca extension)
 neurolang = [
-    "torch>=2.0.0",
+    "torch>=2.0.0,<3.0.0",
 ]
-dev = [
-    "pytest>=8.0.0",
-    "pytest-asyncio>=0.23.0",
-    "pytest-cov>=4.1.0",
-    "hypothesis>=6.98.3",
-    "ruff>=0.4.10",
-    "mypy>=1.10.0",
-    "locust>=2.29.1",
-    "httpx>=0.27.0",
-    "types-PyYAML>=6.0.0",
-    "types-requests>=2.31.0",
+
+# Optional LLM provider integrations
+llm-providers = [
+    "openai>=1.0.0,<2.0.0",
 ]
-docs = [
-    "sphinx>=7.0.0",
-    "sphinx-rtd-theme>=2.0.0",
+
+# Optional cache backends
+storage = [
+    "redis>=5.0.0,<6.0.0",
 ]
+
+# Optional embeddings (sentence-transformers is heavy, only install if needed)
+embeddings = [
+    "sentence-transformers>=3.0.0,<4.0.0",
+]
+
+# Testing dependencies
 test = [
-    "pytest>=8.0.0",
-    "pytest-asyncio>=0.23.0",
-    "pytest-cov>=4.1.0",
-    "hypothesis>=6.98.3",
-    "httpx>=0.27.0",
+    "pytest>=8.0.0,<9.0.0",
+    "pytest-asyncio>=0.23.0,<1.0.0",
+    "pytest-cov>=4.1.0,<5.0.0",
+    "hypothesis>=6.98.3,<7.0.0",
+    "httpx>=0.27.0,<1.0.0",
 ]
+
+# Development tools (linting, type checking, formatting)
+dev = [
+    "ruff>=0.4.10,<1.0.0",
+    "mypy>=1.10.0,<2.0.0",
+    "types-PyYAML>=6.0.0,<7.0.0",
+    "types-requests>=2.31.0,<3.0.0",
+]
+
+# Load and performance testing
+profiling = [
+    "locust>=2.29.1,<3.0.0",
+]
+
+# Security auditing and dependency analysis
+security-audit = [
+    "pip-audit>=2.6.0,<3.0.0",
+    "deptry>=0.12.0,<1.0.0",
+]
+
+# Documentation generation
+docs = [
+    "sphinx>=7.0.0,<8.0.0",
+    "sphinx-rtd-theme>=2.0.0,<3.0.0",
+]
+
+# Visualization and notebooks (for examples and analysis)
 visualization = [
-    "matplotlib>=3.8.4",
-    "jupyter>=1.0.0",
+    "matplotlib>=3.8.4,<4.0.0",
+    "jupyter>=1.0.0,<2.0.0",
+]
+
+# Examples - all optional dependencies for running examples
+examples = [
+    "matplotlib>=3.8.4,<4.0.0",
+]
+
+# Complete development environment (all dev tools + tests)
+all-dev = [
+    "pytest>=8.0.0,<9.0.0",
+    "pytest-asyncio>=0.23.0,<1.0.0",
+    "pytest-cov>=4.1.0,<5.0.0",
+    "hypothesis>=6.98.3,<7.0.0",
+    "httpx>=0.27.0,<1.0.0",
+    "ruff>=0.4.10,<1.0.0",
+    "mypy>=1.10.0,<2.0.0",
+    "types-PyYAML>=6.0.0,<7.0.0",
+    "types-requests>=2.31.0,<3.0.0",
+    "locust>=2.29.1,<3.0.0",
+    "pip-audit>=2.6.0,<3.0.0",
+    "deptry>=0.12.0,<1.0.0",
 ]
 
 [project.urls]
