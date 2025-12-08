@@ -5,9 +5,9 @@
 ### Multi-Level Synaptic Dynamic Memory
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="assets/mlsdm-hero.png">
-  <source media="(prefers-color-scheme: light)" srcset="assets/mlsdm-hero.png">
-  <img src="assets/mlsdm-hero.png" alt="MLSDM Neural Architecture Visualization" width="1200" height="630" style="max-width: 100%; height: auto; display: block; margin: 0 auto;">
+  <source media="(prefers-color-scheme: dark)" srcset="assets/mlsdm-hero.svg">
+  <source media="(prefers-color-scheme: light)" srcset="assets/mlsdm-hero.svg">
+  <img src="assets/mlsdm-hero.svg" alt="MLSDM Neural Architecture Visualization - Multi-Level Synaptic Dynamic Memory with Memory (29.37MB), Moral Filter (93.3%), Wake/Sleep cycles (89.5% savings), and Speech detection (100% TPR)" width="1200" height="600" style="max-width: 100%; height: auto; display: block; margin: 0 auto; image-rendering: crisp-edges; image-rendering: -webkit-optimize-contrast;">
 </picture>
 
 **Production-ready neurobiologically-inspired cognitive governance for LLMs**
