@@ -7,7 +7,7 @@
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/mlsdm-hero.svg">
   <source media="(prefers-color-scheme: light)" srcset="assets/mlsdm-hero.svg">
-  <img src="assets/mlsdm-hero.svg" alt="MLSDM Neural Architecture diagram showing memory, moral filter, wake/sleep cycles, and speech detection components" width="1200" height="600" style="max-width: 100%; height: auto; display: block; margin: 0 auto; image-rendering: crisp-edges;">
+  <img src="assets/mlsdm-hero.svg" alt="MLSDM Neural Architecture diagram with core components" width="1200" height="600" style="max-width: 100%; height: auto; display: block; margin: 0 auto; image-rendering: crisp-edges;">
 </picture>
 
 **Production-ready neurobiologically-inspired cognitive governance for LLMs**
