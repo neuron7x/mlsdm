@@ -294,6 +294,12 @@ line-ending = "auto"
 # Extend default Python stdlib to include commonly missed modules
 extend_exclude = ["tests", "examples", "benchmarks", "scripts"]
 
+# Package to module name mappings for packages that don't follow standard naming
+[tool.deptry.package_module_name_map]
+opentelemetry-api = "opentelemetry"
+opentelemetry-sdk = "opentelemetry"
+pyjwt = "jwt"
+
 # Ignore dev-only tools (these are intentionally not imported in src/)
 [tool.deptry.per_rule_ignores]
 DEP002 = [
@@ -313,6 +319,8 @@ DEP002 = [
     "sphinx-rtd-theme",
     "matplotlib",
     "jupyter",
+    "opentelemetry-api",  # Optional observability
+    "opentelemetry-sdk",  # Optional observability
 ]
 
 # Ignore optional dependencies that are intentionally conditional imports
@@ -323,6 +331,7 @@ DEP001 = [
     "torch",      # Optional NeuroLang extension
     "sentence-transformers",  # Optional embeddings
     "fslgs",      # Optional experimental feature
+    "opentelemetry",  # Optional observability - provided by opentelemetry-api/sdk
 ]
 
 # JWT is imported via PyJWT package
