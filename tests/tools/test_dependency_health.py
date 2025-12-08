@@ -29,11 +29,12 @@ class TestDependencyHealth:
             lines = f.readlines()
 
         # Filter out comments and empty lines
-        return [
-            line.strip()
-            for line in lines
-            if line.strip() and not line.strip().startswith("#") and not line.strip().startswith("-r")
-        ]
+        result = []
+        for line in lines:
+            stripped = line.strip()
+            if stripped and not stripped.startswith("#") and not stripped.startswith("-r"):
+                result.append(stripped)
+        return result
 
     def test_pytest_in_dev_requirements(self) -> None:
         """Test that pytest is in dev requirements."""
