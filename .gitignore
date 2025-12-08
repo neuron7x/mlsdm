@@ -34,3 +34,7 @@ reports/EFFECTIVENESS_SNAPSHOT.md
 
 # Eval suite generated reports
 evals/*_report.json
+
+# Generated dependency files (constraints.txt is manually maintained)
+constraints.txt.generated
+*.txt.generated
