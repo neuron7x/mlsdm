@@ -24,6 +24,20 @@ uvicorn mlsdm.api.app:app --host 0.0.0.0 --port 8000
 curl http://localhost:8000/health/metrics
 ```
 
+### Install OpenTelemetry (Optional)
+
+OpenTelemetry is an optional dependency. Install it with the `[tracing]` extra:
+
+```bash
+# Install with tracing support
+pip install mlsdm-governed-cognitive-memory[tracing]
+
+# Or if already installed, add tracing
+pip install "mlsdm-governed-cognitive-memory[tracing]"
+```
+
+**Note**: If OpenTelemetry is not installed, the observability stack will work with no-op tracing. All logs and metrics will still function normally, but distributed tracing will be disabled.
+
 ### Enable OpenTelemetry Tracing
 
 Set environment variables to enable tracing:
