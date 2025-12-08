@@ -25,6 +25,7 @@
 [![Docker](https://img.shields.io/badge/docker-ghcr.io-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://github.com/neuron7x/mlsdm/pkgs/container/mlsdm-neuro-engine)
 [![Status](https://img.shields.io/badge/status-beta-orange?style=for-the-badge)](CHANGELOG.md)
 
+[🚀 Getting Started](GETTING_STARTED.md) •
 [Quick Start](#-quick-start) •
 [Documentation](#-documentation) •
 [Architecture](#-architecture) •
@@ -273,6 +274,8 @@ For complete system design, see [ARCHITECTURE_SPEC.md](ARCHITECTURE_SPEC.md).
 
 ## 🚀 Quick Start
 
+> **New to MLSDM?** Start with our [**Getting Started Guide**](GETTING_STARTED.md) for a streamlined introduction.
+
 ### Prerequisites
 
 - Python 3.10+
@@ -285,12 +288,20 @@ For complete system design, see [ARCHITECTURE_SPEC.md](ARCHITECTURE_SPEC.md).
 git clone https://github.com/neuron7x/mlsdm.git
 cd mlsdm
 
-# Install core dependencies
+# Minimal installation (core features only, recommended for first-time users)
+pip install numpy sentence-transformers fastapi uvicorn pyyaml pydantic prometheus-client tenacity requests psutil
+
+# OR full installation with all optional features (includes OpenTelemetry tracing)
 pip install -r requirements.txt
 
 # (Optional) Install NeuroLang/Aphasia support
 pip install -r requirements-neurolang.txt
+
+# (Optional) Install OpenTelemetry for distributed tracing
+pip install ".[observability]"
 ```
+
+**Note:** OpenTelemetry is now optional. MLSDM works perfectly without it if you don't need distributed tracing.
 
 ### Basic Usage
 
