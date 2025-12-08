@@ -34,38 +34,58 @@ from functools import wraps
 from threading import Lock
 from typing import TYPE_CHECKING, Any, Literal
 
-# Try to import OpenTelemetry, but allow graceful degradation if not available
+# Runtime imports and fallbacks for OpenTelemetry
+# Declare variables first to avoid "already defined" errors
+_trace_module: Any
+_ResourceClass: Any
+_SpanProcessorClass: Any
+_TracerProviderClass: Any
+_BatchSpanProcessorClass: Any
+_ConsoleSpanExporterClass: Any
+_SpanKindEnum: Any
+_StatusClass: Any
+_StatusCodeEnum: Any
+
 try:
-    from opentelemetry import trace
-    from opentelemetry.sdk.resources import Resource
-    from opentelemetry.sdk.trace import SpanProcessor, TracerProvider
-    from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
-    from opentelemetry.trace import SpanKind, Status, StatusCode
+    from opentelemetry import trace as _trace_module
+    from opentelemetry.sdk.resources import Resource as _ResourceClass
+    from opentelemetry.sdk.trace import SpanProcessor as _SpanProcessorClass
+    from opentelemetry.sdk.trace import TracerProvider as _TracerProviderClass
+    from opentelemetry.sdk.trace.export import BatchSpanProcessor as _BatchSpanProcessorClass
+    from opentelemetry.sdk.trace.export import ConsoleSpanExporter as _ConsoleSpanExporterClass
+    from opentelemetry.trace import SpanKind as _SpanKindEnum
+    from opentelemetry.trace import Status as _StatusClass
+    from opentelemetry.trace import StatusCode as _StatusCodeEnum
     OTEL_AVAILABLE = True
 except ImportError:
     OTEL_AVAILABLE = False
-    # Define stub types for when OTEL is not available
-    trace = None
-    Resource = None
-    SpanProcessor = None
-    TracerProvider = None
-    BatchSpanProcessor = None
-    ConsoleSpanExporter = None
-    SpanKind = None
-    Status = None
-    StatusCode = None
+    _trace_module = None
+    _ResourceClass = None
+    _SpanProcessorClass = None
+    _TracerProviderClass = None
+    _BatchSpanProcessorClass = None
+    _ConsoleSpanExporterClass = None
+    _SpanKindEnum = None
+    _StatusClass = None
+    _StatusCodeEnum = None
+
+# Public runtime API (these are the names used in the rest of the code)
+trace = _trace_module
+Resource = _ResourceClass
+SpanProcessor = _SpanProcessorClass
+TracerProvider = _TracerProviderClass
+BatchSpanProcessor = _BatchSpanProcessorClass
+ConsoleSpanExporter = _ConsoleSpanExporterClass
+SpanKind = _SpanKindEnum
+Status = _StatusClass
+StatusCode = _StatusCodeEnum
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
 
-    # Import OTEL types for type checking, with fallback to Any if not available
-    try:
-        from opentelemetry.context import Context
-        from opentelemetry.trace import Span, Tracer
-    except ImportError:
-        Context = Any
-        Span = Any
-        Tracer = Any
+    # Type-only imports for static analysis
+    # These will only be used during type checking, not at runtime
+    from opentelemetry.trace import Span, Tracer
 
 logger = logging.getLogger(__name__)
 
@@ -152,6 +172,13 @@ class NoOpTracer:
     ) -> Iterator[NoOpSpan]:
         """No-op span context manager."""
         yield NoOpSpan()
+
+
+# Type alias for functions that return either a real tracer or NoOpTracer
+if TYPE_CHECKING:
+    TracerLike = Tracer | NoOpTracer
+else:
+    TracerLike = Any
 
 
 # ---------------------------------------------------------------------------
@@ -273,8 +300,8 @@ class TracerManager:
         self._config = config or TracingConfig()
         self._initialized = False
         self._tracer: Tracer | None = None
-        self._provider: TracerProvider | None = None
-        self._processor: SpanProcessor | None = None
+        self._provider: Any = None  # TracerProvider or None
+        self._processor: Any = None  # SpanProcessor or None
 
     @classmethod
     def get_instance(cls, config: TracingConfig | None = None) -> TracerManager:
@@ -425,7 +452,7 @@ class TracerManager:
                 self._initialized = False
 
     @property
-    def tracer(self) -> Tracer | NoOpTracer:
+    def tracer(self) -> TracerLike:
         """Get the tracer instance, initializing if necessary.
 
         Returns:
@@ -440,7 +467,7 @@ class TracerManager:
         if self._tracer is None:
             # Return a no-op tracer if not initialized
             if trace is not None:
-                return trace.get_tracer("mlsdm", MLSDM_VERSION)
+                return trace.get_tracer("mlsdm", MLSDM_VERSION)  # type: ignore[no-any-return]
             return NoOpTracer()
 
         return self._tracer
@@ -521,11 +548,11 @@ def get_tracer_manager(config: TracingConfig | None = None) -> TracerManager:
     return TracerManager.get_instance(config)
 
 
-def get_tracer() -> Tracer:
+def get_tracer() -> TracerLike:
     """Get the global tracer instance.
 
     Returns:
-        OpenTelemetry Tracer instance
+        OpenTelemetry Tracer instance or NoOpTracer if OTEL not available
     """
     return get_tracer_manager().tracer
 
