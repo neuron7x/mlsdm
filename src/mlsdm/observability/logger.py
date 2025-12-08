@@ -48,7 +48,7 @@ def get_current_trace_context() -> dict[str, str]:
     """
     if not OTEL_AVAILABLE or trace is None:
         return {"trace_id": "", "span_id": ""}
-    
+
     span = trace.get_current_span()
     span_context = span.get_span_context()
 

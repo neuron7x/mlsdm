@@ -71,10 +71,12 @@ logger = logging.getLogger(__name__)
 
 # Version constant - import from parent package to avoid inconsistency
 try:
-    from mlsdm import __version__ as MLSDM_VERSION
+    from mlsdm import __version__ as mlsdm_version
 except ImportError:
     # Fallback for when package not installed
-    MLSDM_VERSION = "1.2.0"
+    mlsdm_version = "1.2.0"
+
+MLSDM_VERSION = mlsdm_version
 
 # Span attribute prefix constants
 SPAN_ATTR_PREFIX_MLSDM = "mlsdm."
@@ -107,31 +109,31 @@ def _get_span_kind_client() -> Any:
 
 class NoOpSpan:
     """No-op span implementation when OpenTelemetry is not available."""
-    
+
     def set_attribute(self, key: str, value: Any) -> None:
         """No-op set attribute."""
         pass
-    
+
     def set_attributes(self, attributes: dict[str, Any]) -> None:
         """No-op set attributes."""
         pass
-    
+
     def add_event(self, name: str, attributes: dict[str, Any] | None = None) -> None:
         """No-op add event."""
         pass
-    
+
     def record_exception(self, exception: Exception) -> None:
         """No-op record exception."""
         pass
-    
+
     def set_status(self, status: Any) -> None:
         """No-op set status."""
         pass
-    
+
     def __enter__(self) -> NoOpSpan:
         """No-op context manager entry."""
         return self
-    
+
     def __exit__(self, *args: Any) -> None:
         """No-op context manager exit."""
         pass
@@ -139,7 +141,7 @@ class NoOpSpan:
 
 class NoOpTracer:
     """No-op tracer implementation when OpenTelemetry is not available."""
-    
+
     @contextmanager
     def start_as_current_span(
         self,
@@ -431,7 +433,7 @@ class TracerManager:
         """
         if not OTEL_AVAILABLE:
             return NoOpTracer()
-        
+
         if not self._initialized:
             self.initialize()
 
@@ -475,7 +477,7 @@ class TracerManager:
         # Use default kind only if OTEL is available
         if kind is None:
             kind = _get_span_kind_internal()
-        
+
         with self.tracer.start_as_current_span(
             name,
             kind=kind,
@@ -493,7 +495,7 @@ class TracerManager:
         """
         if not OTEL_AVAILABLE or isinstance(span, NoOpSpan):
             return
-        
+
         span.record_exception(exception)
         if Status is not None and StatusCode is not None:
             span.set_status(Status(StatusCode.ERROR, str(exception)))

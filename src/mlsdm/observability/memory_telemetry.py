@@ -30,7 +30,7 @@ from .tracing import get_tracer_manager
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
-    
+
     # Import OTEL types only for type checking, not at runtime
     try:
         from opentelemetry.trace import Span
