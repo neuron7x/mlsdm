@@ -5,7 +5,7 @@ import random
 import re
 import threading
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, TypedDict
 
 from mlsdm.core.cognitive_controller import CognitiveController
 from mlsdm.core.llm_wrapper import LLMWrapper
@@ -13,6 +13,27 @@ from mlsdm.observability.aphasia_logging import AphasiaLogEvent, log_aphasia_eve
 
 if TYPE_CHECKING:
     from mlsdm.config import AphasiaDetectorCalibration, SecureModeCalibration
+
+
+class AphasiaAnalysisResult(TypedDict):
+    """
+    Structured result from aphasia analysis.
+
+    Attributes:
+        is_aphasic: True if any threshold is violated (telegraphic patterns detected)
+        severity: Quantified severity score from 0.0 (healthy) to 1.0 (severe)
+        avg_sentence_len: Average number of words per sentence
+        function_word_ratio: Proportion of function words (0.0 to 1.0)
+        fragment_ratio: Proportion of short sentences/fragments (0.0 to 1.0)
+        flags: List of specific violations detected (e.g., 'short_sentences',
+            'low_function_words', 'high_fragment_ratio', 'empty_text', etc.)
+    """
+    is_aphasic: bool
+    severity: float
+    avg_sentence_len: float
+    function_word_ratio: float
+    fragment_ratio: float
+    flags: list[str]
 
 # Import calibration defaults - these can be overridden via config
 # Type hints use Optional to allow None when calibration module unavailable
@@ -515,7 +536,7 @@ class AphasiaBrocaDetector:
         self.max_fragment_ratio = float(max_fragment_ratio)
         self.fragment_length_threshold = self.DEFAULT_FRAGMENT_LENGTH_THRESHOLD
 
-    def analyze(self, text: str) -> dict[str, Any]:
+    def analyze(self, text: str) -> AphasiaAnalysisResult:
         """
         Analyze text for Broca's aphasia-like telegraphic speech patterns.
 
@@ -546,7 +567,7 @@ class AphasiaBrocaDetector:
             text: Input text to analyze. Can be any length, including empty strings.
 
         Returns:
-            dict: Analysis report with the following keys:
+            AphasiaAnalysisResult: Structured analysis report (TypedDict) with the following keys:
                 - is_aphasic (bool): True if any threshold is violated
                 - severity (float): Quantified severity score (0.0 = healthy, 1.0 = severe)
                 - avg_sentence_len (float): Average words per sentence
