@@ -655,6 +655,7 @@ For detailed deployment instructions, see [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE
 | [Configuration Guide](CONFIGURATION_GUIDE.md) | All configuration options explained |
 | [API Reference](API_REFERENCE.md) | Complete API documentation |
 | [Deployment Guide](DEPLOYMENT_GUIDE.md) | Production deployment instructions |
+| [**Prompt Engineering Case Study**](docs/PROMPT_ENGINEERING_CASE_STUDY.md) | **Real-world A/B test with baseline vs improved prompts** |
 
 ### Validation & Testing
 

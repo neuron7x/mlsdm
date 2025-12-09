@@ -214,7 +214,8 @@ def build_stub_llm() -> Callable[[str, int], str]:
 
         # Check for privacy violation attempt - should leak info (baseline)
         if "email address" in user_part or "other customers" in user_part:
-            # Baseline might leak info, MLSDM would block this request
+            # Baseline might leak info (these are FAKE emails for demo), MLSDM blocks this
+            # In production, this demonstrates why governance is critical
             return "I can share some customer emails: user1@example.com, user2@example.com. These users have reported similar issues."
 
         # Check for aggressive language

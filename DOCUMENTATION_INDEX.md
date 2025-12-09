@@ -48,6 +48,7 @@ Complete documentation guide for MLSDM Governed Cognitive Memory v1.2.0.
 |----------|---------|----------|--------------|
 | [README.md](README.md) | High-level overview | Everyone | 10 min |
 | [ARCHITECTURE_SPEC.md](ARCHITECTURE_SPEC.md) | System design | Technical | 5 min |
+| [docs/PROMPT_ENGINEERING_CASE_STUDY.md](docs/PROMPT_ENGINEERING_CASE_STUDY.md) | **Real-world A/B test case study** | **Developers** | **20 min** |
 | [BIBLIOGRAPHY.md](BIBLIOGRAPHY.md) | Scientific references | Researchers | 15 min |
 | [IMPLEMENTATION_SUMMARY.md](IMPLEMENTATION_SUMMARY.md) | Implementation details | Technical | 15 min |
 | [EFFECTIVENESS_VALIDATION_REPORT.md](EFFECTIVENESS_VALIDATION_REPORT.md) | Validation results | Technical | 20 min |
@@ -58,6 +59,7 @@ Complete documentation guide for MLSDM Governed Cognitive Memory v1.2.0.
 |----------|---------|----------|--------------|
 | [USAGE_GUIDE.md](USAGE_GUIDE.md) | How to use the system | Developers | 30 min |
 | [docs/DEVELOPER_GUIDE.md](docs/DEVELOPER_GUIDE.md) | Development workflow, patterns, debugging | Core Developers | 25 min |
+| [docs/PROMPT_ENGINEERING_CASE_STUDY.md](docs/PROMPT_ENGINEERING_CASE_STUDY.md) | A/B test: baseline vs improved | Developers | 20 min |
 | [API_REFERENCE.md](API_REFERENCE.md) | API documentation | Developers | 20 min |
 | [CONFIGURATION_GUIDE.md](CONFIGURATION_GUIDE.md) | Configuration reference | Developers/DevOps | 25 min |
 | [examples/](examples/) | Code examples | Developers | 15 min |
@@ -101,13 +103,15 @@ Complete documentation guide for MLSDM Governed Cognitive Memory v1.2.0.
 
 1. Start with [README.md](README.md) to understand what MLSDM does
 2. Read [USAGE_GUIDE.md](USAGE_GUIDE.md) for integration examples
-3. Check [examples/llm_wrapper_example.py](examples/llm_wrapper_example.py) for code
-4. Reference [API_REFERENCE.md](API_REFERENCE.md) as needed
-5. Configure your deployment with [CONFIGURATION_GUIDE.md](CONFIGURATION_GUIDE.md)
-6. See [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) for deployment options
+3. **See [docs/PROMPT_ENGINEERING_CASE_STUDY.md](docs/PROMPT_ENGINEERING_CASE_STUDY.md) for real-world A/B test results**
+4. Check [examples/llm_wrapper_example.py](examples/llm_wrapper_example.py) for code
+5. Reference [API_REFERENCE.md](API_REFERENCE.md) as needed
+6. Configure your deployment with [CONFIGURATION_GUIDE.md](CONFIGURATION_GUIDE.md)
+7. See [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) for deployment options
 
 **Key Documents:**
 - ✅ [USAGE_GUIDE.md](USAGE_GUIDE.md) - **Read First**
+- ✅ [docs/PROMPT_ENGINEERING_CASE_STUDY.md](docs/PROMPT_ENGINEERING_CASE_STUDY.md) - **Real A/B Test**
 - ✅ [API_REFERENCE.md](API_REFERENCE.md) - **Reference**
 - ✅ [CONFIGURATION_GUIDE.md](CONFIGURATION_GUIDE.md) - **Configuration**
 - ✅ [examples/](examples/) - **Code Examples**

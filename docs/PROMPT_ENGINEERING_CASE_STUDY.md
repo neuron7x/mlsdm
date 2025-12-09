@@ -99,20 +99,22 @@ class MLSDMChatbot:
     """Customer support chatbot with MLSDM cognitive governance."""
     
     def __init__(self):
-        # Initialize MLSDM engine
+        # OpenAI client
+        self.client = openai.OpenAI()
+        
+        # Initialize MLSDM engine with LLM and embedding functions
         self.engine = create_neuro_engine(
             config=NeuroEngineConfig(
-                dimension=1536,              # OpenAI embedding size
+                dim=1536,                    # OpenAI embedding size
                 capacity=20_000,             # Memory capacity
                 wake_duration=8,             # 8 cycles before consolidation
                 sleep_duration=3,            # 3 cycle rest period
                 initial_moral_threshold=0.50, # Adaptive threshold starts at 0.5
-                enable_speech_governance=True # Detect poor quality responses
-            )
+                enable_fslgs=False,          # Disable FSLGS for simplicity
+            ),
+            llm_generate_fn=self._llm_generate,
+            embedding_fn=self._embedding_fn,
         )
-        
-        # OpenAI client
-        self.client = openai.OpenAI()
     
     def _llm_generate(self, prompt: str, max_tokens: int) -> str:
         """LLM generation function."""
@@ -140,10 +142,6 @@ class MLSDMChatbot:
             input=text
         )
         return np.array(response.data[0].embedding, dtype=np.float32)
-    
-    # Wire up functions to MLSDM
-    engine.llm_generate_fn = _llm_generate
-    engine.embedding_fn = _embedding_fn
     
     def generate_response(
         self, 
