@@ -162,14 +162,12 @@ def e2e_deterministic_seed() -> int:
     np.random.seed(seed)
 
     # Set torch seed if available
-    try:
+    import importlib.util
+    if importlib.util.find_spec("torch") is not None:
         import torch
-
         torch.manual_seed(seed)
         if torch.cuda.is_available():
             torch.cuda.manual_seed_all(seed)
-    except ImportError:
-        pass
 
     return seed
 
