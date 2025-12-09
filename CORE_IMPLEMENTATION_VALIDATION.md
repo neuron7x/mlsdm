@@ -24,10 +24,12 @@ This document provides **evidence-based validation** that the MLSDM neuro-cognit
 
 ### Key Findings (Verified via Commands)
 
-✅ **577 tests collected** for core components  
+✅ **577 tests collected** for core cognitive modules (memory, cognition, rhythm, speech)  
 ✅ **0 TODOs/NotImplementedError** found in core modules  
 ✅ **47 formal invariants** documented in `docs/FORMAL_INVARIANTS.md`  
 ✅ **Complete cognitive cycle** operational (11 steps verified)
+
+**Note**: This validation focuses on **core cognitive components only**. The full test suite contains **1,587 tests** covering all modules (see [COVERAGE_REPORT_2025.md](COVERAGE_REPORT_2025.md)).
 
 **Verification Command**: Run `./scripts/verify_core_implementation.sh` to reproduce all counts.
 
