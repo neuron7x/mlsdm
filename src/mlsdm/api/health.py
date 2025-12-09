@@ -98,6 +98,10 @@ _cognitive_controller: Any | None = None
 # Global neuro engine reference (to be set by the application)
 _neuro_engine: Any | None = None
 
+# CPU percentage cache to ensure consistent readings in rapid consecutive calls
+# Cache for 100ms to avoid flaky test results while keeping health checks responsive
+_cpu_percent_cache: tuple[float, float] | None = None  # (timestamp, value)
+
 
 def set_memory_manager(manager: Any) -> None:
     """Set the global memory manager reference for health checks.
@@ -296,6 +300,30 @@ def _check_aphasia_health() -> tuple[bool, str | None]:
     return True, "not_configured_or_ok"
 
 
+def _get_cached_cpu_percent() -> float:
+    """Get CPU percentage with 100ms caching to ensure consistent readings.
+
+    This prevents flaky health checks when consecutive calls happen rapidly
+    (e.g., /health/ready followed immediately by /health/readiness).
+
+    Returns:
+        CPU usage percentage
+    """
+    global _cpu_percent_cache
+    current_time = time.time()
+
+    # Use cached value if less than 100ms old
+    if _cpu_percent_cache is not None:
+        cached_time, cached_value = _cpu_percent_cache
+        if current_time - cached_time < 0.1:  # 100ms cache
+            return cached_value
+
+    # Get fresh reading and cache it
+    cpu_percent = float(psutil.cpu_percent(interval=0))
+    _cpu_percent_cache = (current_time, cpu_percent)
+    return cpu_percent
+
+
 def _perform_readiness_check(response: Response) -> ReadinessStatus:
     """Internal function to perform readiness checks.
 
@@ -368,10 +396,10 @@ def _perform_readiness_check(response: Response) -> ReadinessStatus:
         all_ready = False
 
     try:
-        # Use non-blocking CPU check (interval=0) for fast health checks
-        # This returns instantly using cached values from the last measurement
-        # Blocking interval=0.1 would add 100ms latency to every readiness check
-        cpu_percent = psutil.cpu_percent(interval=0)
+        # Use cached CPU check to ensure consistent readings in rapid consecutive calls
+        # This prevents flaky results when /health/ready and /health/readiness are called
+        # back-to-back. Cache is 100ms so health checks remain responsive.
+        cpu_percent = _get_cached_cpu_percent()
         cpu_available = cpu_percent < 98.0
         components["system_cpu"] = ComponentStatus(
             healthy=cpu_available,
