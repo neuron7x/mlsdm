@@ -78,6 +78,7 @@ def test_pelm_zero_growth_after_init():
     print(f"✅ PASS: Memory growth {growth_percent:.2f}% is within {tolerance_percent}% tolerance")
 
 
+@pytest.mark.slow
 def test_pelm_zero_growth_after_init_large_capacity():
     """
     Verify zero-growth property with production-sized capacity (20k vectors).
@@ -141,9 +142,3 @@ def test_pelm_zero_growth_after_init_large_capacity():
     )
     
     print(f"✅ PASS: Memory growth {growth_percent:.2f}% is within {tolerance_percent}% tolerance")
-
-
-# Mark the large capacity test as slow to allow skipping in fast CI runs
-test_pelm_zero_growth_after_init_large_capacity = pytest.mark.slow(
-    test_pelm_zero_growth_after_init_large_capacity
-)
