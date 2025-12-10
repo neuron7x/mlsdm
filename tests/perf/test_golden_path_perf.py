@@ -14,7 +14,6 @@ Usage:
 """
 
 import platform
-import statistics
 import sys
 import time
 from dataclasses import dataclass
@@ -26,6 +25,13 @@ import pytest
 
 # Add src to path for standalone execution
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
+
+# Benchmark configuration constants
+PELM_N_OPS = 1000
+MEMORY_N_OPS = 1000
+CONTROLLER_N_OPS = 500
+DIMENSION = 384
+PELM_CAPACITY = 20000
 
 
 @dataclass
@@ -51,12 +57,18 @@ class PerfResult:
 
 
 def percentile(data: list[float], p: float) -> float:
-    """Calculate percentile using nearest-rank method."""
+    """Calculate percentile using nearest-rank method.
+    
+    The nearest-rank method: the percentile is the smallest value in the list
+    such that at least p% of data values are <= that value.
+    """
     if not data:
         return 0.0
     sorted_data = sorted(data)
-    idx = max(0, int(len(sorted_data) * p) - 1)
-    return sorted_data[min(idx, len(sorted_data) - 1)]
+    n = len(sorted_data)
+    # Nearest-rank: index = ceil(p * n) - 1, clamped to valid range
+    idx = max(0, min(int(p * n), n - 1))
+    return sorted_data[idx]
 
 
 def get_env_info() -> dict:
@@ -93,21 +105,18 @@ class TestPELMPerformance:
             PhaseEntangledLatticeMemory,
         )
 
-        return PhaseEntangledLatticeMemory(dimension=384, capacity=20000)
+        return PhaseEntangledLatticeMemory(dimension=DIMENSION, capacity=PELM_CAPACITY)
 
     @pytest.mark.benchmark
     def test_pelm_entangle_throughput(self, pelm) -> None:
         """Benchmark PELM entangle operations."""
-        N_OPS = 1000
-        DIM = 384
-
         # Prepare data
-        vectors = [np.random.randn(DIM).astype(np.float32).tolist() for _ in range(N_OPS)]
-        phases = [np.random.random() for _ in range(N_OPS)]
+        vectors = [np.random.randn(DIMENSION).astype(np.float32).tolist() for _ in range(PELM_N_OPS)]
+        phases = [np.random.random() for _ in range(PELM_N_OPS)]
         latencies: list[float] = []
 
         # Warmup
-        for i in range(min(50, N_OPS)):
+        for i in range(min(50, PELM_N_OPS)):
             pelm.entangle(vectors[i], phases[i])
 
         # Benchmark
@@ -120,9 +129,9 @@ class TestPELMPerformance:
 
         result = PerfResult(
             operation="PELM.entangle",
-            total_ops=N_OPS,
+            total_ops=PELM_N_OPS,
             total_time_ms=total_time,
-            ops_per_sec=N_OPS / (total_time / 1000),
+            ops_per_sec=PELM_N_OPS / (total_time / 1000),
             p50_ms=percentile(latencies, 0.50),
             p95_ms=percentile(latencies, 0.95),
             p99_ms=percentile(latencies, 0.99),
@@ -139,12 +148,9 @@ class TestPELMPerformance:
     @pytest.mark.benchmark
     def test_pelm_retrieve_throughput(self, pelm) -> None:
         """Benchmark PELM retrieve operations."""
-        N_OPS = 1000
-        DIM = 384
-
         # Prepare data and populate memory
-        vectors = [np.random.randn(DIM).astype(np.float32).tolist() for _ in range(N_OPS)]
-        phases = [np.random.random() for _ in range(N_OPS)]
+        vectors = [np.random.randn(DIMENSION).astype(np.float32).tolist() for _ in range(PELM_N_OPS)]
+        phases = [np.random.random() for _ in range(PELM_N_OPS)]
 
         for v, p in zip(vectors, phases):
             pelm.entangle(v, p)
@@ -152,12 +158,12 @@ class TestPELMPerformance:
         latencies: list[float] = []
 
         # Warmup
-        for i in range(min(50, N_OPS)):
+        for i in range(min(50, PELM_N_OPS)):
             pelm.retrieve(vectors[i], phases[i], top_k=5)
 
         # Benchmark
         start_total = time.perf_counter()
-        for i in range(N_OPS):
+        for i in range(PELM_N_OPS):
             start = time.perf_counter()
             pelm.retrieve(vectors[i % len(vectors)], phases[i % len(phases)], top_k=5)
             latencies.append((time.perf_counter() - start) * 1000)
@@ -165,9 +171,9 @@ class TestPELMPerformance:
 
         result = PerfResult(
             operation="PELM.retrieve",
-            total_ops=N_OPS,
+            total_ops=PELM_N_OPS,
             total_time_ms=total_time,
-            ops_per_sec=N_OPS / (total_time / 1000),
+            ops_per_sec=PELM_N_OPS / (total_time / 1000),
             p50_ms=percentile(latencies, 0.50),
             p95_ms=percentile(latencies, 0.95),
             p99_ms=percentile(latencies, 0.99),
@@ -188,19 +194,16 @@ class TestMultiLevelMemoryPerformance:
         """Create MultiLevelSynapticMemory instance."""
         from mlsdm.memory.multi_level_memory import MultiLevelSynapticMemory
 
-        return MultiLevelSynapticMemory(dimension=384)
+        return MultiLevelSynapticMemory(dimension=DIMENSION)
 
     @pytest.mark.benchmark
     def test_multi_level_update(self, memory) -> None:
         """Benchmark multi-level memory update processing."""
-        N_OPS = 1000
-        DIM = 384
-
-        vectors = [np.random.randn(DIM).astype(np.float32) for _ in range(N_OPS)]
+        vectors = [np.random.randn(DIMENSION).astype(np.float32) for _ in range(MEMORY_N_OPS)]
         latencies: list[float] = []
 
         # Warmup
-        for i in range(min(50, N_OPS)):
+        for i in range(min(50, MEMORY_N_OPS)):
             memory.update(vectors[i])
 
         # Benchmark
@@ -213,9 +216,9 @@ class TestMultiLevelMemoryPerformance:
 
         result = PerfResult(
             operation="MultiLevelMemory.update",
-            total_ops=N_OPS,
+            total_ops=MEMORY_N_OPS,
             total_time_ms=total_time,
-            ops_per_sec=N_OPS / (total_time / 1000),
+            ops_per_sec=MEMORY_N_OPS / (total_time / 1000),
             p50_ms=percentile(latencies, 0.50),
             p95_ms=percentile(latencies, 0.95),
             p99_ms=percentile(latencies, 0.99),
@@ -235,20 +238,17 @@ class TestCognitiveControllerPerformance:
         """Create CognitiveController instance."""
         from mlsdm.core.cognitive_controller import CognitiveController
 
-        return CognitiveController(dim=384)
+        return CognitiveController(dim=DIMENSION)
 
     @pytest.mark.benchmark
     def test_controller_process_event(self, controller) -> None:
         """Benchmark cognitive controller process_event operations."""
-        N_OPS = 500
-        DIM = 384
-
-        vectors = [np.random.randn(DIM).astype(np.float32) for _ in range(N_OPS)]
-        moral_values = [np.random.uniform(0.3, 0.9) for _ in range(N_OPS)]
+        vectors = [np.random.randn(DIMENSION).astype(np.float32) for _ in range(CONTROLLER_N_OPS)]
+        moral_values = [np.random.uniform(0.3, 0.9) for _ in range(CONTROLLER_N_OPS)]
         latencies: list[float] = []
 
         # Warmup
-        for i in range(min(20, N_OPS)):
+        for i in range(min(20, CONTROLLER_N_OPS)):
             controller.process_event(vectors[i], moral_values[i])
 
         # Benchmark
@@ -261,9 +261,9 @@ class TestCognitiveControllerPerformance:
 
         result = PerfResult(
             operation="CognitiveController.process_event",
-            total_ops=N_OPS,
+            total_ops=CONTROLLER_N_OPS,
             total_time_ms=total_time,
-            ops_per_sec=N_OPS / (total_time / 1000),
+            ops_per_sec=CONTROLLER_N_OPS / (total_time / 1000),
             p50_ms=percentile(latencies, 0.50),
             p95_ms=percentile(latencies, 0.95),
             p99_ms=percentile(latencies, 0.99),
@@ -282,75 +282,73 @@ def run_all_benchmarks() -> dict:
     from mlsdm.memory.phase_entangled_lattice_memory import PhaseEntangledLatticeMemory
 
     results = {}
-    DIM = 384
-    N_OPS = 1000
 
     # PELM entangle
-    pelm = PhaseEntangledLatticeMemory(dimension=DIM, capacity=20000)
-    vectors = [np.random.randn(DIM).astype(np.float32).tolist() for _ in range(N_OPS)]
-    phases = [np.random.random() for _ in range(N_OPS)]
-    latencies = []
+    pelm = PhaseEntangledLatticeMemory(dimension=DIMENSION, capacity=PELM_CAPACITY)
+    vectors = [np.random.randn(DIMENSION).astype(np.float32).tolist() for _ in range(PELM_N_OPS)]
+    phases = [np.random.random() for _ in range(PELM_N_OPS)]
+    pelm_entangle_latencies: list[float] = []
     start_total = time.perf_counter()
     for v, p in zip(vectors, phases):
         start = time.perf_counter()
         pelm.entangle(v, p)
-        latencies.append((time.perf_counter() - start) * 1000)
+        pelm_entangle_latencies.append((time.perf_counter() - start) * 1000)
     total_time = (time.perf_counter() - start_total) * 1000
     results["pelm_entangle"] = {
-        "ops_per_sec": N_OPS / (total_time / 1000),
-        "p50_ms": percentile(latencies, 0.50),
-        "p95_ms": percentile(latencies, 0.95),
-        "p99_ms": percentile(latencies, 0.99),
+        "ops_per_sec": PELM_N_OPS / (total_time / 1000),
+        "p50_ms": percentile(pelm_entangle_latencies, 0.50),
+        "p95_ms": percentile(pelm_entangle_latencies, 0.95),
+        "p99_ms": percentile(pelm_entangle_latencies, 0.99),
         "memory_mb": pelm.memory_usage_bytes() / 1024 / 1024,
     }
 
     # PELM retrieve
-    latencies = []
+    pelm_retrieve_latencies: list[float] = []
     start_total = time.perf_counter()
-    for i in range(N_OPS):
+    for i in range(PELM_N_OPS):
         start = time.perf_counter()
         pelm.retrieve(vectors[i], phases[i], top_k=5)
-        latencies.append((time.perf_counter() - start) * 1000)
+        pelm_retrieve_latencies.append((time.perf_counter() - start) * 1000)
     total_time = (time.perf_counter() - start_total) * 1000
     results["pelm_retrieve"] = {
-        "ops_per_sec": N_OPS / (total_time / 1000),
-        "p50_ms": percentile(latencies, 0.50),
-        "p95_ms": percentile(latencies, 0.95),
-        "p99_ms": percentile(latencies, 0.99),
+        "ops_per_sec": PELM_N_OPS / (total_time / 1000),
+        "p50_ms": percentile(pelm_retrieve_latencies, 0.50),
+        "p95_ms": percentile(pelm_retrieve_latencies, 0.95),
+        "p99_ms": percentile(pelm_retrieve_latencies, 0.99),
     }
 
     # MultiLevelMemory
-    memory = MultiLevelSynapticMemory(dimension=DIM)
-    vectors_np = [np.random.randn(DIM).astype(np.float32) for _ in range(N_OPS)]
-    latencies = []
+    memory = MultiLevelSynapticMemory(dimension=DIMENSION)
+    vectors_np = [np.random.randn(DIMENSION).astype(np.float32) for _ in range(MEMORY_N_OPS)]
+    memory_latencies: list[float] = []
     start_total = time.perf_counter()
     for v in vectors_np:
         start = time.perf_counter()
         memory.update(v)
-        latencies.append((time.perf_counter() - start) * 1000)
+        memory_latencies.append((time.perf_counter() - start) * 1000)
     total_time = (time.perf_counter() - start_total) * 1000
     results["multi_level_update"] = {
-        "ops_per_sec": N_OPS / (total_time / 1000),
-        "p50_ms": percentile(latencies, 0.50),
-        "p95_ms": percentile(latencies, 0.95),
-        "p99_ms": percentile(latencies, 0.99),
+        "ops_per_sec": MEMORY_N_OPS / (total_time / 1000),
+        "p50_ms": percentile(memory_latencies, 0.50),
+        "p95_ms": percentile(memory_latencies, 0.95),
+        "p99_ms": percentile(memory_latencies, 0.99),
     }
 
     # CognitiveController
-    controller = CognitiveController(dim=DIM)
-    moral_values = [np.random.uniform(0.3, 0.9) for _ in range(500)]
-    latencies = []
+    controller = CognitiveController(dim=DIMENSION)
+    moral_values = [np.random.uniform(0.3, 0.9) for _ in range(CONTROLLER_N_OPS)]
+    controller_latencies: list[float] = []
     start_total = time.perf_counter()
-    for i in range(500):
+    for i in range(CONTROLLER_N_OPS):
         start = time.perf_counter()
         controller.process_event(vectors_np[i], moral_values[i])
-        latencies.append((time.perf_counter() - start) * 1000)
+        controller_latencies.append((time.perf_counter() - start) * 1000)
     total_time = (time.perf_counter() - start_total) * 1000
     results["controller_process_event"] = {
-        "ops_per_sec": 500 / (total_time / 1000),
-        "p50_ms": percentile(latencies, 0.50),
-        "p95_ms": percentile(latencies, 0.95),
-        "p99_ms": percentile(latencies, 0.99),
+        "ops_per_sec": CONTROLLER_N_OPS / (total_time / 1000),
+        "p50_ms": percentile(controller_latencies, 0.50),
+        "p95_ms": percentile(controller_latencies, 0.95),
+        "p99_ms": percentile(controller_latencies, 0.99),
     }
 
     return results
