@@ -58,7 +58,7 @@ class PerfResult:
 
 def percentile(data: list[float], p: float) -> float:
     """Calculate percentile using nearest-rank method.
-    
+
     The nearest-rank method: the percentile is the smallest value in the list
     such that at least p% of data values are <= that value.
     """
@@ -121,7 +121,7 @@ class TestPELMPerformance:
 
         # Benchmark
         start_total = time.perf_counter()
-        for v, p in zip(vectors, phases):
+        for v, p in zip(vectors, phases, strict=True):
             start = time.perf_counter()
             pelm.entangle(v, p)
             latencies.append((time.perf_counter() - start) * 1000)
@@ -152,7 +152,7 @@ class TestPELMPerformance:
         vectors = [np.random.randn(DIMENSION).astype(np.float32).tolist() for _ in range(PELM_N_OPS)]
         phases = [np.random.random() for _ in range(PELM_N_OPS)]
 
-        for v, p in zip(vectors, phases):
+        for v, p in zip(vectors, phases, strict=True):
             pelm.entangle(v, p)
 
         latencies: list[float] = []
@@ -253,7 +253,7 @@ class TestCognitiveControllerPerformance:
 
         # Benchmark
         start_total = time.perf_counter()
-        for v, m in zip(vectors, moral_values):
+        for v, m in zip(vectors, moral_values, strict=True):
             start = time.perf_counter()
             controller.process_event(v, m)
             latencies.append((time.perf_counter() - start) * 1000)
@@ -289,7 +289,7 @@ def run_all_benchmarks() -> dict:
     phases = [np.random.random() for _ in range(PELM_N_OPS)]
     pelm_entangle_latencies: list[float] = []
     start_total = time.perf_counter()
-    for v, p in zip(vectors, phases):
+    for v, p in zip(vectors, phases, strict=True):
         start = time.perf_counter()
         pelm.entangle(v, p)
         pelm_entangle_latencies.append((time.perf_counter() - start) * 1000)
