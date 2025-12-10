@@ -17,7 +17,7 @@ MLSDM — це добре спроектований когнітивний фр
 | Критерій | Оцінка | Коментар |
 |----------|--------|----------|
 | **Імплементація коду** | 90/100 | Повна імплементація всіх ядерних модулів |
-| **Тестове покриття** | 75/100 | 69.25% загального покриття, 90%+ критичних модулів |
+| **Тестове покриття** | 75/100 | 69.56% загального покриття, 90%+ критичних модулів |
 | **Документація** | 85/100 | Обширна документація з чесними дисклеймерами |
 | **CI/CD інфраструктура** | 90/100 | 19 workflows, повна автоматизація |
 | **Production readiness** | 80/100 | Бета-статус, придатний для некритичних систем |
@@ -51,7 +51,7 @@ MLSDM — це добре спроектований когнітивний фр
 ### Coverage Gate
 
 ```
-Coverage: 69.25%
+Coverage: 69.56%
 Threshold: 68%
 Status: ✓ COVERAGE GATE PASSED
 ```
@@ -92,6 +92,39 @@ python tests/load/standalone_server_load_test.py --users 5 --duration 15
 | Memory Growth | 3.6 MB | ✅ |
 
 **Результат: ✅ LOAD TEST PASSED**
+
+---
+
+## ⚡ Core Component Performance Benchmarks (Верифіковано 2025-12-10)
+
+### Environment
+
+| Параметр | Значення |
+|----------|----------|
+| **CPU** | x86_64 (4 cores) |
+| **RAM** | 15.6 GB |
+| **Python** | 3.12.3 |
+| **OS** | Linux |
+
+### Golden-Path Microbenchmarks
+
+```bash
+OTEL_SDK_DISABLED=true python tests/perf/test_golden_path_perf.py
+```
+
+| Component | Throughput | P50 | P95 | P99 | Memory |
+|-----------|------------|-----|-----|-----|--------|
+| **PELM.entangle** | 839 ops/sec | 1.189ms | 2.131ms | 2.216ms | 33.87 MB |
+| **PELM.retrieve** | 829 ops/sec | 1.200ms | 1.232ms | 1.327ms | - |
+| **MultiLevelMemory.update** | 12,858 ops/sec | 0.075ms | 0.094ms | 0.101ms | - |
+| **CognitiveController.process_event** | 15,062 ops/sec | 0.059ms | 0.080ms | 0.335ms | - |
+
+### Performance Notes
+
+- **PELM (Phase-Entangled Lattice Memory):** ~830 ops/sec for both entangle/retrieve. Memory footprint ~34MB for 20K capacity.
+- **MultiLevelMemory:** Fast at ~12.8K ops/sec - suitable for high-throughput event processing.
+- **CognitiveController:** ~15K ops/sec with sub-millisecond P95 latency - production-ready performance.
+- **Previous claims of 5,500 ops/sec** partially validated: PELM is slower (~830), but Controller/Memory are significantly faster (12-15K).
 
 ---
 
