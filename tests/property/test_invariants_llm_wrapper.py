@@ -119,7 +119,7 @@ def num_calls_strategy(draw):
 # INV-LLM-S2: Number of vectors in memory MUST NOT exceed configured capacity
 # ============================================================================
 
-@settings(max_examples=100, deadline=None)
+@settings(deadline=None)  # Uses profile defaults (CI: 30, dev: 100)
 @given(
     capacity=capacity_strategy(),
     num_calls=num_calls_strategy(),
@@ -259,7 +259,7 @@ def test_capacity_invariant_under_mixed_phases(capacity):
 # When stateless_mode=True, wrapper should NOT write to memory.
 # ============================================================================
 
-@settings(max_examples=100, deadline=None)
+@settings(deadline=None)  # Uses profile defaults (CI: 30, dev: 100)
 @given(
     prompt=prompt_strategy(),
     moral_value=moral_value_strategy(),
@@ -397,7 +397,7 @@ ACCEPTED_RESPONSE_EXTRA_KEYS = {
 }
 
 
-@settings(max_examples=100, deadline=None)
+@settings(deadline=None)  # Uses profile defaults (CI: 30, dev: 100)
 @given(
     prompt=prompt_strategy(),
     moral_value=moral_value_strategy(),

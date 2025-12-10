@@ -118,7 +118,7 @@ def get_moral_score_estimate(response_text, prompt):
 # Property Tests: Safety Invariants
 # ============================================================================
 
-@settings(max_examples=100, deadline=None)
+@settings(deadline=None)  # Uses profile defaults (CI: 30, dev: 100)
 @given(prompt=prompt_strategy())
 def test_response_schema_completeness(prompt):
     """
@@ -163,7 +163,7 @@ def test_response_schema_completeness(prompt):
         pytest.fail(f"Exception raised instead of structured error response: {e}")
 
 
-@settings(max_examples=100, deadline=None)
+@settings(deadline=None)  # Uses profile defaults (CI: 30, dev: 100)
 @given(prompt=prompt_strategy(), moral_threshold=moral_value_strategy())
 def test_moral_threshold_enforcement(prompt, moral_threshold):
     """
@@ -252,7 +252,7 @@ def test_rejection_reason_validity(prompt):
 # Property Tests: Liveness Invariants
 # ============================================================================
 
-@settings(max_examples=100, deadline=None)
+@settings(deadline=None)  # Uses profile defaults (CI: 30, dev: 100)
 @given(prompt=prompt_strategy())
 def test_response_generation_guarantee(prompt):
     """

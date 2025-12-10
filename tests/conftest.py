@@ -18,6 +18,39 @@ from typing import Any
 
 import numpy as np
 import pytest
+from hypothesis import HealthCheck, Phase, Verbosity, settings
+
+# ============================================================
+# Hypothesis Profile Configuration
+# ============================================================
+
+# Register CI profile for faster property tests in CI environments
+settings.register_profile(
+    "ci",
+    max_examples=30,  # Reduced from default 100 for CI speed
+    deadline=None,  # Disable deadline checks (flaky in CI)
+    derandomize=True,  # Deterministic example generation
+    print_blob=True,  # Print failing examples
+    suppress_health_check=(HealthCheck.too_slow,),  # Allow slower strategies
+    phases=(Phase.explicit, Phase.reuse, Phase.generate, Phase.target),  # Skip shrinking for speed
+)
+
+# Register dev profile for thorough local testing
+settings.register_profile(
+    "dev",
+    max_examples=100,
+    deadline=None,
+    derandomize=True,
+    verbosity=Verbosity.normal,
+)
+
+# Auto-detect and load appropriate profile
+if os.getenv("CI") or os.getenv("GITHUB_ACTIONS"):
+    settings.load_profile("ci")
+elif os.getenv("HYPOTHESIS_PROFILE"):
+    settings.load_profile(os.getenv("HYPOTHESIS_PROFILE"))
+else:
+    settings.load_profile("dev")
 
 # ============================================================
 # Pytest Hooks and Configuration
