@@ -80,7 +80,7 @@ This document maps theoretical claims and documented metrics to their validation
 | Detection Thresholds | avg_len≥6, func≥0.15, frag≤0.5 | `tests/validation/test_aphasia_detection.py` | Configurable via constructor |
 | Corpus Size | 100 samples (50+50) | `tests/eval/aphasia_corpus.json` | Min 50 per class enforced |
 
-**Corpus Limitation**: The aphasia detection metrics (100% TPR, 80% TNR) are measured on a corpus of **100 samples** (50 telegraphic + 50 normal utterances). While this corpus is adequate for **validation of detection logic**, it is **limited for production-level claims**. A larger, more diverse corpus would be needed to verify performance across varied linguistic patterns, dialects, and severity levels. See `tests/eval/aphasia_corpus.json` for corpus details.
+**Corpus Limitation**: The aphasia detection metrics (100% TPR, 88% TNR) are measured on a corpus of **100 samples** (50 telegraphic + 50 normal utterances). While this corpus is adequate for **validation of detection logic**, it is **limited for production-level claims**. A larger, more diverse corpus would be needed to verify performance across varied linguistic patterns, dialects, and severity levels. See `tests/eval/aphasia_corpus.json` for corpus details.
 
 **Validation**: Run `python tests/eval/aphasia_eval_suite.py` to reproduce metrics. Tests in `tests/eval/test_aphasia_eval_suite.py` enforce minimum thresholds and prevent corpus degradation.
 
