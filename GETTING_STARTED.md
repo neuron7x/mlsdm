@@ -286,6 +286,55 @@ pip install sentence-transformers
 export DISABLE_RATE_LIMIT=1
 ```
 
+## Verifying Key Metrics
+
+Want to verify the documented effectiveness metrics? Here's how:
+
+### Memory Footprint (29.37 MB claim)
+
+```bash
+# Install numpy if not already installed
+pip install numpy
+
+# Run memory benchmark
+python benchmarks/measure_memory_footprint.py
+
+# Expected output: ~29.37 MB (within 10% margin)
+# Configuration: 20,000 vectors × 384 dimensions
+```
+
+### Effectiveness Metrics
+
+```bash
+# Install full dependencies
+pip install -e .
+
+# Moral filter effectiveness (93.3% toxic rejection)
+pytest tests/validation/test_moral_filter_effectiveness.py -v -s
+
+# Wake/sleep effectiveness (89.5% resource savings)
+pytest tests/validation/test_wake_sleep_effectiveness.py -v -s
+
+# Aphasia detection (100% TPR, 80% TNR on 100-sample corpus)
+pytest tests/eval/test_aphasia_eval_suite.py -v
+```
+
+### Full Test Suite
+
+```bash
+# Run all tests (requires full install)
+pytest tests/ --ignore=tests/load -v
+
+# Run with coverage measurement
+./coverage_gate.sh
+
+# Expected: 70.85% overall coverage, 1,587+ tests passing
+```
+
+See [CLAIMS_TRACEABILITY.md](CLAIMS_TRACEABILITY.md) for complete metric documentation.
+
+---
+
 ## Getting Help
 
 - **Issues**: [GitHub Issues](https://github.com/neuron7x/mlsdm/issues)

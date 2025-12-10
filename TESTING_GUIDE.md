@@ -3,7 +3,7 @@
 **Document Version:** 1.2.0  
 **Project Version:** 1.2.0  
 **Last Updated:** December 2025  
-**Test Coverage:** 90.26%
+**Test Coverage:** 70.85% (Overall) | 90%+ (Core Modules)
 
 ## Table of Contents
 
@@ -21,11 +21,11 @@
 
 ## Overview
 
-This guide provides comprehensive instructions for testing MLSDM Governed Cognitive Memory. The project maintains high test coverage (97.63%) and follows industry best practices for unit, integration, and validation testing.
+This guide provides comprehensive instructions for testing MLSDM Governed Cognitive Memory. The project maintains solid test coverage (70.85% overall, 90%+ for core modules) and follows industry best practices for unit, integration, and validation testing.
 
 ### Testing Philosophy
 
-1. **Comprehensive Coverage**: Maintain ≥90% code coverage
+1. **Pragmatic Coverage**: Maintain ≥68% overall coverage (enforced), 90%+ for core modules
 2. **Test Pyramid**: More unit tests, fewer integration tests
 3. **Fast Execution**: Unit tests < 1ms, integration tests < 1s
 4. **Reproducibility**: Deterministic tests with fixed seeds
@@ -35,11 +35,14 @@ This guide provides comprehensive instructions for testing MLSDM Governed Cognit
 
 | Category | Purpose | Location | Count | Execution Time |
 |----------|---------|----------|-------|----------------|
-| **Unit Tests** | Test individual components | `src/tests/unit/` | 150+ | <2s |
-| **Integration Tests** | Test component interactions | `tests/integration/` | 10+ | <5s |
-| **E2E Tests** | Test full prod-level scenarios | `tests/e2e/` | 28+ | <3s |
-| **Validation Tests** | Test effectiveness claims | `tests/validation/` | 8+ | <10s |
-| **Property Tests** | Test invariants with fuzzing | `src/tests/unit/test_property_based.py` | 20+ | <3s |
+| **Unit Tests** | Test individual components | `tests/unit/` | ~1,200 | <30s |
+| **State Tests** | Test state persistence | `tests/state/` | ~31 | <5s |
+| **Integration Tests** | Test component interactions | `tests/integration/` | ~50 | <10s |
+| **Validation Tests** | Test effectiveness claims | `tests/validation/` | ~4 | <10s |
+| **Property Tests** | Test invariants with Hypothesis | `tests/property/` | ~50 | <15s |
+| **Security Tests** | Test STRIDE controls | `tests/security/` | ~38 | <5s |
+| **E2E Tests** | Test full prod-level scenarios | `tests/e2e/` | ~28 | <10s |
+| **Load Tests** | Test throughput (requires server) | `tests/load/` | ~3 | N/A |
 
 ---
 
@@ -83,47 +86,89 @@ xdg-open htmlcov/index.html  # Linux
 
 ## Test Structure
 
+### Test Organization
+
+The MLSDM test suite is organized by scope and purpose to support different validation needs:
+
+| Directory | Scope | Test Count | Coverage Focus |
+|-----------|-------|------------|----------------|
+| `tests/unit/` | Unit tests for all modules | ~1,200 | All source modules |
+| `tests/state/` | State persistence unit tests | ~31 | State management |
+| `tests/integration/` | Component integration | ~50 | Module interactions |
+| `tests/validation/` | Effectiveness validation | ~4 | Key metrics |
+| `tests/eval/` | Evaluation suites | ~9 | Aphasia, Sapolsky |
+| `tests/property/` | Property-based tests | ~50 | Invariants |
+| `tests/security/` | Security tests | ~38 | STRIDE controls |
+| `tests/e2e/` | End-to-end scenarios | ~28 | Full workflows |
+| `tests/load/` | Load tests (Locust) | ~3 | Throughput |
+| **Total** | **Full Suite** | **~1,587** | **70.85% coverage** |
+
+### Test Scopes
+
+**Core Cognitive Modules Only** (used in CORE_IMPLEMENTATION_VALIDATION.md):
+```bash
+pytest tests/unit/test_cognitive_controller.py \
+       tests/unit/test_llm_wrapper.py \
+       tests/unit/test_*_memory.py \
+       tests/unit/test_moral_filter*.py \
+       tests/unit/test_cognitive_rhythm.py \
+       --co -q
+# Result: ~577 tests
+```
+
+**Full Coverage Suite** (used in coverage_gate.sh):
+```bash
+pytest tests/unit/ tests/state/ --cov=src/mlsdm
+# Result: 1,587 tests, 70.85% coverage
+```
+
+### Directory Structure
+
 ```
 tests/
-├── e2e/                 # End-to-end tests for prod-level scenarios
-│   ├── conftest.py            # E2E fixtures (e2e_config, e2e_app, e2e_http_client)
-│   ├── test_e2e_scenarios.py  # E2E prod scenarios (happy path, toxic rejection, aphasia, etc.)
-│   ├── test_end_to_end_core.py # Core happy path tests
-│   └── test_neuro_cognitive_engine_stub_backend.py  # Engine E2E tests
-├── integration/          # Integration tests for end-to-end workflows
+├── unit/                # Unit tests for individual modules (~1,200 tests)
+│   ├── test_cognitive_controller.py
+│   ├── test_llm_wrapper.py
+│   ├── test_*_memory.py
+│   ├── test_moral_filter*.py
+│   └── ... (all module tests)
+├── state/               # State persistence tests (~31 tests)
+│   └── test_system_state_integrity.py
+├── integration/         # Component integration tests (~50 tests)
 │   ├── test_end_to_end.py
 │   └── test_llm_wrapper_integration.py
-└── validation/          # Effectiveness validation tests
-    ├── test_moral_filter_effectiveness.py
-    └── test_wake_sleep_effectiveness.py
-
-src/tests/unit/          # Unit tests for individual components
-├── test_coherence_safety_metrics.py
-├── test_api.py
-├── test_cognitive_controller.py
-├── test_config_loader.py
-├── test_config_validator.py
-├── test_data_serializer.py
-├── test_llm_wrapper.py
-├── test_llm_wrapper_unit.py
-├── test_memory_manager.py
-├── test_moral_filter_v2.py
-├── test_performance.py
-├── test_property_based.py
-├── test_qilm_v2.py
-└── test_security.py
+├── validation/          # Effectiveness validation tests (~4 tests)
+│   ├── test_moral_filter_effectiveness.py
+│   └── test_wake_sleep_effectiveness.py
+├── eval/                # Evaluation suites (~9 tests)
+│   ├── test_aphasia_eval_suite.py
+│   └── test_sapolsky_suite.py
+├── property/            # Property-based tests (~50 tests)
+│   ├── test_pelm_phase_behavior.py
+│   └── test_invariants_memory.py
+├── security/            # Security tests (~38 tests)
+│   ├── test_guardrails_stride.py
+│   └── test_payload_scrubber.py
+├── e2e/                 # End-to-end tests (~28 tests)
+│   ├── test_e2e_scenarios.py
+│   └── test_neuro_cognitive_engine_stub_backend.py
+└── load/                # Load tests (~3 tests, requires server)
+    └── locust_load_test.py
 ```
 
 ## Coverage Requirements
 
-- **Minimum Coverage:** 90% (enforced by pyproject.toml)
-- **Current Coverage:** 97.63%
-- **Critical Modules:** 100% coverage required for:
-  - `src/mlsdm/core/cognitive_controller.py`
-  - `src/mlsdm/core/memory_manager.py`
-  - `src/mlsdm/cognition/moral_filter.py`
-  - `src/mlsdm/utils/coherence_safety_metrics.py`
-  - `src/mlsdm/utils/security_logger.py`
+- **Minimum Coverage Threshold:** 68% (enforced by coverage_gate.sh)
+- **Current Overall Coverage:** 70.85% (measured on tests/unit/ + tests/state/)
+- **Core Modules Coverage:** 90%+ (cognitive controller, memory, moral filter)
+- **Critical Modules:** Near 100% coverage achieved for:
+  - `src/mlsdm/core/cognitive_controller.py` (97.05%)
+  - `src/mlsdm/core/memory_manager.py` (100%)
+  - `src/mlsdm/cognition/moral_filter.py` (100%)
+  - `src/mlsdm/cognition/moral_filter_v2.py` (100%)
+  - `src/mlsdm/utils/coherence_safety_metrics.py` (99.56%)
+
+**Note**: Coverage measurement focuses on core modules. See [COVERAGE_REPORT_2025.md](COVERAGE_REPORT_2025.md) for detailed breakdown by module.
 
 ## Writing New Tests
 
