@@ -132,7 +132,7 @@ MLSDM wraps **any LLM** with a neurobiologically-grounded cognitive layer that p
 | **Moral Filter** | EMA-based adaptive threshold [0.30, 0.90] | 93.3% toxic rejection |
 | **PELM Memory** | Phase-entangled lattice with 20k vector capacity | 29.37 MB fixed |
 | **Wake/Sleep Cycles** | 8 wake + 3 sleep steps with memory consolidation | 89.5% resource savings |
-| **Aphasia Detection** | Broca-model for telegraphic speech detection | 100% TPR, 80% TNR* |
+| **Aphasia Detection** | Broca-model for telegraphic speech detection | 100% TPR, 80% TNR (on 50+50 sample corpus)* |
 | **Thread Safety** | Lock-based synchronization for concurrent requests | 1,000+ RPS verified |
 | **Observability** | Prometheus metrics + structured JSON logging | Full pipeline visibility |
 

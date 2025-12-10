@@ -35,7 +35,7 @@ This document maps theoretical claims and documented metrics to their validation
 | Claim | Value | Source Test/Benchmark | Notes |
 |-------|-------|----------------------|-------|
 | Toxic Content Rejection Rate | 93.3% | `tests/validation/test_moral_filter_effectiveness.py::test_moral_filter_toxic_rejection` | Reproducible with seed=42 |
-| Comprehensive Toxic Rejection | 97.8% | `tests/validation/test_moral_filter_effectiveness.py::test_comprehensive_safety_metrics` | Aggregated safety metrics |
+| Comprehensive Safety Score | 97.8% | `tests/validation/test_moral_filter_effectiveness.py::test_comprehensive_safety_metrics` | Overall safety score = (toxic_rejection_rate + (1 - moral_drift) + threshold_convergence + (1 - false_positive_rate)) / 4 |
 | False Positive Rate | 37.5% | `tests/validation/test_moral_filter_effectiveness.py::test_moral_filter_false_positive_rate` | Acceptable trade-off for safety |
 | Bounded Drift Under Attack | 0.33 | `tests/validation/test_moral_filter_effectiveness.py::test_moral_drift_stability` | 70% toxic bombardment test |
 | Threshold Range | [0.30, 0.90] | `tests/unit/test_moral_filter.py` | Formal invariant, property-tested |
@@ -78,6 +78,8 @@ This document maps theoretical claims and documented metrics to their validation
 | Mean Severity | 0.885 | `tests/eval/aphasia_eval_suite.py` | Average severity for telegraphic |
 | Detection Thresholds | avg_len≥6, func≥0.15, frag≤0.5 | `tests/validation/test_aphasia_detection.py` | Configurable via constructor |
 | Corpus Size | 100 samples (50+50) | `tests/eval/aphasia_corpus.json` | Min 50 per class enforced |
+
+**Corpus Limitation**: The aphasia detection metrics (100% TPR, 80% TNR) are measured on a corpus of **100 samples** (50 telegraphic + 50 normal utterances). While this corpus is adequate for **validation of detection logic**, it is **limited for production-level claims**. A larger, more diverse corpus would be needed to verify performance across varied linguistic patterns, dialects, and severity levels. See `tests/eval/aphasia_corpus.json` for corpus details.
 
 **Validation**: Run `python tests/eval/aphasia_eval_suite.py` to reproduce metrics. Tests in `tests/eval/test_aphasia_eval_suite.py` enforce minimum thresholds and prevent corpus degradation.
 

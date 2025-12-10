@@ -84,6 +84,72 @@ open htmlcov/index.html  # macOS
 xdg-open htmlcov/index.html  # Linux
 ```
 
+## Verifying Key Metrics
+
+This section provides commands to reproduce and verify the documented metrics and claims.
+
+### Memory Footprint (29.37 MB claim)
+
+```bash
+# Install dependencies (if not already installed)
+pip install numpy
+
+# Run benchmark
+python benchmarks/measure_memory_footprint.py
+
+# Expected output: ~29.37 MB (within 10% margin)
+# Measures PELM with 20,000 vectors at 384 dimensions
+```
+
+**Note**: Memory footprint is for Phase-Entangled Lattice Memory (PELM) with production configuration (dimension=384, capacity=20,000). Actual memory may vary by ±10% depending on Python version and system overhead.
+
+### Moral Filter Effectiveness (93.3% toxic rejection)
+
+```bash
+# Install full dependencies
+pip install -e .
+
+# Run moral filter effectiveness test
+pytest tests/validation/test_moral_filter_effectiveness.py::test_moral_filter_toxic_rejection -v -s
+
+# Expected: 93.3% toxic content rejection rate (with seed=42)
+```
+
+**Note**: This metric is reproducible with fixed random seed (42) on a simulated distribution of toxic vs. safe content.
+
+### Wake/Sleep Effectiveness (89.5% resource savings)
+
+```bash
+# Run wake/sleep effectiveness test
+pytest tests/validation/test_wake_sleep_effectiveness.py::test_wake_sleep_resource_efficiency -v -s
+
+# Expected: 89.5% reduction in processing load during sleep phase
+```
+
+**Note**: Measures reduction in vector storage operations during sleep phase compared to wake phase.
+
+### Aphasia Detection (100% TPR, 80% TNR)
+
+```bash
+# Run aphasia detection evaluation
+pytest tests/eval/test_aphasia_eval_suite.py -v
+
+# Expected: 100% True Positive Rate (TPR), 80% True Negative Rate (TNR)
+```
+
+**Important Limitation**: These metrics are based on an evaluation corpus of **100 samples** (50 telegraphic + 50 normal utterances). See `tests/eval/aphasia_corpus.json`. While adequate for validation, this corpus is limited for production-level claims. Larger-scale evaluation may show different performance characteristics.
+
+### Comprehensive Safety Metrics (97.8%)
+
+```bash
+# Run comprehensive safety test
+pytest tests/validation/test_moral_filter_effectiveness.py::test_comprehensive_safety_metrics -v -s
+
+# Expected: 97.8% aggregated safety score
+```
+
+**Note**: This metric aggregates multiple safety dimensions. See P2-5 in this guide for the exact calculation formula.
+
 ## Test Structure
 
 ### Test Organization
