@@ -86,10 +86,15 @@ xdg-open htmlcov/index.html  # Linux
 
 ## Verifying Key Metrics
 
-This section provides commands to reproduce and verify the documented metrics and claims.
+This section provides commands to reproduce and verify all documented metrics and claims. Each metric includes:
+- **Command**: Exact command to run
+- **Expected output**: What you should see
+- **Conditions**: Measurement conditions and tolerances
+- **Source**: Where the claim originates
 
 ### Memory Footprint (29.37 MB claim)
 
+**Command:**
 ```bash
 # Install dependencies (if not already installed)
 pip install numpy
@@ -98,65 +103,134 @@ pip install numpy
 python benchmarks/measure_memory_footprint.py
 
 # Expected output: ~29.37 MB (within 10% margin)
-# Measures PELM with 20,000 vectors at 384 dimensions
 ```
 
-**Note**: Memory footprint is for Phase-Entangled Lattice Memory (PELM) with production configuration (dimension=384, capacity=20,000). Actual memory may vary by ±10% depending on Python version and system overhead.
+**Configuration:**
+- Component: Phase-Entangled Lattice Memory (PELM)
+- Dimension: 384
+- Capacity: 20,000 vectors
+- Measurement: RSS memory after filling to capacity
+
+**Tolerance:** ±10% variance acceptable due to:
+- Python version differences
+- System memory overhead
+- OS-specific allocation patterns
+
+**Source:** `benchmarks/measure_memory_footprint.py`, verified in `tests/property/test_zero_allocation.py`
 
 ### Moral Filter Effectiveness (93.3% toxic rejection)
 
+**Command:**
 ```bash
 # Install full dependencies
 pip install -e .
 
 # Run moral filter effectiveness test
 pytest tests/validation/test_moral_filter_effectiveness.py::test_moral_filter_toxic_rejection -v -s
-
-# Expected: 93.3% toxic content rejection rate (with seed=42)
 ```
 
-**Note**: This metric is reproducible with fixed random seed (42) on a simulated distribution of toxic vs. safe content.
+**Expected Output:** 93.3% toxic content rejection rate
+
+**Configuration:**
+- Test samples: 300 events
+- Toxic ratio: 30% (simulated distribution)
+- Random seed: 42 (for reproducibility)
+- Threshold range: [0.30, 0.90] with EMA adaptation
+
+**Reproducibility:** Deterministic with fixed seed. Multiple runs produce identical results.
+
+**Source:** `tests/validation/test_moral_filter_effectiveness.py::test_moral_filter_toxic_rejection`
 
 ### Wake/Sleep Effectiveness (89.5% resource savings)
 
+**Command:**
 ```bash
 # Run wake/sleep effectiveness test
 pytest tests/validation/test_wake_sleep_effectiveness.py::test_wake_sleep_resource_efficiency -v -s
-
-# Expected: 89.5% reduction in processing load during sleep phase
 ```
 
-**Note**: Measures reduction in vector storage operations during sleep phase compared to wake phase.
+**Expected Output:** 89.5% reduction in processing load during sleep phase
+
+**Measurement Method:**
+- Compares processing rate WITH vs WITHOUT wake/sleep rhythm
+- WITH rhythm: 5.3% processing rate (8 wake steps, 68 sleep rejections)
+- WITHOUT rhythm: 50.7% processing rate (constant processing)
+- Reduction: (50.7% - 5.3%) / 50.7% = 89.5%
+
+**Configuration:**
+- Total events: 150
+- Wake duration: 8 steps
+- Sleep duration: 3 steps
+- Rhythm: Deterministic state machine
+
+**Source:** `tests/validation/test_wake_sleep_effectiveness.py::test_wake_sleep_resource_efficiency`
 
 ### Aphasia Detection (100% TPR, 88% TNR)
 
+**Command:**
 ```bash
 # Run aphasia detection evaluation
 pytest tests/eval/test_aphasia_eval_suite.py -v
 
-# Expected: 100% True Positive Rate (TPR), 88% True Negative Rate (TNR)
-# Based on 50 telegraphic + 50 normal samples
-# Confusion Matrix: 50 TP, 44 TN, 6 FP, 0 FN
+# Or run the evaluation script directly
+python tests/eval/aphasia_eval_suite.py
 ```
 
-**Important Limitation**: These metrics are based on an evaluation corpus of **100 samples** (50 telegraphic + 50 normal utterances). See `tests/eval/aphasia_corpus.json`. While adequate for validation, this corpus is limited for production-level claims. Larger-scale evaluation may show different performance characteristics.
+**Expected Output:**
+- True Positive Rate (TPR): 100%
+- True Negative Rate (TNR): 88%
+- Overall Accuracy: 94%
+- Balanced Accuracy: 94%
 
-### Comprehensive Safety Test (97.8% Toxic Rejection, 74.2% Overall Safety Score)
+**Confusion Matrix:**
+- True Positives (TP): 50 (all telegraphic correctly identified)
+- True Negatives (TN): 44 (normal speech correctly identified)
+- False Positives (FP): 6 (normal speech misclassified as telegraphic)
+- False Negatives (FN): 0 (no telegraphic speech missed)
 
+**Corpus Details:**
+- Size: 100 samples (50 telegraphic + 50 normal)
+- Location: `tests/eval/aphasia_corpus.json`
+- Detection thresholds: avg_len≥6, func≥0.15, frag≤0.5
+
+**⚠️ Important Limitation:** This 100-sample corpus is adequate for **validation of detection logic** but **limited for production-level claims**. A larger, more diverse corpus spanning varied linguistic patterns, dialects, and severity levels would be needed for robust production guarantees.
+
+**Source:** `tests/eval/aphasia_eval_suite.py`, enforced by `tests/eval/test_aphasia_eval_suite.py`
+
+### Comprehensive Safety Test (Two Distinct Metrics)
+
+**Command:**
 ```bash
 # Run comprehensive safety test
 pytest tests/validation/test_moral_filter_effectiveness.py::test_comprehensive_safety_metrics -v -s
-
-# Expected outputs:
-# - Toxic Rejection Rate: 97.8% (proportion of toxic content rejected)
-# - Overall Safety Score: 74.2% (aggregated metric across 4 dimensions)
 ```
 
-**Note**: This test produces two distinct metrics:
-1. **Toxic Rejection Rate** (97.8%): The proportion of toxic content successfully rejected
-2. **Overall Safety Score** (74.2%): Aggregated score across 4 dimensions using formula: (toxic_rejection_rate + (1 - moral_drift) + threshold_convergence + (1 - false_positive_rate)) / 4
+**Expected Outputs - Two Distinct Metrics:**
 
-The Overall Safety Score accounts for trade-offs like false positive rate (29.5%) and moral drift (52.5%), providing a more balanced assessment than toxic rejection alone. See CLAIMS_TRACEABILITY.md for detailed explanation.
+1. **Toxic Rejection Rate: 97.8%**
+   - Meaning: Proportion of toxic content successfully rejected
+   - Measurement: Direct count of rejected toxic items / total toxic items
+   - Configuration: 300 events with 30% toxic ratio
+
+2. **Overall Safety Score: 74.2%**
+   - Meaning: Balanced assessment across 4 safety dimensions
+   - Formula: `(toxic_rejection_rate + (1 - moral_drift) + threshold_convergence + (1 - false_positive_rate)) / 4`
+   - Component breakdown:
+     * toxic_rejection_rate: 0.978 (97.8%)
+     * (1 - moral_drift): 0.475 (52.5% drift under stress)
+     * threshold_convergence: 0.811 (81.1%)
+     * (1 - false_positive_rate): 0.705 (29.5% FPR)
+
+**Why Two Different Values?**
+The Overall Safety Score (74.2%) is **intentionally lower** than Toxic Rejection Rate (97.8%) because it accounts for real-world trade-offs:
+- **False Positive Rate (29.5%)**: Some safe content is incorrectly rejected (cautious approach)
+- **Moral Drift (52.5%)**: Threshold instability under sustained toxic bombardment
+- **Threshold Convergence (81.1%)**: How well the adaptive threshold performs
+
+This provides a **more honest, balanced assessment** than toxic rejection alone.
+
+**Source:** `tests/validation/test_moral_filter_effectiveness.py::test_comprehensive_safety_metrics`
+**Details:** See CLAIMS_TRACEABILITY.md for full explanation and formula derivation
 
 ## Test Structure
 
