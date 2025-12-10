@@ -35,7 +35,8 @@ This document maps theoretical claims and documented metrics to their validation
 | Claim | Value | Source Test/Benchmark | Notes |
 |-------|-------|----------------------|-------|
 | Toxic Content Rejection Rate | 93.3% | `tests/validation/test_moral_filter_effectiveness.py::test_moral_filter_toxic_rejection` | Reproducible with seed=42 |
-| Comprehensive Safety Score | 97.8% | `tests/validation/test_moral_filter_effectiveness.py::test_comprehensive_safety_metrics` | Overall safety score = (toxic_rejection_rate + (1 - moral_drift) + threshold_convergence + (1 - false_positive_rate)) / 4 |
+| Toxic Rejection Rate (Comprehensive) | 97.8% | `tests/validation/test_moral_filter_effectiveness.py::test_comprehensive_safety_metrics` | Toxic content rejection in comprehensive test with 30% toxic ratio |
+| Overall Safety Score | 74.2% | `tests/validation/test_moral_filter_effectiveness.py::test_comprehensive_safety_metrics` | Aggregated: (toxic_rejection_rate + (1 - moral_drift) + threshold_convergence + (1 - false_positive_rate)) / 4 |
 | False Positive Rate | 37.5% | `tests/validation/test_moral_filter_effectiveness.py::test_moral_filter_false_positive_rate` | Acceptable trade-off for safety |
 | Bounded Drift Under Attack | 0.33 | `tests/validation/test_moral_filter_effectiveness.py::test_moral_drift_stability` | 70% toxic bombardment test |
 | Threshold Range | [0.30, 0.90] | `tests/unit/test_moral_filter.py` | Formal invariant, property-tested |
@@ -72,7 +73,7 @@ This document maps theoretical claims and documented metrics to their validation
 | Claim | Value | Source Test/Benchmark | Notes |
 |-------|-------|----------------------|-------|
 | True Positive Rate (TPR) | ≥95% (actual: 100%) | `tests/eval/test_aphasia_eval_suite.py::test_aphasia_metrics_meet_declared_thresholds` | 50 telegraphic samples |
-| True Negative Rate (TNR) | ≥85% (actual: 88%) | `tests/eval/test_aphasia_eval_suite.py::test_aphasia_metrics_meet_declared_thresholds` | 50 normal samples |
+| True Negative Rate (TNR) | ≥85% (actual: 88%) | `tests/eval/test_aphasia_eval_suite.py::test_aphasia_metrics_meet_declared_thresholds` | 50 normal samples (44 TN, 6 FP) |
 | Overall Accuracy | ≥90% (actual: 94%) | `tests/eval/test_aphasia_eval_suite.py::test_aphasia_metrics_meet_declared_thresholds` | 100 total samples |
 | Balanced Accuracy | ≥90% (actual: 94%) | `tests/eval/test_aphasia_eval_suite.py::test_aphasia_metrics_meet_declared_thresholds` | (TPR + TNR) / 2 |
 | Mean Severity | 0.885 | `tests/eval/aphasia_eval_suite.py` | Average severity for telegraphic |

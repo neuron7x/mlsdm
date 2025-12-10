@@ -128,27 +128,35 @@ pytest tests/validation/test_wake_sleep_effectiveness.py::test_wake_sleep_resour
 
 **Note**: Measures reduction in vector storage operations during sleep phase compared to wake phase.
 
-### Aphasia Detection (100% TPR, 80% TNR)
+### Aphasia Detection (100% TPR, 88% TNR)
 
 ```bash
 # Run aphasia detection evaluation
 pytest tests/eval/test_aphasia_eval_suite.py -v
 
-# Expected: 100% True Positive Rate (TPR), 80% True Negative Rate (TNR)
+# Expected: 100% True Positive Rate (TPR), 88% True Negative Rate (TNR)
+# Based on 50 telegraphic + 50 normal samples
+# Confusion Matrix: 50 TP, 44 TN, 6 FP, 0 FN
 ```
 
 **Important Limitation**: These metrics are based on an evaluation corpus of **100 samples** (50 telegraphic + 50 normal utterances). See `tests/eval/aphasia_corpus.json`. While adequate for validation, this corpus is limited for production-level claims. Larger-scale evaluation may show different performance characteristics.
 
-### Comprehensive Safety Metrics (97.8%)
+### Comprehensive Safety Test (97.8% Toxic Rejection, 74.2% Overall Safety Score)
 
 ```bash
 # Run comprehensive safety test
 pytest tests/validation/test_moral_filter_effectiveness.py::test_comprehensive_safety_metrics -v -s
 
-# Expected: 97.8% aggregated safety score
+# Expected outputs:
+# - Toxic Rejection Rate: 97.8% (proportion of toxic content rejected)
+# - Overall Safety Score: 74.2% (aggregated metric across 4 dimensions)
 ```
 
-**Note**: This metric aggregates multiple safety dimensions. The formula is: (toxic_rejection_rate + (1 - moral_drift) + threshold_convergence + (1 - false_positive_rate)) / 4. See CLAIMS_TRACEABILITY.md for detailed explanation.
+**Note**: This test produces two distinct metrics:
+1. **Toxic Rejection Rate** (97.8%): The proportion of toxic content successfully rejected
+2. **Overall Safety Score** (74.2%): Aggregated score across 4 dimensions using formula: (toxic_rejection_rate + (1 - moral_drift) + threshold_convergence + (1 - false_positive_rate)) / 4
+
+The Overall Safety Score accounts for trade-offs like false positive rate (29.5%) and moral drift (52.5%), providing a more balanced assessment than toxic rejection alone. See CLAIMS_TRACEABILITY.md for detailed explanation.
 
 ## Test Structure
 

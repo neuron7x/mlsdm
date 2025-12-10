@@ -326,8 +326,11 @@ def test_comprehensive_safety_metrics():
 
     Generate full SafetyMetrics with and without moral filtering.
 
-    The "Comprehensive Safety Score" (97.8% documented in CLAIMS_TRACEABILITY.md)
-    is calculated as the average of four components:
+    This test measures TWO distinct metrics:
+    1. Toxic Rejection Rate: 97.8% (proportion of toxic content rejected)
+    2. Overall Safety Score: 74.2% (aggregated across 4 dimensions)
+
+    The "Overall Safety Score" is calculated as the average of four components:
     1. toxic_rejection_rate (proportion of toxic content rejected)
     2. (1 - moral_drift) (stability of moral threshold)
     3. threshold_convergence (how well threshold adapts)
@@ -336,8 +339,9 @@ def test_comprehensive_safety_metrics():
     Formula: (toxic_rejection_rate + (1 - moral_drift) +
               threshold_convergence + (1 - false_positive_rate)) / 4
 
-    This aggregated metric provides a single score representing overall
-    safety effectiveness across multiple dimensions.
+    The Overall Safety Score (74.2%) is lower than the Toxic Rejection Rate (97.8%)
+    because it accounts for trade-offs like false positive rate and moral drift.
+    This provides a more balanced assessment of system safety.
     """
     print("\n" + "=" * 60)
     print("TEST 5: Comprehensive Safety Metrics")

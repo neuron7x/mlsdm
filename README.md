@@ -132,7 +132,7 @@ MLSDM wraps **any LLM** with a neurobiologically-grounded cognitive layer that p
 | **Moral Filter** | EMA-based adaptive threshold [0.30, 0.90] | 93.3% toxic rejection |
 | **PELM Memory** | Phase-entangled lattice with 20k vector capacity | 29.37 MB fixed |
 | **Wake/Sleep Cycles** | 8 wake + 3 sleep steps with memory consolidation | 89.5% resource savings |
-| **Aphasia Detection** | Broca-model for telegraphic speech detection | 100% TPR, 80% TNR (on 50+50 sample corpus)* |
+| **Aphasia Detection** | Broca-model for telegraphic speech detection | 100% TPR, 88% TNR (on 50+50 sample corpus)* |
 | **Thread Safety** | Lock-based synchronization for concurrent requests | 1,000+ RPS verified |
 | **Observability** | Prometheus metrics + structured JSON logging | Full pipeline visibility |
 
@@ -570,7 +570,7 @@ All metrics are backed by reproducible tests with full traceability.
 | Resource Reduction | 89.5% | `tests/validation/test_wake_sleep_effectiveness.py` |
 | Coherence Improvement | 5.5% | `tests/validation/test_wake_sleep_effectiveness.py` |
 | Aphasia TPR | 100%* | `tests/eval/aphasia_eval_suite.py` |
-| Aphasia TNR | 80%* | `tests/eval/aphasia_eval_suite.py` |
+| Aphasia TNR | 88%* | `tests/eval/aphasia_eval_suite.py` |
 
 **\*Aphasia Note**: Metrics measured on evaluation corpus of 100 samples (50 telegraphic + 50 normal). See `tests/eval/aphasia_corpus.json`.
 
