@@ -113,6 +113,47 @@ jobs:
         run: |
           pytest -q --ignore=tests/load
   
+  coverage:
+    name: Code Coverage Gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      DISABLE_RATE_LIMIT: "1"
+      LLM_BACKEND: "local_stub"
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: |
+            requirements.txt
+            pyproject.toml
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -e ".[test]"
+      
+      - name: Run tests with coverage
+        run: |
+          # WHY: Generate coverage report for src/mlsdm with 90% threshold (from pyproject.toml)
+          pytest --cov=src/mlsdm --cov-report=xml --cov-report=term-missing \
+            --cov-fail-under=90 --ignore=tests/load -v
+      
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage.xml
+          retention-days: 90
+  
   e2e-tests:
     name: End-to-End Tests
     runs-on: ubuntu-latest
@@ -368,11 +409,12 @@ jobs:
           retention-days: 90
   
   # Gate job that requires all critical CI jobs to pass
+  # WHY: neuro-engine-eval is not included as it has continue-on-error: true
   all-ci-passed:
     name: All CI Checks Passed
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    needs: [lint, security, test, e2e-tests, effectiveness-validation, benchmarks]
+    needs: [lint, security, test, coverage, e2e-tests, effectiveness-validation, benchmarks]
     steps:
       - name: All checks passed
         run: echo "All CI checks passed successfully!"
