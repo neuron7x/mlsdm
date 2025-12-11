@@ -73,6 +73,7 @@ jobs:
       - name: Run pip-audit for vulnerability scanning
         run: |
           # WHY: Audit only requirements.txt dependencies to avoid false positives from system packages
+          # Note: --format=json can be added for structured output if needed by reporting tools
           pip-audit --requirement requirements.txt --progress-spinner=off
       
       - name: Report status
@@ -409,7 +410,7 @@ jobs:
           retention-days: 90
   
   # Gate job that requires all critical CI jobs to pass
-  # WHY: neuro-engine-eval is not included as it has continue-on-error: true
+  # WHY: neuro-engine-eval is excluded because it has continue-on-error: true (non-blocking)
   all-ci-passed:
     name: All CI Checks Passed
     runs-on: ubuntu-latest

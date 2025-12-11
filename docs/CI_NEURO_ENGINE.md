@@ -16,7 +16,9 @@ The Neuro Cognitive Engine CI pipeline is the primary quality gate for MLSDM. It
 ### Trigger Conditions
 - **Push**: To `main` and `feature/*` branches
 - **Pull Request**: To `main` and `feature/*` branches
-- **Estimated Duration**: 15-20 minutes (with cache hits: 8-12 minutes)
+- **Estimated Duration**: 
+  - With cache hits (typical): 8-12 minutes
+  - Cold cache (first run or cache miss): 15-20 minutes
 
 ## CI Jobs
 
@@ -244,8 +246,9 @@ DISABLE_RATE_LIMIT=1 LLM_BACKEND=local_stub \
 - ✅ OK: P95 < 400ms
 
 **Timestamp Fix** ⚡ Q4 2025:
-- Changed from shell `$(date -u +%Y-%m-%dT%H:%M:%SZ)` (not executed)
+- Changed from shell `$(date -u +%Y-%m-%dT%H:%M:%SZ)` (treated as literal string, not executed)
 - To Python `datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")`
+- Shell command in Python string was never executed; now using proper Python datetime
 - Ensures accurate benchmark timestamps
 
 **Artifacts**:
