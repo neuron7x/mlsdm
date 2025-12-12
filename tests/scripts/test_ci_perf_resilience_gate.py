@@ -81,6 +81,18 @@ class TestPRAnalyzer:
         assert changes[0].change_class == ChangeClass.DOC_ONLY
         assert changes[1].change_class == ChangeClass.CORE_CRITICAL
 
+    def test_classify_scripts_directory(self):
+        """Test classification of scripts directory as critical."""
+        change = self.analyzer.classify_file("scripts/run_effectiveness_suite.py", "")
+        assert change.change_class == ChangeClass.CORE_CRITICAL
+        assert "critical path" in change.reason.lower()
+
+    def test_classify_benchmarks_directory(self):
+        """Test classification of benchmarks directory as critical."""
+        change = self.analyzer.classify_file("benchmarks/test_neuro_engine_performance.py", "")
+        assert change.change_class == ChangeClass.CORE_CRITICAL
+        assert "critical path" in change.reason.lower()
+
 
 class TestCIInspector:
     """Test CI inspector functionality."""
@@ -318,6 +330,35 @@ class TestMergeVerdictor:
         assert verdict == "DO_NOT_MERGE_YET"
         assert len(actions) > 0
         assert any("comprehensive" in r.lower() for r in reasons)
+
+    def test_verdict_red_perf_failure(self):
+        """Test do not merge for red mode with perf/resilience failures."""
+        job_results = [
+            JobResult("Lint and Type Check", JobStatus.SUCCESS, "Passed"),
+            JobResult(
+                "Performance & Resilience Validation / Fast Resilience Tests",
+                JobStatus.FAILURE,
+                "Failed | Test timeout exceeded",
+            ),
+            JobResult(
+                "Performance & Resilience Validation / Performance & SLO Validation",
+                JobStatus.SUCCESS,
+                "Passed",
+            ),
+            JobResult(
+                "Performance & Resilience Validation / Comprehensive Resilience Tests",
+                JobStatus.FAILURE,
+                "Failed | Memory leak detected",
+            ),
+        ]
+        verdict, actions, reasons = self.verdictor.determine_verdict(
+            RiskMode.RED_HIGH_RISK_OR_RELEASE, job_results
+        )
+        assert verdict == "DO_NOT_MERGE_YET"
+        assert len(actions) >= 2
+        assert any("Fast Resilience" in action for action in actions)
+        assert any("Comprehensive" in action for action in actions)
+        assert any("failed" in r.lower() for r in reasons)
 
 
 class TestCIPerfResilienceGate:

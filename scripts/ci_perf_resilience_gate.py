@@ -101,6 +101,8 @@ class PRAnalyzer:
         "src/mlsdm/clients",
         "src/mlsdm/cache",
         "src/mlsdm/scheduler",
+        "scripts/",  # CLI tools that affect runtime behavior
+        "benchmarks/",  # Performance tests that define SLOs
         "config/",
         ".github/workflows/",
     ]
@@ -766,7 +768,11 @@ def main() -> None:
     args = parser.parse_args()
 
     # Determine owner, repo, and PR number
-    if args.pr_url:
+    if args.pr_url and (args.pr_number or args.repo):
+        print("❌ Error: Cannot specify both --pr-url and --pr-number/--repo")
+        print("   Use either --pr-url OR --pr-number with --repo, not both")
+        sys.exit(1)
+    elif args.pr_url:
         try:
             owner, repo, pr_number = parse_pr_url(args.pr_url)
         except ValueError as e:
