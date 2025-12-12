@@ -24,9 +24,10 @@ def test_main_api_invokes_uvicorn_run(monkeypatch) -> None:
     mock_run = MagicMock()
     monkeypatch.setattr(cli_main, "uvicorn", MagicMock(run=mock_run))
 
-    with patch.dict("sys.modules", _stub_app_module()):
-        with patch("sys.argv", ["mlsdm", "--api"]):
-            exit_code = cli_main.main()
+    with patch.dict("sys.modules", _stub_app_module()), patch(
+        "sys.argv", ["mlsdm", "--api"]
+    ):
+        exit_code = cli_main.main()
 
     assert exit_code == 0
     assert mock_run.called
@@ -41,8 +42,9 @@ def test_main_api_handles_missing_uvicorn(monkeypatch) -> None:
     cli_main = _load_cli_main_module()
     monkeypatch.setattr(cli_main, "uvicorn", None)
 
-    with patch.dict("sys.modules", _stub_app_module()):
-        with patch("sys.argv", ["mlsdm", "--api"]):
-            exit_code = cli_main.main()
+    with patch.dict("sys.modules", _stub_app_module()), patch(
+        "sys.argv", ["mlsdm", "--api"]
+    ):
+        exit_code = cli_main.main()
 
     assert exit_code == 1
