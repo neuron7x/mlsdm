@@ -107,14 +107,16 @@ dimension: 384
         config_file = tmp_path / "test_config.yaml"
         config_file.write_text("dimension: 384")
 
+        # Mock uvicorn.run to prevent actual server start
+        # uvicorn is imported inside main(), so patch it where it's imported
         with patch("sys.argv", ["mlsdm", "--config", str(config_file), "--api"]):
-            # Patch uvicorn at import time
             with patch("uvicorn.run") as mock_uvicorn_run:
                 main()
 
                 # Should call uvicorn.run with app
                 mock_uvicorn_run.assert_called_once()
                 call_args = mock_uvicorn_run.call_args
+                # Check positional and keyword arguments
                 assert call_args.kwargs["host"] == "0.0.0.0"
                 assert call_args.kwargs["port"] == 8000
 

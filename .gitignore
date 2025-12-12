@@ -5,6 +5,7 @@ __pycache__/
 .coverage
 coverage.json
 coverage.xml
+coverage-*.xml
 *.egg-info/
 dist/
 build/

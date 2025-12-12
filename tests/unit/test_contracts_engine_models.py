@@ -274,7 +274,7 @@ class TestEngineResult:
 
     def test_engine_result_is_success_property(self):
         """Test is_success property."""
-        # Success case
+        # Success case: no error, no rejection, has response
         result1 = EngineResult(response="text")
         assert result1.is_success is True
 
@@ -288,6 +288,14 @@ class TestEngineResult:
         # Failure with rejection
         result3 = EngineResult(response="", rejected_at="pre_flight")
         assert result3.is_success is False
+
+        # Failure with empty response (no error/rejection but no output)
+        result4 = EngineResult(response="")
+        assert result4.is_success is False
+
+        # Success requires all three conditions
+        result5 = EngineResult(response="valid output", error=None, rejected_at=None)
+        assert result5.is_success is True
 
     def test_engine_result_is_rejected_property(self):
         """Test is_rejected property."""

@@ -319,10 +319,15 @@ class EngineResult(BaseModel):
     def is_success(self) -> bool:
         """Check if the result represents a successful generation.
 
+        A result is considered successful if:
+        - No error occurred (error is None)
+        - Request was not rejected (rejected_at is None)
+        - Response is not empty (has generated text)
+
         Returns:
-            True if no error and response is not empty.
+            True if generation succeeded without errors or rejections and produced output.
         """
-        return self.error is None and self.rejected_at is None
+        return self.error is None and self.rejected_at is None and bool(self.response)
 
     @property
     def is_rejected(self) -> bool:
