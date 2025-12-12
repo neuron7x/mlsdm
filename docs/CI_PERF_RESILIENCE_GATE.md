@@ -179,15 +179,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      
+
       - name: Install dependencies
         run: pip install requests
-      
+
       - name: Run CI Gate
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -268,7 +268,7 @@ Changes containing these patterns are classified as critical:
 
 **Cause**: PR hasn't triggered any workflows yet, or workflows haven't completed.
 
-**Solution**: 
+**Solution**:
 - Push a new commit to trigger workflows
 - Wait for workflows to complete
 - Check that workflows are configured to run on PRs
@@ -330,6 +330,6 @@ To modify, edit the `RiskClassifier.classify()` method.
 
 ---
 
-**Last Updated**: December 2025  
-**Version**: 1.0.0  
+**Last Updated**: December 2025
+**Version**: 1.0.0
 **Maintainer**: neuron7x

@@ -183,9 +183,7 @@ async def run_async_load_test(
         # Limit concurrent tasks
         if len(tasks) >= concurrency:
             done, pending = await asyncio.wait(
-                tasks,
-                return_when=asyncio.FIRST_COMPLETED,
-                timeout=timeout_per_request
+                tasks, return_when=asyncio.FIRST_COMPLETED, timeout=timeout_per_request
             )
             tasks = list(pending)
 
@@ -234,6 +232,7 @@ def create_stub_llm_provider() -> Callable[[str], str]:
 
     Returns a callable that simulates LLM generation with predictable latency.
     """
+
     def stub_generate(prompt: str) -> str:
         """Stub LLM generation with minimal, predictable latency."""
         # Simulate minimal processing time (< 1ms)

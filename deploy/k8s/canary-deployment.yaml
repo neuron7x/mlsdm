@@ -2,7 +2,7 @@
 # Canary Deployment for MLSDM Neuro-Cognitive Engine
 # ====================================================
 # This manifest provides canary deployment capability for gradual rollouts.
-# 
+#
 # Canary deployments allow testing new versions with a small percentage
 # of traffic before full rollout.
 #
@@ -68,18 +68,18 @@ metadata:
     track: canary
 spec:
   replicas: 1  # Start with 1 replica for canary
-  
+
   strategy:
     type: RollingUpdate
     rollingUpdate:
       maxSurge: 1
       maxUnavailable: 0
-  
+
   selector:
     matchLabels:
       app: mlsdm-api
       track: canary
-  
+
   template:
     metadata:
       labels:
@@ -92,7 +92,7 @@ spec:
         prometheus.io/path: "/health/metrics"
         # Add canary label for metrics
         mlsdm.io/deployment-track: "canary"
-    
+
     spec:
       securityContext:
         runAsNonRoot: true
@@ -100,13 +100,13 @@ spec:
         fsGroup: 1000
         seccompProfile:
           type: RuntimeDefault
-      
+
       containers:
       - name: mlsdm-api
         # Image tag should be updated to the new version being tested
         image: ghcr.io/neuron7x/mlsdm-neuro-engine:canary
         imagePullPolicy: Always
-        
+
         securityContext:
           allowPrivilegeEscalation: false
           readOnlyRootFilesystem: true
@@ -115,12 +115,12 @@ spec:
           capabilities:
             drop:
             - ALL
-        
+
         ports:
         - name: http
           containerPort: 8000
           protocol: TCP
-        
+
         env:
         - name: CONFIG_PATH
           value: "/etc/mlsdm/config.yaml"
@@ -130,7 +130,7 @@ spec:
           value: "true"
         - name: PYTHONUNBUFFERED
           value: "1"
-        
+
         resources:
           requests:
             memory: "512Mi"
@@ -138,7 +138,7 @@ spec:
           limits:
             memory: "2Gi"
             cpu: "1000m"
-        
+
         livenessProbe:
           httpGet:
             path: /health/live
@@ -147,7 +147,7 @@ spec:
           periodSeconds: 20
           timeoutSeconds: 5
           failureThreshold: 3
-        
+
         readinessProbe:
           httpGet:
             path: /health/ready
@@ -156,21 +156,21 @@ spec:
           periodSeconds: 10
           timeoutSeconds: 3
           failureThreshold: 3
-        
+
         volumeMounts:
         - name: config
           mountPath: /etc/mlsdm
           readOnly: true
         - name: tmp
           mountPath: /tmp
-      
+
       volumes:
       - name: config
         configMap:
           name: mlsdm-canary-config
       - name: tmp
         emptyDir: {}
-      
+
       terminationGracePeriodSeconds: 30
 
 ---

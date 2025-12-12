@@ -22,14 +22,12 @@ from mlsdm.extensions import NeuroLangWrapper
 
 
 def parse_args(argv=None):
-    parser = argparse.ArgumentParser(
-        description="Smoke test for NeuroLangWrapper"
-    )
+    parser = argparse.ArgumentParser(description="Smoke test for NeuroLangWrapper")
     parser.add_argument(
         "--prompt",
         type=str,
         default="Quick smoke test for NeuroLangWrapper.",
-        help="Prompt to test with (default: 'Quick smoke test for NeuroLangWrapper.')"
+        help="Prompt to test with (default: 'Quick smoke test for NeuroLangWrapper.')",
     )
     return parser.parse_args(argv)
 

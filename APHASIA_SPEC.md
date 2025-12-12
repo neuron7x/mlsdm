@@ -1,7 +1,7 @@
 # Aphasia-Broca Model Specification
 
-**Version:** 1.3.0  
-**Status:** Implemented  
+**Version:** 1.3.0
+**Status:** Implemented
 **Last Updated:** November 23, 2025
 
 > **Implementation Note:** As of v1.2.0, the Aphasia-Broca detection and repair functionality is now implemented as a pluggable **Speech Governor** (`AphasiaSpeechGovernor`) that integrates with the universal Speech Governance framework in `LLMWrapper`. As of v1.3.0, the system uses `PipelineSpeechGovernor` for composable, deterministic governance pipelines with failure isolation. See the [Speech Governance](#speech-governance-integration) section for details.
@@ -137,7 +137,7 @@ text: str  # LLM-generated response text
 
 2. **Function Word Analysis**
    ```python
-   function_words = {'the', 'is', 'are', 'and', 'or', 'but', 'if', 
+   function_words = {'the', 'is', 'are', 'and', 'or', 'but', 'if',
                      'to', 'of', 'in', 'on', 'at', 'for', 'with', ...}
    total_words = count_words(text)
    func_word_count = count_function_words(text, function_words)
@@ -172,15 +172,15 @@ def calculate_severity(avg_sent_len, func_ratio, frag_ratio):
     delta_len = max(0, MIN_SENTENCE_LENGTH - avg_sent_len)
     delta_func = max(0, MIN_FUNCTION_RATIO - func_ratio)
     delta_frag = max(0, frag_ratio - MAX_FRAGMENT_RATIO)
-    
+
     # Normalized contributions
     contrib_len = delta_len / MIN_SENTENCE_LENGTH
     contrib_func = delta_func / MIN_FUNCTION_RATIO
     contrib_frag = delta_frag / MAX_FRAGMENT_RATIO
-    
+
     # Average severity (capped at 1.0)
     severity = min(1.0, (contrib_len + contrib_func + contrib_frag) / 3)
-    
+
     return severity
 ```
 
@@ -258,8 +258,8 @@ def calculate_severity(avg_sent_len, func_ratio, frag_ratio):
 
 **Example:**
 ```
-"The cognitive architecture provides a comprehensive framework for LLM governance. 
-It integrates multiple biological principles to ensure safe and coherent responses. 
+"The cognitive architecture provides a comprehensive framework for LLM governance.
+It integrates multiple biological principles to ensure safe and coherent responses.
 This approach has been validated through extensive testing."
 
 Analysis:
@@ -313,7 +313,7 @@ When aphasic patterns are detected, the system:
    - Proper use of conjunctions and transitions
    - All technical details preserved
    - Clear logical flow
-   
+
    Original prompt: {original_prompt}
    """
    ```
@@ -615,7 +615,7 @@ The `AphasiaSpeechGovernor` class encapsulates aphasia detection and repair logi
 
 ```python
 from mlsdm.extensions.neuro_lang_extension import (
-    AphasiaBrocaDetector, 
+    AphasiaBrocaDetector,
     AphasiaSpeechGovernor
 )
 from mlsdm.core.llm_wrapper import LLMWrapper
@@ -775,11 +775,11 @@ from mlsdm.speech.governance import SpeechGovernanceResult
 
 class FormalnessGovernor:
     """Enforce formal language style."""
-    
+
     def __call__(self, *, prompt: str, draft: str, max_tokens: int):
         # Apply formalization logic
         formal_text = self.make_formal(draft)
-        
+
         return SpeechGovernanceResult(
             final_text=formal_text,
             raw_text=draft,
@@ -824,7 +824,7 @@ Canonical references:
 
 ---
 
-**Document Status:** Active  
-**Review Cycle:** Per minor version  
-**Last Reviewed:** November 23, 2025  
+**Document Status:** Active
+**Review Cycle:** Per minor version
+**Last Reviewed:** November 23, 2025
 **Next Review:** Version 1.3.0 release

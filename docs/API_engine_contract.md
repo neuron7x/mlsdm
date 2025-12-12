@@ -1,7 +1,7 @@
 # NeuroCognitiveEngine Contract
 
-**Document Version:** 1.0.0  
-**Last Updated:** December 2025  
+**Document Version:** 1.0.0
+**Last Updated:** December 2025
 **Status:** Stable
 
 This document defines the internal contract for the `NeuroCognitiveEngine.generate()` method output.
@@ -21,8 +21,8 @@ The `generate()` method returns an `EngineResult` model that provides a strongly
 
 ## Target Contract
 
-**Function:** `NeuroCognitiveEngine.generate()`  
-**Input:** prompt (str), optional parameters  
+**Function:** `NeuroCognitiveEngine.generate()`
+**Input:** prompt (str), optional parameters
 **Output:** `EngineResult` (see below)
 
 ---

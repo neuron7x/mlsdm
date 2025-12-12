@@ -1,8 +1,8 @@
 # Testing Guide
 
-**Document Version:** 1.2.0  
-**Project Version:** 1.2.0  
-**Last Updated:** December 2025  
+**Document Version:** 1.2.0
+**Project Version:** 1.2.0
+**Last Updated:** December 2025
 **Test Coverage:** 70.85% (Overall) | 90%+ (Core Modules)
 
 ## Table of Contents
@@ -187,17 +187,17 @@ from mlsdm.utils.coherence_safety_metrics import CoherenceSafetyAnalyzer
 
 class TestMyComponent:
     """Test suite for MyComponent"""
-    
+
     @pytest.fixture
     def analyzer(self):
         """Create analyzer instance"""
         return CoherenceSafetyAnalyzer()
-    
+
     def test_basic_functionality(self, analyzer):
         """Test basic functionality"""
         result = analyzer.measure_temporal_consistency([])
         assert result == 1.0
-    
+
     def test_edge_case_empty_input(self, analyzer):
         """Test edge case with empty input"""
         result = analyzer.measure_semantic_coherence([], [])
@@ -220,7 +220,7 @@ class TestEdgeCases:
     def set_random_seed(self):
         """Set random seed for reproducible tests"""
         np.random.seed(42)
-    
+
     def test_with_random_data(self):
         """Test with random data"""
         data = np.random.randn(100, 128)

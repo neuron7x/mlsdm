@@ -107,57 +107,83 @@ _PROMPT_INJECTION_PATTERNS: list[tuple[re.Pattern[str], SafetyCategory, float, s
         "Attempt to ignore previous instructions",
     ),
     (
-        re.compile(r"disregard\s+(?:all\s+)?(?:previous|above|prior)?\s*(?:instructions?|rules?)", re.IGNORECASE),
+        re.compile(
+            r"disregard\s+(?:all\s+)?(?:previous|above|prior)?\s*(?:instructions?|rules?)",
+            re.IGNORECASE,
+        ),
         SafetyCategory.INSTRUCTION_OVERRIDE,
         0.9,
         "Attempt to disregard rules/instructions",
     ),
     (
-        re.compile(r"forget\s+(?:everything|all)(?:\s+(?:you|I|that)\s+(?:told|said|were\s+told))?", re.IGNORECASE),
+        re.compile(
+            r"forget\s+(?:everything|all)(?:\s+(?:you|I|that)\s+(?:told|said|were\s+told))?",
+            re.IGNORECASE,
+        ),
         SafetyCategory.INSTRUCTION_OVERRIDE,
         0.85,
         "Attempt to reset context",
     ),
     # System prompt probing
     (
-        re.compile(r"(?:what|show|tell|reveal|display)\s+(?:is|are|me)?\s*(?:your|the)?\s*(?:system\s*prompt|initial\s+instructions?|original\s+instructions?)", re.IGNORECASE),
+        re.compile(
+            r"(?:what|show|tell|reveal|display)\s+(?:is|are|me)?\s*(?:your|the)?\s*(?:system\s*prompt|initial\s+instructions?|original\s+instructions?)",
+            re.IGNORECASE,
+        ),
         SafetyCategory.SYSTEM_PROMPT_PROBE,
         0.8,
         "Attempt to reveal system prompt",
     ),
     (
-        re.compile(r"(?:print|output|display)\s+(?:your\s+)?(?:initial|system|original)\s+(?:prompt|instructions?)", re.IGNORECASE),
+        re.compile(
+            r"(?:print|output|display)\s+(?:your\s+)?(?:initial|system|original)\s+(?:prompt|instructions?)",
+            re.IGNORECASE,
+        ),
         SafetyCategory.SYSTEM_PROMPT_PROBE,
         0.8,
         "Attempt to print system prompt",
     ),
     (
-        re.compile(r"(?:repeat|echo)\s+(?:your\s+)?(?:system\s+)?(?:prompt|instructions?)(?:\s+(?:back|verbatim|to\s+me))?", re.IGNORECASE),
+        re.compile(
+            r"(?:repeat|echo)\s+(?:your\s+)?(?:system\s+)?(?:prompt|instructions?)(?:\s+(?:back|verbatim|to\s+me))?",
+            re.IGNORECASE,
+        ),
         SafetyCategory.SYSTEM_PROMPT_PROBE,
         0.8,
         "Attempt to echo instructions",
     ),
     (
-        re.compile(r"reveal\s+(?:your\s+)?(?:original|initial|system)\s+(?:instructions?|prompt)", re.IGNORECASE),
+        re.compile(
+            r"reveal\s+(?:your\s+)?(?:original|initial|system)\s+(?:instructions?|prompt)",
+            re.IGNORECASE,
+        ),
         SafetyCategory.SYSTEM_PROMPT_PROBE,
         0.8,
         "Attempt to reveal original instructions",
     ),
     # Role hijacking
     (
-        re.compile(r"(?:you\s+are(?:\s+now)?|act\s+as|pretend\s+(?:to\s+be|you(?:'re|\s+are)))\s+(?:an?\s+)?(?:evil|malicious|bad)", re.IGNORECASE),
+        re.compile(
+            r"(?:you\s+are(?:\s+now)?|act\s+as|pretend\s+(?:to\s+be|you(?:'re|\s+are)))\s+(?:an?\s+)?(?:evil|malicious|bad)",
+            re.IGNORECASE,
+        ),
         SafetyCategory.ROLE_HIJACK,
         0.85,
         "Attempt to hijack role to malicious entity",
     ),
     (
-        re.compile(r"(?:from\s+now\s+on|starting\s+now),?\s+you\s+(?:are|will\s+be)", re.IGNORECASE),
+        re.compile(
+            r"(?:from\s+now\s+on|starting\s+now),?\s+you\s+(?:are|will\s+be)", re.IGNORECASE
+        ),
         SafetyCategory.ROLE_HIJACK,
         0.7,
         "Attempt to reassign role",
     ),
     (
-        re.compile(r"(?:you\s+are\s+now|act\s+as)\s+(?:an?\s+)?(?:villain|hacker|bad\s+actor)", re.IGNORECASE),
+        re.compile(
+            r"(?:you\s+are\s+now|act\s+as)\s+(?:an?\s+)?(?:villain|hacker|bad\s+actor)",
+            re.IGNORECASE,
+        ),
         SafetyCategory.ROLE_HIJACK,
         0.85,
         "Attempt to reassign role to malicious entity",
@@ -170,19 +196,28 @@ _PROMPT_INJECTION_PATTERNS: list[tuple[re.Pattern[str], SafetyCategory, float, s
     ),
     # Jailbreak patterns
     (
-        re.compile(r"(?:bypass|disable|turn\s+off)\s+(?:your\s+)?(?:safety|content|ethical)\s+(?:filters?|restrictions?|guidelines?)", re.IGNORECASE),
+        re.compile(
+            r"(?:bypass|disable|turn\s+off)\s+(?:your\s+)?(?:safety|content|ethical)\s+(?:filters?|restrictions?|guidelines?)",
+            re.IGNORECASE,
+        ),
         SafetyCategory.JAILBREAK_ATTEMPT,
         0.9,
         "Attempt to bypass safety filters",
     ),
     (
-        re.compile(r"(?:no\s+(?:ethical|safety|moral)\s+(?:constraints?|restrictions?|guidelines?))", re.IGNORECASE),
+        re.compile(
+            r"(?:no\s+(?:ethical|safety|moral)\s+(?:constraints?|restrictions?|guidelines?))",
+            re.IGNORECASE,
+        ),
         SafetyCategory.JAILBREAK_ATTEMPT,
         0.85,
         "Request to remove ethical constraints",
     ),
     (
-        re.compile(r"(?:jailbreak|unlock|unleash)\s+(?:yourself|your\s+(?:capabilities|potential|full))", re.IGNORECASE),
+        re.compile(
+            r"(?:jailbreak|unlock|unleash)\s+(?:yourself|your\s+(?:capabilities|potential|full))",
+            re.IGNORECASE,
+        ),
         SafetyCategory.JAILBREAK_ATTEMPT,
         0.95,
         "Direct jailbreak request",
@@ -225,7 +260,9 @@ _PROMPT_INJECTION_PATTERNS: list[tuple[re.Pattern[str], SafetyCategory, float, s
 _SECRET_PATTERNS: list[tuple[re.Pattern[str], SafetyCategory, str]] = [
     # API keys and tokens
     (
-        re.compile(r"(?:api[_-]?key|apikey)\s*[=:]\s*['\"]?[a-zA-Z0-9_\-]{20,}['\"]?", re.IGNORECASE),
+        re.compile(
+            r"(?:api[_-]?key|apikey)\s*[=:]\s*['\"]?[a-zA-Z0-9_\-]{20,}['\"]?", re.IGNORECASE
+        ),
         SafetyCategory.SECRET_LEAK,
         "API key exposure",
     ),
@@ -265,19 +302,27 @@ _SECRET_PATTERNS: list[tuple[re.Pattern[str], SafetyCategory, str]] = [
     ),
     # Environment variable dumps (plain text format)
     (
-        re.compile(r"(?:^|\n)(?:API_KEY|SECRET_KEY|OPENAI_API_KEY|ANTHROPIC_API_KEY)\s*=", re.IGNORECASE),
+        re.compile(
+            r"(?:^|\n)(?:API_KEY|SECRET_KEY|OPENAI_API_KEY|ANTHROPIC_API_KEY)\s*=", re.IGNORECASE
+        ),
         SafetyCategory.CONFIG_LEAK,
         "Environment variable exposure",
     ),
     # JSON-style config exposure
     (
-        re.compile(r'["\'](?:api_key|secret_key|openai_api_key|anthropic_api_key)["\']\s*:\s*["\'][a-zA-Z0-9_\-]{20,}["\']', re.IGNORECASE),
+        re.compile(
+            r'["\'](?:api_key|secret_key|openai_api_key|anthropic_api_key)["\']\s*:\s*["\'][a-zA-Z0-9_\-]{20,}["\']',
+            re.IGNORECASE,
+        ),
         SafetyCategory.CONFIG_LEAK,
         "JSON config key exposure",
     ),
     # Config file content
     (
-        re.compile(r"(?:openai|anthropic|azure)_(?:api_)?key\s*[=:]\s*['\"]?[a-zA-Z0-9_\-]{20,}", re.IGNORECASE),
+        re.compile(
+            r"(?:openai|anthropic|azure)_(?:api_)?key\s*[=:]\s*['\"]?[a-zA-Z0-9_\-]{20,}",
+            re.IGNORECASE,
+        ),
         SafetyCategory.CONFIG_LEAK,
         "Config key exposure",
     ),
@@ -477,10 +522,15 @@ class LLMSafetyAnalyzer:
             risk_level: Overall risk level
             is_blocked: Whether the request was blocked
         """
-        log_level = logging.WARNING if risk_level in (
-            SafetyRiskLevel.HIGH,
-            SafetyRiskLevel.CRITICAL,
-        ) else logging.INFO
+        log_level = (
+            logging.WARNING
+            if risk_level
+            in (
+                SafetyRiskLevel.HIGH,
+                SafetyRiskLevel.CRITICAL,
+            )
+            else logging.INFO
+        )
 
         logger.log(
             log_level,

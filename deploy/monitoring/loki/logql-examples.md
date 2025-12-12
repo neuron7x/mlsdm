@@ -86,9 +86,9 @@ sum by (error_code) (count_over_time({job="mlsdm"} | json | level="ERROR" [1h]))
 
 ### Emergency shutdowns with context
 ```logql
-{job="mlsdm"} 
-  | json 
-  | event_type="emergency_shutdown" 
+{job="mlsdm"}
+  | json
+  | event_type="emergency_shutdown"
   | line_format "reason={{.reason}} phase={{.phase}} memory_mb={{.memory_mb}}"
 ```
 
@@ -175,9 +175,9 @@ rate({job="mlsdm"} | json | event_type="request_completed" [1m])
 ### SLO Compliance Panel Query
 ```logql
 # Error rate (should be < 0.1%)
-sum(rate({job="mlsdm"} | json | level="ERROR" [5m])) 
-/ 
-sum(rate({job="mlsdm"} | json [5m])) 
+sum(rate({job="mlsdm"} | json | level="ERROR" [5m]))
+/
+sum(rate({job="mlsdm"} | json [5m]))
 * 100
 ```
 
@@ -202,8 +202,8 @@ groups:
   rules:
   - alert: HighErrorRateFromLogs
     expr: |
-      sum(count_over_time({job="mlsdm"} | json | level="ERROR" [5m])) 
-      / 
+      sum(count_over_time({job="mlsdm"} | json | level="ERROR" [5m]))
+      /
       sum(count_over_time({job="mlsdm"} | json [5m])) > 0.01
     for: 5m
     labels:

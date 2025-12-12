@@ -38,6 +38,7 @@ def test_train_neurolang_creates_checkpoint(tmp_path, monkeypatch):
     assert exit_code == 0
     assert output.is_file()
     import torch
+
     state = torch.load(output, map_location="cpu")
     assert isinstance(state, dict)
     assert "actor" in state

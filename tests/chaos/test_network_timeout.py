@@ -75,6 +75,7 @@ def create_flaky_llm(failure_pattern: list[bool]):
 
 def create_fake_embedder(dim: int = 384):
     """Create a thread-safe fake embedding function."""
+
     def fake_embedder(text: str) -> np.ndarray:
         text_hash = abs(hash(text))
         local_rng = np.random.RandomState(text_hash % (2**31))
@@ -83,6 +84,7 @@ def create_fake_embedder(dim: int = 384):
         if norm > 1e-9:
             vec = vec / norm
         return vec
+
     return fake_embedder
 
 
@@ -354,6 +356,7 @@ class TestNetworkTimeoutChaos:
         2. Make request
         3. Verify graceful handling
         """
+
         def slow_embedder(text: str) -> np.ndarray:
             time.sleep(0.5)  # Slow embedding
             return np.random.randn(384).astype(np.float32)

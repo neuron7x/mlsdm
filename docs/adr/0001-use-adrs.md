@@ -1,8 +1,8 @@
 # ADR-0001: Use Architecture Decision Records
 
-**Status**: Accepted  
-**Date**: 2025-11-30  
-**Deciders**: MLSDM Core Team  
+**Status**: Accepted
+**Date**: 2025-11-30
+**Deciders**: MLSDM Core Team
 **Categories**: Architecture, Documentation
 
 ## Context

@@ -1,8 +1,8 @@
 # Developer Guide
 
-**Document Version:** 1.0.0  
-**Project Version:** 1.0.0  
-**Last Updated:** December 2025  
+**Document Version:** 1.0.0
+**Project Version:** 1.0.0
+**Last Updated:** December 2025
 **Status:** Production
 
 ---
@@ -376,7 +376,7 @@ class LLMProvider(Protocol):
 class MyCustomAdapter:
     def generate(self, prompt: str, max_tokens: int) -> str:
         return my_llm_call(prompt, max_tokens)
-    
+
     def get_provider_name(self) -> str:
         return "my_custom"
 ```
@@ -444,15 +444,15 @@ def process_event(
     context_top_k: int = 5
 ) -> dict:
     """Process cognitive event with moral evaluation.
-    
+
     Args:
         event_vector: Input embedding (dim,)
         moral_value: Moral score 0.0-1.0
         context_top_k: Number of context items
-        
+
     Returns:
         Dict with accepted, phase, threshold, etc.
-        
+
     Raises:
         ValueError: If moral_value outside [0, 1]
     """
@@ -463,14 +463,14 @@ def process_event(
 ```python
 class MoralFilterV2:
     """Adaptive moral filtering with homeostatic threshold.
-    
+
     The filter maintains a dynamic threshold that adapts based on
     acceptance rates to achieve approximately 50% acceptance.
-    
+
     Attributes:
         threshold: Current moral threshold value (0.30-0.90)
         ema: Exponential moving average of acceptance rate
-        
+
     Example:
         >>> filter = MoralFilterV2(initial_threshold=0.5)
         >>> accepted = filter.evaluate(moral_value=0.8)
@@ -558,11 +558,11 @@ import anthropic
 
 class AnthropicAdapter:
     """Anthropic Claude API adapter."""
-    
+
     def __init__(self, api_key: str, model: str = "claude-3-opus"):
         self.client = anthropic.Anthropic(api_key=api_key)
         self.model = model
-    
+
     def generate(self, prompt: str, max_tokens: int) -> str:
         response = self.client.messages.create(
             model=self.model,
@@ -570,7 +570,7 @@ class AnthropicAdapter:
             messages=[{"role": "user", "content": prompt}]
         )
         return response.content[0].text
-    
+
     def get_provider_name(self) -> str:
         return "anthropic"
 ```
@@ -607,7 +607,7 @@ from mlsdm.core.llm_pipeline import FilterResult, FilterDecision
 
 class MyPreFilter:
     """Custom pre-filter for specific validation."""
-    
+
     def evaluate(self, prompt: str, context: dict) -> FilterResult:
         if self._is_blocked(prompt):
             return FilterResult(
@@ -619,7 +619,7 @@ class MyPreFilter:
             decision=FilterDecision.ALLOW,
             reason="allowed"
         )
-    
+
     def _is_blocked(self, prompt: str) -> bool:
         # Custom logic
         return False
@@ -853,7 +853,7 @@ Closes #42
 
 ---
 
-**Document Status:** Production  
-**Review Cycle:** Per minor version  
-**Last Reviewed:** December 2025  
+**Document Status:** Production
+**Review Cycle:** Per minor version
+**Last Reviewed:** December 2025
 **Next Review:** Version 1.3.0 release

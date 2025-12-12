@@ -23,11 +23,7 @@ from typing import Any
 def check_pip_audit_installed() -> bool:
     """Check if pip-audit is installed."""
     try:
-        subprocess.run(
-            ["pip-audit", "--version"],
-            capture_output=True,
-            check=True
-        )
+        subprocess.run(["pip-audit", "--version"], capture_output=True, check=True)
         return True
     except (subprocess.CalledProcessError, FileNotFoundError):
         return False
@@ -38,9 +34,7 @@ def install_pip_audit() -> bool:
     print("Installing pip-audit...")
     try:
         subprocess.run(
-            [sys.executable, "-m", "pip", "install", "pip-audit"],
-            capture_output=True,
-            check=True
+            [sys.executable, "-m", "pip", "install", "pip-audit"], capture_output=True, check=True
         )
         print("✓ pip-audit installed successfully")
         return True
@@ -67,12 +61,7 @@ def run_pip_audit(fix: bool = False) -> tuple[bool, dict[str, Any]]:
         cmd.append("--fix")
 
     try:
-        result = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            check=False
-        )
+        result = subprocess.run(cmd, capture_output=True, text=True, check=False)
 
         # Parse JSON output
         if result.stdout:
@@ -117,10 +106,7 @@ def check_security_configs() -> bool:
     print("Checking security configuration files...")
     print("=" * 60)
 
-    required_files = [
-        "SECURITY_POLICY.md",
-        "THREAT_MODEL.md"
-    ]
+    required_files = ["SECURITY_POLICY.md", "THREAT_MODEL.md"]
 
     all_present = True
     for file in required_files:
@@ -182,10 +168,7 @@ def check_security_implementations() -> tuple[bool, list[str]]:
 
 
 def generate_security_report(
-    audit_results: dict,
-    config_check: bool,
-    impl_check: bool,
-    impl_findings: list[str]
+    audit_results: dict, config_check: bool, impl_check: bool, impl_findings: list[str]
 ) -> str:
     """Generate security audit report.
 
@@ -293,18 +276,13 @@ def main(argv: list[str] | None = None) -> int:
     impl_check, impl_findings = check_security_implementations()
 
     # Generate report
-    report = generate_security_report(
-        audit_results,
-        config_check,
-        impl_check,
-        impl_findings
-    )
+    report = generate_security_report(audit_results, config_check, impl_check, impl_findings)
 
     print("\n" + report)
 
     # Save report if requested
     if args.report:
-        with open(args.report, 'w') as f:
+        with open(args.report, "w") as f:
             f.write(report)
         print(f"\n✓ Report saved to {args.report}")
 

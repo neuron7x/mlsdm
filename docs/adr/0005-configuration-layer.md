@@ -1,8 +1,8 @@
 # ADR-0005: Configuration Layer Architecture (CONFIG-01)
 
-**Status**: Accepted  
-**Date**: 2025-12-01  
-**Deciders**: MLSDM Core Team  
+**Status**: Accepted
+**Date**: 2025-12-01
+**Deciders**: MLSDM Core Team
 **Categories**: Architecture, Configuration, Production Readiness
 
 ## Context
@@ -74,7 +74,7 @@ from mlsdm.config import (
     RateLimitCalibration,
     SynergyExperienceCalibration,
     SecureModeCalibration,
-    
+
     # Default instances
     MORAL_FILTER_DEFAULTS,
     APHASIA_DEFAULTS,
@@ -86,7 +86,7 @@ from mlsdm.config import (
     RATE_LIMIT_DEFAULTS,
     SYNERGY_EXPERIENCE_DEFAULTS,
     SECURE_MODE_DEFAULTS,
-    
+
     # Functions
     get_calibration_config,
     get_calibration_summary,

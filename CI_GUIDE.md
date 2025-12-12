@@ -11,9 +11,9 @@ MLSDM uses GitHub Actions for continuous integration and deployment. The CI pipe
 ### Core CI Workflows (Run on Every PR/Push)
 
 #### 1. **CI - Neuro Cognitive Engine** (`ci-neuro-cognitive-engine.yml`)
-**Purpose:** Primary CI pipeline for code quality and testing  
-**Triggers:** Push to main/feature branches, PRs  
-**Duration:** ~15-20 minutes  
+**Purpose:** Primary CI pipeline for code quality and testing
+**Triggers:** Push to main/feature branches, PRs
+**Duration:** ~15-20 minutes
 
 **Jobs:**
 - `lint`: Code linting (ruff) and type checking (mypy)
@@ -32,9 +32,9 @@ MLSDM uses GitHub Actions for continuous integration and deployment. The CI pipe
 - Modifying test infrastructure
 
 #### 2. **CI Smoke Tests** (`ci-smoke.yml`)
-**Purpose:** Quick sanity checks for rapid feedback  
-**Triggers:** Push to main/feature branches, PRs  
-**Duration:** ~5 minutes  
+**Purpose:** Quick sanity checks for rapid feedback
+**Triggers:** Push to main/feature branches, PRs
+**Duration:** ~5 minutes
 
 **Jobs:**
 - Quick import tests
@@ -46,9 +46,9 @@ MLSDM uses GitHub Actions for continuous integration and deployment. The CI pipe
 - Changing core dependencies
 
 #### 3. **Property-Based Tests** (`property-tests.yml`)
-**Purpose:** Hypothesis-based property testing  
-**Triggers:** Push to main/feature branches, PRs  
-**Duration:** ~10 minutes  
+**Purpose:** Hypothesis-based property testing
+**Triggers:** Push to main/feature branches, PRs
+**Duration:** ~10 minutes
 
 **Jobs:**
 - Fuzz testing with Hypothesis
@@ -60,9 +60,9 @@ MLSDM uses GitHub Actions for continuous integration and deployment. The CI pipe
 - Changing test strategies
 
 #### 4. **SAST Security Scan** (`sast-scan.yml`)
-**Purpose:** Static Application Security Testing  
-**Triggers:** Push to main/feature branches, PRs  
-**Duration:** ~5-10 minutes  
+**Purpose:** Static Application Security Testing
+**Triggers:** Push to main/feature branches, PRs
+**Duration:** ~5-10 minutes
 
 **Jobs:**
 - Bandit security scanning
@@ -76,9 +76,9 @@ MLSDM uses GitHub Actions for continuous integration and deployment. The CI pipe
 ### Specialized CI Workflows
 
 #### 5. **Aphasia / NeuroLang CI** (`aphasia-ci.yml`)
-**Purpose:** Test optional Aphasia/NeuroLang extension  
-**Triggers:** Push to main/feature branches, PRs (manual dispatch)  
-**Duration:** ~10 minutes  
+**Purpose:** Test optional Aphasia/NeuroLang extension
+**Triggers:** Push to main/feature branches, PRs (manual dispatch)
+**Duration:** ~10 minutes
 
 **Jobs:**
 - Aphasia detection tests
@@ -90,9 +90,9 @@ MLSDM uses GitHub Actions for continuous integration and deployment. The CI pipe
 - Adding speech governance features
 
 #### 6. **Performance & Resilience Validation** (`perf-resilience.yml`)
-**Purpose:** Load testing and stress testing  
-**Triggers:** Scheduled (daily at 2 AM UTC), manual dispatch  
-**Duration:** ~30-60 minutes  
+**Purpose:** Load testing and stress testing
+**Triggers:** Scheduled (daily at 2 AM UTC), manual dispatch
+**Duration:** ~30-60 minutes
 
 **Jobs:**
 - Load testing with Locust
@@ -104,9 +104,9 @@ MLSDM uses GitHub Actions for continuous integration and deployment. The CI pipe
 - Adding new performance tests
 
 #### 7. **Chaos Engineering Tests** (`chaos-tests.yml`)
-**Purpose:** Test system resilience under adverse conditions  
-**Triggers:** Scheduled (daily at 3 AM UTC), manual dispatch  
-**Duration:** ~30-60 minutes  
+**Purpose:** Test system resilience under adverse conditions
+**Triggers:** Scheduled (daily at 3 AM UTC), manual dispatch
+**Duration:** ~30-60 minutes
 
 **Jobs:**
 - Memory pressure tests
@@ -120,9 +120,9 @@ MLSDM uses GitHub Actions for continuous integration and deployment. The CI pipe
 ### Release Workflows
 
 #### 8. **Production Gate** (`prod-gate.yml`)
-**Purpose:** Pre-production validation and approval  
-**Triggers:** Manual workflow dispatch  
-**Duration:** ~30 minutes + manual approval time  
+**Purpose:** Pre-production validation and approval
+**Triggers:** Manual workflow dispatch
+**Duration:** ~30 minutes + manual approval time
 
 **Jobs:**
 - Full test suite execution
@@ -136,9 +136,9 @@ MLSDM uses GitHub Actions for continuous integration and deployment. The CI pipe
 - Adding deployment validations
 
 #### 9. **Release** (`release.yml`)
-**Purpose:** Build and publish releases  
-**Triggers:** Git tags (v*)  
-**Duration:** ~15 minutes  
+**Purpose:** Build and publish releases
+**Triggers:** Git tags (v*)
+**Duration:** ~15 minutes
 
 **Jobs:**
 - Build Python package
@@ -365,7 +365,7 @@ jobs:
     steps:
       - lint
       - smoke-tests
-  
+
   full-tests:
     needs: quick-checks
     strategy:
@@ -376,7 +376,7 @@ jobs:
       - unit-tests
       - integration-tests
       - e2e-tests
-  
+
   specialized-tests:
     needs: full-tests
     runs-on: ubuntu-latest
@@ -451,7 +451,7 @@ skips = ["B404", "B603"]  # specific checks to skip
 2. **Mark slow tests**
    ```python
    import pytest
-   
+
    @pytest.mark.slow
    def test_long_running():
        ...
@@ -537,5 +537,5 @@ python scripts/ci_perf_resilience_gate.py --pr-number 231 --repo neuron7x/mlsdm
 
 ---
 
-**Last Updated:** December 2025  
+**Last Updated:** December 2025
 **Maintainer:** neuron7x

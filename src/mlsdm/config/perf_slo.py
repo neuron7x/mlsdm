@@ -91,19 +91,19 @@ LOAD_PROFILES: dict[str, LoadProfile] = {
         name="light",
         total_requests=50,
         concurrency=5,
-        description="Light load: 50 requests, 5 concurrent"
+        description="Light load: 50 requests, 5 concurrent",
     ),
     "moderate": LoadProfile(
         name="moderate",
         total_requests=200,
         concurrency=10,
-        description="Moderate load: 200 requests, 10 concurrent"
+        description="Moderate load: 200 requests, 10 concurrent",
     ),
     "spike": LoadProfile(
         name="spike",
         total_requests=100,
         concurrency=20,
-        description="Spike load: 100 requests, 20 concurrent (tests circuit breaker)"
+        description="Spike load: 100 requests, 20 concurrent (tests circuit breaker)",
     ),
 }
 

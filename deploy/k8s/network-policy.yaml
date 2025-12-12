@@ -69,7 +69,7 @@ spec:
       ports:
         - protocol: TCP
           port: 8000
-    
+
     # Allow traffic from Prometheus for metrics scraping
     - from:
         - namespaceSelector:
@@ -110,7 +110,7 @@ spec:
           port: 53
         - protocol: TCP
           port: 53
-    
+
     # Allow egress to OpenAI API (if using OpenAI backend)
     # Note: For cloud services, use CIDR blocks or external service names
     - to:

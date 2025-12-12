@@ -83,7 +83,7 @@ class SecurityLogger:
         if not self.logger.handlers:
             handler = logging.StreamHandler()
             handler.setFormatter(
-                logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+                logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
             )
             self.logger.addHandler(handler)
 
@@ -94,7 +94,7 @@ class SecurityLogger:
         message: str,
         correlation_id: str | None = None,
         client_id: str | None = None,
-        additional_data: dict[str, Any] | None = None
+        additional_data: dict[str, Any] | None = None,
     ) -> str:
         """Internal method to log security event.
 
@@ -129,8 +129,9 @@ class SecurityLogger:
         if additional_data:
             # Filter out any potential PII
             filtered_data = {
-                k: v for k, v in additional_data.items()
-                if k not in ['email', 'username', 'password', 'token']
+                k: v
+                for k, v in additional_data.items()
+                if k not in ["email", "username", "password", "token"]
             }
             log_entry["data"] = filtered_data
 
@@ -140,11 +141,7 @@ class SecurityLogger:
 
         return correlation_id
 
-    def log_auth_success(
-        self,
-        client_id: str,
-        correlation_id: str | None = None
-    ) -> str:
+    def log_auth_success(self, client_id: str, correlation_id: str | None = None) -> str:
         """Log successful authentication.
 
         Args:
@@ -159,14 +156,11 @@ class SecurityLogger:
             logging.INFO,
             "Authentication successful",
             correlation_id=correlation_id,
-            client_id=client_id
+            client_id=client_id,
         )
 
     def log_auth_failure(
-        self,
-        client_id: str,
-        reason: str = "Invalid credentials",
-        correlation_id: str | None = None
+        self, client_id: str, reason: str = "Invalid credentials", correlation_id: str | None = None
     ) -> str:
         """Log failed authentication attempt.
 
@@ -184,14 +178,10 @@ class SecurityLogger:
             f"Authentication failed: {reason}",
             correlation_id=correlation_id,
             client_id=client_id,
-            additional_data={"reason": reason}
+            additional_data={"reason": reason},
         )
 
-    def log_rate_limit_exceeded(
-        self,
-        client_id: str,
-        correlation_id: str | None = None
-    ) -> str:
+    def log_rate_limit_exceeded(self, client_id: str, correlation_id: str | None = None) -> str:
         """Log rate limit exceeded event.
 
         Args:
@@ -206,14 +196,11 @@ class SecurityLogger:
             logging.WARNING,
             "Rate limit exceeded",
             correlation_id=correlation_id,
-            client_id=client_id
+            client_id=client_id,
         )
 
     def log_invalid_input(
-        self,
-        client_id: str,
-        error_message: str,
-        correlation_id: str | None = None
+        self, client_id: str, error_message: str, correlation_id: str | None = None
     ) -> str:
         """Log invalid input validation error.
 
@@ -231,14 +218,11 @@ class SecurityLogger:
             f"Invalid input: {error_message}",
             correlation_id=correlation_id,
             client_id=client_id,
-            additional_data={"error": error_message}
+            additional_data={"error": error_message},
         )
 
     def log_state_change(
-        self,
-        change_type: str,
-        details: dict[str, Any],
-        correlation_id: str | None = None
+        self, change_type: str, details: dict[str, Any], correlation_id: str | None = None
     ) -> str:
         """Log important state change.
 
@@ -255,7 +239,7 @@ class SecurityLogger:
             logging.INFO,
             f"State change: {change_type}",
             correlation_id=correlation_id,
-            additional_data={"change_type": change_type, "details": details}
+            additional_data={"change_type": change_type, "details": details},
         )
 
     def log_anomaly(
@@ -263,7 +247,7 @@ class SecurityLogger:
         anomaly_type: str,
         description: str,
         severity: str = "medium",
-        correlation_id: str | None = None
+        correlation_id: str | None = None,
     ) -> str:
         """Log anomaly detection event.
 
@@ -286,15 +270,15 @@ class SecurityLogger:
             additional_data={
                 "anomaly_type": anomaly_type,
                 "description": description,
-                "severity": severity
-            }
+                "severity": severity,
+            },
         )
 
     def log_system_event(
         self,
         event_type: SecurityEventType,
         message: str,
-        additional_data: dict[str, Any] | None = None
+        additional_data: dict[str, Any] | None = None,
     ) -> str:
         """Log system-level event.
 
@@ -306,12 +290,7 @@ class SecurityLogger:
         Returns:
             Correlation ID
         """
-        return self._log_event(
-            event_type,
-            logging.INFO,
-            message,
-            additional_data=additional_data
-        )
+        return self._log_event(event_type, logging.INFO, message, additional_data=additional_data)
 
     def log_prompt_injection_detected(
         self,
@@ -319,7 +298,7 @@ class SecurityLogger:
         risk_level: str,
         category: str,
         is_blocked: bool = True,
-        correlation_id: str | None = None
+        correlation_id: str | None = None,
     ) -> str:
         """Log prompt injection detection event.
 
@@ -343,7 +322,7 @@ class SecurityLogger:
                 "risk_level": risk_level,
                 "category": category,
                 "is_blocked": is_blocked,
-            }
+            },
         )
 
     def log_jailbreak_attempt(
@@ -351,7 +330,7 @@ class SecurityLogger:
         client_id: str,
         risk_level: str,
         is_blocked: bool = True,
-        correlation_id: str | None = None
+        correlation_id: str | None = None,
     ) -> str:
         """Log jailbreak attempt detection.
 
@@ -373,14 +352,10 @@ class SecurityLogger:
             additional_data={
                 "risk_level": risk_level,
                 "is_blocked": is_blocked,
-            }
+            },
         )
 
-    def log_secret_leak_prevented(
-        self,
-        secret_type: str,
-        correlation_id: str | None = None
-    ) -> str:
+    def log_secret_leak_prevented(self, secret_type: str, correlation_id: str | None = None) -> str:
         """Log prevention of secret leakage in output.
 
         Args:
@@ -395,7 +370,7 @@ class SecurityLogger:
             logging.INFO,
             f"Secret leak prevented: {secret_type}",
             correlation_id=correlation_id,
-            additional_data={"secret_type": secret_type}
+            additional_data={"secret_type": secret_type},
         )
 
     def log_moral_filter_block(
@@ -403,7 +378,7 @@ class SecurityLogger:
         client_id: str,
         moral_value: float,
         threshold: float,
-        correlation_id: str | None = None
+        correlation_id: str | None = None,
     ) -> str:
         """Log moral filter blocking a request.
 
@@ -425,7 +400,7 @@ class SecurityLogger:
             additional_data={
                 "moral_value": moral_value,
                 "threshold": threshold,
-            }
+            },
         )
 
     def log_rbac_deny(
@@ -435,7 +410,7 @@ class SecurityLogger:
         method: str,
         required_roles: list[str],
         user_roles: list[str],
-        correlation_id: str | None = None
+        correlation_id: str | None = None,
     ) -> str:
         """Log RBAC access denial.
 
@@ -461,14 +436,11 @@ class SecurityLogger:
                 "method": method,
                 "required_roles": required_roles,
                 "user_roles": user_roles,
-            }
+            },
         )
 
     def log_secret_rotation(
-        self,
-        key_type: str,
-        user_id: str | None = None,
-        correlation_id: str | None = None
+        self, key_type: str, user_id: str | None = None, correlation_id: str | None = None
     ) -> str:
         """Log secret/key rotation event.
 
@@ -488,14 +460,11 @@ class SecurityLogger:
             additional_data={
                 "key_type": key_type,
                 "user_id": user_id,
-            }
+            },
         )
 
     def log_security_config_error(
-        self,
-        error_type: str,
-        message: str,
-        correlation_id: str | None = None
+        self, error_type: str, message: str, correlation_id: str | None = None
     ) -> str:
         """Log security configuration error.
 
@@ -515,7 +484,7 @@ class SecurityLogger:
             additional_data={
                 "error_type": error_type,
                 "message": message,
-            }
+            },
         )
 
 

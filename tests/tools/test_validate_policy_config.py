@@ -59,7 +59,11 @@ class TestValidatePolicyConfig:
         """Test that the script can be imported without errors."""
         # Try to import as a module
         result = subprocess.run(
-            [sys.executable, "-c", f"import sys; sys.path.insert(0, '{script_path.parent}'); import validate_policy_config"],
+            [
+                sys.executable,
+                "-c",
+                f"import sys; sys.path.insert(0, '{script_path.parent}'); import validate_policy_config",
+            ],
             capture_output=True,
             text=True,
         )
@@ -181,9 +185,9 @@ class TestValidatePolicyConfig:
             workflow_file = check.get("workflow_file")
             if workflow_file:
                 workflow_path = repo_root / workflow_file
-                assert workflow_path.exists(), (
-                    f"Workflow file not found for check '{check['name']}': {workflow_file}"
-                )
+                assert (
+                    workflow_path.exists()
+                ), f"Workflow file not found for check '{check['name']}': {workflow_file}"
 
     def test_security_modules_referenced_exist(self, repo_root: Path, policy_dir: Path):
         """Test that security modules referenced in policies actually exist."""
@@ -208,9 +212,9 @@ class TestValidatePolicyConfig:
                 py_path = src_path.parent / f"{src_path.name}.py"
                 init_path = src_path / "__init__.py"
 
-                assert py_path.exists() or init_path.exists(), (
-                    f"LLM safety module not found: {llm_safety}"
-                )
+                assert (
+                    py_path.exists() or init_path.exists()
+                ), f"LLM safety module not found: {llm_safety}"
 
         # Check payload scrubber module
         scrubber = input_val.get("payload_scrubber_module")
@@ -221,9 +225,9 @@ class TestValidatePolicyConfig:
                 py_path = src_path.parent / f"{src_path.name}.py"
                 init_path = src_path / "__init__.py"
 
-                assert py_path.exists() or init_path.exists(), (
-                    f"Payload scrubber module not found: {scrubber}"
-                )
+                assert (
+                    py_path.exists() or init_path.exists()
+                ), f"Payload scrubber module not found: {scrubber}"
 
     def test_slo_test_locations_exist(self, repo_root: Path, policy_dir: Path):
         """Test that SLO test files referenced in policies actually exist."""
@@ -252,9 +256,7 @@ class TestValidatePolicyConfig:
             file_path = test_loc.split("::", 1)[0] if "::" in test_loc else test_loc
 
             full_path = repo_root / file_path
-            assert full_path.exists(), (
-                f"Test file not found for SLO '{name}': {file_path}"
-            )
+            assert full_path.exists(), f"Test file not found for SLO '{name}': {file_path}"
 
     def test_script_detects_missing_workflow(self, tmp_path: Path):
         """Test that script detects when a referenced workflow doesn't exist."""
@@ -274,7 +276,10 @@ required_checks:
 
         # Try to run validator (will likely fail)
         result = subprocess.run(
-            [sys.executable, "-c", f"""
+            [
+                sys.executable,
+                "-c",
+                f"""
 import sys
 import yaml
 from pathlib import Path
@@ -292,7 +297,8 @@ if not workflow_path.exists():
 else:
     print(f"✓ Workflow file exists: {{workflow_file}}")
     sys.exit(0)
-"""],
+""",
+            ],
             capture_output=True,
             text=True,
         )

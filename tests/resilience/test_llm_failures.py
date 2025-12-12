@@ -25,6 +25,7 @@ if TYPE_CHECKING:
 
 def create_stub_embedder(dim: int = 384) -> Callable[[str], np.ndarray]:
     """Create a deterministic stub embedding function."""
+
     def stub_embed(text: str) -> np.ndarray:
         # Use bitwise AND for uniform distribution across 32-bit range
         np.random.seed(hash(text) & 0xFFFFFFFF)
@@ -36,6 +37,7 @@ def create_stub_embedder(dim: int = 384) -> Callable[[str], np.ndarray]:
         else:
             vec = vec / norm
         return vec
+
     return stub_embed
 
 
@@ -143,6 +145,7 @@ class TestLLM5xxErrors:
         When LLM consistently fails, system should exhaust retries
         and return structured error response or raise exception.
         """
+
         def always_500_llm(prompt: str, max_tokens: int) -> str:
             """LLM that always returns 500 error."""
             raise Exception("HTTP 500: Internal Server Error")
@@ -173,6 +176,7 @@ class TestMalformedLLMResponses:
 
         System should detect empty responses and handle gracefully.
         """
+
         def empty_response_llm(prompt: str, max_tokens: int) -> str:
             """LLM that returns empty response."""
             return ""
@@ -194,6 +198,7 @@ class TestMalformedLLMResponses:
 
         Some LLM APIs return JSON. System should handle malformed JSON gracefully.
         """
+
         def malformed_json_llm(prompt: str, max_tokens: int) -> str:
             """LLM that returns malformed JSON."""
             return "{invalid json response"
@@ -226,7 +231,7 @@ class TestCircuitBreakerBehavior:
             config=CircuitBreakerConfig(
                 failure_threshold=3,
                 recovery_timeout=10.0,
-            )
+            ),
         )
 
         # Trigger failures by recording them directly
@@ -252,7 +257,7 @@ class TestCircuitBreakerBehavior:
             config=CircuitBreakerConfig(
                 failure_threshold=2,
                 recovery_timeout=1.0,  # Short for testing
-            )
+            ),
         )
 
         # Trigger failures to open circuit

@@ -14,7 +14,7 @@ import pytest
 def mock_no_otel():
     """Mock environment where OpenTelemetry is not available."""
     # Remove opentelemetry from sys.modules to simulate it not being installed
-    otel_modules = [m for m in sys.modules if m.startswith('opentelemetry')]
+    otel_modules = [m for m in sys.modules if m.startswith("opentelemetry")]
     removed_modules = {}
 
     for module in otel_modules:
@@ -25,14 +25,14 @@ def mock_no_otel():
     original_import = __builtins__.__import__
 
     def mock_import(name, *args, **kwargs):
-        if name.startswith('opentelemetry'):
+        if name.startswith("opentelemetry"):
             raise ImportError(f"No module named '{name}'")
         return original_import(name, *args, **kwargs)
 
-    with patch('builtins.__import__', side_effect=mock_import):
+    with patch("builtins.__import__", side_effect=mock_import):
         # Force reload of tracing module to pick up mocked import
-        if 'mlsdm.observability.tracing' in sys.modules:
-            del sys.modules['mlsdm.observability.tracing']
+        if "mlsdm.observability.tracing" in sys.modules:
+            del sys.modules["mlsdm.observability.tracing"]
 
         yield
 
@@ -78,18 +78,18 @@ def test_noop_tracer_without_otel():
         assert isinstance(tracer, NoOpTracer)
 
         # Test that context manager works
-        with manager.start_span('test_span') as span:
+        with manager.start_span("test_span") as span:
             # These should not raise
-            span.set_attribute('key', 'value')
-            span.set_attributes({'key1': 'value1', 'key2': 'value2'})
-            span.add_event('test_event', {'detail': 'test'})
+            span.set_attribute("key", "value")
+            span.set_attributes({"key1": "value1", "key2": "value2"})
+            span.add_event("test_event", {"detail": "test"})
             try:
-                raise ValueError('test exception')
+                raise ValueError("test exception")
             except ValueError as e:
                 span.record_exception(e)
-            span.set_status('OK')
+            span.set_status("OK")
 
-        print('✓ NoOpTracer operations completed without errors')
+        print("✓ NoOpTracer operations completed without errors")
 
 
 def test_trace_context_without_otel():
@@ -101,12 +101,12 @@ def test_trace_context_without_otel():
 
         # Should return empty strings
         assert isinstance(ctx, dict)
-        assert 'trace_id' in ctx
-        assert 'span_id' in ctx
-        assert ctx['trace_id'] == ''
-        assert ctx['span_id'] == ''
+        assert "trace_id" in ctx
+        assert "span_id" in ctx
+        assert ctx["trace_id"] == ""
+        assert ctx["span_id"] == ""
 
-        print('✓ get_current_trace_context returns empty strings as expected')
+        print("✓ get_current_trace_context returns empty strings as expected")
 
 
 def test_trace_helper_functions_without_otel():
@@ -122,32 +122,32 @@ def test_trace_helper_functions_without_otel():
 
     if not OTEL_AVAILABLE:
         # Test trace_generate
-        with trace_generate('test prompt', 0.8, 100) as span:
-            span.set_attribute('test', 'value')
+        with trace_generate("test prompt", 0.8, 100) as span:
+            span.set_attribute("test", "value")
 
         # Test trace_full_pipeline
-        with trace_full_pipeline(100, 0.8, 'wake') as span:
-            span.set_attribute('test', 'value')
+        with trace_full_pipeline(100, 0.8, "wake") as span:
+            span.set_attribute("test", "value")
 
         # Test trace_llm_call
-        with trace_llm_call('test_model', 'test prompt', 100) as span:
-            span.set_attribute('test', 'value')
+        with trace_llm_call("test_model", "test prompt", 100) as span:
+            span.set_attribute("test", "value")
 
         # Test trace_memory_retrieval
         with trace_memory_retrieval(5, 0.8) as span:
-            span.set_attribute('test', 'value')
+            span.set_attribute("test", "value")
 
         # Test trace_moral_filter
         with trace_moral_filter(0.5, 0.8) as span:
-            span.set_attribute('test', 'value')
+            span.set_attribute("test", "value")
 
-        print('✓ All trace helper functions work without OTEL')
+        print("✓ All trace helper functions work without OTEL")
 
 
 def test_no_otel_in_sys_modules():
     """Regression test: verify imports don't fail when opentelemetry not in sys.modules."""
     # Remove opentelemetry from sys.modules temporarily
-    otel_modules = [m for m in list(sys.modules.keys()) if m.startswith('opentelemetry')]
+    otel_modules = [m for m in list(sys.modules.keys()) if m.startswith("opentelemetry")]
     removed = {}
 
     for module in otel_modules:
@@ -156,13 +156,13 @@ def test_no_otel_in_sys_modules():
 
     try:
         # Force reimport of mlsdm modules
-        for module in ['mlsdm.observability.tracing', 'mlsdm.observability.logger']:
+        for module in ["mlsdm.observability.tracing", "mlsdm.observability.logger"]:
             if module in sys.modules:
                 del sys.modules[module]
 
         # These imports should work even if opentelemetry was removed
 
-        print('✓ Imports successful even with opentelemetry removed from sys.modules')
+        print("✓ Imports successful even with opentelemetry removed from sys.modules")
     finally:
         # Restore modules
         for module, obj in removed.items():
@@ -184,13 +184,13 @@ def test_tracer_manager_disabled_state():
 
         # Tracer should still be usable (NoOp)
         tracer = manager.tracer
-        with tracer.start_as_current_span('test') as span:
-            span.set_attribute('key', 'value')
+        with tracer.start_as_current_span("test") as span:
+            span.set_attribute("key", "value")
 
-        print('✓ TracerManager handles disabled state correctly')
+        print("✓ TracerManager handles disabled state correctly")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # Run tests manually for debugging
     test_import_tracing_without_otel()
     test_import_mlsdm_extensions_without_otel()
@@ -200,4 +200,4 @@ if __name__ == '__main__':
     test_no_otel_in_sys_modules()
     test_tracer_manager_disabled_state()
 
-    print('\n✅ All no-OTEL tests passed!')
+    print("\n✅ All no-OTEL tests passed!")

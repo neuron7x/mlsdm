@@ -1,8 +1,8 @@
 # Deployment Guide
 
-**Document Version:** 1.2.0  
-**Project Version:** 1.2.0  
-**Last Updated:** December 2025  
+**Document Version:** 1.2.0
+**Project Version:** 1.2.0
+**Last Updated:** December 2025
 **Status:** Production
 
 Production deployment guide for MLSDM Governed Cognitive Memory v1.2.0.
@@ -75,11 +75,11 @@ def create_wrapper():
     def my_llm(prompt: str, max_tokens: int) -> str:
         # Your LLM integration
         return call_your_llm(prompt, max_tokens)
-    
+
     def my_embed(text: str) -> np.ndarray:
         # Your embedding integration
         return get_embeddings(text)
-    
+
     return LLMWrapper(
         llm_generate_fn=my_llm,
         embedding_fn=my_embed,
@@ -147,11 +147,11 @@ def get_wrapper():
     def my_llm(prompt: str, max_tokens: int) -> str:
         # Implementation
         pass
-    
+
     def my_embed(text: str) -> np.ndarray:
         # Implementation
         pass
-    
+
     return LLMWrapper(
         llm_generate_fn=my_llm,
         embedding_fn=my_embed,
@@ -772,17 +772,17 @@ def log_request(request, result):
 async def health():
     """Comprehensive health check."""
     state = wrapper.get_state()
-    
+
     # Check memory usage
-    memory_pct = (state['qilm_stats']['used'] / 
+    memory_pct = (state['qilm_stats']['used'] /
                   state['qilm_stats']['capacity']) * 100
-    
+
     # Check moral threshold bounds
     threshold_ok = 0.30 <= state['moral_threshold'] <= 0.90
-    
+
     # Overall health
     healthy = memory_pct < 95 and threshold_ok
-    
+
     return {
         "status": "healthy" if healthy else "degraded",
         "checks": {
@@ -876,11 +876,11 @@ processors:
 1. **Authentication**
    ```python
    from fastapi import Header, HTTPException
-   
+
    async def verify_api_key(x_api_key: str = Header()):
        if x_api_key != os.getenv("API_KEY"):
            raise HTTPException(status_code=401, detail="Invalid API key")
-   
+
    @app.post("/v1/generate", dependencies=[Depends(verify_api_key)])
    async def generate(request: GenerateRequest):
        # ...
@@ -890,10 +890,10 @@ processors:
    ```python
    from slowapi import Limiter, _rate_limit_exceeded_handler
    from slowapi.util import get_remote_address
-   
+
    limiter = Limiter(key_func=get_remote_address)
    app.state.limiter = limiter
-   
+
    @app.post("/v1/generate")
    @limiter.limit("100/minute")
    async def generate(request: Request, ...):
@@ -905,7 +905,7 @@ processors:
    class GenerateRequest(BaseModel):
        prompt: str = Field(..., max_length=10000)
        moral_value: float = Field(..., ge=0.0, le=1.0)
-       
+
        @validator('prompt')
        def validate_prompt(cls, v):
            if not v.strip():
@@ -1037,7 +1037,7 @@ Single instance optimization:
 # Optimized configuration
 mlsdm:
   capacity: 50000  # Increase for more memory
-  
+
 resources:
   requests:
     memory: "2Gi"
@@ -1079,7 +1079,7 @@ Multiple instances with load balancing:
 ```
 Symptoms: Most requests rejected
 Cause: Moral threshold too high or incorrect scoring
-Solution: 
+Solution:
 - Check moral_value scoring function
 - Lower initial_threshold
 - Monitor threshold adaptation
@@ -1228,6 +1228,6 @@ For deployment assistance:
 
 ---
 
-**Version**: 1.0.0  
-**Last Updated**: November 2025  
+**Version**: 1.0.0
+**Last Updated**: November 2025
 **Maintainer**: neuron7x

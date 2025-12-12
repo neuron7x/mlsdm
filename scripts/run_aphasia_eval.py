@@ -21,9 +21,7 @@ from aphasia_eval_suite import AphasiaEvalSuite
 
 
 def parse_args(argv=None):
-    parser = argparse.ArgumentParser(
-        description="Run Aphasia-Broca evaluation suite."
-    )
+    parser = argparse.ArgumentParser(description="Run Aphasia-Broca evaluation suite.")
     parser.add_argument(
         "--corpus",
         type=str,

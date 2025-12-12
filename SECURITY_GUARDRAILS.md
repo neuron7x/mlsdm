@@ -1,7 +1,7 @@
 # Security Guardrails Guide
 
-**Document Version:** 1.0.0  
-**Last Updated:** December 2025  
+**Document Version:** 1.0.0
+**Last Updated:** December 2025
 **Status:** Production Ready
 
 ## Table of Contents
@@ -286,7 +286,7 @@ async def enforce_request_guardrails(
     context: GuardrailContext,
 ) -> PolicyDecision:
     """Enforce comprehensive request-level guardrails.
-    
+
     Performs:
     - Authentication (OIDC/mTLS/API key)
     - Authorization (RBAC/scopes)
@@ -294,7 +294,7 @@ async def enforce_request_guardrails(
     - Rate limiting
     - Input validation
     - PII scrubbing
-    
+
     Returns:
         PolicyDecision with allow/deny and STRIDE categories
     """
@@ -307,11 +307,11 @@ async def enforce_llm_guardrails(
     response: str | None = None,
 ) -> PolicyDecision:
     """Enforce LLM-specific safety guardrails.
-    
+
     Performs:
     - Prompt safety analysis (injection/jailbreak)
     - Response safety analysis (secret/config leaks)
-    
+
     Returns:
         PolicyDecision with safety assessment
     """
@@ -330,14 +330,14 @@ def evaluate_request_policy(
     context: PolicyContext
 ) -> PolicyDecisionDetail:
     """Evaluate request-level policies.
-    
+
     Policies:
     - Authentication required (except public routes)
     - Rate limiting enforcement
     - Authorization for sensitive routes
     - Request signature (for high-security routes)
     - Payload size limits
-    
+
     Returns:
         PolicyDecisionDetail with reasons and STRIDE categories
     """
@@ -348,12 +348,12 @@ def evaluate_llm_output_policy(
     context: PolicyContext
 ) -> PolicyDecisionDetail:
     """Evaluate LLM output policies.
-    
+
     Policies:
     - Prompt safety (injection/jailbreak)
     - Output safety (secret/config leaks)
     - Content policy compliance
-    
+
     Returns:
         PolicyDecisionDetail with safety decision
     """
@@ -361,7 +361,7 @@ def evaluate_llm_output_policy(
 
 ### 3. Observability Layer
 
-**Modules**: 
+**Modules**:
 - `src/mlsdm/observability/metrics.py`
 - `src/mlsdm/observability/tracing.py`
 
@@ -409,12 +409,12 @@ def my_custom_policy(context: PolicyContext) -> PolicyDecisionDetail:
     """Custom policy for high-value routes."""
     reasons = []
     stride_categories = []
-    
+
     # Check if user has premium role
     if "/premium" in context.route and "premium" not in context.user_roles:
         reasons.append("Premium subscription required")
         stride_categories.append("elevation_of_privilege")
-    
+
     return PolicyDecisionDetail(
         allow=len(reasons) == 0,
         reasons=reasons,
@@ -709,7 +709,7 @@ Verify observability instrumentation:
 - test_request_guardrails_creates_span()
 - test_span_attributes_include_stride_categories()
 
-# Metrics tests  
+# Metrics tests
 - test_record_guardrail_decision_increments_counter()
 - test_stride_violations_tracked_separately()
 
@@ -765,7 +765,7 @@ curl -H "Authorization: Bearer YOUR_TOKEN" \
 
 **Issue**: Rate limit exceeded
 
-**Solution**: 
+**Solution**:
 - Reduce request rate to ≤5 RPS per client
 - Request rate limit increase via configuration:
   ```bash
@@ -796,6 +796,6 @@ export MLSDM_GUARDRAILS_VERBOSE=true
 
 ---
 
-**Document Maintainer**: MLSDM Security Team  
-**Last Review**: December 2025  
+**Document Maintainer**: MLSDM Security Team
+**Last Review**: December 2025
 **Next Review**: March 2026

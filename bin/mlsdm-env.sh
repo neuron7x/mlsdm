@@ -37,7 +37,7 @@ CONFIG_PATH="$PROJECT_ROOT/$CONFIG_FILE"
 # 2. DEFENSIVE LOADING & FEEDBACK
 # ==============================================================================
 if [ -f "$CONFIG_PATH" ] && [ -r "$CONFIG_PATH" ]; then
-    
+
     # Попередження, якщо файл порожній, але не блокуємо роботу жорстко, якщо це не критично
     if [ ! -s "$CONFIG_PATH" ]; then
         echo "⚠️  [MLSDM] WARNING: Config file is empty: $CONFIG_PATH"
@@ -50,7 +50,7 @@ if [ -f "$CONFIG_PATH" ] && [ -r "$CONFIG_PATH" ]; then
 else
     echo "🛑 [MLSDM] CRITICAL ERROR: Cannot load configuration."
     echo "   Expected path: $CONFIG_PATH"
-    
+
     if [ ! -f "$CONFIG_PATH" ]; then
         echo "   [Reason]: File not found."
         echo "   [Fix]: Run 'cp mlsdm_config.example.sh mlsdm_config.sh' in the project root."
@@ -58,6 +58,6 @@ else
         echo "   [Reason]: Permission denied."
         echo "   [Fix]: Run 'chmod +r $CONFIG_PATH'."
     fi
-    
+
     exit 1
 fi

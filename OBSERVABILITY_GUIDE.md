@@ -320,7 +320,7 @@ Based on MLSDM architecture and production patterns, we recommend the following 
 
 ```promql
 # Availability calculation
-(1 - sum(rate(mlsdm_requests_total{status=~"5.."}[5m])) 
+(1 - sum(rate(mlsdm_requests_total{status=~"5.."}[5m]))
    / sum(rate(mlsdm_requests_total[5m]))) * 100
 ```
 
@@ -328,7 +328,7 @@ Based on MLSDM architecture and production patterns, we recommend the following 
 
 ```promql
 # P95 latency
-histogram_quantile(0.95, 
+histogram_quantile(0.95,
   sum(rate(mlsdm_request_latency_seconds_bucket[5m])) by (le)
 )
 ```
@@ -337,7 +337,7 @@ histogram_quantile(0.95,
 
 ```promql
 # Error budget burn rate (per hour)
-sum(increase(mlsdm_errors_total[1h])) 
+sum(increase(mlsdm_errors_total[1h]))
 / (30 * 24 * 0.005 * sum(increase(mlsdm_requests_total[1h])))
 ```
 
@@ -345,7 +345,7 @@ sum(increase(mlsdm_errors_total[1h]))
 
 ```promql
 # Moral rejection rate
-sum(rate(mlsdm_moral_rejections_total[5m])) 
+sum(rate(mlsdm_moral_rejections_total[5m]))
 / sum(rate(mlsdm_requests_total[5m])) * 100
 ```
 
@@ -541,14 +541,14 @@ groups:
     rules:
       - alert: HighMoralRejectionRate
         expr: |
-          sum(rate(mlsdm_moral_rejections_total[5m])) 
+          sum(rate(mlsdm_moral_rejections_total[5m]))
           / sum(rate(mlsdm_requests_total[5m])) > 0.1
         for: 5m
         labels:
           severity: warning
         annotations:
           summary: "High moral rejection rate (> 10%)"
-          
+
       - alert: EmergencyShutdownTriggered
         expr: mlsdm_emergency_shutdown_active == 1
         for: 0m
@@ -556,10 +556,10 @@ groups:
           severity: critical
         annotations:
           summary: "MLSDM emergency shutdown is active"
-          
+
       - alert: HighP95Latency
         expr: |
-          histogram_quantile(0.95, 
+          histogram_quantile(0.95,
             sum(rate(mlsdm_request_latency_seconds_bucket[5m])) by (le)
           ) > 0.5
         for: 5m
@@ -567,10 +567,10 @@ groups:
           severity: warning
         annotations:
           summary: "P95 latency exceeds 500ms"
-          
+
       - alert: HighAphasiaCriticalRate
         expr: |
-          sum(rate(mlsdm_aphasia_detected_total{severity_bucket="critical"}[5m])) 
+          sum(rate(mlsdm_aphasia_detected_total{severity_bucket="critical"}[5m]))
           / sum(rate(mlsdm_aphasia_detected_total[5m])) > 0.2
         for: 5m
         labels:

@@ -305,7 +305,15 @@ def _policy_authentication_required(context: PolicyContext) -> bool:
         True if authenticated or route is public, False otherwise
     """
     # Public routes that don't require authentication
-    public_routes = ["/health", "/health/live", "/health/ready", "/status", "/docs", "/redoc", "/openapi.json"]
+    public_routes = [
+        "/health",
+        "/health/live",
+        "/health/ready",
+        "/status",
+        "/docs",
+        "/redoc",
+        "/openapi.json",
+    ]
 
     if context.route in public_routes:
         return True
@@ -400,9 +408,7 @@ def _policy_prompt_safety(context: PolicyContext) -> bool:
         "role_hijack",
     ]
 
-    has_critical_violation = any(
-        v in context.safety_violations for v in critical_violations
-    )
+    has_critical_violation = any(v in context.safety_violations for v in critical_violations)
 
     return not has_critical_violation
 
@@ -430,9 +436,7 @@ def _policy_output_safety(context: PolicyContext) -> bool:
         "system_prompt_probe",
     ]
 
-    has_critical_violation = any(
-        v in context.safety_violations for v in critical_violations
-    )
+    has_critical_violation = any(v in context.safety_violations for v in critical_violations)
 
     return not has_critical_violation
 
@@ -453,8 +457,6 @@ def _policy_content_compliance(context: PolicyContext) -> bool:
         "dangerous_command",
     ]
 
-    has_dangerous_violation = any(
-        v in context.safety_violations for v in dangerous_violations
-    )
+    has_dangerous_violation = any(v in context.safety_violations for v in dangerous_violations)
 
     return not has_dangerous_violation

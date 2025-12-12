@@ -218,9 +218,7 @@ def measure_wake_sleep_metrics(snapshot: EffectivenessSnapshot) -> None:
     class NoRhythmController(CognitiveController):  # type: ignore[misc]
         """Controller without rhythm for baseline."""
 
-        def process_event(
-            self, vector: np.ndarray, moral_value: float
-        ) -> dict[str, Any]:
+        def process_event(self, vector: np.ndarray, moral_value: float) -> dict[str, Any]:
             with self._lock:
                 self.step_counter += 1
                 accepted = self.moral.evaluate(moral_value)
@@ -240,7 +238,7 @@ def measure_wake_sleep_metrics(snapshot: EffectivenessSnapshot) -> None:
             baseline_processed += 1
 
     baseline_vecs = []
-    for vec in vectors[:min(baseline_processed, n_events)]:
+    for vec in vectors[: min(baseline_processed, n_events)]:
         state = controller_without.process_event(vec, moral_value=0.8)
         if not state["rejected"]:
             baseline_vecs.append(vec)
@@ -310,12 +308,8 @@ def measure_aphasia_metrics(snapshot: EffectivenessSnapshot) -> None:
     ]
 
     # Count detections
-    true_positives = sum(
-        1 for text in telegraphic_samples if detector.analyze(text)["is_aphasic"]
-    )
-    false_positives = sum(
-        1 for text in healthy_samples if detector.analyze(text)["is_aphasic"]
-    )
+    true_positives = sum(1 for text in telegraphic_samples if detector.analyze(text)["is_aphasic"])
+    false_positives = sum(1 for text in healthy_samples if detector.analyze(text)["is_aphasic"])
 
     n_telegraphic = len(telegraphic_samples)
 

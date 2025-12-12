@@ -77,7 +77,9 @@ class TestMemoryMetricsExporter:
         metrics_exporter.increment_pelm_corruption(recovered=True)
         metrics_exporter.increment_pelm_corruption(recovered=False)
 
-        recovered_count = metrics_exporter.pelm_corruption_total.labels(recovered="true")._value.get()
+        recovered_count = metrics_exporter.pelm_corruption_total.labels(
+            recovered="true"
+        )._value.get()
         failed_count = metrics_exporter.pelm_corruption_total.labels(recovered="false")._value.get()
         assert recovered_count == 1
         assert failed_count == 1
@@ -96,8 +98,12 @@ class TestMemoryMetricsExporter:
         metrics_exporter.increment_synaptic_consolidation(transfer="l2_to_l3")
         metrics_exporter.increment_synaptic_consolidation(transfer="l1_to_l2")
 
-        l1_l2_count = metrics_exporter.synaptic_consolidation_total.labels(transfer="l1_to_l2")._value.get()
-        l2_l3_count = metrics_exporter.synaptic_consolidation_total.labels(transfer="l2_to_l3")._value.get()
+        l1_l2_count = metrics_exporter.synaptic_consolidation_total.labels(
+            transfer="l1_to_l2"
+        )._value.get()
+        l2_l3_count = metrics_exporter.synaptic_consolidation_total.labels(
+            transfer="l2_to_l3"
+        )._value.get()
         assert l1_l2_count == 2
         assert l2_l3_count == 1
 
@@ -129,7 +135,9 @@ class TestMemoryMetricsExporter:
         count = metrics_exporter.pelm_retrieve_latency_ms._sum.get()
         assert count == 10.0
 
-    def test_synaptic_update_latency_histogram(self, metrics_exporter: MemoryMetricsExporter) -> None:
+    def test_synaptic_update_latency_histogram(
+        self, metrics_exporter: MemoryMetricsExporter
+    ) -> None:
         """Test synaptic update latency histogram."""
         metrics_exporter.observe_synaptic_update_latency(0.5)
         metrics_exporter.observe_synaptic_update_latency(1.0)

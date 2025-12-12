@@ -1,8 +1,8 @@
 # Threat Model
 
-**Document Version:** 1.0.0  
-**Project Version:** 1.0.0  
-**Last Updated:** November 2025  
+**Document Version:** 1.0.0
+**Project Version:** 1.0.0
+**Last Updated:** November 2025
 **Threat Modeling Framework:** STRIDE + Attack Trees
 
 ## Table of Contents
@@ -267,16 +267,16 @@ This threat model identifies security threats to MLSDM Governed Cognitive Memory
    ├── Phishing
    ├── Log scanning
    └── Insider threat
-   
+
 2. Attacker floods API with requests
    ├── Distributed sources (DDoS)
    └── Single source (high-rate)
-   
+
 3. System overwhelmed
    ├── Rate limiter saturated
    ├── Connection pool exhausted
    └── CPU/memory limits reached
-   
+
 4. Legitimate users denied service
 ```
 
@@ -290,11 +290,11 @@ This threat model identifies security threats to MLSDM Governed Cognitive Memory
 
 ```
 1. Attacker submits maximum-size vectors
-   
+
 2. Memory fills to capacity (20k vectors)
-   
+
 3. Circular buffer starts evicting old data
-   
+
 4. Potential data loss / degraded performance
 ```
 
@@ -323,8 +323,8 @@ This threat model identifies security threats to MLSDM Governed Cognitive Memory
 - Memory corruption with adversarial vectors
 - Service disruption
 
-**Likelihood:** Medium  
-**Impact:** High  
+**Likelihood:** Medium
+**Impact:** High
 **Risk:** **High**
 
 **Mitigations:**
@@ -349,8 +349,8 @@ This threat model identifies security threats to MLSDM Governed Cognitive Memory
 - Moral governance bypass
 - Injection of unfiltered content
 
-**Likelihood:** Medium  
-**Impact:** Medium  
+**Likelihood:** Medium
+**Impact:** Medium
 **Risk:** Medium
 
 **Mitigations:**
@@ -375,8 +375,8 @@ This threat model identifies security threats to MLSDM Governed Cognitive Memory
 - Data breach
 - Service disruption
 
-**Likelihood:** Medium  
-**Impact:** Critical  
+**Likelihood:** Medium
+**Impact:** Critical
 **Risk:** **High**
 
 **Mitigations:**
@@ -417,7 +417,7 @@ This threat model identifies security threats to MLSDM Governed Cognitive Memory
 
 ## NeuroLang / Aphasia Security Controls
 
-**Added:** November 2025  
+**Added:** November 2025
 **Version:** 1.0.0
 
 The NeuroLang grammar module and Aphasia-Broca detection system introduce specialized security considerations due to their use of PyTorch checkpoints, offline training capabilities, and access to sensitive LLM responses. This section documents the security controls implemented to mitigate these risks.
@@ -580,9 +580,9 @@ All security controls are validated through comprehensive test suites:
 
 ## Review and Updates
 
-**Review Schedule:** Quarterly or after major changes  
-**Last Reviewed:** November 2025  
-**Next Review:** February 2026  
+**Review Schedule:** Quarterly or after major changes
+**Last Reviewed:** November 2025
+**Next Review:** February 2026
 **Owner:** Security Team
 
 ---

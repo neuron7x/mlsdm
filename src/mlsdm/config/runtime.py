@@ -33,10 +33,10 @@ from typing import Any
 class RuntimeMode(str, Enum):
     """Supported runtime modes for MLSDM."""
 
-    DEV = "dev"                    # Local development
-    LOCAL_PROD = "local-prod"      # Local production
-    CLOUD_PROD = "cloud-prod"      # Cloud production (Docker/k8s)
-    AGENT_API = "agent-api"        # API/Agent mode
+    DEV = "dev"  # Local development
+    LOCAL_PROD = "local-prod"  # Local production
+    CLOUD_PROD = "cloud-prod"  # Cloud production (Docker/k8s)
+    AGENT_API = "agent-api"  # API/Agent mode
 
 
 @dataclass
@@ -302,18 +302,14 @@ def get_runtime_config(mode: RuntimeMode | None = None) -> RuntimeConfig:
         rate_limit_window=_get_env_int(
             "RATE_LIMIT_WINDOW", defaults["security"]["rate_limit_window"]
         ),
-        secure_mode=_get_env_bool(
-            "MLSDM_SECURE_MODE", defaults["security"]["secure_mode"]
-        ),
+        secure_mode=_get_env_bool("MLSDM_SECURE_MODE", defaults["security"]["secure_mode"]),
         cors_origins=defaults["security"]["cors_origins"],
     )
 
     # Observability config with env overrides
     observability = ObservabilityConfig(
         log_level=_get_env_str("LOG_LEVEL", defaults["observability"]["log_level"]),
-        json_logging=_get_env_bool(
-            "JSON_LOGGING", defaults["observability"]["json_logging"]
-        ),
+        json_logging=_get_env_bool("JSON_LOGGING", defaults["observability"]["json_logging"]),
         metrics_enabled=_get_env_bool(
             "ENABLE_METRICS", defaults["observability"]["metrics_enabled"]
         ),
@@ -334,9 +330,7 @@ def get_runtime_config(mode: RuntimeMode | None = None) -> RuntimeConfig:
         llm_backend=_get_env_str("LLM_BACKEND", defaults["engine"]["llm_backend"]),
         embedding_dim=_get_env_int("EMBEDDING_DIM", defaults["engine"]["embedding_dim"]),
         enable_fslgs=_get_env_bool("ENABLE_FSLGS", defaults["engine"]["enable_fslgs"]),
-        enable_metrics=_get_env_bool(
-            "ENABLE_METRICS", defaults["engine"]["enable_metrics"]
-        ),
+        enable_metrics=_get_env_bool("ENABLE_METRICS", defaults["engine"]["enable_metrics"]),
         config_path=_get_env_str("CONFIG_PATH", defaults["engine"]["config_path"]),
     )
 

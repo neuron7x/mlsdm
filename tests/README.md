@@ -200,12 +200,12 @@ from mlsdm.module import Component
 
 class TestComponentBasic:
     """Basic functionality tests."""
-    
+
     def test_initialization_with_defaults(self):
         """Test component initializes with default parameters."""
         comp = Component()
         assert comp.param == expected_default
-    
+
     def test_operation_normal_case(self, sample_fixture):
         """Test normal operation with valid input."""
         result = comp.operation(sample_fixture)
@@ -213,7 +213,7 @@ class TestComponentBasic:
 
 class TestComponentEdgeCases:
     """Edge case and boundary tests."""
-    
+
     def test_empty_input_handling(self):
         """Test component handles empty input gracefully."""
         comp = Component()

@@ -165,7 +165,13 @@ class EngineErrorInfo(BaseModel):
     type: str = Field(
         ...,
         description="Error type code",
-        examples=["moral_precheck", "grammar_precheck", "mlsdm_rejection", "empty_response", "internal_error"],
+        examples=[
+            "moral_precheck",
+            "grammar_precheck",
+            "mlsdm_rejection",
+            "empty_response",
+            "internal_error",
+        ],
     )
     message: str | None = Field(
         default=None,

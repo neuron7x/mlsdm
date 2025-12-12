@@ -1,7 +1,7 @@
 # Speech Governance API Contract
 
-**Document Version:** 1.0.0  
-**Last Updated:** December 2025  
+**Document Version:** 1.0.0
+**Last Updated:** December 2025
 **Status:** Stable
 
 This document defines the contract for the Speech Governance system, including aphasia detection and repair functionality exposed through the `/infer` endpoint.
@@ -35,8 +35,8 @@ The Speech Governance system provides:
 
 ## Target Contract
 
-**Endpoint:** `POST /infer`  
-**Feature:** `aphasia_mode` parameter  
+**Endpoint:** `POST /infer`
+**Feature:** `aphasia_mode` parameter
 **Response Field:** `aphasia_metadata`
 
 When `aphasia_mode=true` is set in the request, the response includes structured metadata about aphasia detection and repair in the `aphasia_metadata` field.

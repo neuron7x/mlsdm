@@ -73,34 +73,34 @@ log_success() {
 # Check if required tools are available
 check_tools() {
     log_info "Checking available tools..."
-    
+
     HAS_YQ=false
     HAS_PYTHON=false
     HAS_KUBECTL=false
     HAS_KUBECONFORM=false
-    
+
     if command -v yq &> /dev/null; then
         log_success "yq found"
         HAS_YQ=true
     fi
-    
+
     if command -v python3 &> /dev/null; then
         if python3 -c "import yaml" 2>/dev/null; then
             log_success "python3 with PyYAML found"
             HAS_PYTHON=true
         fi
     fi
-    
+
     if command -v kubectl &> /dev/null; then
         log_success "kubectl found"
         HAS_KUBECTL=true
     fi
-    
+
     if command -v kubeconform &> /dev/null; then
         log_success "kubeconform found"
         HAS_KUBECONFORM=true
     fi
-    
+
     if [ "$HAS_YQ" = false ] && [ "$HAS_PYTHON" = false ]; then
         log_error "Neither yq nor python3+PyYAML found. Cannot validate YAML."
         exit 1
@@ -112,7 +112,7 @@ validate_yaml_syntax() {
     local file=$1
     local filename
     filename=$(basename "$file")
-    
+
     if [ "$HAS_YQ" = true ]; then
         if yq eval '.' "$file" > /dev/null 2>&1; then
             log_success "$filename - YAML syntax valid"
@@ -139,7 +139,7 @@ validate_json_syntax() {
     local file=$1
     local filename
     filename=$(basename "$file")
-    
+
     if python3 -c "import json; json.load(open('$file'))" 2>/dev/null; then
         log_success "$filename - JSON syntax valid"
         return 0
@@ -154,7 +154,7 @@ validate_yaml_strict() {
     local file=$1
     local filename
     filename=$(basename "$file")
-    
+
     if [ "$HAS_YQ" = true ]; then
         if yq eval '.' "$file" > /dev/null 2>&1; then
             log_success "$filename - yq validation passed"
@@ -172,7 +172,7 @@ validate_k8s_schema() {
     local file=$1
     local filename
     filename=$(basename "$file")
-    
+
     if [ "$HAS_KUBECONFORM" = true ]; then
         if kubeconform -strict -summary "$file" 2>&1; then
             log_success "$filename - schema validation passed"
@@ -190,7 +190,7 @@ check_common_issues() {
     local file=$1
     local filename
     filename=$(basename "$file")
-    
+
     # Check for hardcoded secrets (look for non-placeholder, non-variable values)
     # Only warn if we see actual values that aren't placeholders or env vars
     if grep -qE "(password|secret|api-key|apikey):" "$file"; then
@@ -201,21 +201,21 @@ check_common_issues() {
             fi
         fi
     fi
-    
+
     # Check for missing resource limits
     if grep -q "kind: Deployment" "$file" || grep -q "kind: StatefulSet" "$file"; then
         if ! grep -q "resources:" "$file"; then
             log_warn "$filename - Missing resource limits/requests"
         fi
     fi
-    
+
     # Check for missing health probes
     if grep -q "kind: Deployment" "$file"; then
         if ! grep -q "livenessProbe:" "$file" && ! grep -q "readinessProbe:" "$file"; then
             log_warn "$filename - Missing health probes"
         fi
     fi
-    
+
     # Check for 'latest' tag
     if grep -qE "image:.*:latest" "$file"; then
         log_warn "$filename - Uses 'latest' tag (not recommended for production)"
@@ -227,25 +227,25 @@ validate_manifest() {
     local file=$1
     local filename
     filename=$(basename "$file")
-    
+
     echo ""
     log_info "Validating: $filename"
-    
+
     # Skip non-YAML files
     if [[ ! "$file" =~ \.(yaml|yml)$ ]]; then
         log_info "Skipping non-YAML file: $filename"
         return 0
     fi
-    
+
     # Validate YAML syntax
     validate_yaml_syntax "$file" || true
-    
+
     # Strict YAML validation
     if [ "$STRICT_MODE" = true ]; then
         validate_yaml_strict "$file" || true
         validate_k8s_schema "$file" || true
     fi
-    
+
     # Check for common issues
     check_common_issues "$file"
 }
@@ -253,7 +253,7 @@ validate_manifest() {
 # Validate kustomization
 validate_kustomization() {
     log_info "Validating kustomization..."
-    
+
     if [ -f "$K8S_DIR/kustomization.yaml" ]; then
         if kubectl kustomize "$K8S_DIR" > /dev/null 2>&1; then
             log_success "Kustomization build successful"
@@ -272,38 +272,38 @@ main() {
     echo "MLSDM Kubernetes Manifest Validation"
     echo "========================================="
     echo ""
-    
+
     check_tools
-    
+
     echo ""
     echo "-----------------------------------------"
     echo "Validating Kubernetes Manifests"
     echo "-----------------------------------------"
-    
+
     # Validate all YAML files in k8s directory
     for file in "$K8S_DIR"/*.yaml "$K8S_DIR"/*.yml; do
         if [ -f "$file" ]; then
             validate_manifest "$file"
         fi
     done
-    
+
     echo ""
     echo "-----------------------------------------"
     echo "Validating Monitoring Manifests"
     echo "-----------------------------------------"
-    
+
     for file in "$MONITORING_DIR"/*.yaml "$MONITORING_DIR"/*.yml; do
         if [ -f "$file" ]; then
             validate_manifest "$file"
         fi
     done
-    
+
     # Validate JSON files
     echo ""
     echo "-----------------------------------------"
     echo "Validating JSON Files"
     echo "-----------------------------------------"
-    
+
     for file in "$MONITORING_DIR"/*.json "$GRAFANA_DIR"/*.json; do
         if [ -f "$file" ]; then
             echo ""
@@ -311,18 +311,18 @@ main() {
             validate_json_syntax "$file" || true
         fi
     done
-    
+
     echo ""
     echo "-----------------------------------------"
     echo "Validating Kustomization"
     echo "-----------------------------------------"
-    
+
     if [ "$HAS_KUBECTL" = true ]; then
         validate_kustomization
     else
         log_warn "kubectl not found - skipping kustomization validation"
     fi
-    
+
     # Summary
     echo ""
     echo "========================================="
@@ -330,7 +330,7 @@ main() {
     echo "========================================="
     echo "Errors:   $ERRORS"
     echo "Warnings: $WARNINGS"
-    
+
     if [ $ERRORS -gt 0 ]; then
         echo ""
         log_error "Validation failed with $ERRORS error(s)"

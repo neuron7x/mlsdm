@@ -1,8 +1,8 @@
 # API Reference
 
-**Document Version:** 1.2.0  
-**Project Version:** 1.2.0  
-**Last Updated:** December 2025  
+**Document Version:** 1.2.0
+**Project Version:** 1.2.0
+**Last Updated:** December 2025
 **Status:** Production
 
 Complete API reference for MLSDM Governed Cognitive Memory v1.2.0.
@@ -467,15 +467,15 @@ from mlsdm.speech.governance import SpeechGovernor, SpeechGovernanceResult
 
 class MyGovernor:
     def __call__(
-        self, 
-        *, 
-        prompt: str, 
-        draft: str, 
+        self,
+        *,
+        prompt: str,
+        draft: str,
         max_tokens: int
     ) -> SpeechGovernanceResult:
         # Analyze and potentially modify draft
         final_text = self.process(draft)
-        
+
         return SpeechGovernanceResult(
             final_text=final_text,
             raw_text=draft,
@@ -501,12 +501,12 @@ from mlsdm.speech.governance import SpeechGovernanceResult
 class ContentFilter:
     def __init__(self, forbidden_words: list[str]):
         self.forbidden = set(forbidden_words)
-    
+
     def __call__(self, *, prompt: str, draft: str, max_tokens: int) -> SpeechGovernanceResult:
         words = draft.split()
         filtered = [w for w in words if w.lower() not in self.forbidden]
         final = " ".join(filtered)
-        
+
         return SpeechGovernanceResult(
             final_text=final,
             raw_text=draft,
@@ -528,7 +528,7 @@ class FormalStyleGovernor:
     def __call__(self, *, prompt: str, draft: str, max_tokens: int) -> SpeechGovernanceResult:
         # Replace informal contractions
         formal = draft.replace("don't", "do not").replace("can't", "cannot")
-        
+
         return SpeechGovernanceResult(
             final_text=formal,
             raw_text=draft,
@@ -669,7 +669,7 @@ class ToxicityGovernor:
             clean_text = self.detoxify(draft)
         else:
             clean_text = draft
-        
+
         return SpeechGovernanceResult(
             final_text=clean_text,
             raw_text=draft,
@@ -1349,6 +1349,6 @@ print(f"  Moral threshold: {state['moral_threshold']:.2f}")
 
 ---
 
-**Version**: 1.0.0  
-**Last Updated**: November 2025  
+**Version**: 1.0.0
+**Last Updated**: November 2025
 **Maintainer**: neuron7x

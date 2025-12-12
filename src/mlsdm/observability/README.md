@@ -12,7 +12,7 @@ The observability module provides a comprehensive logging solution designed spec
 
 - **JSON Structured Logs**: Every log entry is formatted as JSON with consistent fields
 - **Multiple Log Levels**: DEBUG, INFO, WARNING, ERROR
-- **Dual Log Rotation**: 
+- **Dual Log Rotation**:
   - Size-based rotation (RotatingFileHandler)
   - Time-based rotation (TimedRotatingFileHandler)
 - **Thread-Safe**: Fully thread-safe for concurrent logging

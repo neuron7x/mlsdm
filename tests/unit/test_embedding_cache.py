@@ -279,9 +279,7 @@ class TestEmbeddingCache:
 
     def test_thread_safety(self) -> None:
         """Test thread safety of cache operations."""
-        cache = EmbeddingCache(
-            config=EmbeddingCacheConfig(max_size=100)
-        )
+        cache = EmbeddingCache(config=EmbeddingCacheConfig(max_size=100))
         errors: list[Exception] = []
 
         def worker(thread_id: int) -> None:

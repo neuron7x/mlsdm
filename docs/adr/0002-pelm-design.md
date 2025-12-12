@@ -1,8 +1,8 @@
 # ADR-0002: Phase-Entangled Lattice Memory (PELM) Design
 
-**Status**: Accepted  
-**Date**: 2025-11-30  
-**Deciders**: MLSDM Core Team  
+**Status**: Accepted
+**Date**: 2025-11-30
+**Deciders**: MLSDM Core Team
 **Categories**: Architecture, Memory Systems
 
 ## Context

@@ -34,6 +34,7 @@ class EmbeddingCacheConfig:
         ttl_seconds: Time-to-live for cached entries in seconds (default: 3600)
         enabled: Whether caching is enabled (default: True)
     """
+
     max_size: int = 1000
     ttl_seconds: float = 3600.0
     enabled: bool = True
@@ -49,6 +50,7 @@ class EmbeddingCacheStats:
         evictions: Number of entries evicted due to size/TTL limits
         current_size: Current number of cached entries
     """
+
     hits: int
     misses: int
     evictions: int
@@ -71,6 +73,7 @@ class _CacheEntry:
         vector: The cached embedding vector
         timestamp: When the entry was created/last accessed
     """
+
     vector: np.ndarray
     timestamp: float
 
@@ -128,8 +131,10 @@ class EmbeddingCache:
         """
         current_time = time.time()
         expired_keys = [
-            key for key, entry in self._cache.items()
-            if self.config.ttl_seconds > 0 and (current_time - entry.timestamp) > self.config.ttl_seconds
+            key
+            for key, entry in self._cache.items()
+            if self.config.ttl_seconds > 0
+            and (current_time - entry.timestamp) > self.config.ttl_seconds
         ]
         for key in expired_keys:
             del self._cache[key]
@@ -217,6 +222,7 @@ class EmbeddingCache:
         Returns:
             A cached version of the embedding function
         """
+
         def cached_embed(text: str) -> np.ndarray:
             # Try to get from cache
             cached = self.get(text)

@@ -1,7 +1,7 @@
 # Release Checklist
 
-**Version**: 1.2.0  
-**Last Updated**: November 2025  
+**Version**: 1.2.0
+**Last Updated**: November 2025
 **Purpose**: Release gate verification synced with `.github/workflows/release.yml`
 
 ---

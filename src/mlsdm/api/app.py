@@ -15,6 +15,7 @@ from pydantic import BaseModel, Field
 # Try to import OpenTelemetry, but allow graceful degradation
 try:
     from opentelemetry.trace import SpanKind
+
     OTEL_AVAILABLE = True
 except ImportError:
     OTEL_AVAILABLE = False
@@ -105,10 +106,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     security_logger.log_system_event(
         SecurityEventType.STARTUP,
         "MLSDM Governed Cognitive Memory API started",
-        additional_data={
-            "version": "1.0.0",
-            "dimension": _manager.dimension
-        }
+        additional_data={"version": "1.0.0", "dimension": _manager.dimension},
     )
 
     yield
@@ -116,8 +114,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # SHUTDOWN
     # Log system shutdown
     security_logger.log_system_event(
-        SecurityEventType.SHUTDOWN,
-        "MLSDM Governed Cognitive Memory API shutting down"
+        SecurityEventType.SHUTDOWN, "MLSDM Governed Cognitive Memory API shutting down"
     )
 
     # Shutdown OpenTelemetry tracing (flush pending spans)
@@ -178,10 +175,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> str:
     api_key = os.getenv("API_KEY")
 
     if api_key and token != api_key:
-        security_logger.log_auth_failure(
-            client_id="unknown",
-            reason="Invalid token"
-        )
+        security_logger.log_auth_failure(client_id="unknown", reason="Invalid token")
         raise HTTPException(status_code=401, detail="Invalid authentication")
 
     security_logger.log_auth_success(client_id="unknown")
@@ -212,9 +206,7 @@ class GenerateRequest(BaseModel):
     max_tokens: int | None = Field(
         None, ge=1, le=4096, description="Maximum number of tokens to generate"
     )
-    moral_value: float | None = Field(
-        None, ge=0.0, le=1.0, description="Moral threshold value"
-    )
+    moral_value: float | None = Field(None, ge=0.0, le=1.0, description="Moral threshold value")
 
 
 # Request/Response models for /infer endpoint (extended API)
@@ -229,16 +221,13 @@ class InferRequest(BaseModel):
         None, ge=1, le=4096, description="Maximum number of tokens to generate"
     )
     secure_mode: bool = Field(
-        default=False,
-        description="Enable enhanced security filtering for sensitive contexts"
+        default=False, description="Enable enhanced security filtering for sensitive contexts"
     )
     aphasia_mode: bool = Field(
-        default=False,
-        description="Enable aphasia detection and repair for output quality"
+        default=False, description="Enable aphasia detection and repair for output quality"
     )
     rag_enabled: bool = Field(
-        default=True,
-        description="Enable RAG-based context retrieval from memory"
+        default=True, description="Enable RAG-based context retrieval from memory"
     )
     context_top_k: int | None = Field(
         None, ge=1, le=100, description="Number of context items for RAG (default: 5)"
@@ -281,9 +270,7 @@ class CognitiveStateDTO(BaseModel):
     phase: str = Field(description="Current cognitive phase (wake/sleep)")
     stateless_mode: bool = Field(description="Whether running in stateless/degraded mode")
     emergency_shutdown: bool = Field(description="Whether emergency shutdown is active")
-    memory_used_mb: float | None = Field(
-        default=None, description="Aggregated memory usage in MB"
-    )
+    memory_used_mb: float | None = Field(default=None, description="Aggregated memory usage in MB")
     moral_threshold: float | None = Field(
         default=None, description="Current moral filter threshold (0.0-1.0)"
     )
@@ -311,9 +298,7 @@ class GenerateResponse(BaseModel):
     response: str = Field(description="Generated response text")
     accepted: bool = Field(description="Whether the request was morally accepted")
     phase: str = Field(description="Current cognitive phase")
-    moral_score: float | None = Field(
-        default=None, description="Moral score used for this request"
-    )
+    moral_score: float | None = Field(default=None, description="Moral score used for this request")
     aphasia_flags: dict[str, Any] | None = Field(
         default=None, description="Aphasia detection flags (if available)"
     )
@@ -325,15 +310,11 @@ class GenerateResponse(BaseModel):
     )
 
     # Optional diagnostic fields
-    metrics: dict[str, Any] | None = Field(
-        default=None, description="Performance timing metrics"
-    )
+    metrics: dict[str, Any] | None = Field(default=None, description="Performance timing metrics")
     safety_flags: dict[str, Any] | None = Field(
         default=None, description="Safety validation results"
     )
-    memory_stats: dict[str, Any] | None = Field(
-        default=None, description="Memory state statistics"
-    )
+    memory_stats: dict[str, Any] | None = Field(default=None, description="Memory state statistics")
 
 
 class ErrorDetail(BaseModel):
@@ -341,9 +322,7 @@ class ErrorDetail(BaseModel):
 
     error_type: str = Field(description="Type of error")
     message: str = Field(description="Human-readable error message")
-    details: dict[str, Any] | None = Field(
-        default=None, description="Additional error details"
-    )
+    details: dict[str, Any] | None = Field(default=None, description="Additional error details")
 
 
 class ErrorResponse(BaseModel):
@@ -354,9 +333,7 @@ class ErrorResponse(BaseModel):
 
 @app.post("/v1/process_event/", response_model=StateResponse)
 async def process_event(
-    event: EventInput,
-    request: Request,
-    user: str = Depends(get_current_user)
+    event: EventInput, request: Request, user: str = Depends(get_current_user)
 ) -> StateResponse:
     """Process event with comprehensive security validation.
 
@@ -369,32 +346,23 @@ async def process_event(
     if _rate_limiting_enabled and not _rate_limiter.is_allowed(client_id):
         security_logger.log_rate_limit_exceeded(client_id=client_id)
         raise HTTPException(
-            status_code=429,
-            detail="Rate limit exceeded. Maximum 5 requests per second."
+            status_code=429, detail="Rate limit exceeded. Maximum 5 requests per second."
         )
 
     # Validate moral value
     try:
         moral_value = _validator.validate_moral_value(event.moral_value)
     except ValueError as e:
-        security_logger.log_invalid_input(
-            client_id=client_id,
-            error_message=str(e)
-        )
+        security_logger.log_invalid_input(client_id=client_id, error_message=str(e))
         raise HTTPException(status_code=400, detail=str(e)) from e
 
     # Validate and convert vector
     try:
         vec = _validator.validate_vector(
-            event.event_vector,
-            expected_dim=_manager.dimension,
-            normalize=False
+            event.event_vector, expected_dim=_manager.dimension, normalize=False
         )
     except ValueError as e:
-        security_logger.log_invalid_input(
-            client_id=client_id,
-            error_message=str(e)
-        )
+        security_logger.log_invalid_input(client_id=client_id, error_message=str(e))
         raise HTTPException(status_code=400, detail=str(e)) from e
 
     # Process the event
@@ -404,10 +372,7 @@ async def process_event(
 
 
 @app.get("/v1/state/", response_model=StateResponse)
-async def get_state(
-    request: Request,
-    user: str = Depends(get_current_user)
-) -> StateResponse:
+async def get_state(request: Request, user: str = Depends(get_current_user)) -> StateResponse:
     """Get system state with rate limiting."""
     client_id = _get_client_id(request)
 
@@ -415,8 +380,7 @@ async def get_state(
     if _rate_limiting_enabled and not _rate_limiter.is_allowed(client_id):
         security_logger.log_rate_limit_exceeded(client_id=client_id)
         raise HTTPException(
-            status_code=429,
-            detail="Rate limit exceeded. Maximum 5 requests per second."
+            status_code=429, detail="Rate limit exceeded. Maximum 5 requests per second."
         )
 
     L1, L2, L3 = _manager.memory.get_state()
@@ -502,8 +466,7 @@ async def generate(
         # Validate prompt
         if not request_body.prompt or not request_body.prompt.strip():
             security_logger.log_invalid_input(
-                client_id=client_id,
-                error_message="Prompt cannot be empty"
+                client_id=client_id, error_message="Prompt cannot be empty"
             )
             span.set_attribute("mlsdm.validation_error", "empty_prompt")
             return JSONResponse(
@@ -545,7 +508,7 @@ async def generate(
                     "mlsdm.accepted": accepted,
                     "mlsdm.rejected_at": rejected_at or "",
                     "mlsdm.response_length": len(result.get("response", "")),
-                }
+                },
             )
 
             # Build safety flags from validation steps
@@ -618,8 +581,7 @@ async def generate(
             # Log the error but don't expose stack trace in response
             logger.exception("Error in generate endpoint")
             security_logger.log_invalid_input(
-                client_id=client_id,
-                error_message=f"Internal error: {type(e).__name__}"
+                client_id=client_id, error_message=f"Internal error: {type(e).__name__}"
             )
             # Record exception on span
             tracer_manager.record_exception(span, e)
@@ -706,8 +668,7 @@ async def infer(
         # Validate prompt
         if not request_body.prompt or not request_body.prompt.strip():
             security_logger.log_invalid_input(
-                client_id=client_id,
-                error_message="Prompt cannot be empty"
+                client_id=client_id, error_message="Prompt cannot be empty"
             )
             span.set_attribute("mlsdm.validation_error", "empty_prompt")
             return JSONResponse(
@@ -764,7 +725,7 @@ async def infer(
                     "mlsdm.accepted": accepted,
                     "mlsdm.rejected_at": rejected_at or "",
                     "mlsdm.response_length": len(result.get("response", "")),
-                }
+                },
             )
 
             # Build moral metadata
@@ -803,8 +764,12 @@ async def infer(
                     )
                     # Add aphasia info to span
                     if aphasia_report:
-                        span.set_attribute("mlsdm.aphasia.detected", aphasia_report.get("is_aphasic", False))
-                        span.set_attribute("mlsdm.aphasia.severity", aphasia_report.get("severity", 0.0))
+                        span.set_attribute(
+                            "mlsdm.aphasia.detected", aphasia_report.get("is_aphasic", False)
+                        )
+                        span.set_attribute(
+                            "mlsdm.aphasia.severity", aphasia_report.get("severity", 0.0)
+                        )
                 else:
                     # Aphasia mode requested but no speech governor configured
                     aphasia_metadata = AphasiaMetadata(
@@ -834,8 +799,7 @@ async def infer(
         except Exception as e:
             logger.exception("Error in infer endpoint")
             security_logger.log_invalid_input(
-                client_id=client_id,
-                error_message=f"Internal error: {type(e).__name__}"
+                client_id=client_id, error_message=f"Internal error: {type(e).__name__}"
             )
             # Record exception on span
             tracer_manager.record_exception(span, e)

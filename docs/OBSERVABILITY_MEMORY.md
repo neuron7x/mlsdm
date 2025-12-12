@@ -22,13 +22,13 @@ All observability features are designed to expose only **metadata** - no raw vec
 from mlsdm.observability import (
     # Metrics exporter
     get_memory_metrics_exporter,
-    
+
     # Convenience functions for recording
     record_pelm_store,
     record_pelm_retrieve,
     record_synaptic_update,
     record_pelm_corruption,
-    
+
     # Timer helper
     MemoryOperationTimer,
 )
@@ -236,7 +236,7 @@ mlsdm_memory_pelm_utilization_ratio > 0.9
 # P95 store latency
 histogram_quantile(0.95, rate(mlsdm_memory_pelm_store_latency_milliseconds_bucket[5m]))
 
-# P95 retrieve latency  
+# P95 retrieve latency
 histogram_quantile(0.95, rate(mlsdm_memory_pelm_retrieve_latency_milliseconds_bucket[5m]))
 
 # Hit rate
@@ -284,7 +284,7 @@ groups:
         annotations:
           summary: "PELM capacity utilization above 90%"
           description: "Current utilization: {{ $value | humanizePercentage }}"
-          
+
       - alert: PELMCapacityCritical
         expr: mlsdm_memory_pelm_utilization_ratio > 0.95
         for: 2m
@@ -292,7 +292,7 @@ groups:
           severity: critical
         annotations:
           summary: "PELM capacity critically high (> 95%)"
-          
+
       - alert: PELMCorruptionDetected
         expr: increase(mlsdm_memory_pelm_corruption_total[5m]) > 0
         for: 0m
@@ -300,10 +300,10 @@ groups:
           severity: critical
         annotations:
           summary: "PELM memory corruption detected"
-          
+
       - alert: PELMHighRetrieveLatency
         expr: |
-          histogram_quantile(0.95, 
+          histogram_quantile(0.95,
             rate(mlsdm_memory_pelm_retrieve_latency_milliseconds_bucket[5m])
           ) > 50
         for: 5m
@@ -311,7 +311,7 @@ groups:
           severity: warning
         annotations:
           summary: "PELM P95 retrieve latency exceeds 50ms"
-          
+
       - alert: LowMemoryHitRate
         expr: |
           sum(rate(mlsdm_memory_pelm_retrieve_total{result="hit"}[5m])) /

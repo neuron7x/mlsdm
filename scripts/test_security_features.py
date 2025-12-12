@@ -88,8 +88,13 @@ def main(argv: list[str] | None = None) -> int:
     # Test 1: Security unit tests
     success, _ = run_command(
         [
-            "python", "-m", "pytest",
-            "src/tests/unit/test_security.py", "-v", "--tb=short", "--no-cov",
+            "python",
+            "-m",
+            "pytest",
+            "src/tests/unit/test_security.py",
+            "-v",
+            "--tb=short",
+            "--no-cov",
         ],
         "Security Unit Tests",
     )
@@ -98,8 +103,13 @@ def main(argv: list[str] | None = None) -> int:
     # Test 2: API tests with security features
     success, _ = run_command(
         [
-            "python", "-m", "pytest",
-            "src/tests/unit/test_api.py", "-v", "--tb=short", "--no-cov",
+            "python",
+            "-m",
+            "pytest",
+            "src/tests/unit/test_api.py",
+            "-v",
+            "--tb=short",
+            "--no-cov",
         ],
         "API Tests with Security",
     )
@@ -108,8 +118,12 @@ def main(argv: list[str] | None = None) -> int:
     # Test 3: Rate limiter tests
     success, _ = run_command(
         [
-            "python", "-m", "pytest",
-            "src/tests/unit/test_security.py::TestRateLimiter", "-v", "--no-cov",
+            "python",
+            "-m",
+            "pytest",
+            "src/tests/unit/test_security.py::TestRateLimiter",
+            "-v",
+            "--no-cov",
         ],
         "Rate Limiter Tests",
     )
@@ -118,8 +132,12 @@ def main(argv: list[str] | None = None) -> int:
     # Test 4: Input validator tests
     success, _ = run_command(
         [
-            "python", "-m", "pytest",
-            "src/tests/unit/test_security.py::TestInputValidator", "-v", "--no-cov",
+            "python",
+            "-m",
+            "pytest",
+            "src/tests/unit/test_security.py::TestInputValidator",
+            "-v",
+            "--no-cov",
         ],
         "Input Validator Tests",
     )
@@ -128,8 +146,12 @@ def main(argv: list[str] | None = None) -> int:
     # Test 5: Security logger tests
     success, _ = run_command(
         [
-            "python", "-m", "pytest",
-            "src/tests/unit/test_security.py::TestSecurityLogger", "-v", "--no-cov",
+            "python",
+            "-m",
+            "pytest",
+            "src/tests/unit/test_security.py::TestSecurityLogger",
+            "-v",
+            "--no-cov",
         ],
         "Security Logger Tests",
     )
@@ -148,7 +170,7 @@ def main(argv: list[str] | None = None) -> int:
         "scripts/security_audit.py",
         "SECURITY_IMPLEMENTATION.md",
         "SECURITY_POLICY.md",
-        "THREAT_MODEL.md"
+        "THREAT_MODEL.md",
     ]
 
     all_present = True

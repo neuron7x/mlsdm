@@ -487,7 +487,11 @@ def log_pelm_corruption(
     try:
         obs_logger = get_observability_logger()
 
-        event_type = MemoryEventType.PELM_RECOVERY_ATTEMPTED if recovered else MemoryEventType.PELM_CORRUPTION_DETECTED
+        event_type = (
+            MemoryEventType.PELM_RECOVERY_ATTEMPTED
+            if recovered
+            else MemoryEventType.PELM_CORRUPTION_DETECTED
+        )
         status = "recovered" if recovered else ("detected" if detected else "none")
 
         obs_logger.error(

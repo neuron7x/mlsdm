@@ -238,7 +238,7 @@ sequenceDiagram
     U->>W: generate(prompt, moral_value)
     W->>W: Create embedding
     W->>MF: Evaluate moral_value
-    
+
     alt Rejected
         MF-->>W: Rejected
         W-->>U: {accepted: false}
@@ -248,7 +248,7 @@ sequenceDiagram
         W->>M: Store & retrieve context
         W->>LLM: Generate with context
         LLM-->>W: Response
-        
+
         opt NeuroLangWrapper
             W->>A: Analyze response
             alt Aphasic
@@ -256,7 +256,7 @@ sequenceDiagram
                 W->>LLM: Regenerate
             end
         end
-        
+
         W-->>U: {response, phase, metadata}
     end
 ```

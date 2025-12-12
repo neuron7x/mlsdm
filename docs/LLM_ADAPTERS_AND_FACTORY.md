@@ -21,7 +21,7 @@ Callable[[str, int], str]
    - Connects to OpenAI's API
    - Requires `OPENAI_API_KEY` environment variable
    - Optional `OPENAI_MODEL` (default: "gpt-3.5-turbo")
-   
+
 2. **Local Stub Adapter** (`build_local_stub_llm_adapter`)
    - Deterministic mock for testing
    - No external dependencies
@@ -119,12 +119,12 @@ from typing import Callable
 
 def build_custom_llm_adapter() -> Callable[[str, int], str]:
     """Build a custom LLM adapter."""
-    
+
     def llm_generate_fn(prompt: str, max_tokens: int) -> str:
         # Your custom implementation
         response = your_llm_call(prompt, max_tokens)
         return response
-    
+
     return llm_generate_fn
 
 # Use custom adapter
@@ -276,10 +276,10 @@ The engine returns a structured response:
 
 This implementation maintains the core MLSDM architecture:
 
-✅ **Single Memory Source**: MLSDM remains the only source of truth  
-✅ **Pre-flight Checks**: Moral and grammar checks before generation  
-✅ **Structured Responses**: Consistent response format with timing and validation  
-✅ **Backward Compatibility**: All existing tests pass (415 tests)  
+✅ **Single Memory Source**: MLSDM remains the only source of truth
+✅ **Pre-flight Checks**: Moral and grammar checks before generation
+✅ **Structured Responses**: Consistent response format with timing and validation
+✅ **Backward Compatibility**: All existing tests pass (415 tests)
 ✅ **No Breaking Changes**: Existing API preserved
 
 ## Future Extensions

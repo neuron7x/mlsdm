@@ -77,9 +77,7 @@ class ApiError(BaseModel):
     # ------------------------------------------------------------------
 
     @classmethod
-    def validation_error(
-        cls, message: str, field: str | None = None, **kwargs: Any
-    ) -> ApiError:
+    def validation_error(cls, message: str, field: str | None = None, **kwargs: Any) -> ApiError:
         """Create a validation error.
 
         Args:

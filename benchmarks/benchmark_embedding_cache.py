@@ -77,9 +77,7 @@ class TestEmbeddingCacheBenchmarks:
         print("BENCHMARK: Embedding Cache Hit Rate")
         print("=" * 70)
 
-        cache = EmbeddingCache(
-            config=EmbeddingCacheConfig(max_size=100, ttl_seconds=3600)
-        )
+        cache = EmbeddingCache(config=EmbeddingCacheConfig(max_size=100, ttl_seconds=3600))
         wrapped_embed = cache.wrap(slow_embedding)
 
         # Test with repeated prompts
@@ -111,7 +109,9 @@ class TestEmbeddingCacheBenchmarks:
 
         # Validate high hit rate for repeated prompts
         assert stats.hits == expected_hits, f"Expected {expected_hits} hits, got {stats.hits}"
-        assert stats.misses == expected_misses, f"Expected {expected_misses} misses, got {stats.misses}"
+        assert (
+            stats.misses == expected_misses
+        ), f"Expected {expected_misses} misses, got {stats.misses}"
         assert stats.hit_rate >= 99.0, f"Expected hit rate >= 99%, got {stats.hit_rate:.2f}%"
 
         print("✓ Cache achieves 99%+ hit rate with repeated prompts")
@@ -145,9 +145,7 @@ class TestEmbeddingCacheBenchmarks:
         stats_no_cache = compute_percentiles(latencies_no_cache)
 
         # Measure WITH cache (cache will warm up on first pass)
-        cache = EmbeddingCache(
-            config=EmbeddingCacheConfig(max_size=100, ttl_seconds=3600)
-        )
+        cache = EmbeddingCache(config=EmbeddingCacheConfig(max_size=100, ttl_seconds=3600))
         wrapped_embed = cache.wrap(slow_embedding)
 
         latencies_with_cache: list[float] = []
@@ -174,14 +172,10 @@ class TestEmbeddingCacheBenchmarks:
 
         # Calculate improvement
         p95_improvement = (
-            (stats_no_cache["p95"] - stats_with_cache["p95"])
-            / stats_no_cache["p95"]
-            * 100
+            (stats_no_cache["p95"] - stats_with_cache["p95"]) / stats_no_cache["p95"] * 100
         )
         mean_improvement = (
-            (stats_no_cache["mean"] - stats_with_cache["mean"])
-            / stats_no_cache["mean"]
-            * 100
+            (stats_no_cache["mean"] - stats_with_cache["mean"]) / stats_no_cache["mean"] * 100
         )
 
         print("\nImprovement:")
@@ -190,12 +184,10 @@ class TestEmbeddingCacheBenchmarks:
         print()
 
         # Cache should provide significant latency improvement
-        assert stats_with_cache["mean"] < stats_no_cache["mean"], (
-            "Cache should reduce mean latency"
-        )
-        assert mean_improvement > 50.0, (
-            f"Expected >50% mean latency improvement, got {mean_improvement:.1f}%"
-        )
+        assert stats_with_cache["mean"] < stats_no_cache["mean"], "Cache should reduce mean latency"
+        assert (
+            mean_improvement > 50.0
+        ), f"Expected >50% mean latency improvement, got {mean_improvement:.1f}%"
 
         print("✓ Cache provides >50% latency reduction")
         print()
@@ -207,9 +199,7 @@ class TestEmbeddingCacheBenchmarks:
         print("=" * 70)
 
         # Create cache with reasonable size
-        cache = EmbeddingCache(
-            config=EmbeddingCacheConfig(max_size=1000, ttl_seconds=3600)
-        )
+        cache = EmbeddingCache(config=EmbeddingCacheConfig(max_size=1000, ttl_seconds=3600))
         wrapped_embed = cache.wrap(slow_embedding)
 
         # Fill cache with diverse prompts
@@ -295,9 +285,9 @@ class TestEmbeddingCacheBenchmarks:
         # the actual numbers depend on internal calls. Let's verify reasonable hit rate.
 
         assert cache_stats["hits"] > 0, "Should have cache hits after warming up"
-        assert cache_stats["hit_rate"] > 50, (
-            f"Expected hit rate > 50%, got {cache_stats['hit_rate']:.2f}%"
-        )
+        assert (
+            cache_stats["hit_rate"] > 50
+        ), f"Expected hit rate > 50%, got {cache_stats['hit_rate']:.2f}%"
 
         print("✓ LLMWrapper integrates correctly with embedding cache")
         print()
@@ -309,9 +299,7 @@ class TestEmbeddingCacheBenchmarks:
         print("=" * 70)
 
         # Small cache to test eviction
-        cache = EmbeddingCache(
-            config=EmbeddingCacheConfig(max_size=10, ttl_seconds=3600)
-        )
+        cache = EmbeddingCache(config=EmbeddingCacheConfig(max_size=10, ttl_seconds=3600))
 
         # Add 20 entries (should trigger evictions)
         for i in range(20):

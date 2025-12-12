@@ -259,7 +259,7 @@ class MyProvider(LLMProvider):
         self.api_key = api_key or os.environ.get("MY_PROVIDER_API_KEY")
         if not self.api_key:
             raise ValueError("MY_PROVIDER_API_KEY required")
-    
+
     def generate(self, prompt: str, max_tokens: int, **kwargs) -> str:
         try:
             # Your API call here
@@ -270,7 +270,7 @@ class MyProvider(LLMProvider):
                 provider_id=self.provider_id,
                 original_error=e
             )
-    
+
     @property
     def provider_id(self) -> str:
         return "my_provider"

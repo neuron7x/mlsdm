@@ -1,7 +1,7 @@
 # Configuration Layer Architecture
 
-**Document Version:** 1.0.0  
-**Last Updated:** December 2025  
+**Document Version:** 1.0.0
+**Last Updated:** December 2025
 **Status:** Stable
 
 ## Overview
@@ -299,8 +299,8 @@ except ImportError:
 
 # Use fallback if calibration unavailable
 threshold = (
-    MORAL_FILTER_DEFAULTS.threshold 
-    if MORAL_FILTER_DEFAULTS 
+    MORAL_FILTER_DEFAULTS.threshold
+    if MORAL_FILTER_DEFAULTS
     else 0.50
 )
 ```
@@ -314,6 +314,6 @@ threshold = (
 
 ---
 
-**Document Status:** Stable  
-**Last Reviewed:** December 2025  
+**Document Status:** Stable
+**Last Reviewed:** December 2025
 **Next Review:** Version 1.3.0 release

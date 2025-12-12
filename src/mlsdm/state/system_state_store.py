@@ -264,8 +264,7 @@ def load_system_state(
             else:
                 # Legacy format: direct state dict
                 state_dict = {
-                    k: v.tolist() if isinstance(v, np.ndarray) else v
-                    for k, v in arrs.items()
+                    k: v.tolist() if isinstance(v, np.ndarray) else v for k, v in arrs.items()
                 }
 
         else:
@@ -379,8 +378,7 @@ def recover_system_state(filepath: str) -> SystemStateRecord:
                 state_dict = state_data.item() if hasattr(state_data, "item") else dict(state_data)
             else:
                 state_dict = {
-                    k: v.tolist() if isinstance(v, np.ndarray) else v
-                    for k, v in arrs.items()
+                    k: v.tolist() if isinstance(v, np.ndarray) else v for k, v in arrs.items()
                 }
         else:
             raise ValueError(f"Unsupported format: {ext}")

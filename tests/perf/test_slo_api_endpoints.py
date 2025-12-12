@@ -85,7 +85,11 @@ class TestGenerateEndpointSLO:
                 },
             )
             # Accept 2xx and 429 (rate limiting is expected behavior)
-            assert response.status_code in (200, 201, 429), f"Unexpected status: {response.status_code}"
+            assert response.status_code in (
+                200,
+                201,
+                429,
+            ), f"Unexpected status: {response.status_code}"
 
         results = run_load_test(
             operation=make_request,
@@ -94,9 +98,9 @@ class TestGenerateEndpointSLO:
         )
 
         # Error rate should be very low
-        assert results.error_rate_percent <= DEFAULT_ERROR_RATE_SLO.max_error_rate_percent, (
-            f"Error rate {results.error_rate_percent:.2f}% exceeds SLO"
-        )
+        assert (
+            results.error_rate_percent <= DEFAULT_ERROR_RATE_SLO.max_error_rate_percent
+        ), f"Error rate {results.error_rate_percent:.2f}% exceeds SLO"
 
         # Availability should be high
         availability = 100.0 - results.error_rate_percent
@@ -171,9 +175,9 @@ class TestHealthEndpointSLO:
         )
 
         # Health checks should never fail
-        assert results.error_rate_percent == 0.0, (
-            f"Health checks failed {results.error_rate_percent:.2f}% of time"
-        )
+        assert (
+            results.error_rate_percent == 0.0
+        ), f"Health checks failed {results.error_rate_percent:.2f}% of time"
 
     def test_readiness_latency(self, deterministic_seed: int) -> None:
         """Validate /health/readiness latency is low.
@@ -198,9 +202,7 @@ class TestHealthEndpointSLO:
         # Readiness checks have higher latency tolerance than liveness
         # Due to system resource checks (CPU, memory) that may be slow in CI
         # Use centralized multiplier for readiness endpoints
-        readiness_latency_slo = (
-            DEFAULT_LATENCY_SLO.api_p95_ms * READINESS_CHECK_SLO_MULTIPLIER
-        )
+        readiness_latency_slo = DEFAULT_LATENCY_SLO.api_p95_ms * READINESS_CHECK_SLO_MULTIPLIER
         assert results.p95_latency_ms < readiness_latency_slo, (
             f"Readiness check P95 latency {results.p95_latency_ms:.2f}ms too high "
             f"(should be < {readiness_latency_slo}ms)"
@@ -245,7 +247,9 @@ class TestModerateLoadSLO:
         )
 
         # Allow slightly higher error rate under load
-        relaxed_error_slo = DEFAULT_ERROR_RATE_SLO.max_error_rate_percent * MODERATE_LOAD_ERROR_MULTIPLIER
+        relaxed_error_slo = (
+            DEFAULT_ERROR_RATE_SLO.max_error_rate_percent * MODERATE_LOAD_ERROR_MULTIPLIER
+        )
         assert results.error_rate_percent <= relaxed_error_slo, (
             f"Error rate {results.error_rate_percent:.2f}% exceeds relaxed SLO "
             f"under moderate load ({relaxed_error_slo}%)"

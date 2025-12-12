@@ -193,8 +193,7 @@ class TestRiskClassifier:
     def test_classify_red_many_critical(self):
         """Test red classification for many critical changes."""
         changes = [
-            FileChange(f"src/core{i}.py", ChangeClass.CORE_CRITICAL, "Critical")
-            for i in range(15)
+            FileChange(f"src/core{i}.py", ChangeClass.CORE_CRITICAL, "Critical") for i in range(15)
         ]
         mode, reasons = self.classifier.classify(changes, [], [])
         assert mode == RiskMode.RED_HIGH_RISK_OR_RELEASE
@@ -471,9 +470,7 @@ class TestIntegration:
 
         gate = CIPerfResilienceGate()
         # Mock the CI inspector methods to avoid additional API calls
-        with patch.object(
-            gate.ci_inspector, "inspect_ci_jobs", return_value=[]
-        ):
+        with patch.object(gate.ci_inspector, "inspect_ci_jobs", return_value=[]):
             analysis = gate.analyze_pr("owner", "repo", 123)
 
         assert analysis["pr_number"] == 123

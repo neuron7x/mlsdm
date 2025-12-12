@@ -1,6 +1,6 @@
 # MLSDM Integration Guide
 
-**Version:** 1.2.0  
+**Version:** 1.2.0
 **Last Updated:** November 2025
 
 This guide helps you integrate MLSDM into your application in under 30 minutes.
@@ -39,7 +39,7 @@ engine = create_neuro_engine()
 result = engine.generate("Tell me about machine learning")
 
 print(result["response"])              # Generated text
-print(result["mlsdm"]["accepted"])     # True if accepted  
+print(result["mlsdm"]["accepted"])     # True if accepted
 print(result["timing"]["total"])       # Timing in milliseconds
 ```
 
@@ -321,7 +321,7 @@ prompts = [
 
 for prompt in prompts:
     result = engine.generate(prompt, moral_value=0.8)
-    
+
     if result["accepted"]:
         print(f"User: {prompt}")
         print(f"MLSDM: {result['response'][:100]}...")

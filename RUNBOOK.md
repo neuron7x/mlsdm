@@ -1,7 +1,7 @@
 # MLSDM Production Runbook
 
-**Status**: Production Ready v1.2.0  
-**Last Updated**: December 2025  
+**Status**: Production Ready v1.2.0
+**Last Updated**: December 2025
 **Maintainer**: neuron7x
 
 ## Table of Contents
@@ -299,7 +299,7 @@ delta(moral_filter_threshold[1h])
   expr: rate(rejected_events_count[5m]) / rate(total_events_processed[5m]) > 0.5
   for: 5m
   severity: warning
-  
+
 # High latency
 - alert: HighLatency
   expr: histogram_quantile(0.95, rate(process_event_latency_seconds_bucket[5m])) > 0.1
@@ -724,16 +724,16 @@ curl http://api/health/detailed
 
 ## Contact Information
 
-**Primary Maintainer**: neuron7x (GitHub: @neuron7x)  
-**On-Call Rotation**: See `.github/CODEOWNERS` for current maintainers  
-**Escalation Path**: 
+**Primary Maintainer**: neuron7x (GitHub: @neuron7x)
+**On-Call Rotation**: See `.github/CODEOWNERS` for current maintainers
+**Escalation Path**:
 1. Primary: Check GitHub Issues for similar problems
 2. Secondary: Create issue with `[URGENT]` prefix at https://github.com/neuron7x/mlsdm/issues
 3. Critical: Tag @neuron7x in issue for immediate attention
 
 **Communication Channels**:
-- **Issues**: https://github.com/neuron7x/mlsdm/issues  
-- **Discussions**: https://github.com/neuron7x/mlsdm/discussions  
+- **Issues**: https://github.com/neuron7x/mlsdm/issues
+- **Discussions**: https://github.com/neuron7x/mlsdm/discussions
 - **Documentation**: https://github.com/neuron7x/mlsdm
 
 ---

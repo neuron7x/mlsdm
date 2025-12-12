@@ -67,8 +67,7 @@ class TestPromptInjectionDetection:
             assert not result.is_safe, f"Malicious prompt not detected: {prompt}"
             assert result.risk_level in (SafetyRiskLevel.HIGH, SafetyRiskLevel.CRITICAL)
             assert any(
-                v.category == SafetyCategory.INSTRUCTION_OVERRIDE
-                for v in result.violations
+                v.category == SafetyCategory.INSTRUCTION_OVERRIDE for v in result.violations
             ), f"Expected INSTRUCTION_OVERRIDE for: {prompt}"
 
     def test_system_prompt_probe_detected(self, analyzer: LLMSafetyAnalyzer) -> None:
@@ -84,8 +83,7 @@ class TestPromptInjectionDetection:
         for prompt in probes:
             result = analyzer.analyze_prompt(prompt)
             assert any(
-                v.category == SafetyCategory.SYSTEM_PROMPT_PROBE
-                for v in result.violations
+                v.category == SafetyCategory.SYSTEM_PROMPT_PROBE for v in result.violations
             ), f"System prompt probe not detected: {prompt}"
 
     def test_role_hijacking_detected(self, analyzer: LLMSafetyAnalyzer) -> None:
@@ -100,8 +98,7 @@ class TestPromptInjectionDetection:
         for prompt in hijack_attempts:
             result = analyzer.analyze_prompt(prompt)
             assert any(
-                v.category == SafetyCategory.ROLE_HIJACK
-                for v in result.violations
+                v.category == SafetyCategory.ROLE_HIJACK for v in result.violations
             ), f"Role hijack not detected: {prompt}"
 
     def test_jailbreak_attempt_detected(self, analyzer: LLMSafetyAnalyzer) -> None:
@@ -118,8 +115,7 @@ class TestPromptInjectionDetection:
             result = analyzer.analyze_prompt(prompt)
             assert not result.is_safe, f"Jailbreak not blocked: {prompt}"
             assert any(
-                v.category == SafetyCategory.JAILBREAK_ATTEMPT
-                for v in result.violations
+                v.category == SafetyCategory.JAILBREAK_ATTEMPT for v in result.violations
             ), f"Jailbreak not detected: {prompt}"
 
     def test_dangerous_command_detected(self, analyzer: LLMSafetyAnalyzer) -> None:
@@ -133,8 +129,7 @@ class TestPromptInjectionDetection:
         for prompt in dangerous:
             result = analyzer.analyze_prompt(prompt)
             assert any(
-                v.category == SafetyCategory.DANGEROUS_COMMAND
-                for v in result.violations
+                v.category == SafetyCategory.DANGEROUS_COMMAND for v in result.violations
             ), f"Dangerous command not detected: {prompt}"
 
     def test_fake_system_marker_detected(self, analyzer: LLMSafetyAnalyzer) -> None:
@@ -149,8 +144,7 @@ class TestPromptInjectionDetection:
         for prompt in injections:
             result = analyzer.analyze_prompt(prompt)
             assert any(
-                v.category == SafetyCategory.PROMPT_INJECTION
-                for v in result.violations
+                v.category == SafetyCategory.PROMPT_INJECTION for v in result.violations
             ), f"Fake marker not detected: {prompt}"
 
     def test_multiple_violations_detected(self, analyzer: LLMSafetyAnalyzer) -> None:
@@ -212,10 +206,7 @@ class TestOutputFiltering:
         for output in outputs:
             result = analyzer.filter_output(output)
             assert not result.is_safe, f"API key not detected in: {output}"
-            assert any(
-                v.category == SafetyCategory.SECRET_LEAK
-                for v in result.violations
-            )
+            assert any(v.category == SafetyCategory.SECRET_LEAK for v in result.violations)
             assert result.sanitized_content is not None
             assert "[REDACTED]" in result.sanitized_content
             # Original secret should not be in sanitized content

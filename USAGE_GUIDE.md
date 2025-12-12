@@ -1,8 +1,8 @@
 # Usage Guide
 
-**Document Version:** 1.2.0  
-**Project Version:** 1.2.0  
-**Last Updated:** December 2025  
+**Document Version:** 1.2.0
+**Project Version:** 1.2.0
+**Last Updated:** December 2025
 **Status:** Production
 
 Comprehensive guide for using MLSDM Governed Cognitive Memory in your applications.
@@ -360,7 +360,7 @@ def score_moral_value(text: str) -> float:
     # Option 1: Use a classifier
     # toxicity_score = toxicity_classifier(text)
     # return 1.0 - toxicity_score
-    
+
     # Option 2: Simple heuristics
     bad_words = ["toxic", "harmful", "hate"]
     if any(word in text.lower() for word in bad_words):
@@ -391,20 +391,20 @@ import logging
 
 def monitored_generate(wrapper, prompt, moral_value):
     result = wrapper.generate(prompt, moral_value)
-    
+
     # Log rejections
     if not result["accepted"]:
         logging.warning(f"Rejected: {result['note']}")
-    
+
     # Alert on sleep phase
     if result["phase"] == "sleep":
         logging.info("Sleep phase consolidation")
-    
+
     # Track moral drift
     state = wrapper.get_state()
     if state["moral_threshold"] < 0.35:
         logging.warning("Moral threshold very low")
-    
+
     return result
 ```
 

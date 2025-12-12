@@ -1,7 +1,7 @@
 # SLO Validation Protocol
 
-**Version:** 1.0.0  
-**Last Updated:** December 2025  
+**Version:** 1.0.0
+**Last Updated:** December 2025
 **Status:** ACTIVE
 
 ## Purpose
@@ -41,24 +41,24 @@ def test_memory_stays_stable_over_time():
     """Verify memory usage doesn't grow unbounded."""
     np.random.seed(42)  # Deterministic
     controller = CognitiveController()
-    
+
     # Warm-up: 3 iterations
     for _ in range(3):
         controller.process_event(test_event)
-    
+
     # Measure initial growth
     initial_mem = controller.get_memory_usage()
     for _ in range(100):
         controller.process_event(test_event)
     mid_mem = controller.get_memory_usage()
     initial_growth = mid_mem - initial_mem
-    
+
     # Measure later growth
     for _ in range(100):
         controller.process_event(test_event)
     final_mem = controller.get_memory_usage()
     later_growth = final_mem - mid_mem
-    
+
     # Allow noise tolerance
     assert later_growth <= initial_growth * 2 + NOISE_TOLERANCE_MB
 ```
@@ -88,11 +88,11 @@ def load_slo_policy():
 def test_readiness_latency():
     policy = load_slo_policy()
     target = policy["slos"]["api_endpoints"][0]["ci_thresholds"]["p95_latency_ms"]
-    
+
     # Run test
     latencies = measure_readiness_latency(n=100)
     p95 = np.percentile(latencies, 95)
-    
+
     assert p95 < target, f"P95 latency {p95:.1f}ms exceeds target {target}ms"
 ```
 
@@ -192,7 +192,7 @@ P95 latency: 135ms (target: 120ms) ✗
 Memory growth: 2.5x (target: ≤ 2x) ✗
 ```
 
-**Action:** 
+**Action:**
 1. Investigate root cause
 2. Profile and optimize
 3. Consider adjusting SLO target if it's too aggressive
@@ -259,7 +259,7 @@ grep -r "sleep\|time.sleep" src/mlsdm/
 
 ```bash
 # Run test 100 times
-for i in {1..100}; do 
+for i in {1..100}; do
     pytest tests/perf/test_slo_api_endpoints.py::test_readiness_latency || echo "Failed on run $i"
 done
 ```
@@ -282,7 +282,7 @@ done
 
 ```promql
 # P95 readiness latency
-histogram_quantile(0.95, 
+histogram_quantile(0.95,
   rate(process_event_latency_seconds_bucket{endpoint="/health/readiness"}[5m])
 )
 

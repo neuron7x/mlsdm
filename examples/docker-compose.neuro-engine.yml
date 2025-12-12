@@ -17,20 +17,20 @@ services:
       # Server configuration
       - HOST=0.0.0.0
       - PORT=8000
-      
+
       # LLM Backend configuration
       # Options: "local_stub" (default, no API key needed) or "openai"
       - LLM_BACKEND=${LLM_BACKEND:-local_stub}
-      
+
       # OpenAI configuration (required when LLM_BACKEND=openai)
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - OPENAI_MODEL=${OPENAI_MODEL:-gpt-3.5-turbo}
-      
+
       # Engine configuration
       - EMBEDDING_DIM=${EMBEDDING_DIM:-384}
       - ENABLE_FSLGS=${ENABLE_FSLGS:-true}
       - ENABLE_METRICS=${ENABLE_METRICS:-true}
-      
+
       # Security configuration
       - LOG_PAYLOADS=${LOG_PAYLOADS:-false}
     healthcheck:

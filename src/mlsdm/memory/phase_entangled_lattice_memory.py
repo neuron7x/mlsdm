@@ -28,6 +28,7 @@ try:
         record_pelm_retrieve,
         record_pelm_store,
     )
+
     _OBSERVABILITY_AVAILABLE = True
 except ImportError:
     _OBSERVABILITY_AVAILABLE = False
@@ -42,6 +43,7 @@ class MemoryRetrieval:
         phase: The phase value associated with this memory
         resonance: Cosine similarity score (higher = better match)
     """
+
     vector: np.ndarray
     phase: float
     resonance: float
@@ -288,20 +290,14 @@ class PhaseEntangledLatticeMemory:
                         f"phase at index {i} must be numeric, got {type(phase).__name__}"
                     )
                 if math.isnan(phase) or math.isinf(phase):
-                    raise ValueError(
-                        f"phase at index {i} must be a finite number, got {phase}"
-                    )
+                    raise ValueError(f"phase at index {i} must be a finite number, got {phase}")
                 if not (0.0 <= phase <= 1.0):
-                    raise ValueError(
-                        f"phase at index {i} must be in [0.0, 1.0], got {phase}"
-                    )
+                    raise ValueError(f"phase at index {i} must be in [0.0, 1.0], got {phase}")
 
                 # Validate vector values using numpy (faster than element-by-element)
                 vec_np = np.array(vector, dtype=np.float32)
                 if not np.all(np.isfinite(vec_np)):
-                    raise ValueError(
-                        f"vector at index {i} contains NaN or infinity values"
-                    )
+                    raise ValueError(f"vector at index {i} contains NaN or infinity values")
 
                 norm = float(np.linalg.norm(vec_np) or self.MIN_NORM_THRESHOLD)
                 idx = self.pointer
@@ -388,7 +384,7 @@ class PhaseEntangledLatticeMemory:
                 q_norm = self.MIN_NORM_THRESHOLD
 
             # Optimize: use in-place operations and avoid intermediate arrays
-            phase_diff = np.abs(self.phase_bank[:self.size] - current_phase)
+            phase_diff = np.abs(self.phase_bank[: self.size] - current_phase)
             phase_mask = phase_diff <= phase_tolerance
             if not np.any(phase_mask):
                 # Record empty result due to phase mismatch
@@ -427,11 +423,13 @@ class PhaseEntangledLatticeMemory:
             results: list[MemoryRetrieval] = []
             for loc in top_local:
                 glob = candidates_idx[loc]
-                results.append(MemoryRetrieval(
-                    vector=self.memory_bank[glob],
-                    phase=self.phase_bank[glob],
-                    resonance=float(cosine_sims[loc])
-                ))
+                results.append(
+                    MemoryRetrieval(
+                        vector=self.memory_bank[glob],
+                        phase=self.phase_bank[glob],
+                        resonance=float(cosine_sims[loc]),
+                    )
+                )
 
             # Record successful retrieval
             if _OBSERVABILITY_AVAILABLE and start_time is not None:
@@ -451,7 +449,7 @@ class PhaseEntangledLatticeMemory:
         return {
             "capacity": self.capacity,
             "used": self.size,
-            "memory_mb": round((self.memory_bank.nbytes + self.phase_bank.nbytes) / 1024**2, 2)
+            "memory_mb": round((self.memory_bank.nbytes + self.phase_bank.nbytes) / 1024**2, 2),
         }
 
     def memory_usage_bytes(self) -> int:
@@ -466,8 +464,8 @@ class PhaseEntangledLatticeMemory:
         """
         # Core numpy arrays
         memory_bank_bytes = self.memory_bank.nbytes  # capacity × dimension × float32
-        phase_bank_bytes = self.phase_bank.nbytes    # capacity × float32
-        norms_bytes = self.norms.nbytes              # capacity × float32
+        phase_bank_bytes = self.phase_bank.nbytes  # capacity × float32
+        norms_bytes = self.norms.nbytes  # capacity × float32
 
         # Subtotal for arrays
         array_bytes = memory_bank_bytes + phase_bank_bytes + norms_bytes
@@ -488,9 +486,9 @@ class PhaseEntangledLatticeMemory:
         """Compute checksum for memory bank integrity validation."""
         # Create a hash of the used portion of memory banks
         hasher = hashlib.sha256()
-        hasher.update(self.memory_bank[:self.size].tobytes())
-        hasher.update(self.phase_bank[:self.size].tobytes())
-        hasher.update(self.norms[:self.size].tobytes())
+        hasher.update(self.memory_bank[: self.size].tobytes())
+        hasher.update(self.phase_bank[: self.size].tobytes())
+        hasher.update(self.norms[: self.size].tobytes())
         # Include metadata
         hasher.update(f"{self.pointer}:{self.size}:{self.capacity}".encode())
         return hasher.hexdigest()

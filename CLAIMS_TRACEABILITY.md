@@ -1,7 +1,7 @@
 # Claims Traceability Matrix
 
-**Document Version:** 1.0.0  
-**Last Updated:** November 2025  
+**Document Version:** 1.0.0
+**Last Updated:** November 2025
 **Status:** Production
 
 This document maps theoretical claims and documented metrics to their validation evidence. Use this for quick verification that all stated metrics are backed by tests, benchmarks, or appropriately marked as future work.
@@ -232,6 +232,6 @@ This traceability matrix should be updated when:
 
 ---
 
-**Document Status:** Production  
-**Review Cycle:** Per PR with metric changes  
+**Document Status:** Production
+**Review Cycle:** Per PR with metric changes
 **Owner:** Principal System Architect

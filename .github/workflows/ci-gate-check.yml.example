@@ -15,19 +15,19 @@ jobs:
     name: CI Performance & Resilience Gate
     runs-on: ubuntu-latest
     if: github.event.pull_request.draft == false
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Set up Python 3.11
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      
+
       - name: Install dependencies
         run: pip install requests
-      
+
       - name: Run CI Gate Analysis
         id: gate
         env:
@@ -37,18 +37,18 @@ jobs:
             --pr-number ${{ github.event.pull_request.number }} \
             --repo ${{ github.repository }} \
             --output markdown > gate-report.md
-          
+
           # Capture exit code
           EXIT_CODE=$?
           echo "exit_code=${EXIT_CODE}" >> $GITHUB_OUTPUT
-          
+
           # Show report in workflow log
           echo "=== CI Gate Report ==="
           cat gate-report.md
-          
+
           # Exit with gate's exit code (0=safe, 1=not ready, 2=risk)
           exit ${EXIT_CODE}
-      
+
       - name: Upload Gate Report
         if: always()
         uses: actions/upload-artifact@v4
@@ -56,7 +56,7 @@ jobs:
           name: ci-gate-report
           path: gate-report.md
           retention-days: 30
-      
+
       - name: Post Report as Comment (Optional)
         if: always() && github.event_name == 'pull_request'
         uses: actions/github-script@v7
@@ -65,11 +65,11 @@ jobs:
             const fs = require('fs');
             const report = fs.readFileSync('gate-report.md', 'utf8');
             const exitCode = '${{ steps.gate.outputs.exit_code }}';
-            
-            const verdict = exitCode === '0' ? '✅ SAFE TO MERGE' : 
-                           exitCode === '1' ? '❌ DO NOT MERGE YET' : 
+
+            const verdict = exitCode === '0' ? '✅ SAFE TO MERGE' :
+                           exitCode === '1' ? '❌ DO NOT MERGE YET' :
                            '⚠️ MERGE WITH CAUTION';
-            
+
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,

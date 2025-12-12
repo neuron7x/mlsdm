@@ -123,8 +123,7 @@ class CircuitOpenError(CircuitBreakerError):
         self.name = name
         self.recovery_time_remaining = recovery_time_remaining
         super().__init__(
-            f"Circuit breaker '{name}' is OPEN. "
-            f"Recovery in {recovery_time_remaining:.1f}s"
+            f"Circuit breaker '{name}' is OPEN. " f"Recovery in {recovery_time_remaining:.1f}s"
         )
 
 
@@ -133,9 +132,7 @@ class CircuitHalfOpenError(CircuitBreakerError):
 
     def __init__(self, name: str) -> None:
         self.name = name
-        super().__init__(
-            f"Circuit breaker '{name}' is HALF_OPEN but max probe requests reached"
-        )
+        super().__init__(f"Circuit breaker '{name}' is HALF_OPEN but max probe requests reached")
 
 
 class CircuitBreaker:
@@ -593,10 +590,7 @@ class CircuitBreakerRegistry:
             Dictionary mapping names to state dicts.
         """
         with self._lock:
-            return {
-                name: cb.get_state_dict()
-                for name, cb in self._circuit_breakers.items()
-            }
+            return {name: cb.get_state_dict() for name, cb in self._circuit_breakers.items()}
 
     def reset_all(self) -> None:
         """Reset all circuit breakers to initial state."""

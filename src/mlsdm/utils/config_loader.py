@@ -24,6 +24,7 @@ from mlsdm.utils.config_schema import SystemConfig, validate_config_dict
 @dataclass
 class _CachedConfig:
     """Internal cached configuration entry."""
+
     config: dict[str, Any]
     mtime: float
     file_hash: str
@@ -114,10 +115,7 @@ class ConfigCache:
         with self._lock:
             # Evict oldest entries if cache is full
             while len(self._cache) >= self.max_entries:
-                oldest_key = min(
-                    self._cache.keys(),
-                    key=lambda k: self._cache[k].timestamp
-                )
+                oldest_key = min(self._cache.keys(), key=lambda k: self._cache[k].timestamp)
                 del self._cache[oldest_key]
 
             # Use file_path for mtime and hash, or cache_key if not provided
@@ -323,7 +321,7 @@ class ConfigLoader:
                 continue
 
             # Remove prefix and convert to lowercase
-            config_key = env_key[len(prefix):].lower()
+            config_key = env_key[len(prefix) :].lower()
 
             # Handle nested keys (e.g., MORAL_FILTER__THRESHOLD)
             if "__" in config_key:

@@ -1,6 +1,6 @@
 # MLSDM LLM API Specification
 
-**Version:** 1.2.0  
+**Version:** 1.2.0
 **Last Updated:** November 2025
 
 Complete specification for MLSDM's LLM integration APIs.
@@ -277,18 +277,18 @@ from mlsdm import (
     NeuroCognitiveEngine,
     NeuroEngineConfig,
     NeuroCognitiveClient,
-    
+
     # Speech governance
     SpeechGovernor,
     SpeechGovernanceResult,
     PipelineSpeechGovernor,
-    
+
     # Factory functions
     create_llm_wrapper,
     create_neuro_engine,
     build_neuro_engine_from_env,
     build_stub_embedding_fn,
-    
+
     # Version
     __version__,
 )

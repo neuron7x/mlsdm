@@ -1,8 +1,8 @@
 # ADR-0003: Moral Filter Algorithm with Adaptive Threshold
 
-**Status**: Accepted  
-**Date**: 2025-11-30  
-**Deciders**: MLSDM Core Team  
+**Status**: Accepted
+**Date**: 2025-11-30
+**Deciders**: MLSDM Core Team
 **Categories**: Architecture, Safety, AI Alignment
 
 ## Context
@@ -56,7 +56,7 @@ def evaluate(moral_value: float) -> bool:
 def adapt(accepted: bool) -> None:
     signal = 1.0 if accepted else 0.0
     ema_accept_rate = ALPHA * signal + (1 - ALPHA) * ema_accept_rate
-    
+
     error = ema_accept_rate - 0.5  # Target 50% accept rate
     if abs(error) > DEAD_BAND:
         delta = 0.05 * sign(error)

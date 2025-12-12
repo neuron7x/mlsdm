@@ -110,7 +110,7 @@ integrations:
     - "Bandit SAST Scan"
     - "Type Check"
     - "Lint with Ruff"
-  
+
   branch_protection:
     require_pr_reviews: 1
     require_status_checks: true

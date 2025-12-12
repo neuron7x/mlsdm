@@ -229,6 +229,7 @@ class PipelineMetadata(BaseModel):
             try:
                 # Cast to Mapping for type safety when converting dict-like objects
                 from collections.abc import Mapping
+
                 if isinstance(val, Mapping):
                     return dict(val)
                 return None
