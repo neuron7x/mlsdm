@@ -12,13 +12,12 @@ from pathlib import Path
 scripts_dir = Path(__file__).parent.parent / "scripts"
 sys.path.insert(0, str(scripts_dir))
 
-from ci_perf_resilience_gate import (
+from ci_perf_resilience_gate import (  # noqa: E402
     ChangeClass,
     CIPerfResilienceGate,
     FileChange,
     JobResult,
     JobStatus,
-    RiskMode,
 )
 
 
@@ -167,7 +166,7 @@ def demo_release_pr():
     print(f"Reasoning: {', '.join(mode_reasons)}")
     print()
     print(f"Verdict: {verdict}")
-    print(f"Reasons:")
+    print("Reasons:")
     for reason in reasons:
         print(f"  - {reason}")
     print()

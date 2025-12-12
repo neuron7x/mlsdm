@@ -18,8 +18,7 @@ import sys
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional, Set, Tuple
-from urllib.parse import urlparse
+from typing import Any
 
 try:
     import requests
@@ -166,7 +165,7 @@ class PRAnalyzer:
             reason="Utility or non-critical code change",
         )
 
-    def analyze_changes(self, files: List[Dict[str, Any]]) -> List[FileChange]:
+    def analyze_changes(self, files: list[dict[str, Any]]) -> list[FileChange]:
         """Analyze all changed files in a PR."""
         changes = []
         for file_info in files:
@@ -192,7 +191,7 @@ class CIInspector:
         "Code Coverage",
     ]
 
-    def __init__(self, github_token: Optional[str] = None) -> None:
+    def __init__(self, github_token: str | None = None) -> None:
         """Initialize CI inspector."""
         self.github_token = github_token or os.environ.get("GITHUB_TOKEN", "")
         self.headers = {}
@@ -202,7 +201,7 @@ class CIInspector:
 
     def get_workflow_runs(
         self, owner: str, repo: str, pr_number: int
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Get workflow runs for a PR."""
         url = f"https://api.github.com/repos/{owner}/{repo}/pulls/{pr_number}"
         try:
@@ -223,7 +222,7 @@ class CIInspector:
             print(f"Warning: Failed to fetch workflow runs: {e}")
             return []
 
-    def get_jobs_for_run(self, owner: str, repo: str, run_id: int) -> List[Dict[str, Any]]:
+    def get_jobs_for_run(self, owner: str, repo: str, run_id: int) -> list[dict[str, Any]]:
         """Get jobs for a specific workflow run."""
         url = f"https://api.github.com/repos/{owner}/{repo}/actions/runs/{run_id}/jobs"
         try:
@@ -234,7 +233,7 @@ class CIInspector:
             print(f"Warning: Failed to fetch jobs for run {run_id}: {e}")
             return []
 
-    def map_job_status(self, conclusion: Optional[str], status: str) -> JobStatus:
+    def map_job_status(self, conclusion: str | None, status: str) -> JobStatus:
         """Map GitHub job status to our enum."""
         if conclusion == "success":
             return JobStatus.SUCCESS
@@ -248,14 +247,14 @@ class CIInspector:
             return JobStatus.PENDING
         return JobStatus.UNKNOWN
 
-    def inspect_ci_jobs(self, owner: str, repo: str, pr_number: int) -> List[JobResult]:
+    def inspect_ci_jobs(self, owner: str, repo: str, pr_number: int) -> list[JobResult]:
         """Inspect CI jobs for a PR and return results."""
         workflow_runs = self.get_workflow_runs(owner, repo, pr_number)
         if not workflow_runs:
             return []
 
         job_results = []
-        seen_jobs: Set[str] = set()
+        seen_jobs: set[str] = set()
 
         # Process each workflow run (most recent first)
         for run in sorted(workflow_runs, key=lambda r: r["created_at"], reverse=True):
@@ -285,7 +284,7 @@ class CIInspector:
 
         return job_results
 
-    def _extract_key_facts(self, job: Dict[str, Any], status: JobStatus) -> str:
+    def _extract_key_facts(self, job: dict[str, Any], status: JobStatus) -> str:
         """Extract key facts from job data."""
         facts = []
 
@@ -328,8 +327,8 @@ class RiskClassifier:
     """Classifies PR risk based on changes and CI status."""
 
     def classify(
-        self, changes: List[FileChange], job_results: List[JobResult], pr_labels: List[str]
-    ) -> Tuple[RiskMode, List[str]]:
+        self, changes: list[FileChange], job_results: list[JobResult], pr_labels: list[str]
+    ) -> tuple[RiskMode, list[str]]:
         """Classify risk mode and provide reasoning."""
         reasons = []
 
@@ -372,8 +371,8 @@ class MergeVerdictor:
     """Determines merge verdict based on mode and CI status."""
 
     def determine_verdict(
-        self, mode: RiskMode, job_results: List[JobResult]
-    ) -> Tuple[str, List[str], List[str]]:
+        self, mode: RiskMode, job_results: list[JobResult]
+    ) -> tuple[str, list[str], list[str]]:
         """
         Determine merge verdict.
 
@@ -525,7 +524,7 @@ class MergeVerdictor:
 class CIPerfResilienceGate:
     """Main CI Performance & Resilience Gate implementation."""
 
-    def __init__(self, github_token: Optional[str] = None) -> None:
+    def __init__(self, github_token: str | None = None) -> None:
         """Initialize the gate."""
         self.pr_analyzer = PRAnalyzer()
         self.ci_inspector = CIInspector(github_token)
@@ -534,7 +533,7 @@ class CIPerfResilienceGate:
 
     def analyze_pr(
         self, owner: str, repo: str, pr_number: int
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Analyze a PR and return full gate analysis."""
         print(f"\n🔍 Analyzing PR #{pr_number} in {owner}/{repo}...\n")
 
@@ -593,7 +592,7 @@ class CIPerfResilienceGate:
             "verdict_reasons": verdict_reasons,
         }
 
-    def generate_slo_improvements(self, analysis: Dict[str, Any]) -> List[str]:
+    def generate_slo_improvements(self, analysis: dict[str, Any]) -> list[str]:
         """Generate SLO/CI improvement suggestions."""
         suggestions = []
 
@@ -635,7 +634,7 @@ class CIPerfResilienceGate:
 
         return suggestions[:3]  # Limit to 3 suggestions
 
-    def format_output(self, analysis: Dict[str, Any]) -> str:
+    def format_output(self, analysis: dict[str, Any]) -> str:
         """Format analysis output as markdown."""
         output = []
 
@@ -723,7 +722,7 @@ class CIPerfResilienceGate:
         return "\n".join(output)
 
 
-def parse_pr_url(pr_url: str) -> Tuple[str, str, int]:
+def parse_pr_url(pr_url: str) -> tuple[str, str, int]:
     """Parse GitHub PR URL to extract owner, repo, and PR number."""
     # Example: https://github.com/neuron7x/mlsdm/pull/231
     match = re.match(

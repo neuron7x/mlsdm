@@ -1,21 +1,18 @@
 """
-Unit tests for CI Performance & Resilience Gate script.
+Tests for CI Performance & Resilience Gate
 """
 
-import json
+import sys
+from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
-
-# Import the module to test
-import sys
-from pathlib import Path
 
 # Add scripts directory to path
 scripts_dir = Path(__file__).parent.parent.parent / "scripts"
 sys.path.insert(0, str(scripts_dir))
 
-from ci_perf_resilience_gate import (
+from ci_perf_resilience_gate import (  # noqa: E402
     ChangeClass,
     CIInspector,
     CIPerfResilienceGate,
@@ -413,7 +410,7 @@ class TestIntegration:
         mock_response = Mock()
         mock_response.status_code = 200
         mock_response.raise_for_status = Mock()
-        
+
         # Mock PR data, files, and workflow runs
         mock_response.json.side_effect = [
             # PR data (first call)
@@ -428,7 +425,7 @@ class TestIntegration:
                 {"filename": "src/mlsdm/neuro_engine/core.py", "patch": ""},
             ],
         ]
-        
+
         mock_get.return_value = mock_response
 
         gate = CIPerfResilienceGate()
