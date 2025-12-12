@@ -3,8 +3,10 @@ __pycache__/
 *.pyo
 .pytest_cache/
 .coverage
+.coverage.*
 coverage.json
 coverage.xml
+coverage*.xml
 *.egg-info/
 dist/
 build/
