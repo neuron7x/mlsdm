@@ -27,6 +27,7 @@
 
 [🚀 Getting Started](GETTING_STARTED.md) •
 [Quick Start](#-quick-start) •
+[Who Needs This?](#-who-needs-mlsdm) •
 [Documentation](#-documentation) •
 [Architecture](#-architecture) •
 [Metrics](#-validated-metrics) •
@@ -39,6 +40,7 @@
 ## 📋 Table of Contents
 
 - [What is MLSDM?](#-what-is-mlsdm)
+- [Who Needs MLSDM?](#-who-needs-mlsdm)
 - [Core Value Proposition](#-core-value-proposition)
 - [Key Features](#-key-features)
 - [Architecture](#-architecture)
@@ -109,6 +111,74 @@ MLSDM wraps **any LLM** with a neurobiologically-grounded cognitive layer that p
 </td>
 </tr>
 </table>
+
+---
+
+## 👥 Who Needs MLSDM?
+
+MLSDM is designed for teams and organizations deploying LLMs who need governance, safety, and resource efficiency without expensive fine-tuning.
+
+### Target Audiences
+
+<table>
+<tr>
+<td width="50%">
+
+#### 🏢 **AI Platform Engineers**
+Building production LLM services that require:
+- Fixed memory bounds for predictable scaling
+- Safety filtering without RLHF infrastructure
+- Resource efficiency in multi-tenant environments
+- Observable cognitive behavior with Prometheus metrics
+
+**Example Use Case**: Deploy GPT-4 with safety guarantees and bounded memory for a SaaS platform serving 10k+ users.
+
+#### 🔬 **AI Safety Researchers**
+Exploring neurobiologically-inspired governance:
+- Test adaptive safety mechanisms
+- Measure cognitive effectiveness metrics
+- Study wake/sleep cycle impacts on coherence
+- Validate biological constraints in AI systems
+
+**Example Use Case**: Research phase-entangled memory as an alternative to traditional RAG architectures.
+
+</td>
+<td width="50%">
+
+#### 💼 **Product Teams**
+Integrating LLMs into applications with:
+- Compliance requirements (content filtering)
+- Budget constraints (no RLHF)
+- Resource limits (edge deployment, mobile)
+- Quality requirements (aphasia detection)
+
+**Example Use Case**: Add OpenAI GPT to a customer service chatbot with built-in toxicity filtering and fixed memory overhead.
+
+#### 🎓 **Educators & Students**
+Learning about:
+- Neuroscience-inspired AI architectures
+- Cognitive governance patterns
+- LLM safety mechanisms
+- Production-ready ML engineering
+
+**Example Use Case**: Study multi-level memory systems as teaching material for neuromorphic computing courses.
+
+</td>
+</tr>
+</table>
+
+### When to Use MLSDM
+
+✅ **Good Fit:**
+- You need safety filtering without fine-tuning
+- You have strict memory/resource constraints
+- You want observable cognitive behavior
+- You're deploying in production environments
+
+❌ **Not a Good Fit:**
+- You need hallucination prevention (MLSDM wraps but doesn't improve factual accuracy)
+- You have zero tolerance for false positives (37.5% FP rate)
+- You require certified compliance tools (beta status, requires domain audit)
 
 ---
 
