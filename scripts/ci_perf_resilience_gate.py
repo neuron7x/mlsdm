@@ -16,6 +16,7 @@ import os
 import re
 import sys
 from dataclasses import dataclass
+from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Optional, Set, Tuple
 from urllib.parse import urlparse
@@ -312,8 +313,6 @@ class CIInspector:
 
     def _calculate_duration(self, start: str, end: str) -> str:
         """Calculate duration between two ISO timestamps."""
-        from datetime import datetime
-
         try:
             start_dt = datetime.fromisoformat(start.replace("Z", "+00:00"))
             end_dt = datetime.fromisoformat(end.replace("Z", "+00:00"))
