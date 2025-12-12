@@ -29,7 +29,7 @@ logging.getLogger().setLevel(logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-def main() -> None:
+def main() -> int:
     parser = argparse.ArgumentParser(description="mlsdm-governed-cognitive-memory CLI")
     parser.add_argument("--config", type=str, default="config/default_config.yaml")
     parser.add_argument("--steps", type=int, default=100)
