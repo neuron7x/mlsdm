@@ -198,18 +198,16 @@ class TestLoggingSetup:
 class TestModuleEntry:
     """Tests for module entry point via __main__.py."""
 
-    def test_cli_main_module_executable(self):
-        """Test that cli/main.py can be executed as module."""
-        # This tests that the module can be run
-        result = subprocess.run(
-            [sys.executable, "-m", "mlsdm.cli.main", "--help"],
-            capture_output=True,
-            text=True,
-            timeout=10,
-        )
+    def test_cli_main_argument_parsing(self):
+        """Test that main() correctly parses command line arguments."""
+        from mlsdm.cli.main import main
 
-        # Should show help or error (argparse will show help)
-        assert result.returncode in [0, 2]  # 0 = success, 2 = argparse error
+        # Test that argparse is set up correctly by checking help
+        with patch("sys.argv", ["mlsdm", "--help"]):
+            with pytest.raises(SystemExit) as exc_info:
+                main()
+            # argparse exits with 0 for --help
+            assert exc_info.value.code == 0
 
     def test_cli_main_name_main_block(self, tmp_path):
         """Test __name__ == '__main__' block calls main()."""
