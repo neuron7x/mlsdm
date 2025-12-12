@@ -1,82 +1,71 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 600" width="1200" height="600">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 600" width="1200" height="600" style="background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 50%, #0a0e27 100%);">
   <defs>
-    <!-- Enhanced gradient background with depth -->
-    <radialGradient id="bgGradient" cx="50%" cy="50%">
-      <stop offset="0%" style="stop-color:#1e293b"/>
-      <stop offset="70%" style="stop-color:#0f172a"/>
-      <stop offset="100%" style="stop-color:#020617"/>
-    </radialGradient>
-    
-    <!-- Enhanced memory layer gradients with vibrant colors -->
-    <linearGradient id="memoryL1" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#60a5fa;stop-opacity:1"/>
-      <stop offset="100%" style="stop-color:#2563eb;stop-opacity:0.95"/>
+    <!-- Premium gradients -->
+    <linearGradient id="titleGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#3b82f6"/>
+      <stop offset="25%" style="stop-color:#8b5cf6"/>
+      <stop offset="50%" style="stop-color:#ec4899"/>
+      <stop offset="75%" style="stop-color:#10b981"/>
+      <stop offset="100%" style="stop-color:#3b82f6"/>
     </linearGradient>
     
-    <linearGradient id="memoryL2" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#c084fc;stop-opacity:1"/>
-      <stop offset="100%" style="stop-color:#7c3aed;stop-opacity:0.95"/>
-    </linearGradient>
-    
-    <linearGradient id="memoryL3" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#f472b6;stop-opacity:1"/>
-      <stop offset="100%" style="stop-color:#db2777;stop-opacity:0.95"/>
-    </linearGradient>
-    
-    <!-- Moral filter gradient - vibrant green -->
-    <linearGradient id="moralGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#4ade80"/>
-      <stop offset="100%" style="stop-color:#16a34a"/>
-    </linearGradient>
-    
-    <!-- LLM core gradient - vibrant gold -->
-    <linearGradient id="llmGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+    <linearGradient id="llmGrad" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" style="stop-color:#fbbf24"/>
-      <stop offset="50%" style="stop-color:#f59e0b"/>
-      <stop offset="100%" style="stop-color:#d97706"/>
+      <stop offset="100%" style="stop-color:#f97316"/>
     </linearGradient>
     
-    <!-- Title gradient - rainbow effect -->
-    <linearGradient id="titleGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" style="stop-color:#60a5fa"/>
-      <stop offset="25%" style="stop-color:#a78bfa"/>
-      <stop offset="50%" style="stop-color:#f472b6"/>
-      <stop offset="75%" style="stop-color:#4ade80"/>
-      <stop offset="100%" style="stop-color:#60a5fa"/>
+    <linearGradient id="l1Grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#3b82f6"/>
+      <stop offset="100%" style="stop-color:#1d4ed8"/>
     </linearGradient>
     
-    <!-- Enhanced glow filters -->
-    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
-      <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+    <linearGradient id="l2Grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#8b5cf6"/>
+      <stop offset="100%" style="stop-color:#6d28d9"/>
+    </linearGradient>
+    
+    <linearGradient id="l3Grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ec4899"/>
+      <stop offset="100%" style="stop-color:#be185d"/>
+    </linearGradient>
+    
+    <linearGradient id="moralGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#10b981"/>
+      <stop offset="100%" style="stop-color:#047857"/>
+    </linearGradient>
+    
+    <!-- Premium glow effects -->
+    <filter id="premiumGlow">
+      <feGaussianBlur stdDeviation="6" result="coloredBlur"/>
       <feMerge>
         <feMergeNode in="coloredBlur"/>
         <feMergeNode in="SourceGraphic"/>
       </feMerge>
     </filter>
     
-    <filter id="glowStrong" x="-50%" y="-50%" width="200%" height="200%">
-      <feGaussianBlur stdDeviation="8" result="coloredBlur"/>
+    <filter id="textGlow">
+      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
       <feMerge>
         <feMergeNode in="coloredBlur"/>
         <feMergeNode in="SourceGraphic"/>
       </feMerge>
     </filter>
     
-    <filter id="dropShadow" x="-50%" y="-50%" width="200%" height="200%">
-      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.5"/>
-    </filter>
-    
-    <!-- Text sharpening filter for crisp rendering -->
-    <filter id="sharpen">
-      <feConvolveMatrix order="3" kernelMatrix="0 -1 0 -1 5 -1 0 -1 0" preserveAlpha="true"/>
+    <filter id="dropShadow">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="3"/>
+      <feOffset dx="0" dy="4" result="offsetblur"/>
+      <feComponentTransfer>
+        <feFuncA type="linear" slope="0.5"/>
+      </feComponentTransfer>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
     </filter>
   </defs>
   
-  <!-- Background -->
-  <rect width="1200" height="600" fill="url(#bgGradient)"/>
-  
-  <!-- Symmetric grid pattern -->
-  <g opacity="0.04" stroke="#60a5fa" stroke-width="0.5">
+  <!-- Subtle grid background -->
+  <g opacity="0.03" stroke="#3b82f6" stroke-width="0.5">
     <line x1="0" y1="150" x2="1200" y2="150"/>
     <line x1="0" y1="300" x2="1200" y2="300"/>
     <line x1="0" y1="450" x2="1200" y2="450"/>
@@ -85,239 +74,236 @@
     <line x1="900" y1="0" x2="900" y2="600"/>
   </g>
   
-  <!-- Symmetric ambient glows -->
-  <ellipse cx="600" cy="300" rx="450" ry="350" fill="#60a5fa" opacity="0.03"/>
-  <ellipse cx="300" cy="300" rx="200" ry="200" fill="#a78bfa" opacity="0.04"/>
-  <ellipse cx="900" cy="300" rx="200" ry="200" fill="#4ade80" opacity="0.04"/>
+  <!-- Ambient glow effects -->
+  <circle cx="600" cy="300" r="400" fill="url(#titleGrad)" opacity="0.02"/>
   
-  <!-- Title with crisp, optimized typography -->
-  <g>
-    <text x="600" y="70" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="68" font-weight="900" fill="url(#titleGradient)" text-anchor="middle" letter-spacing="4" filter="url(#dropShadow)" style="text-rendering: optimizeLegibility; shape-rendering: crispEdges;">
+  <!-- Main title with premium styling -->
+  <g filter="url(#textGlow)">
+    <text x="600" y="65" font-family="'Inter', 'SF Pro Display', system-ui, -apple-system, sans-serif" font-size="72" font-weight="900" fill="url(#titleGrad)" text-anchor="middle" letter-spacing="8" style="paint-order: stroke; stroke: #0a0e27; stroke-width: 2px;">
       MLSDM
     </text>
-    <text x="600" y="102" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="17" fill="#cbd5e1" text-anchor="middle" font-weight="500" letter-spacing="4" opacity="0.95" style="text-rendering: optimizeLegibility;">
-      MULTI-LEVEL SYNAPTIC DYNAMIC MEMORY
+  </g>
+  
+  <text x="600" y="95" font-family="'Inter', system-ui, sans-serif" font-size="14" fill="#94a3b8" text-anchor="middle" font-weight="600" letter-spacing="6" style="text-transform: uppercase;">
+    Multi-Level Synaptic Dynamic Memory
+  </text>
+  
+  <text x="600" y="115" font-family="'Inter', system-ui, sans-serif" font-size="11" fill="#64748b" text-anchor="middle" font-weight="500" letter-spacing="2">
+    Neurobiologically-Inspired Cognitive Governance for LLMs
+  </text>
+  
+  <!-- Central LLM Core -->
+  <g filter="url(#premiumGlow)">
+    <circle cx="600" cy="320" r="60" fill="url(#llmGrad)" opacity="0.95"/>
+    <circle cx="600" cy="320" r="48" fill="#0a0e27" opacity="0.8"/>
+    <text x="600" y="325" font-family="'JetBrains Mono', 'Fira Code', monospace" font-size="24" font-weight="900" fill="#fef3c7" text-anchor="middle">
+      LLM
     </text>
-    <text x="600" y="122" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="13" fill="#64748b" text-anchor="middle" font-weight="500" letter-spacing="2" opacity="0.8" style="text-rendering: optimizeLegibility;">
-      Neurobiologically-Inspired Cognitive Governance for LLMs
+    <text x="600" y="343" font-family="'Inter', system-ui, sans-serif" font-size="9" font-weight="700" fill="#fde68a" text-anchor="middle" opacity="0.9">
+      CORE ENGINE
     </text>
   </g>
   
-  <!-- Central LLM Core with enhanced styling -->
-  <g filter="url(#glowStrong)">
-    <circle cx="600" cy="320" r="58" fill="url(#llmGradient)" opacity="1"/>
-    <circle cx="600" cy="320" r="45" fill="#0f172a" opacity="0.7"/>
-    <circle cx="600" cy="320" r="38" fill="url(#llmGradient)" opacity="0.3"/>
-    <text x="600" y="318" font-family="'JetBrains Mono', 'Fira Code', 'Consolas', monospace" font-size="22" fill="#fef3c7" text-anchor="middle" font-weight="800" style="text-rendering: optimizeLegibility;">LLM</text>
-    <text x="600" y="336" font-family="system-ui, sans-serif" font-size="9" fill="#fde68a" text-anchor="middle" font-weight="600" opacity="0.9" style="text-rendering: optimizeLegibility;">CORE</text>
-  </g>
-  
-  <!-- Arrow indicators showing data flow direction -->
-  <defs>
-    <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
-      <polygon points="0 0, 10 3, 0 6" fill="#94a3b8" opacity="0.6"/>
-    </marker>
-  </defs>
-  
-  <!-- Perfect circular memory layers with enhanced symmetry -->
-  
-  <!-- L3 (Long-term) - Outermost ring -->
-  <g opacity="0.95" filter="url(#glow)">
-    <circle cx="600" cy="320" r="195" fill="none" stroke="url(#memoryL3)" stroke-width="4.5" stroke-dasharray="10,5"/>
-    <circle cx="600" cy="320" r="195" fill="none" stroke="#f472b6" stroke-width="1" opacity="0.3"/>
+  <!-- Memory rings with premium styling -->
+  <g filter="url(#premiumGlow)">
+    <!-- L1 Ring -->
+    <circle cx="600" cy="320" r="100" fill="none" stroke="url(#l1Grad)" stroke-width="5" stroke-dasharray="8,4" opacity="0.9"/>
+    <g transform="translate(455, 230)">
+      <rect x="0" y="0" width="90" height="80" rx="12" fill="#1e293b" opacity="0.95" stroke="url(#l1Grad)" stroke-width="3"/>
+      <text x="45" y="25" font-family="'Inter', system-ui, sans-serif" font-size="22" font-weight="900" fill="#3b82f6" text-anchor="middle">
+        L1
+      </text>
+      <text x="45" y="43" font-family="'Inter', system-ui, sans-serif" font-size="10" font-weight="700" fill="#60a5fa" text-anchor="middle">
+        Short-term
+      </text>
+      <text x="45" y="58" font-family="'JetBrains Mono', monospace" font-size="11" font-weight="800" fill="#93c5fd" text-anchor="middle">
+        λ=0.95
+      </text>
+      <text x="45" y="72" font-family="'Inter', system-ui, sans-serif" font-size="8" font-weight="600" fill="#60a5fa" text-anchor="middle" opacity="0.8">
+        Fast decay
+      </text>
+    </g>
     
-    <!-- L3 Label positioned symmetrically at 0° (right) -->
-    <g transform="translate(798, 320)">
-      <rect x="-2" y="-38" width="84" height="76" rx="8" fill="#1e293b" opacity="0.98" stroke="#f472b6" stroke-width="2.5"/>
-      <text x="40" y="-18" font-family="system-ui, sans-serif" font-size="20" fill="#f472b6" text-anchor="middle" font-weight="900" style="text-rendering: optimizeLegibility;">L3</text>
-      <text x="40" y="0" font-family="system-ui, sans-serif" font-size="11" fill="#fda4af" text-anchor="middle" font-weight="600" style="text-rendering: optimizeLegibility;">Long-term</text>
-      <text x="40" y="15" font-family="'JetBrains Mono', monospace" font-size="10" fill="#fecdd3" text-anchor="middle" font-weight="700" style="text-rendering: optimizeLegibility;">λ = 0.99</text>
-      <text x="40" y="29" font-family="system-ui, sans-serif" font-size="9" fill="#f9a8d4" text-anchor="middle" opacity="0.85" font-weight="500" style="text-rendering: optimizeLegibility;">Consolidated</text>
+    <!-- L2 Ring -->
+    <circle cx="600" cy="320" r="150" fill="none" stroke="url(#l2Grad)" stroke-width="5" stroke-dasharray="10,5" opacity="0.9"/>
+    <g transform="translate(710, 230)">
+      <rect x="0" y="0" width="90" height="80" rx="12" fill="#1e293b" opacity="0.95" stroke="url(#l2Grad)" stroke-width="3"/>
+      <text x="45" y="25" font-family="'Inter', system-ui, sans-serif" font-size="22" font-weight="900" fill="#8b5cf6" text-anchor="middle">
+        L2
+      </text>
+      <text x="45" y="43" font-family="'Inter', system-ui, sans-serif" font-size="10" font-weight="700" fill="#a78bfa" text-anchor="middle">
+        Medium
+      </text>
+      <text x="45" y="58" font-family="'JetBrains Mono', monospace" font-size="11" font-weight="800" fill="#c4b5fd" text-anchor="middle">
+        λ=0.98
+      </text>
+      <text x="45" y="72" font-family="'Inter', system-ui, sans-serif" font-size="8" font-weight="600" fill="#a78bfa" text-anchor="middle" opacity="0.8">
+        Gated transfer
+      </text>
     </g>
-  </g>
-  
-  <!-- L2 (Medium-term) - Middle ring -->
-  <g opacity="0.95" filter="url(#glow)">
-    <circle cx="600" cy="320" r="145" fill="none" stroke="url(#memoryL2)" stroke-width="4.5" stroke-dasharray="8,4"/>
-    <circle cx="600" cy="320" r="145" fill="none" stroke="#a78bfa" stroke-width="1" opacity="0.3"/>
     
-    <!-- L2 Label positioned symmetrically at 315° (top-right) -->
-    <g transform="translate(710, 225)">
-      <rect x="-2" y="-38" width="84" height="76" rx="8" fill="#1e293b" opacity="0.98" stroke="#a78bfa" stroke-width="2.5"/>
-      <text x="40" y="-18" font-family="system-ui, sans-serif" font-size="20" fill="#a78bfa" text-anchor="middle" font-weight="900" style="text-rendering: optimizeLegibility;">L2</text>
-      <text x="40" y="0" font-family="system-ui, sans-serif" font-size="11" fill="#c4b5fd" text-anchor="middle" font-weight="600" style="text-rendering: optimizeLegibility;">Medium</text>
-      <text x="40" y="15" font-family="'JetBrains Mono', monospace" font-size="10" fill="#ddd6fe" text-anchor="middle" font-weight="700" style="text-rendering: optimizeLegibility;">λ = 0.98</text>
-      <text x="40" y="29" font-family="system-ui, sans-serif" font-size="9" fill="#c4b5fd" text-anchor="middle" opacity="0.85" font-weight="500" style="text-rendering: optimizeLegibility;">Gated</text>
+    <!-- L3 Ring -->
+    <circle cx="600" cy="320" r="200" fill="none" stroke="url(#l3Grad)" stroke-width="5" stroke-dasharray="12,6" opacity="0.9"/>
+    <g transform="translate(800, 320)">
+      <rect x="0" y="-40" width="90" height="80" rx="12" fill="#1e293b" opacity="0.95" stroke="url(#l3Grad)" stroke-width="3"/>
+      <text x="45" y="-15" font-family="'Inter', system-ui, sans-serif" font-size="22" font-weight="900" fill="#ec4899" text-anchor="middle">
+        L3
+      </text>
+      <text x="45" y="3" font-family="'Inter', system-ui, sans-serif" font-size="10" font-weight="700" fill="#f472b6" text-anchor="middle">
+        Long-term
+      </text>
+      <text x="45" y="18" font-family="'JetBrains Mono', monospace" font-size="11" font-weight="800" fill="#fda4af" text-anchor="middle">
+        λ=0.99
+      </text>
+      <text x="45" y="32" font-family="'Inter', system-ui, sans-serif" font-size="8" font-weight="600" fill="#f472b6" text-anchor="middle" opacity="0.8">
+        Consolidated
+      </text>
     </g>
   </g>
   
-  <!-- L1 (Short-term) - Innermost ring -->
-  <g opacity="0.95" filter="url(#glow)">
-    <circle cx="600" cy="320" r="95" fill="none" stroke="url(#memoryL1)" stroke-width="4.5" stroke-dasharray="6,3"/>
-    <circle cx="600" cy="320" r="95" fill="none" stroke="#60a5fa" stroke-width="1" opacity="0.3"/>
-    
-    <!-- L1 Label positioned symmetrically at 225° (top-left) -->
-    <g transform="translate(458, 225)">
-      <rect x="-2" y="-38" width="84" height="76" rx="8" fill="#1e293b" opacity="0.98" stroke="#60a5fa" stroke-width="2.5"/>
-      <text x="40" y="-18" font-family="system-ui, sans-serif" font-size="20" fill="#60a5fa" text-anchor="middle" font-weight="900" style="text-rendering: optimizeLegibility;">L1</text>
-      <text x="40" y="0" font-family="system-ui, sans-serif" font-size="11" fill="#93c5fd" text-anchor="middle" font-weight="600" style="text-rendering: optimizeLegibility;">Short-term</text>
-      <text x="40" y="15" font-family="'JetBrains Mono', monospace" font-size="10" fill="#bfdbfe" text-anchor="middle" font-weight="700" style="text-rendering: optimizeLegibility;">λ = 0.95</text>
-      <text x="40" y="29" font-family="system-ui, sans-serif" font-size="9" fill="#93c5fd" text-anchor="middle" opacity="0.85" font-weight="500" style="text-rendering: optimizeLegibility;">Fast decay</text>
+  <!-- Components with premium cards -->
+  
+  <!-- Moral Filter (Top) -->
+  <g transform="translate(600, 120)" filter="url(#dropShadow)">
+    <rect x="-100" y="-35" width="200" height="70" rx="14" fill="#1e293b" opacity="0.98" stroke="url(#moralGrad)" stroke-width="3"/>
+    <g transform="translate(0, -10)">
+      <path d="M -40,-12 L -25,3 L -10,-17" stroke="#10b981" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="20" cy="-7" r="13" stroke="#10b981" stroke-width="4" fill="none"/>
     </g>
+    <text x="0" y="-40" font-family="'Inter', system-ui, sans-serif" font-size="13" font-weight="900" fill="#10b981" text-anchor="middle" letter-spacing="2">
+      MORAL FILTER
+    </text>
+    <text x="0" y="13" font-family="'JetBrains Mono', monospace" font-size="12" font-weight="800" fill="#34d399" text-anchor="middle">
+      93.3% REJECTION
+    </text>
+    <text x="0" y="27" font-family="'Inter', system-ui, sans-serif" font-size="8" font-weight="600" fill="#6ee7b7" text-anchor="middle" opacity="0.9">
+      Adaptive threshold [0.30-0.90]
+    </text>
   </g>
   
-  <!-- Perfectly positioned governance components in cardinal directions -->
-  
-  <!-- Moral Filter (top - 270°) -->
-  <g transform="translate(600, 125)">
-    <g filter="url(#glow)">
-      <rect x="-90" y="-32" width="180" height="64" rx="10" fill="url(#moralGradient)" opacity="0.98" stroke="#4ade80" stroke-width="2.5"/>
-      <!-- Enhanced checkmark icon -->
-      <path d="M -35,-10 L -20,5 L -5,-15" stroke="#0f172a" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-      <circle cx="20" cy="-5" r="11" stroke="#0f172a" stroke-width="3.5" fill="none"/>
-      <line x1="30" y1="-15" x2="43" y2="-23" stroke="#0f172a" stroke-width="3.5" stroke-linecap="round"/>
-    </g>
-    <text x="0" y="-42" font-family="system-ui, sans-serif" font-size="16" fill="#4ade80" text-anchor="middle" font-weight="800" letter-spacing="0.5" style="text-rendering: optimizeLegibility;">MORAL FILTER</text>
-    <text x="0" y="-26" font-family="'JetBrains Mono', monospace" font-size="11" fill="#86efac" text-anchor="middle" font-weight="700" style="text-rendering: optimizeLegibility;">93.3% REJECTION</text>
-    <text x="0" y="-12" font-family="system-ui, sans-serif" font-size="9" fill="#bbf7d0" text-anchor="middle" opacity="0.9" font-weight="500" style="text-rendering: optimizeLegibility;">EMA Threshold [0.30 - 0.90]</text>
-    <text x="0" y="0" font-family="system-ui, sans-serif" font-size="8" fill="#86efac" text-anchor="middle" opacity="0.75" font-weight="500" style="text-rendering: optimizeLegibility;">Adaptive homeostasis algorithm</text>
-  </g>
-  
-  <!-- Wake/Sleep Rhythm (bottom - 90°) -->
-  <g transform="translate(600, 515)">
-    <g filter="url(#glow)">
-      <rect x="-90" y="-32" width="180" height="64" rx="10" fill="#475569" opacity="0.98" stroke="#94a3b8" stroke-width="2.5"/>
-      <!-- Enhanced moon icon -->
-      <path d="M -34,-5 C -34,-16 -23,-16 -15,-9 C -21,-11 -27,-7 -27,-5 C -27,3 -21,7 -15,5 C -23,12 -34,12 -34,-5" fill="#fbbf24" stroke="#f59e0b" stroke-width="1.5"/>
-      <!-- Enhanced sun icon -->
-      <circle cx="25" cy="-5" r="9" fill="#fbbf24" stroke="#f59e0b" stroke-width="1.5"/>
-      <g stroke="#fbbf24" stroke-width="2.5" stroke-linecap="round">
-        <line x1="25" y1="-18" x2="25" y2="-22"/>
-        <line x1="25" y1="8" x2="25" y2="12"/>
-        <line x1="38" y1="-5" x2="42" y2="-5"/>
-        <line x1="12" y1="-5" x2="8" y2="-5"/>
-        <line x1="33" y1="-13" x2="36" y2="-16"/>
-        <line x1="17" y1="3" x2="14" y2="6"/>
-        <line x1="33" y1="3" x2="36" y2="6"/>
-        <line x1="17" y1="-13" x2="14" y2="-16"/>
+  <!-- Cognitive Rhythm (Bottom) -->
+  <g transform="translate(600, 520)" filter="url(#dropShadow)">
+    <rect x="-100" y="-35" width="200" height="70" rx="14" fill="#1e293b" opacity="0.98" stroke="#64748b" stroke-width="3"/>
+    <g transform="translate(0, -10)">
+      <path d="M -35,-7 C -35,-18 -22,-18 -15,-11 C -22,-13 -28,-9 -28,-7 C -28,1 -22,5 -15,3 C -22,10 -35,10 -35,-7" fill="#fbbf24"/>
+      <circle cx="25" cy="-7" r="10" fill="#fbbf24"/>
+      <g stroke="#f59e0b" stroke-width="2.5" stroke-linecap="round">
+        <line x1="25" y1="-20" x2="25" y2="-24"/>
+        <line x1="25" y1="6" x2="25" y2="10"/>
+        <line x1="38" y1="-7" x2="42" y2="-7"/>
+        <line x1="12" y1="-7" x2="8" y2="-7"/>
       </g>
     </g>
-    <text x="0" y="48" font-family="system-ui, sans-serif" font-size="16" fill="#cbd5e1" text-anchor="middle" font-weight="800" letter-spacing="0.5" style="text-rendering: optimizeLegibility;">COGNITIVE RHYTHM</text>
-    <text x="0" y="63" font-family="'JetBrains Mono', monospace" font-size="11" fill="#e2e8f0" text-anchor="middle" font-weight="700" style="text-rendering: optimizeLegibility;">89.5% RESOURCE ↓</text>
-    <text x="0" y="77" font-family="system-ui, sans-serif" font-size="9" fill="#cbd5e1" text-anchor="middle" opacity="0.9" font-weight="500" style="text-rendering: optimizeLegibility;">8 wake cycles + 3 sleep cycles</text>
-    <text x="0" y="89" font-family="system-ui, sans-serif" font-size="8" fill="#94a3b8" text-anchor="middle" opacity="0.75" font-weight="500" style="text-rendering: optimizeLegibility;">Memory consolidation during sleep</text>
+    <text x="0" y="13" font-family="'JetBrains Mono', monospace" font-size="12" font-weight="800" fill="#cbd5e1" text-anchor="middle">
+      89.5% RESOURCE ↓
+    </text>
+    <text x="0" y="27" font-family="'Inter', system-ui, sans-serif" font-size="8" font-weight="600" fill="#94a3b8" text-anchor="middle" opacity="0.9">
+      8 wake + 3 sleep cycles
+    </text>
   </g>
   
-  <!-- Aphasia Detection (left - 180°) -->
-  <g transform="translate(220, 320)">
-    <g filter="url(#glow)">
-      <rect x="-90" y="-32" width="180" height="64" rx="10" fill="#475569" opacity="0.98" stroke="#60a5fa" stroke-width="2.5"/>
-      <!-- Enhanced speech bubble icon -->
-      <path d="M -40,-18 L -40,10 L -28,10 L -22,18 L -22,10 L 40,10 L 40,-18 Z" fill="#60a5fa" opacity="0.98" stroke="#3b82f6" stroke-width="2"/>
-      <text x="0" y="2" font-family="'JetBrains Mono', monospace" font-size="18" fill="#0f172a" text-anchor="middle" font-weight="900" style="text-rendering: optimizeLegibility;">Aφ</text>
+  <!-- Aphasia Guard (Left) -->
+  <g transform="translate(210, 320)" filter="url(#dropShadow)">
+    <rect x="-100" y="-35" width="200" height="70" rx="14" fill="#1e293b" opacity="0.98" stroke="#3b82f6" stroke-width="3"/>
+    <g transform="translate(0, -10)">
+      <path d="M -45,-20 L -45,12 L -30,12 L -22,22 L -22,12 L 45,12 L 45,-20 Z" fill="#3b82f6" opacity="0.9"/>
+      <text x="0" y="2" font-family="'JetBrains Mono', monospace" font-size="20" font-weight="900" fill="#0a0e27" text-anchor="middle">
+        Aφ
+      </text>
     </g>
-    <text x="0" y="-42" font-family="system-ui, sans-serif" font-size="16" fill="#60a5fa" text-anchor="middle" font-weight="800" letter-spacing="0.5" style="text-rendering: optimizeLegibility;">APHASIA GUARD</text>
-    <text x="0" y="-26" font-family="'JetBrains Mono', monospace" font-size="11" fill="#93c5fd" text-anchor="middle" font-weight="700" style="text-rendering: optimizeLegibility;">TPR 100% │ TNR 80%</text>
-    <text x="0" y="-12" font-family="system-ui, sans-serif" font-size="9" fill="#bfdbfe" text-anchor="middle" opacity="0.9" font-weight="500" style="text-rendering: optimizeLegibility;">Broca-model detection</text>
-    <text x="0" y="0" font-family="system-ui, sans-serif" font-size="8" fill="#93c5fd" text-anchor="middle" opacity="0.75" font-weight="500" style="text-rendering: optimizeLegibility;">Telegraphic speech repair</text>
+    <text x="0" y="-40" font-family="'Inter', system-ui, sans-serif" font-size="13" font-weight="900" fill="#3b82f6" text-anchor="middle" letter-spacing="2">
+      APHASIA GUARD
+    </text>
+    <text x="0" y="13" font-family="'JetBrains Mono', monospace" font-size="12" font-weight="800" fill="#60a5fa" text-anchor="middle">
+      TPR 100% │ TNR 80%
+    </text>
+    <text x="0" y="27" font-family="'Inter', system-ui, sans-serif" font-size="8" font-weight="600" fill="#93c5fd" text-anchor="middle" opacity="0.9">
+      Broca-model detection
+    </text>
   </g>
   
-  <!-- PELM Memory (right - 0°) -->
-  <g transform="translate(980, 320)">
-    <g filter="url(#glow)">
-      <rect x="-90" y="-32" width="180" height="64" rx="10" fill="#475569" opacity="0.98" stroke="#f472b6" stroke-width="2.5"/>
-      <!-- Enhanced memory grid icon -->
-      <g opacity="0.98">
-        <rect x="-35" y="-14" width="14" height="12" fill="#f472b6" opacity="0.95" stroke="#ec4899" stroke-width="0.8"/>
-        <rect x="-18" y="-14" width="14" height="12" fill="#f472b6" opacity="0.75" stroke="#ec4899" stroke-width="0.8"/>
-        <rect x="-1" y="-14" width="14" height="12" fill="#f472b6" opacity="0.55" stroke="#ec4899" stroke-width="0.8"/>
-        <rect x="16" y="-14" width="14" height="12" fill="#f472b6" opacity="0.85" stroke="#ec4899" stroke-width="0.8"/>
-        <rect x="-35" y="0" width="14" height="12" fill="#f472b6" opacity="0.65" stroke="#ec4899" stroke-width="0.8"/>
-        <rect x="-18" y="0" width="14" height="12" fill="#f472b6" opacity="1" stroke="#ec4899" stroke-width="0.8"/>
-        <rect x="-1" y="0" width="14" height="12" fill="#f472b6" opacity="0.75" stroke="#ec4899" stroke-width="0.8"/>
-        <rect x="16" y="0" width="14" height="12" fill="#f472b6" opacity="0.55" stroke="#ec4899" stroke-width="0.8"/>
+  <!-- PELM (Right) -->
+  <g transform="translate(990, 320)" filter="url(#dropShadow)">
+    <rect x="-100" y="-35" width="200" height="70" rx="14" fill="#1e293b" opacity="0.98" stroke="#ec4899" stroke-width="3"/>
+    <g transform="translate(0, -10)">
+      <g opacity="0.9">
+        <rect x="-40" y="-16" width="16" height="14" fill="#ec4899" opacity="0.95"/>
+        <rect x="-20" y="-16" width="16" height="14" fill="#ec4899" opacity="0.7"/>
+        <rect x="0" y="-16" width="16" height="14" fill="#ec4899" opacity="0.5"/>
+        <rect x="20" y="-16" width="16" height="14" fill="#ec4899" opacity="0.85"/>
+        <rect x="-40" y="0" width="16" height="14" fill="#ec4899" opacity="0.6"/>
+        <rect x="-20" y="0" width="16" height="14" fill="#ec4899" opacity="1"/>
+        <rect x="0" y="0" width="16" height="14" fill="#ec4899" opacity="0.75"/>
+        <rect x="20" y="0" width="16" height="14" fill="#ec4899" opacity="0.5"/>
       </g>
     </g>
-    <text x="0" y="-42" font-family="system-ui, sans-serif" font-size="16" fill="#f472b6" text-anchor="middle" font-weight="800" letter-spacing="0.5" style="text-rendering: optimizeLegibility;">PELM</text>
-    <text x="0" y="-26" font-family="'JetBrains Mono', monospace" font-size="11" fill="#fda4af" text-anchor="middle" font-weight="700" style="text-rendering: optimizeLegibility;">20K × 384D</text>
-    <text x="0" y="-12" font-family="system-ui, sans-serif" font-size="9" fill="#fecdd3" text-anchor="middle" opacity="0.9" font-weight="500" style="text-rendering: optimizeLegibility;">Phase-Entangled Lattice</text>
-    <text x="0" y="0" font-family="system-ui, sans-serif" font-size="8" fill="#fda4af" text-anchor="middle" opacity="0.75" font-weight="500" style="text-rendering: optimizeLegibility;">Circular FIFO eviction</text>
+    <text x="0" y="-40" font-family="'Inter', system-ui, sans-serif" font-size="13" font-weight="900" fill="#ec4899" text-anchor="middle" letter-spacing="2">
+      PELM
+    </text>
+    <text x="0" y="13" font-family="'JetBrains Mono', monospace" font-size="12" font-weight="800" fill="#f472b6" text-anchor="middle">
+      20K × 384D
+    </text>
+    <text x="0" y="27" font-family="'Inter', system-ui, sans-serif" font-size="8" font-weight="600" fill="#fda4af" text-anchor="middle" opacity="0.9">
+      Phase-Entangled Lattice
+    </text>
   </g>
   
-  <!-- Symmetric connection lines with directional arrows -->
-  <g opacity="0.3" stroke="#94a3b8" stroke-width="2.5" fill="none" stroke-dasharray="8,6" marker-end="url(#arrowhead)">
-    <line x1="600" y1="262" x2="600" y2="189"/>
-    <line x1="600" y1="378" x2="600" y2="451"/>
-    <line x1="542" y1="320" x2="310" y2="320"/>
-    <line x1="658" y1="320" x2="890" y2="320"/>
+  <!-- Connection lines -->
+  <g opacity="0.3" stroke="#64748b" stroke-width="3" fill="none" stroke-dasharray="10,8">
+    <line x1="600" y1="260" x2="600" y2="185"/>
+    <line x1="600" y1="380" x2="600" y2="455"/>
+    <line x1="540" y1="320" x2="310" y2="320"/>
+    <line x1="660" y1="320" x2="890" y2="320"/>
   </g>
   
-  <!-- Animated data flow particles on connection lines -->
-  <g opacity="0.7">
-    <!-- To Moral Filter -->
-    <circle cx="600" cy="230" r="5" fill="#4ade80" filter="url(#glow)">
-      <animate attributeName="cy" values="230;189;230" dur="2.5s" repeatCount="indefinite"/>
-      <animate attributeName="opacity" values="0.7;1;0.7" dur="2.5s" repeatCount="indefinite"/>
+  <!-- Animated particles -->
+  <g opacity="0.8">
+    <circle cx="600" cy="225" r="6" fill="#10b981" filter="url(#premiumGlow)">
+      <animate attributeName="cy" values="225;185;225" dur="2.5s" repeatCount="indefinite"/>
     </circle>
-    <!-- To Cognitive Rhythm -->
-    <circle cx="600" cy="410" r="5" fill="#94a3b8" filter="url(#glow)">
-      <animate attributeName="cy" values="410;451;410" dur="3s" repeatCount="indefinite"/>
-      <animate attributeName="opacity" values="0.7;1;0.7" dur="3s" repeatCount="indefinite"/>
+    <circle cx="600" cy="415" r="6" fill="#64748b" filter="url(#premiumGlow)">
+      <animate attributeName="cy" values="415;455;415" dur="3s" repeatCount="indefinite"/>
     </circle>
-    <!-- To Aphasia Guard -->
-    <circle cx="426" cy="320" r="5" fill="#60a5fa" filter="url(#glow)">
-      <animate attributeName="cx" values="426;310;426" dur="2.8s" repeatCount="indefinite"/>
-      <animate attributeName="opacity" values="0.7;1;0.7" dur="2.8s" repeatCount="indefinite"/>
+    <circle cx="425" cy="320" r="6" fill="#3b82f6" filter="url(#premiumGlow)">
+      <animate attributeName="cx" values="425;310;425" dur="2.8s" repeatCount="indefinite"/>
     </circle>
-    <!-- To PELM -->
-    <circle cx="774" cy="320" r="5" fill="#f472b6" filter="url(#glow)">
-      <animate attributeName="cx" values="774;890;774" dur="2.6s" repeatCount="indefinite"/>
-      <animate attributeName="opacity" values="0.7;1;0.7" dur="2.6s" repeatCount="indefinite"/>
+    <circle cx="775" cy="320" r="6" fill="#ec4899" filter="url(#premiumGlow)">
+      <animate attributeName="cx" values="775;890;775" dur="2.6s" repeatCount="indefinite"/>
     </circle>
   </g>
   
-  <!-- Enhanced key features banner at bottom with crisp text -->
+  <!-- Premium feature banner -->
   <g transform="translate(600, 572)">
-    <rect x="-590" y="-22" width="1180" height="44" rx="10" fill="#1e293b" opacity="0.85" stroke="#334155" stroke-width="1.5"/>
-    <g font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="13" font-weight="700" text-anchor="middle" style="text-rendering: optimizeLegibility;">
-      <text x="-385" y="4">
-        <tspan fill="#60a5fa" font-size="16">●</tspan>
-        <tspan dx="10" fill="#e0f2fe">29.37 MB Fixed</tspan>
+    <rect x="-590" y="-24" width="1180" height="48" rx="12" fill="#1e293b" opacity="0.9" stroke="#334155" stroke-width="2"/>
+    <g font-family="'Inter', system-ui, sans-serif" font-size="14" font-weight="800" text-anchor="middle">
+      <text x="-385" y="5">
+        <tspan fill="#3b82f6" font-size="18">●</tspan>
+        <tspan dx="12" fill="#e0f2fe">29.37 MB FIXED</tspan>
       </text>
-      <text x="-185" y="4">
-        <tspan fill="#4ade80" font-size="16">●</tspan>
-        <tspan dx="10" fill="#d1fae5">Adaptive Safety</tspan>
+      <text x="-185" y="5">
+        <tspan fill="#10b981" font-size="18">●</tspan>
+        <tspan dx="12" fill="#d1fae5">ADAPTIVE SAFETY</tspan>
       </text>
-      <text x="20" y="4">
-        <tspan fill="#a78bfa" font-size="16">●</tspan>
-        <tspan dx="10" fill="#ede9fe">Neuro-Inspired</tspan>
+      <text x="20" y="5">
+        <tspan fill="#8b5cf6" font-size="18">●</tspan>
+        <tspan dx="12" fill="#ede9fe">NEURO-INSPIRED</tspan>
       </text>
-      <text x="230" y="4">
-        <tspan fill="#f472b6" font-size="16">●</tspan>
-        <tspan dx="10" fill="#fce7f3">Thread-Safe</tspan>
+      <text x="230" y="5">
+        <tspan fill="#ec4899" font-size="18">●</tspan>
+        <tspan dx="12" fill="#fce7f3">THREAD-SAFE</tspan>
       </text>
-      <text x="420" y="4">
-        <tspan fill="#fbbf24" font-size="16">●</tspan>
-        <tspan dx="10" fill="#fef3c7">Production-Ready</tspan>
+      <text x="420" y="5">
+        <tspan fill="#fbbf24" font-size="18">●</tspan>
+        <tspan dx="12" fill="#fef3c7">PRODUCTION-READY</tspan>
       </text>
     </g>
   </g>
   
-  <!-- Symmetric corner accent decorations with enhanced visibility -->
-  <g opacity="0.35">
-    <circle cx="40" cy="40" r="6" fill="#60a5fa" stroke="#3b82f6" stroke-width="1.5"/>
-    <circle cx="1160" cy="40" r="6" fill="#f472b6" stroke="#ec4899" stroke-width="1.5"/>
-    <circle cx="40" cy="560" r="6" fill="#4ade80" stroke="#16a34a" stroke-width="1.5"/>
-    <circle cx="1160" cy="560" r="6" fill="#a78bfa" stroke="#7c3aed" stroke-width="1.5"/>
-  </g>
-  
-  <!-- Subtle rotating elements for visual interest -->
-  <g opacity="0.12">
-    <circle cx="600" cy="320" r="250" fill="none" stroke="#60a5fa" stroke-width="0.8" stroke-dasharray="3,12">
-      <animateTransform attributeName="transform" type="rotate" from="0 600 320" to="360 600 320" dur="60s" repeatCount="indefinite"/>
-    </circle>
-    <circle cx="600" cy="320" r="270" fill="none" stroke="#f472b6" stroke-width="0.8" stroke-dasharray="3,12">
-      <animateTransform attributeName="transform" type="rotate" from="360 600 320" to="0 600 320" dur="80s" repeatCount="indefinite"/>
-    </circle>
+  <!-- Corner accents -->
+  <g opacity="0.4">
+    <circle cx="40" cy="40" r="7" fill="#3b82f6" stroke="#60a5fa" stroke-width="2"/>
+    <circle cx="1160" cy="40" r="7" fill="#ec4899" stroke="#f472b6" stroke-width="2"/>
+    <circle cx="40" cy="560" r="7" fill="#10b981" stroke="#34d399" stroke-width="2"/>
+    <circle cx="1160" cy="560" r="7" fill="#8b5cf6" stroke="#a78bfa" stroke-width="2"/>
   </g>
 </svg>
