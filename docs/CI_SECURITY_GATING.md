@@ -27,10 +27,11 @@ These jobs **BLOCK** merges and releases if they fail:
 #### Bandit Security Scan (CRITICAL GATE)
 - **Job:** `bandit`
 - **Tool:** Bandit SAST scanner
-- **Threshold:** Medium+ severity and confidence
-- **Blocks on:** Any medium, high, or critical security issues
-- **Exit behavior:** Non-zero exit code on security findings
+- **Threshold:** High severity and high confidence
+- **Blocks on:** Any high severity security issues
+- **Exit behavior:** Non-zero exit code on high severity findings
 - **Status:** ✅ BLOCKING (no `continue-on-error`)
+- **Note:** Medium+ findings are generated for SARIF tracking but only high severity blocks CI
 
 #### Semgrep SAST Scan (CRITICAL GATE)
 - **Job:** `semgrep`
