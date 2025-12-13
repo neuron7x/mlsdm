@@ -34,3 +34,6 @@ reports/EFFECTIVENESS_SNAPSHOT.md
 
 # Eval suite generated reports
 evals/*_report.json
+
+# Downloaded tools and binaries
+conftest
