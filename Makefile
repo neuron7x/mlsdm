@@ -1,4 +1,4 @@
-.PHONY: test lint type cov help run-dev run-cloud-local run-agent health-check eval-moral_filter test-memory-obs \
+.PHONY: test lint type cov bench bench-drift help run-dev run-cloud-local run-agent health-check eval-moral_filter test-memory-obs \
         build-package test-package docker-build-neuro-engine docker-run-neuro-engine docker-smoke-neuro-engine \
         docker-compose-up docker-compose-down
 
@@ -10,6 +10,8 @@ help:
 	@echo "  make lint     - Run ruff linter on src and tests"
 	@echo "  make type     - Run mypy type checker on src/mlsdm"
 	@echo "  make cov      - Run tests with coverage report"
+	@echo "  make bench    - Run performance benchmarks (matches CI)"
+	@echo "  make bench-drift - Check benchmark results against baseline"
 	@echo ""
 	@echo "Package Building:"
 	@echo "  make build-package  - Build wheel and sdist distributions"
@@ -48,6 +50,19 @@ type:
 
 cov:
 	pytest --ignore=tests/load --cov=src --cov-report=html --cov-report=term-missing
+
+bench:
+	@echo "Running performance benchmarks..."
+	pytest benchmarks/test_neuro_engine_performance.py -v -s --tb=short
+
+bench-drift:
+	@echo "Checking benchmark drift against baseline..."
+	@if [ -f benchmark-metrics.json ]; then \
+		python scripts/check_benchmark_drift.py benchmark-metrics.json; \
+	else \
+		echo "Error: benchmark-metrics.json not found. Run 'make bench' first."; \
+		exit 1; \
+	fi
 
 # Package Building
 build-package:
