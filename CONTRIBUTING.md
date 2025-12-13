@@ -98,18 +98,6 @@ make test
 # Or: pytest --ignore=tests/load
 
 # Run linter (ruff)
-ruff check src tests
-
-# Run type checker
-mypy src/mlsdm
-
-# Run security checks (CRITICAL - these are blocking gates in CI)
-bandit -r src/mlsdm --severity-level medium --confidence-level medium
-pip-audit --requirement requirements.txt --strict
-```
-
-**⚠️ Security Note:** Security checks are **BLOCKING GATES** in CI. Your PR will be blocked if security issues are found. See [docs/CI_SECURITY_GATING.md](docs/CI_SECURITY_GATING.md) for details.
-# Run linter (ruff)
 make lint
 # Or: ruff check src tests
 
@@ -118,7 +106,7 @@ make type
 # Or: mypy src/mlsdm
 
 # Run security checks (CRITICAL - these are blocking gates in CI)
-bandit -r src/mlsdm --severity-level medium --confidence-level medium
+bandit -r src/mlsdm --severity-level high --confidence-level high
 pip-audit --requirement requirements.txt --strict
 
 # Run tests with coverage
@@ -128,6 +116,8 @@ make cov
 # Show all available commands
 make help
 ```
+
+**⚠️ Security Note:** Security checks are **BLOCKING GATES** in CI. Your PR will be blocked if security issues are found. See [docs/CI_SECURITY_GATING.md](docs/CI_SECURITY_GATING.md) for details.
 
 **⚠️ Security Note:** Security checks are **BLOCKING GATES** in CI. Your PR will be blocked if security issues are found. See [docs/CI_SECURITY_GATING.md](docs/CI_SECURITY_GATING.md) for details.
 

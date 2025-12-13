@@ -18,7 +18,7 @@ See **[docs/CI_SECURITY_GATING.md](docs/CI_SECURITY_GATING.md)** for complete se
 
 **Quick security check before pushing:**
 ```bash
-bandit -r src/mlsdm --severity-level medium --confidence-level medium
+bandit -r src/mlsdm --severity-level high --confidence-level high
 pip-audit --requirement requirements.txt --strict
 ```
 

@@ -1,7 +1,7 @@
 # CI Security Gating Policy
 
 **Document Version:** 1.0.0  
-**Last Updated:** December 2025  
+**Last Updated:** December 13, 2025  
 **Security Level:** Production-Grade
 
 ## Overview
@@ -149,8 +149,8 @@ Developers **MUST** run these commands before pushing:
 
 ### Security Checks
 ```bash
-# 1. Run SAST with Bandit
-bandit -r src/mlsdm --severity-level medium --confidence-level medium
+# 1. Run SAST with Bandit (HIGH severity - matches CI gate)
+bandit -r src/mlsdm --severity-level high --confidence-level high
 
 # 2. Run dependency audit
 pip-audit --requirement requirements.txt --strict
@@ -168,8 +168,9 @@ mypy src/mlsdm
 # Run critical security checks only
 make security-check
 
-# Or manually:
-bandit -r src/mlsdm -ll -i && pip-audit --requirement requirements.txt
+# Or manually (HIGH severity - matches CI):
+bandit -r src/mlsdm --severity-level high --confidence-level high && \
+  pip-audit --requirement requirements.txt --strict
 ```
 
 ## Incident Response
