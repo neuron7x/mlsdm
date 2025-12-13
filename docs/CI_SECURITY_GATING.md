@@ -152,9 +152,11 @@ Developers **MUST** run these commands before pushing:
 ```bash
 # 1. Run SAST with Bandit (HIGH severity - matches CI gate)
 # Path src/mlsdm is the main Python package directory
+# Exit code: 0 = no issues, 1 = issues found
 bandit -r src/mlsdm --severity-level high --confidence-level high
 
 # 2. Run dependency audit (requires requirements.txt installed)
+# Exit code: 0 = no vulnerabilities, 1 = vulnerabilities found
 pip-audit --requirement requirements.txt --strict
 
 # 3. Run all tests (includes security tests)
@@ -167,7 +169,7 @@ mypy src/mlsdm
 
 ### Quick Security Validation
 ```bash
-# Run all security checks before pushing:
+# Run all security checks before pushing (exits on first failure):
 bandit -r src/mlsdm --severity-level high --confidence-level high && \
   pip-audit --requirement requirements.txt --strict && \
   pytest tests/security/ -v

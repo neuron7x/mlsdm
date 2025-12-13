@@ -66,18 +66,12 @@ jobs:
 
       - name: Check for high severity issues (SECURITY GATE)
         run: |
-          # Display any high severity issues for visibility
-          bandit -r src/mlsdm \
-            -f txt \
-            --severity-level high \
-            --confidence-level high \
-            || true  # Show issues but don't fail yet
-
-          # SECURITY GATE: This will fail the workflow if high severity issues are found
+          # SECURITY GATE: Display and fail on high severity issues
+          # If no HIGH issues found, exit 0; if found, display them and exit 1
           bandit -r src/mlsdm \
             --severity-level high \
             --confidence-level high \
-            -q  # Quiet mode, only returns exit code
+            -f txt
 
       - name: Upload SARIF file
         if: always()
