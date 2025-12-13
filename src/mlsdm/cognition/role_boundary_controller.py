@@ -279,6 +279,7 @@ class RoleBoundaryController:
                 "bypass security",
                 "disable safety",
                 "disable authentication",
+                "disable all authentication",
                 "remove authentication",
                 "expose secrets",
                 "credentials",
