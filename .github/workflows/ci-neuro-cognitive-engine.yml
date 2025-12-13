@@ -308,6 +308,23 @@ jobs:
             echo "slo_status=unknown" >> $GITHUB_OUTPUT
           fi
 
+      - name: Check for baseline drift
+        if: always()
+        run: |
+          echo "## Baseline Drift Check" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Run drift check (warning only, not strict)
+          if [ -f benchmark-metrics.json ]; then
+            python scripts/check_benchmark_drift.py benchmark-metrics.json --baseline benchmarks/baseline.json \
+              | tee drift-check.txt
+
+            # Add to summary
+            cat drift-check.txt >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ benchmark-metrics.json not found, skipping drift check" >> $GITHUB_STEP_SUMMARY
+          fi
+
       - name: Check for performance regression (PERF-002)
         if: github.event_name == 'pull_request'
         run: |

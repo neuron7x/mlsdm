@@ -3,7 +3,7 @@
 **Document Version:** 1.0.0
 **Project Version:** 1.0.0
 **Last Updated:** November 2025
-**Minimum Coverage:** 90%
+**Minimum Coverage:** 65% (CI gate threshold)
 
 Thank you for your interest in contributing to MLSDM Governed Cognitive Memory! This document provides comprehensive guidelines and instructions for contributors.
 
@@ -55,13 +55,24 @@ This project adheres to professional engineering standards. We expect:
 
 ### Install Dependencies
 
+The project uses `uv.lock` for reproducible dependency installation:
+
 ```bash
 # Create virtual environment (recommended)
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 
-# Install dependencies
+# Install from lock file for reproducibility (recommended)
+pip install uv
+uv sync
+
+# Or install with requirements.txt (includes all optional dependencies)
 pip install -r requirements.txt
+
+# Or install minimal with extras as needed
+pip install -e .                # Minimal install
+pip install -e ".[embeddings]"  # With semantic embeddings
+pip install -e ".[dev]"          # Full dev environment
 ```
 
 ### Verify Installation
@@ -109,9 +120,13 @@ make type
 bandit -r src/mlsdm --severity-level high --confidence-level high
 pip-audit --requirement requirements.txt --strict
 
-# Run tests with coverage
+# Run tests with coverage (matches CI gate)
 make cov
-# Or: pytest --ignore=tests/load --cov=src --cov-report=html --cov-report=term-missing
+# Or: pytest --cov=src/mlsdm --cov-report=xml --cov-report=term-missing \
+#     --cov-fail-under=65 --ignore=tests/load -m "not slow and not benchmark" -v
+
+# Or use coverage script
+./coverage_gate.sh
 
 # Show all available commands
 make help
