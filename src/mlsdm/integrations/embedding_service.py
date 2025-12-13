@@ -133,6 +133,13 @@ class EmbeddingServiceClient:
             )
             response.raise_for_status()
             data = response.json()
+            
+            # Validate response structure
+            if "data" not in data or not data["data"]:
+                raise ValueError("Invalid OpenAI embedding response: missing data")
+            if "embedding" not in data["data"][0]:
+                raise ValueError("Invalid OpenAI embedding response: missing embedding")
+                
             embedding = np.array(data["data"][0]["embedding"], dtype=np.float32)
             return embedding
         except requests.RequestException as e:

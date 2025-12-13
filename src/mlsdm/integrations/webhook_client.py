@@ -8,6 +8,7 @@ import hashlib
 import hmac
 import json
 import logging
+import random
 import time
 from dataclasses import asdict, dataclass
 from enum import Enum
@@ -131,7 +132,6 @@ class WebhookClient:
                 )
                 if attempt < self.max_retries - 1:
                     # Exponential backoff with max 5 seconds and jitter
-                    import random
                     backoff = min(2**attempt, 5) + random.uniform(0, 0.5)
                     time.sleep(backoff)
 

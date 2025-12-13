@@ -140,6 +140,15 @@ class LLMProviderClient:
             )
             response.raise_for_status()
             data = response.json()
+            
+            # Validate response structure
+            if "choices" not in data or not data["choices"]:
+                raise ValueError("Invalid OpenAI response: missing choices")
+            if "message" not in data["choices"][0]:
+                raise ValueError("Invalid OpenAI response: missing message")
+            if "content" not in data["choices"][0]["message"]:
+                raise ValueError("Invalid OpenAI response: missing content")
+                
             return data["choices"][0]["message"]["content"]
         except requests.RequestException as e:
             self.logger.error(f"OpenAI request failed: {e}")

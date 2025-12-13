@@ -85,12 +85,15 @@ class SecretsManager:
         # Check cache first and validate TTL
         if key in self._cache:
             import time
-            cache_age = time.time() - self._cache_timestamps.get(key, 0)
-            if cache_age < self.cache_ttl:
-                return self._cache[key]
-            else:
-                # Expired, remove from cache
+            timestamp = self._cache_timestamps.get(key)
+            if timestamp is not None:
+                cache_age = time.time() - timestamp
+                if cache_age < self.cache_ttl:
+                    return self._cache[key]
+            # Expired or invalid timestamp, remove from cache
+            if key in self._cache:
                 del self._cache[key]
+            if key in self._cache_timestamps:
                 del self._cache_timestamps[key]
 
         # Fetch from provider

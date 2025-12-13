@@ -110,8 +110,17 @@ class CIHealthMonitor:
             self.logger.warning("GitHub token or repository not configured")
             return CIStatus.UNKNOWN
 
+        # Validate repository format to prevent injection
+        if "/" not in self.repository or self.repository.count("/") != 1:
+            self.logger.error(f"Invalid repository format: {self.repository}")
+            return CIStatus.UNKNOWN
+
         try:
-            url = f"https://api.github.com/repos/{self.repository}/actions/workflows/{workflow_name}/runs"
+            # Use proper URL encoding
+            from urllib.parse import quote
+            repo_encoded = quote(self.repository, safe="")
+            workflow_encoded = quote(workflow_name, safe="")
+            url = f"https://api.github.com/repos/{repo_encoded}/actions/workflows/{workflow_encoded}/runs"
             headers = {
                 "Authorization": f"Bearer {self.github_token}",
                 "Accept": "application/vnd.github.v3+json",
