@@ -549,6 +549,7 @@ jobs:
           severity: 'CRITICAL,HIGH'
           exit-code: '1'  # Fail on vulnerabilities
         # SECURITY GATE: This scan blocks releases if critical/high vulnerabilities found
+        # exit-code: '1' + severity filter ensures non-zero exit on CRITICAL/HIGH findings only
 
       - name: Upload Trivy results to GitHub Security
         uses: github/codeql-action/upload-sarif@v3

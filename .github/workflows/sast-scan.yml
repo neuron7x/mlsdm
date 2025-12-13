@@ -112,6 +112,7 @@ jobs:
     timeout-minutes: 15
     # SECURITY GATE: Semgrep is now a blocking check
     # Bandit remains the primary SAST tool, but Semgrep provides additional coverage
+    # Note: semgrep-action exits with non-zero code on findings by default
 
     steps:
       - name: Checkout code
@@ -125,6 +126,8 @@ jobs:
             p/security-audit
             p/owasp-top-ten
           generateSarif: "1"
+        # This action fails by default when security findings are detected
+        # No need for explicit exit-code handling
 
       - name: Upload Semgrep SARIF
         if: always()

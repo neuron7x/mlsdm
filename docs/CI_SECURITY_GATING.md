@@ -37,9 +37,10 @@ These jobs **BLOCK** merges and releases if they fail:
 - **Job:** `semgrep`
 - **Tool:** Semgrep with security rulesets
 - **Rulesets:** `p/python`, `p/security-audit`, `p/owasp-top-ten`
-- **Blocks on:** Security findings per Semgrep rules
-- **Exit behavior:** Non-zero exit code on security findings
+- **Blocks on:** Any security finding from configured rulesets
+- **Exit behavior:** semgrep-action exits with non-zero code when findings are detected
 - **Status:** ✅ BLOCKING (no `continue-on-error`)
+- **Note:** Semgrep blocking behavior is default for semgrep-action@v1
 
 ### 2. Dependency Vulnerability Scanning (CRITICAL GATE)
 
@@ -150,9 +151,10 @@ Developers **MUST** run these commands before pushing:
 ### Security Checks
 ```bash
 # 1. Run SAST with Bandit (HIGH severity - matches CI gate)
+# Path src/mlsdm is the main Python package directory
 bandit -r src/mlsdm --severity-level high --confidence-level high
 
-# 2. Run dependency audit
+# 2. Run dependency audit (requires requirements.txt installed)
 pip-audit --requirement requirements.txt --strict
 
 # 3. Run all tests (includes security tests)
@@ -165,12 +167,10 @@ mypy src/mlsdm
 
 ### Quick Security Validation
 ```bash
-# Run critical security checks only
-make security-check
-
-# Or manually (HIGH severity - matches CI):
+# Run all security checks before pushing:
 bandit -r src/mlsdm --severity-level high --confidence-level high && \
-  pip-audit --requirement requirements.txt --strict
+  pip-audit --requirement requirements.txt --strict && \
+  pytest tests/security/ -v
 ```
 
 ## Incident Response
