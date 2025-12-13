@@ -6,6 +6,22 @@
 
 MLSDM uses GitHub Actions for continuous integration and deployment. The CI pipeline is designed to ensure code quality, security, and reliability before changes are merged or released.
 
+## 🔒 Reproducible Dependencies
+
+**IMPORTANT:** The project uses `uv.lock` for reproducible dependency installation across all environments:
+
+- **Lock File:** `uv.lock` pins all dependencies to specific versions
+- **Update Lock:** Run `uv lock` after changing `pyproject.toml` dependencies
+- **Install from Lock:** Use `uv sync` for reproducible installs matching CI
+- **GitHub Actions:** All workflows use pinned versions (@v4, @v5, etc.)
+
+**To reproduce CI environment locally:**
+```bash
+pip install uv
+uv sync
+# Now you have the exact same dependencies as CI
+```
+
 ## ⚠️ Security Gates
 
 **CRITICAL:** MLSDM implements strict security gating. Security checks are **BLOCKING** and will prevent merges/releases if they fail.

@@ -55,13 +55,24 @@ This project adheres to professional engineering standards. We expect:
 
 ### Install Dependencies
 
+The project uses `uv.lock` for reproducible dependency installation:
+
 ```bash
 # Create virtual environment (recommended)
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 
-# Install dependencies
+# Install from lock file for reproducibility (recommended)
+pip install uv
+uv sync
+
+# Or install with requirements.txt (includes all optional dependencies)
 pip install -r requirements.txt
+
+# Or install minimal with extras as needed
+pip install -e .                # Minimal install
+pip install -e ".[embeddings]"  # With semantic embeddings
+pip install -e ".[dev]"          # Full dev environment
 ```
 
 ### Verify Installation
