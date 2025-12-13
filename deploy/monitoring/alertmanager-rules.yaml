@@ -78,7 +78,7 @@ groups:
       # SLO-2: Latency - P95 < 50ms target
       - alert: MLSDMHighLatency
         expr: |
-          histogram_quantile(0.95, 
+          histogram_quantile(0.95,
             sum(rate(mlsdm_processing_latency_milliseconds_bucket[5m])) by (le)
           ) > 50
         for: 5m
@@ -93,7 +93,7 @@ groups:
 
       - alert: MLSDMCriticalLatency
         expr: |
-          histogram_quantile(0.99, 
+          histogram_quantile(0.99,
             sum(rate(mlsdm_processing_latency_milliseconds_bucket[5m])) by (le)
           ) > 100
         for: 3m
@@ -363,7 +363,7 @@ groups:
     rules:
       - alert: MLSDMLLMHighLatency
         expr: |
-          histogram_quantile(0.95, 
+          histogram_quantile(0.95,
             sum(rate(mlsdm_generation_latency_milliseconds_bucket[5m])) by (le, provider_id)
           ) > 5000
         for: 5m

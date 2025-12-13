@@ -33,6 +33,7 @@ class ArrayPoolConfig:
         max_total_bytes: Maximum total bytes to keep in pool (default: 10MB)
         enabled: Whether pooling is enabled (default: True)
     """
+
     max_arrays_per_shape: int = 10
     max_total_bytes: int = 10 * 1024 * 1024  # 10 MB
     enabled: bool = True
@@ -49,6 +50,7 @@ class ArrayPoolStats:
         current_size: Current number of pooled arrays
         current_bytes: Current total bytes in pool
     """
+
     hits: int
     misses: int
     returns: int

@@ -511,9 +511,7 @@ def _build_policy_decision(
     # Aggregate results
     all_passed = all(r.passed for r in results)
     reasons = [r.reason for r in results if not r.passed and r.reason]
-    stride_categories = list({
-        r.stride_category.value for r in results if r.stride_category
-    })
+    stride_categories = list({r.stride_category.value for r in results if r.stride_category})
     checks_performed = [r.check_type.value for r in results]
 
     # Build metadata
@@ -551,8 +549,12 @@ def _log_guardrail_decision(
     """
     # Add decision to span
     span.set_attribute("guardrails.decision.allow", decision["allow"])
-    span.set_attribute("guardrails.decision.stride_categories", ",".join(decision["stride_categories"]))
-    span.set_attribute("guardrails.decision.checks_performed", ",".join(decision["checks_performed"]))
+    span.set_attribute(
+        "guardrails.decision.stride_categories", ",".join(decision["stride_categories"])
+    )
+    span.set_attribute(
+        "guardrails.decision.checks_performed", ",".join(decision["checks_performed"])
+    )
 
     # Log decision with structured logging
     log_level = logging.INFO if decision["allow"] else logging.WARNING

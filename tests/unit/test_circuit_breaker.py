@@ -481,9 +481,7 @@ class TestCircuitBreakerThreadSafety:
                 except Exception as e:
                     errors.append(e)
 
-        threads = [
-            threading.Thread(target=state_checker) for _ in range(3)
-        ] + [
+        threads = [threading.Thread(target=state_checker) for _ in range(3)] + [
             threading.Thread(target=mutator) for _ in range(2)
         ]
 

@@ -157,9 +157,7 @@ def demo_release_pr():
         ),
     ]
 
-    mode, mode_reasons = gate.risk_classifier.classify(
-        changes, job_results, ["release", "v1.2.0"]
-    )
+    mode, mode_reasons = gate.risk_classifier.classify(changes, job_results, ["release", "v1.2.0"])
     verdict, actions, reasons = gate.merge_verdictor.determine_verdict(mode, job_results)
 
     print(f"Mode: {mode.value}")

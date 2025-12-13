@@ -111,7 +111,9 @@ class TestPELMPerformance:
     def test_pelm_entangle_throughput(self, pelm) -> None:
         """Benchmark PELM entangle operations."""
         # Prepare data
-        vectors = [np.random.randn(DIMENSION).astype(np.float32).tolist() for _ in range(PELM_N_OPS)]
+        vectors = [
+            np.random.randn(DIMENSION).astype(np.float32).tolist() for _ in range(PELM_N_OPS)
+        ]
         phases = [np.random.random() for _ in range(PELM_N_OPS)]
         latencies: list[float] = []
 
@@ -149,7 +151,9 @@ class TestPELMPerformance:
     def test_pelm_retrieve_throughput(self, pelm) -> None:
         """Benchmark PELM retrieve operations."""
         # Prepare data and populate memory
-        vectors = [np.random.randn(DIMENSION).astype(np.float32).tolist() for _ in range(PELM_N_OPS)]
+        vectors = [
+            np.random.randn(DIMENSION).astype(np.float32).tolist() for _ in range(PELM_N_OPS)
+        ]
         phases = [np.random.random() for _ in range(PELM_N_OPS)]
 
         for v, p in zip(vectors, phases, strict=True):
@@ -365,7 +369,9 @@ if __name__ == "__main__":
     for name, data in results.items():
         print(f"\n{name}:")
         print(f"  Throughput: {data['ops_per_sec']:.0f} ops/sec")
-        print(f"  P50: {data['p50_ms']:.3f}ms  P95: {data['p95_ms']:.3f}ms  P99: {data['p99_ms']:.3f}ms")
+        print(
+            f"  P50: {data['p50_ms']:.3f}ms  P95: {data['p95_ms']:.3f}ms  P99: {data['p99_ms']:.3f}ms"
+        )
         if "memory_mb" in data:
             print(f"  Memory: {data['memory_mb']:.2f} MB")
 

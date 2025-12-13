@@ -112,9 +112,7 @@ class MoralFilterEvalRunner:
             self.scenarios = yaml.safe_load(f)
         return self.scenarios
 
-    def _generate_moral_values(
-        self, scenario_input: dict[str, Any]
-    ) -> list[float]:
+    def _generate_moral_values(self, scenario_input: dict[str, Any]) -> list[float]:
         """
         Generate moral values from scenario input.
 

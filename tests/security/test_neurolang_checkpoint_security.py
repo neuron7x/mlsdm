@@ -25,6 +25,7 @@ from mlsdm.extensions.neuro_lang_extension import (  # noqa: E402
 def test_checkpoint_outside_allowed_dir_is_rejected():
     """Test that checkpoints outside ALLOWED_CHECKPOINT_DIR are rejected."""
     import torch
+
     device = torch.device("cpu")
 
     # Try loading from /tmp (outside config/)
@@ -39,6 +40,7 @@ def test_checkpoint_outside_allowed_dir_is_rejected():
 def test_nonexistent_checkpoint_raises_file_not_found():
     """Test that attempting to load a non-existent checkpoint raises FileNotFoundError."""
     import torch
+
     device = torch.device("cpu")
 
     # Create a path within config/ that doesn't exist
@@ -54,13 +56,12 @@ def test_nonexistent_checkpoint_raises_file_not_found():
 def test_invalid_checkpoint_structure_raises_value_error():
     """Test that checkpoints with invalid structure are rejected."""
     import torch
+
     device = torch.device("cpu")
 
     # Create a temporary checkpoint file with invalid structure
     with tempfile.NamedTemporaryFile(
-        suffix=".pt",
-        dir=str(ALLOWED_CHECKPOINT_DIR),
-        delete=False
+        suffix=".pt", dir=str(ALLOWED_CHECKPOINT_DIR), delete=False
     ) as tmp_file:
         temp_path = Path(tmp_file.name)
 
@@ -75,13 +76,17 @@ def test_invalid_checkpoint_structure_raises_value_error():
             torch.save({"wrong_key": "value"}, temp_path)
             with pytest.raises(ValueError) as exc_info:
                 safe_load_neurolang_checkpoint(str(temp_path), device)
-            assert "Invalid checkpoint structure: missing 'actor' or 'critic' keys" in str(exc_info.value)
+            assert "Invalid checkpoint structure: missing 'actor' or 'critic' keys" in str(
+                exc_info.value
+            )
 
             # Test 3: Dict with only 'actor' key
             torch.save({"actor": {}}, temp_path)
             with pytest.raises(ValueError) as exc_info:
                 safe_load_neurolang_checkpoint(str(temp_path), device)
-            assert "Invalid checkpoint structure: missing 'actor' or 'critic' keys" in str(exc_info.value)
+            assert "Invalid checkpoint structure: missing 'actor' or 'critic' keys" in str(
+                exc_info.value
+            )
 
         finally:
             # Clean up temporary file
@@ -93,13 +98,12 @@ def test_invalid_checkpoint_structure_raises_value_error():
 def test_valid_checkpoint_loads_successfully():
     """Test that a valid checkpoint within allowed directory loads successfully."""
     import torch
+
     device = torch.device("cpu")
 
     # Create a temporary valid checkpoint
     with tempfile.NamedTemporaryFile(
-        suffix=".pt",
-        dir=str(ALLOWED_CHECKPOINT_DIR),
-        delete=False
+        suffix=".pt", dir=str(ALLOWED_CHECKPOINT_DIR), delete=False
     ) as tmp_file:
         temp_path = Path(tmp_file.name)
 
@@ -129,6 +133,7 @@ def test_valid_checkpoint_loads_successfully():
 def test_none_checkpoint_path_returns_none():
     """Test that passing None as checkpoint path returns None without error."""
     import torch
+
     device = torch.device("cpu")
     result = safe_load_neurolang_checkpoint(None, device)
     assert result is None

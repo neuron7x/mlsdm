@@ -1,7 +1,7 @@
 # Cognitive Invariant Traceability Matrix
 
-**Version:** 1.2+  
-**Last Updated:** November 2025  
+**Version:** 1.2+
+**Last Updated:** November 2025
 **Purpose:** Maps documented cognitive invariants to verification tests
 
 This document provides traceability between architectural invariants and their test implementations, ensuring all claimed properties are verified.
@@ -90,10 +90,10 @@ The following invariants are documented in architecture specs but not yet fully 
 
 ## Test Statistics Summary
 
-**Total Verified Invariants:** 31  
-**Total Tests:** 824 (as of v1.2+)  
-**Property Tests:** 50+  
-**Edge Case Tests:** 27  
+**Total Verified Invariants:** 31
+**Total Tests:** 824 (as of v1.2+)
+**Property Tests:** 50+
+**Edge Case Tests:** 27
 **Integration Tests:** 217
 
 **Coverage:** 90%+ maintained across all modules

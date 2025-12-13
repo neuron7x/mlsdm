@@ -1,8 +1,8 @@
 # Architecture Specification
 
-**Document Version:** 1.1.0  
-**Project Version:** 1.1.0  
-**Last Updated:** November 2025  
+**Document Version:** 1.1.0
+**Project Version:** 1.1.0
+**Last Updated:** November 2025
 **Status:** Beta
 
 ## Table of Contents
@@ -270,7 +270,7 @@ MLSDM is a multi-layered system spanning from low-level cognitive primitives to 
 
 ### 1. LLMWrapper
 
-**Location:** `src/mlsdm/core/llm_wrapper.py`  
+**Location:** `src/mlsdm/core/llm_wrapper.py`
 **Purpose:** Universal wrapper providing cognitive governance for any LLM
 
 **Key Responsibilities:**
@@ -292,7 +292,7 @@ class LLMWrapper:
         sleep_duration: int = 3,
         initial_moral_threshold: float = 0.50
     ) -> None
-    
+
     def generate(
         prompt: str,
         moral_value: float,
@@ -310,7 +310,7 @@ class LLMWrapper:
 
 ### 2. CognitiveController
 
-**Location:** `src/mlsdm/core/cognitive_controller.py`  
+**Location:** `src/mlsdm/core/cognitive_controller.py`
 **Purpose:** Thread-safe orchestrator of all cognitive subsystems
 
 **Key Responsibilities:**
@@ -329,14 +329,14 @@ class CognitiveController:
         sleep_duration: int = 3,
         initial_moral_threshold: float = 0.50
     ) -> None
-    
+
     def process_event(
         event_vector: np.ndarray,
         moral_value: float
     ) -> dict
-    
+
     def get_state() -> dict
-    
+
     def get_context(
         query_vector: np.ndarray,
         top_k: int = 5
@@ -352,7 +352,7 @@ class CognitiveController:
 
 ### 3. MoralFilterV2
 
-**Location:** `src/mlsdm/cognition/moral_filter_v2.py`  
+**Location:** `src/mlsdm/cognition/moral_filter_v2.py`
 **Purpose:** Adaptive moral threshold evaluation and homeostasis
 
 **Key Responsibilities:**
@@ -385,7 +385,7 @@ threshold = clip(threshold + adjustment, 0.30, 0.90)
 
 ### 4. CognitiveRhythm
 
-**Location:** `src/mlsdm/rhythm/cognitive_rhythm.py`  
+**Location:** `src/mlsdm/rhythm/cognitive_rhythm.py`
 **Purpose:** Manage wake/sleep cycles with distinct processing behaviors
 
 **Key Responsibilities:**
@@ -416,7 +416,7 @@ Initial → Wake (step 0-7) → Sleep (step 8-10) → Wake (step 11-18) → ...
 
 ### 5. Phase-Entangled Lattice Memory (PELM)
 
-**Location:** `src/mlsdm/memory/phase_entangled_lattice_memory.py` (formerly `qilm_v2.py`)  
+**Location:** `src/mlsdm/memory/phase_entangled_lattice_memory.py` (formerly `qilm_v2.py`)
 **Purpose:** Bounded phase-entangled lattice in embedding space with phase-based retrieval
 
 PELM is a geometrically-structured memory system that stores vectors with associated phase values, enabling phase-proximity-based retrieval. The design is mathematically inspired by quantum concepts but operates entirely in classical embedding space—not related to quantum hardware.
@@ -440,10 +440,10 @@ write_index: int      # Next write position
 def retrieve(query: np.ndarray, phase: str, tolerance: float) -> List[np.ndarray]:
     # 1. Filter by phase with tolerance
     candidates = [v for v, p in zip(vectors, phases) if phase_match(p, phase, tolerance)]
-    
+
     # 2. Compute cosine similarity
     similarities = [cosine(query, v) for v in candidates]
-    
+
     # 3. Return top-k by similarity
     return sorted_by_similarity(candidates, similarities)[:k]
 ```
@@ -458,7 +458,7 @@ def retrieve(query: np.ndarray, phase: str, tolerance: float) -> List[np.ndarray
 
 ### 6. MultiLevelSynapticMemory
 
-**Location:** `src/mlsdm/memory/multi_level_memory.py`  
+**Location:** `src/mlsdm/memory/multi_level_memory.py`
 **Purpose:** Three-level memory with decay and gated transfer
 
 **Memory Levels:**
@@ -485,14 +485,14 @@ def update(event: np.ndarray) -> None:
     L1 = λ1 * L1_prev
     L2 = λ2 * L2_prev
     L3 = λ3 * L3_prev
-    
+
     # Add new event to L1
     L1 += event
-    
+
     # Gated transfer L1 → L2 (if threshold exceeded)
     if norm(L1) > threshold_12:
         L2 += gate_12 * L1
-    
+
     # Gated transfer L2 → L3 (if threshold exceeded)
     if norm(L2) > threshold_23:
         L3 += gate_23 * L2
@@ -502,7 +502,7 @@ def update(event: np.ndarray) -> None:
 
 ### 7. OntologyMatcher
 
-**Location:** `src/mlsdm/cognition/ontology_matcher.py`  
+**Location:** `src/mlsdm/cognition/ontology_matcher.py`
 **Purpose:** Semantic classification and concept matching
 
 **Key Responsibilities:**
@@ -515,7 +515,7 @@ def update(event: np.ndarray) -> None:
 ```python
 class OntologyMatcher:
     def __init__(ontology: Dict[str, np.ndarray]) -> None
-    
+
     def match(
         event_vector: np.ndarray,
         metric: str = "cosine"
@@ -531,8 +531,8 @@ class OntologyMatcher:
 
 ### 8. NeuroLangWrapper
 
-**Location:** `src/mlsdm/extensions/neuro_lang_extension.py`  
-**Status:** ✅ Implemented  
+**Location:** `src/mlsdm/extensions/neuro_lang_extension.py`
+**Status:** ✅ Implemented
 **Purpose:** Enhanced LLM wrapper with NeuroLang language processing and Aphasia-Broca detection
 
 **Key Responsibilities:**
@@ -554,7 +554,7 @@ class NeuroLangWrapper(LLMWrapper):
         sleep_duration: int = 3,
         initial_moral_threshold: float = 0.50
     ) -> None
-    
+
     def generate(
         prompt: str,
         moral_value: float,
@@ -574,8 +574,8 @@ class NeuroLangWrapper(LLMWrapper):
 
 ### 9. AphasiaBrocaDetector
 
-**Location:** `src/mlsdm/extensions/neuro_lang_extension.py`  
-**Status:** ✅ Implemented  
+**Location:** `src/mlsdm/extensions/neuro_lang_extension.py`
+**Status:** ✅ Implemented
 **Purpose:** Detect and quantify telegraphic speech patterns in LLM outputs
 
 **Key Responsibilities:**
@@ -589,7 +589,7 @@ class NeuroLangWrapper(LLMWrapper):
 ```python
 class AphasiaBrocaDetector:
     def __init__() -> None  # Stateless
-    
+
     def analyze(text: str) -> dict:
         return {
             "is_aphasic": bool,
@@ -626,8 +626,8 @@ For detailed specification, see [APHASIA_SPEC.md](APHASIA_SPEC.md).
 
 ### 10. AphasiaSpeechGovernor
 
-**Location:** `src/mlsdm/extensions/neuro_lang_extension.py`  
-**Status:** ✅ Implemented  
+**Location:** `src/mlsdm/extensions/neuro_lang_extension.py`
+**Status:** ✅ Implemented
 **Purpose:** Pluggable speech governor implementing aphasia detection and repair
 
 **Key Responsibilities:**
@@ -645,11 +645,11 @@ class AphasiaSpeechGovernor:
         severity_threshold: float = 0.3,
         llm_generate_fn: Callable[[str, int], str] = None
     ) -> None
-    
+
     def __call__(
-        *, 
-        prompt: str, 
-        draft: str, 
+        *,
+        prompt: str,
+        draft: str,
         max_tokens: int
     ) -> SpeechGovernanceResult
 ```
@@ -663,8 +663,8 @@ class AphasiaSpeechGovernor:
 
 ### 11. NeuroCognitiveEngine
 
-**Location:** `src/mlsdm/engine/neuro_cognitive_engine.py`  
-**Status:** ✅ Implemented  
+**Location:** `src/mlsdm/engine/neuro_cognitive_engine.py`
+**Status:** ✅ Implemented
 **Purpose:** High-level cognitive API with timeout enforcement and circuit breaker
 
 **Key Responsibilities:**
@@ -682,7 +682,7 @@ class NeuroCognitiveEngine:
         llm_router: LLMRouter,
         embedding_fn: Callable[[str], np.ndarray]
     ) -> None
-    
+
     def generate(
         prompt: str,
         moral_value: float,
@@ -701,8 +701,8 @@ class NeuroCognitiveEngine:
 
 ### 12. NeuroEngineService
 
-**Location:** `src/mlsdm/service/neuro_engine_service.py`  
-**Status:** ✅ Implemented  
+**Location:** `src/mlsdm/service/neuro_engine_service.py`
+**Status:** ✅ Implemented
 **Purpose:** Service-layer wrapper for NeuroCognitiveEngine with FastAPI integration
 
 **Key Responsibilities:**
@@ -735,8 +735,8 @@ class HealthResponse(BaseModel):
 
 ### 13. NeuroCognitiveClient (SDK)
 
-**Location:** `src/mlsdm/sdk/neuro_engine_client.py`  
-**Status:** ✅ Implemented  
+**Location:** `src/mlsdm/sdk/neuro_engine_client.py`
+**Status:** ✅ Implemented
 **Purpose:** Python SDK for remote NeuroCognitiveEngine access via HTTP
 
 **Key Responsibilities:**
@@ -754,13 +754,13 @@ class NeuroCognitiveClient:
         api_key: str = None,
         timeout: float = 30.0
     ) -> None
-    
+
     def generate(
         prompt: str,
         moral_value: float,
         timeout_seconds: float = None
     ) -> dict
-    
+
     def health_check() -> dict
 ```
 
@@ -775,8 +775,8 @@ print(result["response"])
 
 ### 14. LLM Adapters and Factory
 
-**Location:** `src/mlsdm/adapters/`  
-**Status:** ✅ Implemented  
+**Location:** `src/mlsdm/adapters/`
+**Status:** ✅ Implemented
 **Purpose:** Pluggable LLM provider integrations with unified interface
 
 **Components:**
@@ -1069,7 +1069,7 @@ weight_consolidated = 0.7
 
 ### FastAPI Integration
 
-**Location:** `src/mlsdm/api/app.py`  
+**Location:** `src/mlsdm/api/app.py`
 **Purpose:** HTTP/JSON interface for remote access
 
 **Endpoints:**
@@ -1186,7 +1186,7 @@ Enterprise-grade operational characteristics:
 
 ---
 
-**Document Status:** Beta  
-**Review Cycle:** Per minor version  
-**Last Reviewed:** November 22, 2025  
+**Document Status:** Beta
+**Review Cycle:** Per minor version
+**Last Reviewed:** November 22, 2025
 **Next Review:** Version 1.2.0 release

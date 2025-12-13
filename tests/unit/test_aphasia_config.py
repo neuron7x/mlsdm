@@ -47,11 +47,7 @@ class TestAphasiaDetectionDisable:
             neurolang_mode="disabled",
         )
 
-        result = wrapper.generate(
-            prompt="Test prompt",
-            moral_value=0.8,
-            max_tokens=50
-        )
+        result = wrapper.generate(prompt="Test prompt", moral_value=0.8, max_tokens=50)
 
         # Detection disabled: should return raw LLM output
         assert result["accepted"] is True
@@ -90,11 +86,7 @@ class TestAphasiaRepairDisable:
             neurolang_mode="disabled",
         )
 
-        result = wrapper.generate(
-            prompt="Test prompt",
-            moral_value=0.8,
-            max_tokens=50
-        )
+        result = wrapper.generate(prompt="Test prompt", moral_value=0.8, max_tokens=50)
 
         # Detection enabled, repair disabled
         assert result["accepted"] is True
@@ -118,11 +110,7 @@ class TestAphasiaRepairDisable:
             neurolang_mode="disabled",
         )
 
-        result = wrapper.generate(
-            prompt="Test prompt",
-            moral_value=0.8,
-            max_tokens=50
-        )
+        result = wrapper.generate(prompt="Test prompt", moral_value=0.8, max_tokens=50)
 
         # Both enabled: should detect and repair
         assert result["accepted"] is True
@@ -149,11 +137,7 @@ class TestAphasiaSeverityThreshold:
             neurolang_mode="disabled",
         )
 
-        result = wrapper.generate(
-            prompt="Test prompt",
-            moral_value=0.8,
-            max_tokens=50
-        )
+        result = wrapper.generate(prompt="Test prompt", moral_value=0.8, max_tokens=50)
 
         # With low threshold, any aphasic text should be repaired
         assert result["aphasia_flags"]["is_aphasic"] is True
@@ -172,11 +156,7 @@ class TestAphasiaSeverityThreshold:
             neurolang_mode="disabled",
         )
 
-        result = wrapper.generate(
-            prompt="Test prompt",
-            moral_value=0.8,
-            max_tokens=50
-        )
+        result = wrapper.generate(prompt="Test prompt", moral_value=0.8, max_tokens=50)
 
         # With high threshold, repair should not trigger
         assert result["aphasia_flags"]["is_aphasic"] is True
@@ -197,11 +177,7 @@ class TestAphasiaSeverityThreshold:
             neurolang_mode="disabled",
         )
 
-        result = wrapper.generate(
-            prompt="Test prompt",
-            moral_value=0.8,
-            max_tokens=50
-        )
+        result = wrapper.generate(prompt="Test prompt", moral_value=0.8, max_tokens=50)
 
         # Check that severity threshold logic is working
         assert result["aphasia_flags"] is not None
@@ -234,11 +210,7 @@ class TestBackwardCompatibility:
         assert wrapper.aphasia_repair_enabled is True
         assert wrapper.aphasia_severity_threshold == 0.3
 
-        result = wrapper.generate(
-            prompt="Test prompt",
-            moral_value=0.8,
-            max_tokens=50
-        )
+        result = wrapper.generate(prompt="Test prompt", moral_value=0.8, max_tokens=50)
 
         # With defaults, should detect and repair
         assert result["aphasia_flags"] is not None
@@ -258,11 +230,7 @@ class TestBackwardCompatibility:
             neurolang_mode="disabled",
         )
 
-        result = wrapper.generate(
-            prompt="Test prompt",
-            moral_value=0.8,
-            max_tokens=50
-        )
+        result = wrapper.generate(prompt="Test prompt", moral_value=0.8, max_tokens=50)
 
         # Healthy text should not be marked as aphasic
         assert result["aphasia_flags"] is not None
@@ -318,11 +286,7 @@ class TestMonitoringMode:
             neurolang_mode="disabled",
         )
 
-        result = wrapper.generate(
-            prompt="Test prompt",
-            moral_value=0.8,
-            max_tokens=50
-        )
+        result = wrapper.generate(prompt="Test prompt", moral_value=0.8, max_tokens=50)
 
         # Should have aphasia flags for monitoring
         assert result["aphasia_flags"] is not None

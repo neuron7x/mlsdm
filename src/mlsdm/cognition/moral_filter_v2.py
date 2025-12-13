@@ -34,13 +34,13 @@ class MoralFilterV2:
     def __init__(self, initial_threshold: float | None = None) -> None:
         # Use calibration default if not specified
         if initial_threshold is None:
-            initial_threshold = (
-                MORAL_FILTER_DEFAULTS.threshold if MORAL_FILTER_DEFAULTS else 0.50
-            )
+            initial_threshold = MORAL_FILTER_DEFAULTS.threshold if MORAL_FILTER_DEFAULTS else 0.50
 
         # Validate input
         if not isinstance(initial_threshold, (int, float)):
-            raise TypeError(f"initial_threshold must be a number, got {type(initial_threshold).__name__}")
+            raise TypeError(
+                f"initial_threshold must be a number, got {type(initial_threshold).__name__}"
+            )
 
         # Optimization: Use pure Python min/max instead of np.clip for scalar
         self.threshold = max(self.MIN_THRESHOLD, min(float(initial_threshold), self.MAX_THRESHOLD))
@@ -57,7 +57,9 @@ class MoralFilterV2:
     def adapt(self, accepted: bool) -> None:
         # Optimization: Use pre-computed constant and avoid np.sign for scalar
         signal = 1.0 if accepted else 0.0
-        self.ema_accept_rate = self.EMA_ALPHA * signal + self._ONE_MINUS_ALPHA * self.ema_accept_rate
+        self.ema_accept_rate = (
+            self.EMA_ALPHA * signal + self._ONE_MINUS_ALPHA * self.ema_accept_rate
+        )
         error = self.ema_accept_rate - 0.5
         if error > self.DEAD_BAND:
             # Positive error - increase threshold

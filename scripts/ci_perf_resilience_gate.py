@@ -120,9 +120,7 @@ class PRAnalyzer:
 
     def __init__(self) -> None:
         """Initialize PR analyzer."""
-        self.core_pattern_regex = re.compile(
-            "|".join(self.CORE_CRITICAL_PATTERNS), re.IGNORECASE
-        )
+        self.core_pattern_regex = re.compile("|".join(self.CORE_CRITICAL_PATTERNS), re.IGNORECASE)
 
     def classify_file(self, file_path: str, patch: str = "") -> FileChange:
         """Classify a single file change."""
@@ -201,9 +199,7 @@ class CIInspector:
             self.headers["Authorization"] = f"token {self.github_token}"
         self.headers["Accept"] = "application/vnd.github.v3+json"
 
-    def get_workflow_runs(
-        self, owner: str, repo: str, pr_number: int
-    ) -> list[dict[str, Any]]:
+    def get_workflow_runs(self, owner: str, repo: str, pr_number: int) -> list[dict[str, Any]]:
         """Get workflow runs for a PR."""
         url = f"https://api.github.com/repos/{owner}/{repo}/pulls/{pr_number}"
         try:
@@ -340,9 +336,7 @@ class RiskClassifier:
         non_core = sum(1 for c in changes if c.change_class == ChangeClass.NON_CORE_CODE)
 
         # Check for release indicators
-        is_release = any(
-            label.lower() in ["release", "production", "prod"] for label in pr_labels
-        )
+        is_release = any(label.lower() in ["release", "production", "prod"] for label in pr_labels)
 
         # Classify based on changes
         if doc_only == len(changes) and len(changes) > 0:
@@ -421,11 +415,7 @@ class MergeVerdictor:
                 None,
             )
             perf_slo = next(
-                (
-                    jr
-                    for jr in perf_resilience_jobs.values()
-                    if "Performance & SLO" in jr.name
-                ),
+                (jr for jr in perf_resilience_jobs.values() if "Performance & SLO" in jr.name),
                 None,
             )
 
@@ -466,11 +456,7 @@ class MergeVerdictor:
                 None,
             )
             perf_slo = next(
-                (
-                    jr
-                    for jr in perf_resilience_jobs.values()
-                    if "Performance & SLO" in jr.name
-                ),
+                (jr for jr in perf_resilience_jobs.values() if "Performance & SLO" in jr.name),
                 None,
             )
             comprehensive = next(
@@ -533,9 +519,7 @@ class CIPerfResilienceGate:
         self.risk_classifier = RiskClassifier()
         self.merge_verdictor = MergeVerdictor()
 
-    def analyze_pr(
-        self, owner: str, repo: str, pr_number: int
-    ) -> dict[str, Any]:
+    def analyze_pr(self, owner: str, repo: str, pr_number: int) -> dict[str, Any]:
         """Analyze a PR and return full gate analysis."""
         print(f"\n🔍 Analyzing PR #{pr_number} in {owner}/{repo}...\n")
 
@@ -619,9 +603,7 @@ class CIPerfResilienceGate:
             )
 
         # Suggest threshold improvements
-        perf_slo = next(
-            (jr for jr in job_results if "Performance & SLO" in jr.name), None
-        )
+        perf_slo = next((jr for jr in job_results if "Performance & SLO" in jr.name), None)
         if perf_slo and perf_slo.status == JobStatus.SUCCESS:
             suggestions.append(
                 "Review and tighten SLO thresholds incrementally to drive continuous "
@@ -674,9 +656,7 @@ class CIPerfResilienceGate:
                     JobStatus.CANCELLED: "🚫",
                     JobStatus.UNKNOWN: "❓",
                 }.get(jr.status, "❓")
-                output.append(
-                    f"| {jr.name} | {status_emoji} {jr.status.value} | {jr.key_facts} |"
-                )
+                output.append(f"| {jr.name} | {status_emoji} {jr.status.value} | {jr.key_facts} |")
         output.append("")
 
         # Section 3: REQUIRED ACTIONS
@@ -727,9 +707,7 @@ class CIPerfResilienceGate:
 def parse_pr_url(pr_url: str) -> tuple[str, str, int]:
     """Parse GitHub PR URL to extract owner, repo, and PR number."""
     # Example: https://github.com/neuron7x/mlsdm/pull/231
-    match = re.match(
-        r"https?://github\.com/([^/]+)/([^/]+)/pull/(\d+)", pr_url
-    )
+    match = re.match(r"https?://github\.com/([^/]+)/([^/]+)/pull/(\d+)", pr_url)
     if not match:
         raise ValueError(f"Invalid PR URL format: {pr_url}")
     return match.group(1), match.group(2), int(match.group(3))
@@ -804,6 +782,7 @@ def main() -> None:
     except Exception as e:
         print(f"❌ Error during analysis: {e}")
         import traceback
+
         traceback.print_exc()
         sys.exit(1)
 

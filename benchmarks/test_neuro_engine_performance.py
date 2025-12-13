@@ -226,7 +226,7 @@ def test_benchmark_pre_flight_latency():
     print()
 
     # SLO: pre_flight_latency_p95 < 20ms
-    assert stats['p95'] < 20.0, f"P95 latency {stats['p95']:.3f}ms exceeds SLO of 20ms"
+    assert stats["p95"] < 20.0, f"P95 latency {stats['p95']:.3f}ms exceeds SLO of 20ms"
     print("✓ SLO met: P95 < 20ms")
     print()
 
@@ -252,7 +252,7 @@ def test_benchmark_end_to_end_small_load():
     print()
 
     # SLO: latency_total_ms_p95 < 500ms
-    assert stats['p95'] < 500.0, f"P95 latency {stats['p95']:.3f}ms exceeds SLO of 500ms"
+    assert stats["p95"] < 500.0, f"P95 latency {stats['p95']:.3f}ms exceeds SLO of 500ms"
     print("✓ SLO met: P95 < 500ms")
     print()
 
@@ -286,9 +286,9 @@ def test_benchmark_end_to_end_heavy_load():
         )
 
         # All should meet SLO
-        assert stats["p95"] < 500.0, (
-            f"P95 latency {stats['p95']:.3f}ms exceeds SLO of 500ms for {token_count} tokens"
-        )
+        assert (
+            stats["p95"] < 500.0
+        ), f"P95 latency {stats['p95']:.3f}ms exceeds SLO of 500ms for {token_count} tokens"
 
     print()
     print("✓ All token counts meet SLO: P95 < 500ms")

@@ -17,7 +17,7 @@ Exit codes:
 import argparse
 import sys
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Any, cast
 
 try:
     import yaml
@@ -32,8 +32,8 @@ class PolicyValidator:
     def __init__(self, repo_root: Path, policy_dir: Path):
         self.repo_root = repo_root
         self.policy_dir = policy_dir
-        self.errors: List[str] = []
-        self.warnings: List[str] = []
+        self.errors: list[str] = []
+        self.warnings: list[str] = []
 
     def validate_all(self) -> bool:
         """Run all validation checks."""
@@ -61,11 +61,11 @@ class PolicyValidator:
 
         return len(self.errors) == 0
 
-    def _load_yaml(self, path: Path) -> Dict | None:
+    def _load_yaml(self, path: Path) -> dict[str, Any] | None:
         """Load and parse YAML file."""
         try:
-            with open(path, "r", encoding="utf-8") as f:
-                return yaml.safe_load(f)
+            with open(path, encoding="utf-8") as f:
+                result = yaml.safe_load(f)
         except FileNotFoundError:
             self.errors.append(f"Policy file not found: {path}")
             return None
@@ -73,13 +73,18 @@ class PolicyValidator:
             self.errors.append(f"YAML parsing error in {path}: {e}")
             return None
 
-    def _validate_security_workflows(self, policy: Dict) -> None:
+        if not isinstance(result, dict):
+            self.errors.append(f"Policy file must contain a mapping: {path}")
+            return None
+
+        return cast(dict[str, Any], result)
+
+    def _validate_security_workflows(self, policy: dict[str, Any]) -> None:
         """Validate that required CI workflows exist."""
         print("CHECK: Security Workflow Files")
         print("-" * 70)
 
         required_checks = policy.get("required_checks", [])
-        workflows_dir = self.repo_root / ".github" / "workflows"
 
         for check in required_checks:
             check_name = check.get("name")
@@ -90,9 +95,7 @@ class PolicyValidator:
                 if workflow_path.exists():
                     print(f"✓ {check_name}: {workflow_file} exists")
                 else:
-                    self.errors.append(
-                        f"{check_name}: Workflow file not found: {workflow_file}"
-                    )
+                    self.errors.append(f"{check_name}: Workflow file not found: {workflow_file}")
                     print(f"✗ {check_name}: {workflow_file} NOT FOUND")
             elif check.get("command"):
                 # Command-based check, verify the command is valid
@@ -110,13 +113,13 @@ class PolicyValidator:
 
         print()
 
-    def _validate_security_modules(self, policy: Dict) -> None:
+    def _validate_security_modules(self, policy: dict[str, Any]) -> None:
         """Validate that referenced security modules exist."""
         print("CHECK: Security Module References")
         print("-" * 70)
 
         security_reqs = policy.get("security_requirements", {})
-        
+
         # Check input validation modules
         input_val = security_reqs.get("input_validation", {})
         llm_safety_module = input_val.get("llm_safety_module")
@@ -147,25 +150,25 @@ class PolicyValidator:
 
         print()
 
-    def _validate_slo_tests(self, policy: Dict) -> None:
+    def _validate_slo_tests(self, policy: dict[str, Any]) -> None:
         """Validate that SLO test locations exist."""
         print("CHECK: SLO Test Locations")
         print("-" * 70)
 
         slos = policy.get("slos", {})
-        
+
         test_locations = []
-        
+
         # Collect test locations from API endpoints
         for endpoint in slos.get("api_endpoints", []):
             if "test_location" in endpoint:
                 test_locations.append((endpoint["name"], endpoint["test_location"]))
-        
+
         # Collect test locations from system resources
         for resource in slos.get("system_resources", []):
             if "test_location" in resource:
                 test_locations.append((resource["name"], resource["test_location"]))
-        
+
         # Collect test locations from cognitive engine
         for component in slos.get("cognitive_engine", []):
             if "test_location" in component:
@@ -174,13 +177,12 @@ class PolicyValidator:
         for name, test_loc in test_locations:
             # Extract file path (before ::)
             if "::" in test_loc:
-                file_path, test_name = test_loc.split("::", 1)
+                file_path, _ = test_loc.split("::", 1)
             else:
                 file_path = test_loc
-                test_name = None
 
             full_path = self.repo_root / file_path
-            
+
             if full_path.exists():
                 print(f"✓ {name}: {file_path} exists")
                 # Could further validate that the test name exists in the file
@@ -190,7 +192,9 @@ class PolicyValidator:
 
         print()
 
-    def _validate_documentation(self, security_policy: Dict, slo_policy: Dict) -> None:
+    def _validate_documentation(
+        self, security_policy: dict[str, Any], slo_policy: dict[str, Any]
+    ) -> None:
         """Validate that referenced documentation exists."""
         print("CHECK: Documentation Files")
         print("-" * 70)
@@ -242,11 +246,9 @@ class PolicyValidator:
             print(f"✗ Validation failed with {len(self.errors)} error(s)")
 
 
-def main():
+def main() -> int:
     """Main entry point."""
-    parser = argparse.ArgumentParser(
-        description="Validate MLSDM policy configuration files"
-    )
+    parser = argparse.ArgumentParser(description="Validate MLSDM policy configuration files")
     parser.add_argument(
         "--policy-dir",
         type=Path,

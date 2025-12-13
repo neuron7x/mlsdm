@@ -634,7 +634,9 @@ class TestNeuroCognitiveEngineExceptionHandling:
         )
 
         # Force an unexpected exception in internal method
-        with patch.object(engine, "_prepare_request_context", side_effect=RuntimeError("unexpected")):
+        with patch.object(
+            engine, "_prepare_request_context", side_effect=RuntimeError("unexpected")
+        ):
             result = engine.generate("Test prompt")
 
             assert result["response"] == ""
@@ -663,8 +665,9 @@ class TestNeuroCognitiveEngineExceptionHandling:
         # Error should indicate empty response (type='empty_response' is used by engine)
         error_type = result["error"].get("type", "")
         error_message = result["error"].get("message", "")
-        assert error_type == "empty_response" or "empty" in error_message.lower(), \
-            f"Expected empty_response error, got type='{error_type}', message='{error_message}'"
+        assert (
+            error_type == "empty_response" or "empty" in error_message.lower()
+        ), f"Expected empty_response error, got type='{error_type}', message='{error_message}'"
 
 
 class TestCircuitBreakerIntegration:
@@ -692,10 +695,7 @@ class TestCircuitBreakerIntegration:
         llm_fn = Mock(return_value="response")
         embed_fn = Mock(return_value=np.random.randn(384))
 
-        config = NeuroEngineConfig(
-            enable_fslgs=False,
-            enable_circuit_breaker=False
-        )
+        config = NeuroEngineConfig(enable_fslgs=False, enable_circuit_breaker=False)
         engine = NeuroCognitiveEngine(
             llm_generate_fn=llm_fn,
             embedding_fn=embed_fn,

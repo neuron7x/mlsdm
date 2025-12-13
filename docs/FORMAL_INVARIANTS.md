@@ -419,7 +419,7 @@ When property test fails:
 
 ---
 
-**Status**: ✅ Documented  
-**Coverage**: 100% of core modules  
-**Last Updated**: 2025-11-28  
+**Status**: ✅ Documented
+**Coverage**: 100% of core modules
+**Last Updated**: 2025-11-28
 **Maintainer**: neuron7x

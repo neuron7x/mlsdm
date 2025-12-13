@@ -1,7 +1,7 @@
 # MLSDM Core Component-Test Traceability Matrix
 
-**Document Version:** 1.1  
-**Date:** November 24, 2025  
+**Document Version:** 1.1
+**Date:** November 24, 2025
 **Purpose:** Evidence-based traceability linking core components to their tests with reproducible verification
 
 ---
@@ -53,7 +53,7 @@ For each core component:
 class PhaseEntangledLatticeMemory:
     def __init__(dimension: int, capacity: int)
     def entangle(vector: list[float], phase: float) -> int
-    def retrieve(query_vector: list[float], current_phase: float, 
+    def retrieve(query_vector: list[float], current_phase: float,
                  phase_tolerance: float, top_k: int) -> list[MemoryRetrieval]
     def get_state_stats() -> dict[str, int | float]
     def detect_corruption() -> bool
@@ -98,7 +98,7 @@ class PhaseEntangledLatticeMemory:
 **Public API:**
 ```python
 class MultiLevelSynapticMemory:
-    def __init__(dimension: int, lambda_l1: float, lambda_l2: float, 
+    def __init__(dimension: int, lambda_l1: float, lambda_l2: float,
                  lambda_l3: float, theta_l1: float, theta_l2: float,
                  gating12: float, gating23: float)
     def update(event: np.ndarray) -> None
@@ -148,7 +148,7 @@ class MoralFilterV2:
     MAX_THRESHOLD = 0.90
     DEAD_BAND = 0.05
     EMA_ALPHA = 0.1
-    
+
     def __init__(initial_threshold: float)
     def evaluate(moral_value: float) -> bool
     def adapt(accepted: bool) -> None
@@ -229,13 +229,13 @@ class CognitiveRhythm:
 **Public API:**
 ```python
 class CognitiveController:
-    def __init__(dim: int, memory_threshold_mb: float, 
+    def __init__(dim: int, memory_threshold_mb: float,
                  max_processing_time_ms: float)
     def process_event(vector: np.ndarray, moral_value: float) -> dict[str, Any]
     def retrieve_context(query_vector: np.ndarray, top_k: int) -> list[MemoryRetrieval]
     def get_memory_usage() -> float
     def reset_emergency_shutdown() -> None
-    
+
     @property
     def qilm -> PhaseEntangledLatticeMemory  # Deprecated alias
 ```
@@ -276,9 +276,9 @@ class CognitiveController:
 class LLMWrapper:
     MAX_WAKE_TOKENS = 2048
     MAX_SLEEP_TOKENS = 150
-    
+
     def __init__(llm_generate_fn: Callable, embedding_fn: Callable,
-                 dim: int, capacity: int, wake_duration: int, 
+                 dim: int, capacity: int, wake_duration: int,
                  sleep_duration: int, initial_moral_threshold: float,
                  llm_timeout: float, llm_retry_attempts: int,
                  speech_governor: SpeechGovernor | None)
@@ -286,7 +286,7 @@ class LLMWrapper:
                  context_top_k: int) -> dict[str, Any]
     def get_state() -> dict[str, Any]
     def reset() -> None
-    
+
     @property
     def qilm_failure_count -> int  # Deprecated alias
 ```
@@ -380,7 +380,7 @@ class PipelineSpeechGovernor:
 ```python
 class AphasiaBrocaDetector:
     @staticmethod
-    def detect(text: str, threshold: float, 
+    def detect(text: str, threshold: float,
                min_sentence_length: int,
                min_function_word_ratio: float) -> dict[str, Any]
 
@@ -665,7 +665,7 @@ pytest tests/integration/test_neuro_cognitive_engine.py -v
 
 **Invariants Tested:**
 - INV-NCE-S1: Response schema completeness
-- INV-NCE-S2: Moral threshold enforcement  
+- INV-NCE-S2: Moral threshold enforcement
 - INV-NCE-S3: Timing non-negativity
 - INV-NCE-L1: Response generation guarantee
 - INV-NCE-L2: No infinite hanging (timeout guarantee)
@@ -703,7 +703,7 @@ pytest tests/integration/test_neuro_engine_http_api.py -v
 **Components:**
 - `llm_provider.py`: `LLMProvider` protocol
 - `openai_adapter.py`: OpenAI API integration
-- `local_stub_adapter.py`: Local testing stub  
+- `local_stub_adapter.py`: Local testing stub
 - `provider_factory.py`: Factory for adapter selection
 
 **Tests:**
@@ -1047,7 +1047,7 @@ python scripts/security_audit.py
 python scripts/run_aphasia_eval.py
 ```
 
-**Recommendation:** 
+**Recommendation:**
 - **Core components:** Production-ready with excellent coverage (94%)
 - **System infrastructure:** Production-ready with good coverage (85-95%)
 - **Overall system:** Ready for production deployment

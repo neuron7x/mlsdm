@@ -1,7 +1,7 @@
 # MLSDM Production Deployment Checklist
 
-**Version**: 1.0.0  
-**Status**: Production Ready  
+**Version**: 1.0.0
+**Status**: Production Ready
 **Last Updated**: November 2025
 
 Use this checklist before deploying MLSDM to production to ensure all critical components are properly configured and validated.

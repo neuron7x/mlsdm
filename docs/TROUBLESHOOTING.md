@@ -56,10 +56,10 @@ API not responding?
    ```bash
    # Check if service is running
    systemctl status mlsdm-api
-   
+
    # Start service
    systemctl start mlsdm-api
-   
+
    # Or start manually
    uvicorn mlsdm.api.app:app --host 0.0.0.0 --port 8000
    ```
@@ -68,7 +68,7 @@ API not responding?
    ```bash
    # Check if port is in use
    lsof -i :8000
-   
+
    # Check firewall
    sudo ufw status
    ```
@@ -77,7 +77,7 @@ API not responding?
    ```bash
    # View service logs
    journalctl -u mlsdm-api -f
-   
+
    # Or log files
    tail -f /var/log/mlsdm/mlsdm_observability.log
    ```

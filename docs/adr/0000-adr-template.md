@@ -1,8 +1,8 @@
 # ADR-XXXX: [Title]
 
-**Status**: [Proposed | Accepted | Deprecated | Superseded]  
-**Date**: YYYY-MM-DD  
-**Deciders**: [List of people who participated in the decision]  
+**Status**: [Proposed | Accepted | Deprecated | Superseded]
+**Date**: YYYY-MM-DD
+**Deciders**: [List of people who participated in the decision]
 **Categories**: [Architecture | Security | Performance | API | Testing | Infrastructure]
 
 ## Context

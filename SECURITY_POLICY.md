@@ -1,8 +1,8 @@
 # Security Policy
 
-**Document Version:** 1.0.0  
-**Project Version:** 1.0.0  
-**Last Updated:** November 2025  
+**Document Version:** 1.0.0
+**Project Version:** 1.0.0
+**Last Updated:** November 2025
 **Security Contact:** Report vulnerabilities via GitHub Security Advisories
 
 ## Table of Contents
@@ -103,7 +103,7 @@ MLSDM implements defense-in-depth security across all 14 system layers:
 1. **Client & Integration Layer**
    - SDK Client: TLS enforcement, token validation
    - LLM Adapters: API key management, secure credential storage
-   
+
 2. **Service & API Layer**
    - FastAPI: Input validation, rate limiting, CORS headers
    - Middleware: Authentication, request sanitization, observability
@@ -128,7 +128,7 @@ MLSDM implements defense-in-depth security across all 14 system layers:
    - Structured logging with security context
    - Audit trails for security events
 
-7. **Security Infrastructure**  
+7. **Security Infrastructure**
    - Rate limiting (`rate_limit.py`)
    - Input validation (`input_validator.py`)
    - Security logging (`security_logger.py`)
@@ -207,31 +207,31 @@ def validate_event_vector(vector: Any) -> np.ndarray:
     # Type checking
     if not isinstance(vector, (list, np.ndarray)):
         raise ValueError("Vector must be list or numpy array")
-    
+
     # Dimension validation
     if len(vector) != EXPECTED_DIM:
         raise ValueError(f"Vector dimension must be {EXPECTED_DIM}")
-    
+
     # Range validation (prevent overflow/underflow)
     if not np.all(np.isfinite(vector)):
         raise ValueError("Vector contains non-finite values")
-    
+
     # Normalization (prevent adversarial inputs)
     vector = np.array(vector, dtype=np.float32)
     norm = np.linalg.norm(vector)
     if norm > 1e6 or norm < 1e-6:
         raise ValueError("Vector norm out of acceptable range")
-    
+
     return vector
 
 def validate_moral_value(value: Any) -> float:
     """Validate moral value parameter."""
     if not isinstance(value, (int, float)):
         raise ValueError("Moral value must be numeric")
-    
+
     if not 0.0 <= value <= 1.0:
         raise ValueError("Moral value must be in range [0.0, 1.0]")
-    
+
     return float(value)
 ```
 
@@ -253,13 +253,13 @@ def verify_bearer_token(authorization: str) -> bool:
     """Verify Bearer token against environment variable."""
     if not authorization.startswith("Bearer "):
         raise HTTPException(401, "Invalid authentication scheme")
-    
+
     token = authorization[7:]  # Remove "Bearer " prefix
     expected_token = os.getenv("API_KEY")
-    
+
     if not expected_token:
         raise ConfigurationError("API_KEY not configured")
-    
+
     # Constant-time comparison to prevent timing attacks
     return secrets.compare_digest(token, expected_token)
 ```
@@ -286,11 +286,11 @@ def verify_bearer_token(authorization: str) -> bool:
 
 class RateLimiter:
     """Token bucket rate limiter."""
-    
+
     def __init__(self, rate: int = 5, period: int = 1):
         """
         Initialize rate limiter.
-        
+
         Args:
             rate: Number of requests allowed per period
             period: Time period in seconds
@@ -298,21 +298,21 @@ class RateLimiter:
         self.rate = rate
         self.period = period
         self.tokens = {}  # client_id -> (tokens, last_update)
-    
+
     def allow_request(self, client_id: str) -> bool:
         """Check if request is allowed under rate limit."""
         now = time.time()
-        
+
         if client_id not in self.tokens:
             self.tokens[client_id] = (self.rate - 1, now)
             return True
-        
+
         tokens, last_update = self.tokens[client_id]
         elapsed = now - last_update
-        
+
         # Refill tokens based on elapsed time
         tokens = min(self.rate, tokens + elapsed * (self.rate / self.period))
-        
+
         if tokens >= 1:
             self.tokens[client_id] = (tokens - 1, now)
             return True
@@ -378,20 +378,20 @@ class RateLimiter:
 def sanitize_log_data(data: dict) -> dict:
     """Remove sensitive information from log data."""
     sanitized = data.copy()
-    
+
     # Remove vector data (may contain sensitive embeddings)
     if "event_vector" in sanitized:
         sanitized["event_vector"] = f"<vector dim={len(data['event_vector'])}>"
-    
+
     # Remove API tokens
     if "authorization" in sanitized:
         sanitized["authorization"] = "<redacted>"
-    
+
     # Truncate long text fields
     for key in ["prompt", "response"]:
         if key in sanitized and len(sanitized[key]) > 100:
             sanitized[key] = sanitized[key][:100] + "..."
-    
+
     return sanitized
 ```
 
@@ -453,7 +453,7 @@ def sanitize_log_data(data: dict) -> dict:
 # Default rate limits
 global:
   rps: 1000  # Global requests per second
-  
+
 per_client:
   rps: 5     # Per-client requests per second
   burst: 10  # Maximum burst size
@@ -870,9 +870,9 @@ HEALTHCHECK --interval=30s --timeout=3s \
 
 ---
 
-**Document Status:** Production  
-**Review Cycle:** Quarterly  
-**Last Reviewed:** November 2025  
+**Document Status:** Production
+**Review Cycle:** Quarterly
+**Last Reviewed:** November 2025
 **Next Review:** February 2026
 
 ---
@@ -928,7 +928,7 @@ HEALTHCHECK --interval=30s --timeout=3s \
 
 **Production Recommendations:**
 - For single-instance deployments: Current implementation is adequate
-- For multi-instance deployments: 
+- For multi-instance deployments:
   - Use external rate limiting (nginx, API gateway, Kong, etc.)
   - OR implement Redis-based distributed rate limiting
   - Current implementation provides defense-in-depth even with external limiting
@@ -1108,7 +1108,7 @@ All PRs must pass the following security checks before merge:
    - Security-focused queries
    - Failure: Blocks PR merge
 
-3. **Ruff Linter** 
+3. **Ruff Linter**
    - Command: `ruff check src tests`
    - Security-relevant rules enabled
    - Failure: Blocks PR merge
@@ -1212,7 +1212,7 @@ This script verifies:
 
 ---
 
-**Document Maintainer**: neuron7x / Security Team  
-**Document Version**: 2.1 (With Policy-as-Code Integration)  
-**Last Updated**: December 7, 2025  
+**Document Maintainer**: neuron7x / Security Team
+**Document Version**: 2.1 (With Policy-as-Code Integration)
+**Last Updated**: December 7, 2025
 **Status**: Production-Ready with Enforced Policy

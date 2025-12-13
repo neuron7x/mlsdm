@@ -132,9 +132,7 @@ class SystemStateRecord(BaseModel):
     def validate_timestamps(self) -> SystemStateRecord:
         """Validate that created_at <= updated_at."""
         if self.created_at > self.updated_at:
-            raise ValueError(
-                f"created_at ({self.created_at}) > updated_at ({self.updated_at})"
-            )
+            raise ValueError(f"created_at ({self.created_at}) > updated_at ({self.updated_at})")
         return self
 
 

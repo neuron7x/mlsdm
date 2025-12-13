@@ -1,8 +1,8 @@
 # MLSDM Governed Cognitive Memory – Bibliography v2.0
 
-**Document Version:** 2.0.0  
-**Project Version:** 1.1.0  
-**Last Updated:** November 2025  
+**Document Version:** 2.0.0
+**Project Version:** 1.1.0
+**Last Updated:** November 2025
 **Status:** Production
 
 ---

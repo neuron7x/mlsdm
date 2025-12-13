@@ -51,7 +51,9 @@ def test_aphasia_detector():
     print(f'   Input: "{healthy_text}"')
     result = detector.analyze(healthy_text)
     print(f"   Result: is_aphasic={result['is_aphasic']}, severity={result['severity']:.2f}")
-    print(f"   Metrics: avg_len={result['avg_sentence_len']:.1f}, func_ratio={result['function_word_ratio']:.2f}")
+    print(
+        f"   Metrics: avg_len={result['avg_sentence_len']:.1f}, func_ratio={result['function_word_ratio']:.2f}"
+    )
 
     print("\n2. Analyzing aphasic text:")
     print(f'   Input: "{aphasic_text}"')
@@ -116,10 +118,12 @@ def test_imports():
 
     print("\n1. Testing import: from mlsdm.extensions import AphasiaBrocaDetector")
     from mlsdm.extensions import AphasiaBrocaDetector as ABDetector
+
     print(f"   ✓ Imported: {ABDetector}")
 
     print("\n2. Testing import: from mlsdm.extensions import NeuroLangWrapper")
     from mlsdm.extensions import NeuroLangWrapper as NLWrapper
+
     print(f"   ✓ Imported: {NLWrapper}")
 
     print("\n✓ All imports work correctly\n")

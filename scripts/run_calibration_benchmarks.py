@@ -92,6 +92,7 @@ APHASIA_TEST_CASES = [
     ("The cat sat on the mat.", False),  # Short but complete
 ]
 
+
 # PELM test scenarios: vectors with phases
 def generate_pelm_test_vectors(
     dim: int = 10,
@@ -112,12 +113,14 @@ def generate_pelm_test_vectors(
 # BENCHMARK CLASSES
 # =============================================================================
 
+
 @dataclass
 class MoralFilterMetrics:
     """Metrics for moral filter calibration."""
+
     threshold: float
     toxic_rejection_rate: float  # % of toxic correctly rejected
-    false_positive_rate: float   # % of non-toxic incorrectly rejected
+    false_positive_rate: float  # % of non-toxic incorrectly rejected
     total_samples: int
     toxic_samples: int
     non_toxic_samples: int
@@ -126,22 +129,24 @@ class MoralFilterMetrics:
 @dataclass
 class AphasiaDetectorMetrics:
     """Metrics for aphasia detector calibration."""
+
     min_sentence_len: float
     min_function_word_ratio: float
     max_fragment_ratio: float
     severity_threshold: float
     telegraphic_detection_rate: float  # % of telegraphic correctly detected
-    false_positive_rate: float         # % of normal incorrectly flagged
+    false_positive_rate: float  # % of normal incorrectly flagged
     total_samples: int
 
 
 @dataclass
 class PELMMetrics:
     """Metrics for PELM calibration."""
+
     phase_tolerance: float
     top_k: int
-    recall_at_k: float      # % of relevant items retrieved
-    precision_at_k: float   # % of retrieved that are relevant
+    recall_at_k: float  # % of relevant items retrieved
+    precision_at_k: float  # % of retrieved that are relevant
     avg_retrieval_time_ms: float
     total_queries: int
 
@@ -290,8 +295,7 @@ def run_pelm_benchmark(
 
         # Count how many vectors are within phase_tolerance (ground truth)
         relevant_count = sum(
-            1 for _, phase in test_vectors
-            if abs(phase - query_phase) <= phase_tolerance
+            1 for _, phase in test_vectors if abs(phase - query_phase) <= phase_tolerance
         )
         total_relevant_available += min(relevant_count, top_k)
 
@@ -305,19 +309,14 @@ def run_pelm_benchmark(
         total_retrieved += len(results)
         # All retrieved should be relevant (within phase tolerance)
         total_relevant_retrieved += sum(
-            1 for r in results
-            if abs(r.phase - query_phase) <= phase_tolerance
+            1 for r in results if abs(r.phase - query_phase) <= phase_tolerance
         )
 
     # Calculate metrics
     recall = (
-        total_relevant_retrieved / total_relevant_available
-        if total_relevant_available > 0
-        else 0.0
+        total_relevant_retrieved / total_relevant_available if total_relevant_available > 0 else 0.0
     )
-    precision = (
-        total_relevant_retrieved / total_retrieved if total_retrieved > 0 else 0.0
-    )
+    precision = total_relevant_retrieved / total_retrieved if total_retrieved > 0 else 0.0
     avg_time = sum(retrieval_times) / len(retrieval_times) if retrieval_times else 0.0
 
     return PELMMetrics(
@@ -380,6 +379,7 @@ def run_synaptic_memory_benchmark(
 # =============================================================================
 # MAIN CALIBRATION RUNNER
 # =============================================================================
+
 
 def print_section(title: str) -> None:
     """Print a section header."""

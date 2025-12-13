@@ -29,20 +29,15 @@ from mlsdm.extensions.neuro_lang_extension import (
 
 
 def parse_args(argv=None):
-    parser = argparse.ArgumentParser(
-        description="Train NeuroLang grammar models offline"
-    )
+    parser = argparse.ArgumentParser(description="Train NeuroLang grammar models offline")
     parser.add_argument(
-        "--epochs",
-        type=int,
-        default=3,
-        help="Number of training epochs (default: 3)"
+        "--epochs", type=int, default=3, help="Number of training epochs (default: 3)"
     )
     parser.add_argument(
         "--output",
         type=str,
         default="config/neurolang_grammar.pt",
-        help="Output path for checkpoint file (default: config/neurolang_grammar.pt)"
+        help="Output path for checkpoint file (default: config/neurolang_grammar.pt)",
     )
     return parser.parse_args(argv)
 

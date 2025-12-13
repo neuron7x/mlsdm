@@ -922,9 +922,7 @@ class MetricsExporter:
             # Record STRIDE violations if denied
             if not allowed:
                 for stride_cat in stride_categories:
-                    self.guardrail_stride_violations_total.labels(
-                        stride_category=stride_cat
-                    ).inc()
+                    self.guardrail_stride_violations_total.labels(stride_category=stride_cat).inc()
 
     def record_guardrail_check(
         self,
@@ -941,15 +939,11 @@ class MetricsExporter:
         """
         with self._lock:
             result = "pass" if passed else "fail"
-            self.guardrail_checks_total.labels(
-                check_type=check_type, result=result
-            ).inc()
+            self.guardrail_checks_total.labels(check_type=check_type, result=result).inc()
 
             # Record STRIDE violation if check failed
             if not passed and stride_category:
-                self.guardrail_stride_violations_total.labels(
-                    stride_category=stride_category
-                ).inc()
+                self.guardrail_stride_violations_total.labels(stride_category=stride_category).inc()
 
     # ---------------------------------------------------------------------------
     # HTTP-Level Metrics Methods (OBS-001 enhancement)
@@ -967,9 +961,9 @@ class MetricsExporter:
             count: Number to increment by (default: 1)
         """
         with self._lock:
-            self.http_requests_total.labels(
-                method=method, endpoint=endpoint, status=status
-            ).inc(count)
+            self.http_requests_total.labels(method=method, endpoint=endpoint, status=status).inc(
+                count
+            )
 
     def observe_http_request_latency(self, latency_seconds: float, endpoint: str) -> None:
         """Observe HTTP request latency.
@@ -979,9 +973,7 @@ class MetricsExporter:
             endpoint: API endpoint path
         """
         with self._lock:
-            self.http_request_latency_seconds.labels(endpoint=endpoint).observe(
-                latency_seconds
-            )
+            self.http_request_latency_seconds.labels(endpoint=endpoint).observe(latency_seconds)
 
     def increment_http_requests_in_flight(self) -> None:
         """Increment the HTTP requests in-flight gauge."""
@@ -1173,9 +1165,9 @@ class MetricsExporter:
             count: Number of tokens
         """
         with self._lock:
-            self.tokens_by_request_type.labels(
-                request_type=request_type, direction=direction
-            ).inc(count)
+            self.tokens_by_request_type.labels(request_type=request_type, direction=direction).inc(
+                count
+            )
 
     def increment_completions_by_category(self, category: str, count: int = 1) -> None:
         """Increment successful completions by category.
@@ -1491,10 +1483,7 @@ class MetricsRegistry:
         self._latency_by_variant: dict[str, list[float]] = {}
 
     def increment_requests_total(
-        self,
-        count: int = 1,
-        provider_id: str | None = None,
-        variant: str | None = None
+        self, count: int = 1, provider_id: str | None = None, variant: str | None = None
     ) -> None:
         """Increment total requests counter.
 
@@ -1557,10 +1546,7 @@ class MetricsRegistry:
             self._latency_pre_flight_ms.append(latency_ms)
 
     def record_latency_generation(
-        self,
-        latency_ms: float,
-        provider_id: str | None = None,
-        variant: str | None = None
+        self, latency_ms: float, provider_id: str | None = None, variant: str | None = None
     ) -> None:
         """Record generation latency.
 
@@ -1601,12 +1587,8 @@ class MetricsRegistry:
                 # Multi-LLM metrics (Phase 8)
                 "requests_by_provider": dict(self._requests_by_provider),
                 "requests_by_variant": dict(self._requests_by_variant),
-                "latency_by_provider": {
-                    k: list(v) for k, v in self._latency_by_provider.items()
-                },
-                "latency_by_variant": {
-                    k: list(v) for k, v in self._latency_by_variant.items()
-                },
+                "latency_by_provider": {k: list(v) for k, v in self._latency_by_provider.items()},
+                "latency_by_variant": {k: list(v) for k, v in self._latency_by_variant.items()},
             }
 
     def get_summary(self) -> dict[str, Any]:

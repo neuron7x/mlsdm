@@ -61,11 +61,11 @@ cognitive_controller:
 api:
   # Request timeout (REL-004)
   request_timeout_seconds: 30.0     # Request-level timeout (returns 504 on timeout)
-  
+
   # Bulkhead concurrency limiting (REL-002)
   max_concurrent_requests: 100      # Maximum concurrent requests
   queue_timeout_seconds: 5.0        # Timeout for waiting in queue
-  
+
   # Request prioritization (REL-005)
   priority:
     enabled: true                   # Enable priority header support

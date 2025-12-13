@@ -1,7 +1,7 @@
 # Moral Filter Evaluation Suite
 
-**Document Version:** 1.0.0  
-**Last Updated:** December 2025  
+**Document Version:** 1.0.0
+**Last Updated:** December 2025
 **Status:** Active
 
 ---
@@ -329,6 +329,6 @@ FAILED SCENARIOS
 
 ---
 
-**Document Status:** Active  
-**Review Cycle:** Per major eval update  
+**Document Status:** Active
+**Review Cycle:** Per major eval update
 **Last Reviewed:** December 2025

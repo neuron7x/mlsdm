@@ -266,7 +266,10 @@ class TestEvaluateLLMOutputPolicy:
 
         assert decision.allow is False
         assert any("Prompt failed safety check" in r for r in decision.reasons)
-        assert "tampering" in decision.stride_categories or "elevation_of_privilege" in decision.stride_categories
+        assert (
+            "tampering" in decision.stride_categories
+            or "elevation_of_privilege" in decision.stride_categories
+        )
 
     def test_deny_unsafe_output(self):
         """Test DENY for unsafe output (STRIDE: Information Disclosure)."""

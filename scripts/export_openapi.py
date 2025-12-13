@@ -61,9 +61,7 @@ def enhance_spec(spec: dict[str, Any]) -> dict[str, Any]:
         Enhanced OpenAPI specification
     """
     # Add additional info
-    spec["info"]["x-logo"] = {
-        "url": "https://github.com/neuron7x/mlsdm/raw/main/docs/logo.png"
-    }
+    spec["info"]["x-logo"] = {"url": "https://github.com/neuron7x/mlsdm/raw/main/docs/logo.png"}
 
     # Add tags descriptions
     spec["tags"] = [

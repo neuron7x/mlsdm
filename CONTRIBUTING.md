@@ -1,8 +1,8 @@
 # Contributing Guide
 
-**Document Version:** 1.0.0  
-**Project Version:** 1.0.0  
-**Last Updated:** November 2025  
+**Document Version:** 1.0.0
+**Project Version:** 1.0.0
+**Last Updated:** November 2025
 **Minimum Coverage:** 90%
 
 Thank you for your interest in contributing to MLSDM Governed Cognitive Memory! This document provides comprehensive guidelines and instructions for contributors.
@@ -204,15 +204,15 @@ We follow **PEP 8** with these additions:
        options: Optional[List[str]] = None
    ) -> dict:
        """Process vector with given threshold.
-       
+
        Args:
            vector: Input vector of shape (dim,)
            threshold: Processing threshold (0.0-1.0)
            options: Optional processing options
-           
+
        Returns:
            Dictionary containing processing results
-           
+
        Raises:
            ValueError: If vector dimension is invalid
        """
@@ -225,13 +225,13 @@ We follow **PEP 8** with these additions:
        """Perform operation with proper error handling."""
        if data.size == 0:
            raise ValueError("Input data cannot be empty")
-       
+
        try:
            result = complex_operation(data)
        except RuntimeError as e:
            logger.error(f"Operation failed: {e}")
            raise
-       
+
        return result
    ```
 
@@ -239,14 +239,14 @@ We follow **PEP 8** with these additions:
    ```python
    class MoralFilter:
        """Adaptive moral filtering with homeostatic threshold.
-       
+
        The filter maintains a dynamic threshold that adapts based on
        acceptance rates to achieve approximately 50% acceptance.
-       
+
        Attributes:
            threshold: Current moral threshold value (0.30-0.90)
            ema: Exponential moving average of acceptance rate
-           
+
        Example:
            >>> filter = MoralFilter(initial_threshold=0.5)
            >>> accepted = filter.evaluate(moral_value=0.8)
@@ -305,13 +305,13 @@ from hypothesis import given, strategies as st
 
 class TestMoralFilter:
     """Test suite for MoralFilter component."""
-    
+
     def test_basic_evaluation(self):
         """Test basic moral evaluation."""
         filter = MoralFilter(0.5)
         assert filter.evaluate(0.8) is True
         assert filter.evaluate(0.2) is False
-    
+
     @given(moral_value=st.floats(0.0, 1.0))
     def test_threshold_bounds_property(self, moral_value):
         """Threshold always stays in valid range."""
@@ -319,7 +319,7 @@ class TestMoralFilter:
         filter.evaluate(moral_value)
         filter.adapt(True)
         assert 0.30 <= filter.threshold <= 0.90
-    
+
     def test_thread_safety(self):
         """Test concurrent access is safe."""
         filter = MoralFilter(0.5)

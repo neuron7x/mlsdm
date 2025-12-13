@@ -266,9 +266,7 @@ class MLSDMClient:
         return result
 
     # Legacy methods for backward compatibility
-    def process_event(
-        self, event_vector: list[float], moral_value: float
-    ) -> dict[str, Any]:
+    def process_event(self, event_vector: list[float], moral_value: float) -> dict[str, Any]:
         """Process event (legacy v1 API).
 
         Args:

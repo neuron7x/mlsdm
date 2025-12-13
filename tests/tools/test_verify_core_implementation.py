@@ -171,9 +171,7 @@ fi
             # grep returns 1 if no matches found (which is what we want)
             if result.returncode == 0:
                 # Found TODOs - fail the test
-                pytest.fail(
-                    f"Found TODO or NotImplementedError in {module_path}:\n{result.stdout}"
-                )
+                pytest.fail(f"Found TODO or NotImplementedError in {module_path}:\n{result.stdout}")
 
     def test_script_validates_test_collection(self, tmp_path: Path):
         """Test that script validates test collection works."""
@@ -236,9 +234,7 @@ fi
         assert "SUMMARY" in stdout.upper() or "VERIFICATION" in stdout.upper()
 
         # Should use visual indicators
-        has_indicators = any(
-            indicator in stdout for indicator in ["✓", "✗", "PASSED", "FAILED"]
-        )
+        has_indicators = any(indicator in stdout for indicator in ["✓", "✗", "PASSED", "FAILED"])
         assert has_indicators
 
     def test_core_module_paths_exist(self, repo_root: Path):

@@ -149,9 +149,7 @@ def migrate_state(
             migrated = migration_func(migrated)
             logger.debug(f"Applied migration {src} -> {dst}")
         except Exception as e:
-            raise RuntimeError(
-                f"Migration from {src} to {dst} failed: {e}"
-            ) from e
+            raise RuntimeError(f"Migration from {src} to {dst} failed: {e}") from e
 
     # Update version to target
     migrated["version"] = to_version
@@ -179,9 +177,7 @@ def register_migration(
         ValueError: If migration already exists or versions are invalid
     """
     if from_version >= to_version:
-        raise ValueError(
-            f"from_version ({from_version}) must be < to_version ({to_version})"
-        )
+        raise ValueError(f"from_version ({from_version}) must be < to_version ({to_version})")
 
     key = (from_version, to_version)
     if key in MIGRATIONS:

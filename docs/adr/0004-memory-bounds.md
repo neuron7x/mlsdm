@@ -1,8 +1,8 @@
 # ADR-0004: Memory Bounds Invariant (CORE-04)
 
-**Status**: Accepted  
-**Date**: 2025-11-30  
-**Deciders**: MLSDM Core Team  
+**Status**: Accepted
+**Date**: 2025-11-30
+**Deciders**: MLSDM Core Team
 **Categories**: Architecture, Performance, Reliability
 
 ## Context

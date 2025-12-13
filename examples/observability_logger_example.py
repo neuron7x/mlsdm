@@ -32,9 +32,7 @@ def main() -> None:
 
         # 1. System startup event
         print("1. Logging system startup...")
-        logger.log_system_startup(
-            version="1.0.0", config={"dimension": 384, "capacity": 20000}
-        )
+        logger.log_system_startup(version="1.0.0", config={"dimension": 384, "capacity": 20000})
 
         # 2. Moral rejection event
         print("2. Logging moral rejection...")
@@ -60,15 +58,11 @@ def main() -> None:
 
         # 7. Memory full warning
         print("7. Logging memory full warning...")
-        logger.log_memory_full(
-            current_size=20000, capacity=20000, memory_mb=512.5
-        )
+        logger.log_memory_full(current_size=20000, capacity=20000, memory_mb=512.5)
 
         # 8. Processing time exceeded
         print("8. Logging processing time exceeded...")
-        logger.log_processing_time_exceeded(
-            processing_time_ms=1500.0, threshold_ms=1000.0
-        )
+        logger.log_processing_time_exceeded(processing_time_ms=1500.0, threshold_ms=1000.0)
 
         # 9. Generic events with custom metrics
         print("9. Logging generic events with custom metrics...")

@@ -298,8 +298,7 @@ class StandaloneLoadTest:
         async with httpx.AsyncClient() as client:
             # Create worker tasks
             workers = [
-                asyncio.create_task(self.worker(i, client))
-                for i in range(self.concurrent_users)
+                asyncio.create_task(self.worker(i, client)) for i in range(self.concurrent_users)
             ]
 
             # Wait for duration
@@ -350,9 +349,7 @@ class StandaloneLoadTest:
         # Pass if: success rate > 95%, P95 < 500ms, memory growth < 100MB
         success_rate = len(successful) / max(1, len(results)) * 100
         report.passed = (
-            success_rate >= 95.0
-            and report.p95_latency < 500.0
-            and report.memory_growth_mb < 100.0
+            success_rate >= 95.0 and report.p95_latency < 500.0 and report.memory_growth_mb < 100.0
         )
 
         return report

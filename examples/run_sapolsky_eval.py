@@ -165,8 +165,6 @@ def main() -> int:
         help="Output JSON file path (default: sapolsky_eval_results.json)",
     )
 
-
-
     parser.add_argument(
         "--verbose",
         action="store_true",
@@ -250,6 +248,7 @@ def main() -> int:
         print(f"❌ Error: {e}", file=sys.stderr)
         if args.verbose:
             import traceback
+
             traceback.print_exc()
         return 1
 

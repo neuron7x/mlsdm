@@ -55,10 +55,12 @@ class TestStrideSpoof:
     @pytest.mark.asyncio
     async def test_valid_authentication_allowed(self):
         """Test that requests with valid authentication are allowed."""
-        headers = Headers({
-            "authorization": "Bearer valid_token",
-            "content-type": "application/json",
-        })
+        headers = Headers(
+            {
+                "authorization": "Bearer valid_token",
+                "content-type": "application/json",
+            }
+        )
         mock_request = self._create_mock_request(headers)
 
         context = GuardrailContext(
@@ -478,9 +480,13 @@ STRIDE_TEST_SCENARIOS = [
 ]
 
 
-@pytest.mark.parametrize("scenario_name,context_kwargs,expected_stride_categories", STRIDE_TEST_SCENARIOS)
+@pytest.mark.parametrize(
+    "scenario_name,context_kwargs,expected_stride_categories", STRIDE_TEST_SCENARIOS
+)
 @pytest.mark.asyncio
-async def test_stride_scenarios(scenario_name: str, context_kwargs: dict, expected_stride_categories: list[str]):
+async def test_stride_scenarios(
+    scenario_name: str, context_kwargs: dict, expected_stride_categories: list[str]
+):
     """Parametrized test for STRIDE threat scenarios.
 
     This test ensures each STRIDE category has concrete coverage.

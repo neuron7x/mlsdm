@@ -9,7 +9,7 @@
 global:
   scrape_interval: 15s
   evaluation_interval: 15s
-  
+
   external_labels:
     environment: production
     service: mlsdm
@@ -40,7 +40,7 @@ scrape_configs:
         labels:
           service: 'mlsdm'
           component: 'api'
-    
+
     # Relabel to add instance labels
     relabel_configs:
       - source_labels: [__address__]

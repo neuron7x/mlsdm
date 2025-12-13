@@ -1,7 +1,7 @@
 # MLSDM API Contract
 
-**Document Version:** 1.0.0  
-**Last Updated:** November 2025  
+**Document Version:** 1.0.0
+**Last Updated:** November 2025
 **Status:** Production
 
 This document defines the HTTP API contract for the MLSDM (Governed Cognitive Memory) service. All endpoints are documented with their request/response schemas, HTTP status codes, and error formats.
@@ -277,7 +277,7 @@ Generate a response using the NeuroCognitiveEngine.
 | `memory_used_mb` | float \| null | Aggregated memory usage in MB |
 | `moral_threshold` | float \| null | Current moral filter threshold (0.0-1.0) |
 
-> **CONTRACT NOTE:** Core contract fields are part of the stable API contract. 
+> **CONTRACT NOTE:** Core contract fields are part of the stable API contract.
 > Do not modify without a major version bump.
 
 **Example Request:**
@@ -574,7 +574,7 @@ class EventInput(BaseModel):
 ```python
 class CognitiveStateDTO(BaseModel):
     """Cognitive state snapshot for API responses.
-    
+
     CONTRACT: These fields are part of the stable API contract.
     """
     phase: str
@@ -588,7 +588,7 @@ class CognitiveStateDTO(BaseModel):
 ```python
 class GenerateResponse(BaseModel):
     """Response model for /generate endpoint.
-    
+
     CONTRACT: Core fields are part of the stable API contract.
     """
     # Core contract fields (always present)
@@ -599,7 +599,7 @@ class GenerateResponse(BaseModel):
     aphasia_flags: dict[str, Any] | None = None
     emergency_shutdown: bool = False
     cognitive_state: CognitiveStateDTO | None = None
-    
+
     # Optional diagnostic fields
     metrics: dict[str, Any] | None = None
     safety_flags: dict[str, Any] | None = None

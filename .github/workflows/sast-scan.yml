@@ -17,21 +17,21 @@ jobs:
     name: Bandit SAST Scan
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Set up Python 3.11
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      
+
       - name: Install bandit
         run: |
           python -m pip install --upgrade pip
           pip install bandit[sarif]
-      
+
       - name: Run bandit scan
         run: |
           # Run bandit with SARIF output for GitHub Security
@@ -41,14 +41,14 @@ jobs:
             --severity-level medium \
             --confidence-level medium \
             || true  # Don't fail yet, check results below
-      
+
       - name: Validate Bandit SARIF JSON
         run: |
           # Validate that generated SARIF is valid JSON
           python3 - << 'EOF'
           import json
           import sys
-          
+
           try:
               with open("bandit-results.sarif", "r", encoding="utf-8") as f:
                   data = json.load(f)
@@ -62,7 +62,7 @@ jobs:
               print("✗ SARIF file not found: bandit-results.sarif")
               sys.exit(1)
           EOF
-      
+
       - name: Check for high severity issues
         run: |
           # Run with high severity to display issues
@@ -70,27 +70,27 @@ jobs:
             -f txt \
             --severity-level high \
             --confidence-level high
-          
+
           # This will fail if high severity issues are found
           bandit -r src/mlsdm \
             --severity-level high \
             --confidence-level high \
             -q  # Quiet mode, only returns exit code
-      
+
       - name: Upload SARIF file
         if: always()
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: bandit-results.sarif
           category: bandit
-      
+
       - name: Generate readable report
         if: always()
         run: |
           echo "## Bandit Security Scan Results" > bandit-summary.md
           echo "" >> bandit-summary.md
           bandit -r src/mlsdm -f txt >> bandit-summary.md 2>&1 || true
-      
+
       - name: Upload scan report
         if: always()
         uses: actions/upload-artifact@v4

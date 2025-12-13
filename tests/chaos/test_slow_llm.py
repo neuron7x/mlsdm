@@ -24,9 +24,11 @@ def create_slow_llm(delay_seconds: float = 1.0):
     Args:
         delay_seconds: Time to delay before returning response
     """
+
     def slow_llm(prompt: str, max_tokens: int = 100) -> str:
         time.sleep(delay_seconds)
         return f"Delayed response to: {prompt[:50]}..."
+
     return slow_llm
 
 
@@ -45,11 +47,13 @@ def create_variable_slow_llm(min_delay: float = 0.1, max_delay: float = 2.0):
         delay = min(min_delay + (call_count[0] * 0.1), max_delay)
         time.sleep(delay)
         return f"Response {call_count[0]} to: {prompt[:30]}..."
+
     return variable_llm
 
 
 def create_fake_embedder(dim: int = 384):
     """Create a thread-safe fake embedding function."""
+
     def fake_embedder(text: str) -> np.ndarray:
         text_hash = abs(hash(text))
         local_rng = np.random.RandomState(text_hash % (2**31))
@@ -58,6 +62,7 @@ def create_fake_embedder(dim: int = 384):
         if norm > 1e-9:
             vec = vec / norm
         return vec
+
     return fake_embedder
 
 

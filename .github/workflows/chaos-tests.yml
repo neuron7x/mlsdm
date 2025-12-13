@@ -25,7 +25,7 @@ jobs:
     permissions:
       contents: read
       checks: write
-    
+
     strategy:
       fail-fast: false
       matrix:
@@ -87,7 +87,7 @@ jobs:
     if: always()
     permissions:
       contents: read
-    
+
     steps:
       - name: Download all results
         uses: actions/download-artifact@v4

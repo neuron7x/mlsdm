@@ -74,8 +74,8 @@ class PrometheusPullExporter:
                 lines.append(f'{metric_name}{{quantile="0.5"}} 0')
                 lines.append(f'{metric_name}{{quantile="0.95"}} 0')
                 lines.append(f'{metric_name}{{quantile="0.99"}} 0')
-                lines.append(f'{metric_name}_sum 0')
-                lines.append(f'{metric_name}_count 0')
+                lines.append(f"{metric_name}_sum 0")
+                lines.append(f"{metric_name}_count 0")
             lines.append("")
 
         return "\n".join(lines)

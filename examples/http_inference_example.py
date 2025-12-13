@@ -56,17 +56,11 @@ def example_raw_http():
     # 3. Basic Inference
     print("\n3. Basic Inference (POST /infer)")
     print("-" * 40)
-    payload = {
-        "prompt": "What is machine learning?",
-        "moral_value": 0.7
-    }
+    payload = {"prompt": "What is machine learning?", "moral_value": 0.7}
     print(f"   Request: {json.dumps(payload, indent=6)}")
 
     response = requests.post(
-        f"{base_url}/infer",
-        json=payload,
-        headers={"Content-Type": "application/json"},
-        timeout=30
+        f"{base_url}/infer", json=payload, headers={"Content-Type": "application/json"}, timeout=30
     )
     print(f"   Status Code: {response.status_code}")
     data = response.json()
@@ -84,15 +78,12 @@ def example_raw_http():
         "secure_mode": True,
         "aphasia_mode": True,
         "rag_enabled": True,
-        "context_top_k": 3
+        "context_top_k": 3,
     }
     print("   Request options: secure_mode=True, aphasia_mode=True")
 
     response = requests.post(
-        f"{base_url}/infer",
-        json=payload,
-        headers={"Content-Type": "application/json"},
-        timeout=30
+        f"{base_url}/infer", json=payload, headers={"Content-Type": "application/json"}, timeout=30
     )
     data = response.json()
     print(f"   Response text: {data['response'][:100]}...")
@@ -151,10 +142,7 @@ def example_sdk_client():
     # 3. Inference
     print("\n3. Inference")
     print("-" * 40)
-    result = client.infer(
-        prompt="What is artificial intelligence?",
-        moral_value=0.7
-    )
+    result = client.infer(prompt="What is artificial intelligence?", moral_value=0.7)
     print(f"   Response: {result.response[:100]}...")
     print(f"   Accepted: {result.accepted}")
     print(f"   Phase: {result.phase}")
@@ -163,10 +151,7 @@ def example_sdk_client():
     print("\n4. Inference with Secure Mode")
     print("-" * 40)
     result = client.infer(
-        prompt="Explain quantum computing",
-        moral_value=0.5,
-        secure_mode=True,
-        max_tokens=256
+        prompt="Explain quantum computing", moral_value=0.5, secure_mode=True, max_tokens=256
     )
     print(f"   Response: {result.response[:100]}...")
     print(f"   Accepted: {result.accepted}")

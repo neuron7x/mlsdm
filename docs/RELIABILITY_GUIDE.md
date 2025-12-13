@@ -1,7 +1,7 @@
 # MLSDM Reliability Guide
 
-**Status**: Production Ready  
-**Last Updated**: November 2025  
+**Status**: Production Ready
+**Last Updated**: November 2025
 **Maintainer**: neuron7x
 
 ## Table of Contents
@@ -96,10 +96,10 @@ from mlsdm.engine.neuro_cognitive_engine import NeuroCognitiveEngine, NeuroEngin
 config = NeuroEngineConfig(
     # Enable/disable bulkhead (default: True)
     enable_bulkhead=True,
-    
+
     # Maximum wait time to acquire a slot (seconds)
     bulkhead_timeout=5.0,
-    
+
     # Concurrency limits per compartment
     bulkhead_llm_limit=10,
     bulkhead_embedding_limit=20,
@@ -260,7 +260,7 @@ config = NeuroEngineConfig(
     # Core settings
     dim=384,
     capacity=20_000,
-    
+
     # Reliability: Bulkhead
     enable_bulkhead=True,
     bulkhead_timeout=5.0,
@@ -268,11 +268,11 @@ config = NeuroEngineConfig(
     bulkhead_embedding_limit=20,
     bulkhead_memory_limit=50,
     bulkhead_cognitive_limit=100,
-    
+
     # Reliability: LLM
     llm_timeout=30.0,
     llm_retry_attempts=3,
-    
+
     # Observability
     enable_metrics=True,
 )
@@ -292,7 +292,7 @@ reliability:
     embedding_limit: 20
     memory_limit: 50
     cognitive_limit: 100
-  
+
   llm:
     timeout: 30.0
     retry_attempts: 3

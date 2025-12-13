@@ -1,7 +1,7 @@
 # CI - Neuro Cognitive Engine: Technical Specification
 
-**Version**: 2.0  
-**Last Updated**: December 11, 2025  
+**Version**: 2.0
+**Last Updated**: December 11, 2025
 **Status**: Production-Ready
 
 ## Overview
@@ -16,16 +16,16 @@ The Neuro Cognitive Engine CI pipeline is the primary quality gate for MLSDM. It
 ### Trigger Conditions
 - **Push**: To `main` and `feature/*` branches
 - **Pull Request**: To `main` and `feature/*` branches
-- **Estimated Duration**: 
+- **Estimated Duration**:
   - With cache hits (typical): 8-12 minutes
   - Cold cache (first run or cache miss): 15-20 minutes
 
 ## CI Jobs
 
 ### 1. Lint and Type Check
-**Purpose**: Static code quality verification  
-**Duration**: ~2 minutes  
-**Python Version**: 3.11  
+**Purpose**: Static code quality verification
+**Duration**: ~2 minutes
+**Python Version**: 3.11
 **Caching**: ✅ Enabled
 
 **Steps**:
@@ -49,9 +49,9 @@ mypy src/mlsdm
 ---
 
 ### 2. Security Vulnerability Scan
-**Purpose**: Dependency security audit  
-**Duration**: ~2 minutes  
-**Python Version**: 3.11  
+**Purpose**: Dependency security audit
+**Duration**: ~2 minutes
+**Python Version**: 3.11
 **Caching**: ✅ Enabled
 
 **Steps**:
@@ -78,9 +78,9 @@ pip-audit --requirement requirements.txt --progress-spinner=off
 ---
 
 ### 3. Test Matrix (Python 3.10 & 3.11)
-**Purpose**: Cross-version compatibility testing  
-**Duration**: ~8 minutes per version  
-**Python Versions**: 3.10, 3.11  
+**Purpose**: Cross-version compatibility testing
+**Duration**: ~8 minutes per version
+**Python Versions**: 3.10, 3.11
 **Caching**: ✅ Enabled
 
 **Steps**:
@@ -107,9 +107,9 @@ DISABLE_RATE_LIMIT=1 LLM_BACKEND=local_stub \
 ---
 
 ### 4. Coverage Gate ⚡ NEW
-**Purpose**: Enforce code coverage standards  
-**Duration**: ~10 minutes  
-**Python Version**: 3.11  
+**Purpose**: Enforce code coverage standards
+**Duration**: ~10 minutes
+**Python Version**: 3.11
 **Caching**: ✅ Enabled
 
 **Steps**:
@@ -127,7 +127,7 @@ DISABLE_RATE_LIMIT=1 LLM_BACKEND=local_stub \
 - Coverage ≥ 65% on src/mlsdm (current: ~68%)
 - Exit code 0
 
-**Note**: Threshold set at 65% to match current coverage (~68%). This provides a quality gate while allowing for minor fluctuations. 
+**Note**: Threshold set at 65% to match current coverage (~68%). This provides a quality gate while allowing for minor fluctuations.
 
 **Threshold Increase Criteria**: When actual coverage consistently exceeds the current threshold by 5% for 2+ releases, increase threshold to (current_coverage - 3%). Example: If coverage reaches 73% consistently → increase threshold to 70%.
 
@@ -144,9 +144,9 @@ DISABLE_RATE_LIMIT=1 LLM_BACKEND=local_stub \
 ---
 
 ### 5. End-to-End Tests
-**Purpose**: Integration testing across full system  
-**Duration**: ~3 minutes  
-**Python Version**: 3.11  
+**Purpose**: Integration testing across full system
+**Duration**: ~3 minutes
+**Python Version**: 3.11
 **Caching**: ✅ Enabled
 
 **Steps**:
@@ -180,9 +180,9 @@ DISABLE_RATE_LIMIT=1 LLM_BACKEND=local_stub \
 ---
 
 ### 6. Effectiveness Validation
-**Purpose**: Validate cognitive system effectiveness metrics  
-**Duration**: ~4 minutes  
-**Python Version**: 3.11  
+**Purpose**: Validate cognitive system effectiveness metrics
+**Duration**: ~4 minutes
+**Python Version**: 3.11
 **Caching**: ✅ Enabled
 
 **Steps**:
@@ -214,9 +214,9 @@ DISABLE_RATE_LIMIT=1 LLM_BACKEND=local_stub \
 ---
 
 ### 7. Performance Benchmarks (SLO Gate)
-**Purpose**: Enforce performance SLO requirements  
-**Duration**: ~3 minutes  
-**Python Version**: 3.11  
+**Purpose**: Enforce performance SLO requirements
+**Duration**: ~3 minutes
+**Python Version**: 3.11
 **Caching**: ✅ Enabled
 
 **Steps**:
@@ -269,10 +269,10 @@ DISABLE_RATE_LIMIT=1 LLM_BACKEND=local_stub \
 ---
 
 ### 8. Cognitive Safety Evaluation
-**Purpose**: Validate neuro-cognitive safety properties  
-**Duration**: ~2 minutes  
-**Python Version**: 3.11  
-**Caching**: ✅ Enabled  
+**Purpose**: Validate neuro-cognitive safety properties
+**Duration**: ~2 minutes
+**Python Version**: 3.11
+**Caching**: ✅ Enabled
 **Continue on Error**: ✅ Yes (non-blocking)
 
 **Steps**:
@@ -317,8 +317,8 @@ DISABLE_RATE_LIMIT=1 LLM_BACKEND=local_stub \
 ---
 
 ### 9. All CI Checks Passed (Gate)
-**Purpose**: Aggregate gate requiring all critical jobs  
-**Duration**: < 1 minute  
+**Purpose**: Aggregate gate requiring all critical jobs
+**Duration**: < 1 minute
 **Depends On**: lint, security, test, coverage, e2e-tests, effectiveness-validation, benchmarks
 
 **Important Notes**:
@@ -502,6 +502,6 @@ chmod +x scripts/run_local_ci.sh
 
 ---
 
-**Maintainer**: neuron7x  
-**Contact**: [GitHub Issues](https://github.com/neuron7x/mlsdm/issues)  
+**Maintainer**: neuron7x
+**Contact**: [GitHub Issues](https://github.com/neuron7x/mlsdm/issues)
 **License**: MIT

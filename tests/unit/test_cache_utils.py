@@ -59,7 +59,11 @@ class TestCacheConfig:
 
     def test_from_env_defaults(self) -> None:
         """Test CacheConfig.from_env() with default values."""
-        env = {k: v for k, v in os.environ.items() if not k.startswith("MLSDM_CACHE") and not k.startswith("MLSDM_REDIS")}
+        env = {
+            k: v
+            for k, v in os.environ.items()
+            if not k.startswith("MLSDM_CACHE") and not k.startswith("MLSDM_REDIS")
+        }
         with patch.dict(os.environ, env, clear=True):
             config = CacheConfig.from_env()
             assert config.enabled is True

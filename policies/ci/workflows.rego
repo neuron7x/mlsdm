@@ -1,7 +1,7 @@
 # ============================================================================
 # MLSDM CI Workflow Policy Rules (OPA/Rego)
 # ============================================================================
-# 
+#
 # These policies enforce security and governance standards for GitHub Actions
 # workflows. They are checked in CI using conftest.
 #
@@ -44,14 +44,14 @@ deny[msg] {
     step := job.steps[_]
     uses := step.uses
     uses != null
-    
+
     # Check if it's a third-party action (not github/* or actions/*)
     not startswith(uses, "actions/")
     not startswith(uses, "github/")
-    
+
     # Check if it's missing a version pin entirely
     not str_contains(uses, "@")
-    
+
     msg := sprintf("Job '%s' uses unpinned action '%s'. Pin to a specific SHA for security.", [job_name, uses])
 }
 
@@ -62,14 +62,14 @@ deny[msg] {
     step := job.steps[_]
     uses := step.uses
     uses != null
-    
+
     # Check if it's a third-party action (not github/* or actions/*)
     not startswith(uses, "actions/")
     not startswith(uses, "github/")
-    
+
     # Check for mutable references
     str_contains(uses, "@main")
-    
+
     msg := sprintf("Job '%s' uses mutable reference @main in '%s'. Pin to a SHA for security.", [job_name, uses])
 }
 
@@ -78,14 +78,14 @@ deny[msg] {
     step := job.steps[_]
     uses := step.uses
     uses != null
-    
+
     # Check if it's a third-party action (not github/* or actions/*)
     not startswith(uses, "actions/")
     not startswith(uses, "github/")
-    
+
     # Check for mutable references
     str_contains(uses, "@master")
-    
+
     msg := sprintf("Job '%s' uses mutable reference @master in '%s'. Pin to a SHA for security.", [job_name, uses])
 }
 
@@ -96,11 +96,11 @@ deny[msg] {
     step := job.steps[_]
     run_cmd := step.run
     run_cmd != null
-    
+
     # Check for potential secret exposure patterns
     str_contains(run_cmd, "echo ${{")
     str_contains(run_cmd, "secrets.")
-    
+
     msg := sprintf("Job '%s' may be exposing secrets in logs via echo. Use masked outputs instead.", [job_name])
 }
 
@@ -123,10 +123,10 @@ warn[msg] {
     step := job.steps[_]
     uses := step.uses
     uses != null
-    
+
     # Check for mutable references like @main or @master
     str_contains(uses, "@main")
-    
+
     msg := sprintf("Job '%s' uses mutable reference in '%s'. Consider pinning to a SHA.", [job_name, uses])
 }
 
@@ -135,10 +135,10 @@ warn[msg] {
     step := job.steps[_]
     uses := step.uses
     uses != null
-    
+
     # Check for mutable references like @main or @master
     str_contains(uses, "@master")
-    
+
     msg := sprintf("Job '%s' uses mutable reference in '%s'. Consider pinning to a SHA.", [job_name, uses])
 }
 

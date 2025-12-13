@@ -1,8 +1,8 @@
 # Moral Filter Specification
 
-**Document Version:** 1.0.0  
-**Project Version:** 1.2.0  
-**Last Updated:** November 2025  
+**Document Version:** 1.0.0
+**Project Version:** 1.2.0
+**Last Updated:** November 2025
 **Status:** Production
 
 ---
@@ -90,13 +90,13 @@ src/mlsdm/cognition/moral_filter_v2.py
 ```python
 class MoralFilterV2:
     """Adaptive moral threshold filter with homeostatic control."""
-    
+
     # Class-level constants (configurable via calibration)
     MIN_THRESHOLD: float = 0.30
     MAX_THRESHOLD: float = 0.90
     DEAD_BAND: float = 0.05
     EMA_ALPHA: float = 0.1
-    
+
     # Instance state
     threshold: float        # Current acceptance threshold
     ema_accept_rate: float  # Exponential moving average of accept signals
@@ -139,15 +139,15 @@ class MoralFilterV2:
 def evaluate(self, moral_value: float) -> bool:
     """
     Evaluate moral acceptability of an event.
-    
+
     Args:
         moral_value: Moral score ∈ [0.0, 1.0]
                      0.0 = maximally immoral
                      1.0 = maximally moral
-    
+
     Returns:
         True if event is morally acceptable, False otherwise
-    
+
     Decision Logic:
         1. If moral_value ≥ MAX_THRESHOLD (0.90): Always accept
         2. If moral_value < MIN_THRESHOLD (0.30): Always reject
@@ -158,7 +158,7 @@ def evaluate(self, moral_value: float) -> bool:
         return True
     if moral_value < self.MIN_THRESHOLD:
         return False
-    
+
     # Threshold-based decision
     return moral_value >= self.threshold
 ```
@@ -169,14 +169,14 @@ def evaluate(self, moral_value: float) -> bool:
 def adapt(self, accepted: bool) -> None:
     """
     Adapt threshold based on filtering decision.
-    
+
     This implements a homeostatic control loop that maintains
     the threshold in a stable range while responding to
     content distribution changes.
-    
+
     Args:
         accepted: Whether the event was accepted
-    
+
     Algorithm:
         1. Convert decision to signal (1.0 if accepted, 0.0 otherwise)
         2. Update EMA of accept rate: ema = α * signal + (1-α) * ema
@@ -186,17 +186,17 @@ def adapt(self, accepted: bool) -> None:
     """
     # Step 1: Convert to signal
     signal = 1.0 if accepted else 0.0
-    
+
     # Step 2: EMA update
     self.ema_accept_rate = (
-        self.EMA_ALPHA * signal + 
+        self.EMA_ALPHA * signal +
         (1.0 - self.EMA_ALPHA) * self.ema_accept_rate
     )
-    
+
     # Step 3: Compute error from target
     target = 0.5  # Balanced accept/reject rate
     error = self.ema_accept_rate - target
-    
+
     # Step 4: Threshold adjustment (if error exceeds dead band)
     if abs(error) > self.DEAD_BAND:
         delta = 0.05 * np.sign(error)
@@ -213,7 +213,7 @@ def adapt(self, accepted: bool) -> None:
 def get_state(self) -> dict[str, float]:
     """
     Return current filter state for observability.
-    
+
     Returns:
         Dictionary containing:
         - threshold: Current moral threshold
@@ -325,14 +325,14 @@ def process_event(self, vector, moral_value):
     with self._lock:
         # Step 1: Evaluate moral acceptability
         accepted = self.moral_filter.evaluate(moral_value)
-        
+
         # Step 2: Adapt threshold
         self.moral_filter.adapt(accepted)
-        
+
         # Step 3: Conditional processing
         if not accepted:
             return self._build_state(rejected=True, note="morally rejected")
-        
+
         # ... continue with memory storage and response
 ```
 
@@ -343,7 +343,7 @@ def process_event(self, vector, moral_value):
 def generate(self, prompt, moral_value, ...):
     # Pre-flight moral check
     state = self.controller.process_event(embedding, moral_value)
-    
+
     if state["rejected"]:
         return {
             "response": "",
@@ -351,7 +351,7 @@ def generate(self, prompt, moral_value, ...):
             "rejected_at": "moral_filter",
             "moral_threshold": state["moral_threshold"]
         }
-    
+
     # ... continue with LLM generation
 ```
 
@@ -426,22 +426,22 @@ def record_moral_event(self, accepted: bool, threshold: float, moral_value: floa
 class TestMoralFilterV2:
     def test_initial_threshold(self):
         """Threshold starts at 0.50 by default."""
-        
+
     def test_evaluate_below_threshold_rejects(self):
         """Values below threshold are rejected."""
-        
+
     def test_evaluate_above_threshold_accepts(self):
         """Values above threshold are accepted."""
-        
+
     def test_adapt_increases_threshold_on_accepts(self):
         """Sustained accepts increase threshold."""
-        
+
     def test_adapt_decreases_threshold_on_rejects(self):
         """Sustained rejects decrease threshold."""
-        
+
     def test_threshold_bounds_enforced(self):
         """Threshold never exceeds [0.30, 0.90]."""
-        
+
     def test_dead_band_prevents_oscillation(self):
         """Small errors don't trigger adaptation."""
 ```
@@ -455,11 +455,11 @@ from hypothesis import given, strategies as st
 @given(st.floats(0.0, 1.0))
 def test_threshold_always_bounded(moral_value):
     """Property: Threshold always within [0.30, 0.90]."""
-    
+
 @given(st.lists(st.booleans(), min_size=1, max_size=100))
 def test_adaptation_bounded(decisions):
     """Property: Single adaptation step ≤ 0.05."""
-    
+
 @given(st.floats(0.0, 1.0), st.floats(0.3, 0.9))
 def test_evaluation_deterministic(value, threshold):
     """Property: Same inputs produce same outputs."""
@@ -471,10 +471,10 @@ def test_evaluation_deterministic(value, threshold):
 # tests/validation/test_moral_filter_effectiveness.py
 def test_moral_filter_toxic_rejection():
     """Verify >70% toxic content rejected."""
-    
+
 def test_moral_filter_false_positive_rate():
     """Verify <50% false positive rate."""
-    
+
 def test_moral_drift_stability():
     """Verify bounded drift under attack."""
 ```
@@ -485,7 +485,7 @@ def test_moral_drift_stability():
 # tests/security/test_robustness.py
 def test_threshold_stable_under_toxic_storm():
     """Threshold remains in bounds under sustained toxic input."""
-    
+
 def test_threshold_recovers_after_attack():
     """Threshold recovers after attack sequence."""
 ```
@@ -529,7 +529,7 @@ def test_threshold_recovers_after_attack():
 
 ---
 
-**Document Status:** Production  
-**Review Cycle:** Per major version  
-**Last Reviewed:** November 2025  
+**Document Status:** Production
+**Review Cycle:** Per major version
+**Last Reviewed:** November 2025
 **Next Review:** v2.0.0 release

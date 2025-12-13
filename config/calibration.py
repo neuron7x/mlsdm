@@ -29,6 +29,7 @@ from typing import Any
 # Higher threshold = stricter filtering (more rejections)
 # Role: SAFETY - Critical for preventing toxic/harmful content
 
+
 @dataclass(frozen=True)
 class MoralFilterCalibration:
     """Moral filter calibrated parameters."""
@@ -67,6 +68,7 @@ MORAL_FILTER_DEFAULTS = MoralFilterCalibration()
 # Controls detection of telegraphic speech patterns characteristic of
 # Broca's aphasia. Used to identify and optionally repair degraded LLM output.
 # Role: QUALITY - Ensures coherent, grammatically complete responses
+
 
 @dataclass(frozen=True)
 class AphasiaDetectorCalibration:
@@ -108,6 +110,7 @@ APHASIA_DEFAULTS = AphasiaDetectorCalibration()
 # Controls security strictness when MLSDM_SECURE_MODE=1.
 # Role: SAFETY - Prevents training and limits capabilities in production
 
+
 @dataclass(frozen=True)
 class SecureModeCalibration:
     """Secure mode calibrated parameters."""
@@ -135,6 +138,7 @@ SECURE_MODE_DEFAULTS = SecureModeCalibration()
 # =============================================================================
 # Controls memory retrieval sensitivity and capacity.
 # Role: MEMORY/PERFORMANCE - Affects recall quality and resource usage
+
 
 @dataclass(frozen=True)
 class PELMCalibration:
@@ -173,6 +177,7 @@ PELM_DEFAULTS = PELMCalibration()
 # =============================================================================
 # Controls memory decay rates and consolidation thresholds.
 # Role: MEMORY - Affects how memories transition between short/medium/long-term
+
 
 @dataclass(frozen=True)
 class SynapticMemoryCalibration:
@@ -216,6 +221,7 @@ SYNAPTIC_MEMORY_DEFAULTS = SynapticMemoryCalibration()
 # Controls wake/sleep cycle durations.
 # Role: QUALITY/PERFORMANCE - Affects response patterns and consolidation
 
+
 @dataclass(frozen=True)
 class CognitiveRhythmCalibration:
     """Cognitive rhythm calibrated parameters."""
@@ -243,6 +249,7 @@ COGNITIVE_RHYTHM_DEFAULTS = CognitiveRhythmCalibration()
 # =============================================================================
 # Controls retry logic, circuit breakers, and graceful degradation.
 # Role: PERFORMANCE/RELIABILITY - Affects system resilience
+
 
 @dataclass(frozen=True)
 class ReliabilityCalibration:
@@ -282,6 +289,7 @@ RELIABILITY_DEFAULTS = ReliabilityCalibration()
 # Controls experience-based learning for combo/synergy actions.
 # Role: QUALITY - Affects adaptive behavior learning
 
+
 @dataclass(frozen=True)
 class SynergyExperienceCalibration:
     """Synergy experience learning calibrated parameters."""
@@ -312,6 +320,7 @@ SYNERGY_EXPERIENCE_DEFAULTS = SynergyExperienceCalibration()
 # Controls API rate limiting parameters.
 # Role: SECURITY/PERFORMANCE - Prevents abuse and overload
 
+
 @dataclass(frozen=True)
 class RateLimitCalibration:
     """Rate limiting calibrated parameters."""
@@ -337,6 +346,7 @@ RATE_LIMIT_DEFAULTS = RateLimitCalibration()
 # =============================================================================
 # Controls controller resource limits and monitoring.
 # Role: PERFORMANCE/SAFETY - Prevents resource exhaustion
+
 
 @dataclass(frozen=True)
 class CognitiveControllerCalibration:
@@ -408,6 +418,7 @@ COGNITIVE_CONTROLLER_DEFAULTS = CognitiveControllerCalibration()
 # Controls API-level reliability features: bulkhead, timeout, priority.
 # Role: RELIABILITY/PERFORMANCE - Prevents cascade failures and ensures SLOs
 
+
 @dataclass(frozen=True)
 class ApiReliabilityCalibration:
     """API reliability calibrated parameters for production deployments.
@@ -478,6 +489,7 @@ API_RELIABILITY_DEFAULTS = ApiReliabilityCalibration()
 # =============================================================================
 # AGGREGATE CALIBRATION CONFIG
 # =============================================================================
+
 
 @dataclass(frozen=True)
 class CalibrationConfig:
@@ -615,7 +627,7 @@ def get_calibration_summary() -> dict[str, dict[str, Any]]:
 
 
 def get_synaptic_memory_config(
-    yaml_config: dict[str, Any] | None = None
+    yaml_config: dict[str, Any] | None = None,
 ) -> SynapticMemoryCalibration:
     """Get synaptic memory configuration merged with defaults.
 

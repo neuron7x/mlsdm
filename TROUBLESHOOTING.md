@@ -235,7 +235,7 @@ TypeError: Embedder must return numpy array
 1. **Ensure correct return type:**
    ```python
    import numpy as np
-   
+
    def my_embedder(text: str) -> np.ndarray:
        # Must return numpy array
        embedding = get_embedding(text)
@@ -247,7 +247,7 @@ TypeError: Embedder must return numpy array
    test_embedding = my_embedder("test")
    print(f"Embedding shape: {test_embedding.shape}")
    # Should be (dim,) where dim matches LLMWrapper(dim=...)
-   
+
    wrapper = LLMWrapper(
        llm_generate_fn=my_llm,
        embedding_fn=my_embedder,
@@ -297,12 +297,12 @@ TypeError: Embedder must return numpy array
    ```python
    import cProfile
    import pstats
-   
+
    profiler = cProfile.Profile()
    profiler.enable()
-   
+
    result = wrapper.generate("test prompt", moral_value=0.8)
-   
+
    profiler.disable()
    stats = pstats.Stats(profiler)
    stats.sort_stats('cumulative')
@@ -542,10 +542,10 @@ FAILED tests/test_something.py::test_function - timeout
    ```bash
    # Python version
    python --version
-   
+
    # Package versions
    pip list | grep -E "mlsdm|numpy|fastapi|opentelemetry"
-   
+
    # System info
    uname -a  # Linux/Mac
    # or
@@ -601,8 +601,8 @@ Paste relevant logs
 
 ---
 
-**Last Updated:** December 2025  
-**Version:** 1.2.0  
+**Last Updated:** December 2025
+**Version:** 1.2.0
 **Maintainer:** neuron7x
 
 ---

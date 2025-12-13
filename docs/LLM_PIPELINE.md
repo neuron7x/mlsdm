@@ -1,8 +1,8 @@
 # LLM Pipeline Specification
 
-**Document Version:** 1.0.0  
-**Project Version:** 1.2.0  
-**Last Updated:** November 2025  
+**Document Version:** 1.0.0
+**Project Version:** 1.2.0
+**Last Updated:** November 2025
 **Status:** Production
 
 ---
@@ -239,15 +239,15 @@ config = PipelineConfig(
     # Moral filter
     moral_filter_enabled=True,      # Enable/disable moral pre-filter
     moral_threshold=0.50,           # Initial moral threshold (0.0-1.0)
-    
+
     # Aphasia filter
     aphasia_detection_enabled=True, # Enable/disable aphasia detection
     aphasia_repair_enabled=True,    # Enable/disable automatic repair
     aphasia_severity_threshold=0.3, # Minimum severity for repair
-    
+
     # Threat filter
     threat_assessment_enabled=False, # Enable/disable threat pre-filter
-    
+
     # General
     max_tokens_default=512,         # Default max tokens
     telemetry_enabled=True,         # Enable/disable telemetry hooks
@@ -323,7 +323,7 @@ result = pipeline.process(prompt="Test", moral_value=0.8)
 # Check stages
 for stage in result.stages:
     print(f"{stage.stage_name}: success={stage.success}, time={stage.duration_ms}ms")
-    
+
     # Access filter-specific metadata
     if hasattr(stage.result, 'metadata'):
         print(f"  Metadata: {stage.result.metadata}")
@@ -448,7 +448,7 @@ from mlsdm.core.llm_pipeline import FilterResult, FilterDecision
 
 class CustomPreFilter:
     """Custom pre-filter implementation."""
-    
+
     def evaluate(self, prompt: str, context: dict) -> FilterResult:
         # Custom logic
         if "forbidden" in prompt.lower():
@@ -477,7 +477,7 @@ pipeline._pre_filters.append(("custom_filter", CustomPreFilter()))
 
 ---
 
-**Document Status:** Production  
-**Review Cycle:** Per major version  
-**Last Reviewed:** November 2025  
+**Document Status:** Production
+**Review Cycle:** Per major version
+**Last Reviewed:** November 2025
 **Next Review:** v2.0.0 release

@@ -136,9 +136,7 @@ class TestConfigCache:
 
         # Create 3 config files
         for i in range(3):
-            with tempfile.NamedTemporaryFile(
-                suffix=".yaml", delete=False, mode="w"
-            ) as f:
+            with tempfile.NamedTemporaryFile(suffix=".yaml", delete=False, mode="w") as f:
                 config = {"index": i}
                 yaml.dump(config, f)
                 configs.append(config)
@@ -335,4 +333,3 @@ class TestGlobalConfigCache:
             assert len(errors) == 0
         finally:
             os.unlink(path)
-

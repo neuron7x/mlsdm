@@ -1,7 +1,7 @@
 # Production Gaps
 
-**Version**: 1.2.1  
-**Last Updated**: December 2025  
+**Version**: 1.2.1
+**Last Updated**: December 2025
 **Purpose**: Prioritized task list for production-readiness improvements
 
 ---
@@ -159,8 +159,8 @@ _All blockers resolved._
 
 ### ~~CICD-001: Add linting and type checking to CI workflows~~ ✅ COMPLETED
 
-**Block**: CI/CD  
-**Criticality**: ~~BLOCKER~~ COMPLETED  
+**Block**: CI/CD
+**Criticality**: ~~BLOCKER~~ COMPLETED
 **Type**: CI
 
 **Description**: ~~Currently `ruff check` and `mypy` are only available via `make lint` and `make type` locally. CI workflows run tests but do not enforce linting or type safety, allowing regressions to reach main.~~ Added linting and type checking steps to CI workflow.
@@ -179,8 +179,8 @@ _All blockers resolved._
 
 ### ~~REL-001: Implement automated health-based recovery~~ ✅ COMPLETED
 
-**Block**: Core Reliability  
-**Criticality**: ~~HIGH~~ COMPLETED  
+**Block**: Core Reliability
+**Criticality**: ~~HIGH~~ COMPLETED
 **Type**: Code
 
 **Description**: ~~After `emergency_shutdown` is triggered due to memory threshold, manual intervention is required via `reset_emergency_shutdown()`. Production deployments need automated recovery.~~
@@ -211,8 +211,8 @@ _All blockers resolved._
 
 ### ~~REL-002: Add bulkhead pattern for request isolation~~ ✅ COMPLETED
 
-**Block**: Core Reliability  
-**Criticality**: ~~HIGH~~ COMPLETED  
+**Block**: Core Reliability
+**Criticality**: ~~HIGH~~ COMPLETED
 **Type**: Code
 
 **Description**: ~~No resource isolation between concurrent requests. A slow request can impact all others.~~
@@ -242,8 +242,8 @@ _All blockers resolved._
 
 ### ~~OBS-001: Implement OpenTelemetry distributed tracing~~ ✅ COMPLETED
 
-**Block**: Observability  
-**Criticality**: ~~HIGH~~ COMPLETED  
+**Block**: Observability
+**Criticality**: ~~HIGH~~ COMPLETED
 **Type**: Code
 
 **Description**: ~~Dependencies (`opentelemetry-api`, `opentelemetry-sdk`) are installed but not integrated. Distributed tracing is critical for debugging production issues.~~ OpenTelemetry tracing fully integrated.
@@ -271,8 +271,8 @@ _All blockers resolved._
 
 ### ~~OBS-002: Deploy Alertmanager rules~~ ✅ COMPLETED
 
-**Block**: Observability  
-**Criticality**: ~~HIGH~~ COMPLETED  
+**Block**: Observability
+**Criticality**: ~~HIGH~~ COMPLETED
 **Type**: Config/Docs
 
 **Description**: ~~Alert rules are defined in `SLO_SPEC.md` but not deployed as actual Alertmanager configuration.~~ Full alerting rules deployed.
@@ -298,8 +298,8 @@ _All blockers resolved._
 
 ### ~~SEC-001: Implement RBAC for API endpoints~~ ✅ COMPLETED
 
-**Block**: Security  
-**Criticality**: ~~HIGH~~ COMPLETED  
+**Block**: Security
+**Criticality**: ~~HIGH~~ COMPLETED
 **Type**: Code
 
 **Description**: ~~Current authentication is binary (authenticated = authorized). Production needs role-based access control.~~ Full RBAC system implemented with role hierarchy.
@@ -324,8 +324,8 @@ _All blockers resolved._
 
 ### ~~SEC-002: Add automated secret rotation support~~ ✅ COMPLETED
 
-**Block**: Security  
-**Criticality**: ~~HIGH~~ COMPLETED  
+**Block**: Security
+**Criticality**: ~~HIGH~~ COMPLETED
 **Type**: Code/Docs
 
 **Description**: ~~API keys are static. Production needs mechanism for rotation without downtime.~~ Secret rotation supported via RoleValidator API.
@@ -350,8 +350,8 @@ _All blockers resolved._
 
 ### ~~SEC-003: Add dependency vulnerability scanning to PR workflow~~ ✅ COMPLETED
 
-**Block**: Security  
-**Criticality**: ~~HIGH~~ COMPLETED  
+**Block**: Security
+**Criticality**: ~~HIGH~~ COMPLETED
 **Type**: CI
 
 **Description**: ~~Trivy scan only runs on release, not on PRs. Vulnerabilities can be introduced and merged.~~ Added pip-audit security scanning to CI workflow.
@@ -368,8 +368,8 @@ _All blockers resolved._
 
 ### ~~SEC-LLM-001: Add LLM safety module for prompt injection detection~~ ✅ COMPLETED
 
-**Block**: Security  
-**Criticality**: ~~HIGH~~ COMPLETED  
+**Block**: Security
+**Criticality**: ~~HIGH~~ COMPLETED
 **Type**: Code
 
 **Description**: ~~No centralized prompt injection detection. LLM inputs could be manipulated to bypass safety controls.~~ Implemented comprehensive LLM safety module.
@@ -396,8 +396,8 @@ _All blockers resolved._
 
 ### ~~SEC-LLM-002: Enhance security logging for LLM safety events~~ ✅ COMPLETED
 
-**Block**: Security  
-**Criticality**: ~~MEDIUM~~ COMPLETED  
+**Block**: Security
+**Criticality**: ~~MEDIUM~~ COMPLETED
 **Type**: Code
 
 **Description**: ~~Security logger lacks events for LLM-specific threats.~~ Enhanced security logger with LLM safety event types.
@@ -423,8 +423,8 @@ _All blockers resolved._
 
 ### ~~SEC-INPUT-001: Add centralized input sanitization~~ ✅ COMPLETED
 
-**Block**: Security  
-**Criticality**: ~~MEDIUM~~ COMPLETED  
+**Block**: Security
+**Criticality**: ~~MEDIUM~~ COMPLETED
 **Type**: Code
 
 **Description**: ~~Input sanitization scattered across codebase.~~ Centralized `sanitize_user_input()` function.
@@ -449,8 +449,8 @@ _All blockers resolved._
 
 ### ~~SEC-RBAC-TEST-001: Add comprehensive RBAC API tests~~ ✅ COMPLETED
 
-**Block**: Security  
-**Criticality**: ~~MEDIUM~~ COMPLETED  
+**Block**: Security
+**Criticality**: ~~MEDIUM~~ COMPLETED
 **Type**: Tests
 
 **Description**: ~~RBAC implementation lacks comprehensive API-level tests.~~ Added RBAC API test suite.
@@ -476,8 +476,8 @@ _All blockers resolved._
 
 ### ~~CICD-002: Add required status checks on main branch~~ ✅ COMPLETED
 
-**Block**: CI/CD  
-**Criticality**: ~~HIGH~~ COMPLETED  
+**Block**: CI/CD
+**Criticality**: ~~HIGH~~ COMPLETED
 **Type**: Config
 
 **Description**: ~~No branch protection rules enforcing CI checks before merge. PRs can be merged without passing tests.~~ Documented branch protection requirements and provided GitHub CLI commands for configuration.
@@ -500,8 +500,8 @@ _All blockers resolved._
 
 ### ~~CICD-003: Separate smoke tests from slow tests~~ ✅ COMPLETED
 
-**Block**: CI/CD  
-**Criticality**: ~~HIGH~~ COMPLETED  
+**Block**: CI/CD
+**Criticality**: ~~HIGH~~ COMPLETED
 **Type**: CI
 
 **Description**: ~~All tests run together. Fast feedback loop is lost when running full test suite.~~ Created separate smoke test workflow for fast feedback.
@@ -527,8 +527,8 @@ _All blockers resolved._
 
 ### ~~CICD-004: Add SAST scanning to PR workflow~~ ✅ COMPLETED
 
-**Block**: CI/CD  
-**Criticality**: ~~HIGH~~ COMPLETED  
+**Block**: CI/CD
+**Criticality**: ~~HIGH~~ COMPLETED
 **Type**: CI
 
 **Description**: ~~No static application security testing (SAST) in CI. CodeQL or bandit should scan for security issues.~~ Added bandit and semgrep SAST scanning.
@@ -553,8 +553,8 @@ _All blockers resolved._
 
 ### ~~CICD-005: Add production deployment gate workflow~~ ✅ COMPLETED
 
-**Block**: CI/CD  
-**Criticality**: ~~HIGH~~ COMPLETED  
+**Block**: CI/CD
+**Criticality**: ~~HIGH~~ COMPLETED
 **Type**: CI
 
 **Description**: ~~No explicit production gate. Release workflow doesn't verify all production criteria.~~ Created comprehensive production gate workflow.
@@ -581,8 +581,8 @@ _All blockers resolved._
 
 ### ~~PERF-001: Implement SLO-based release gates~~ ✅ COMPLETED
 
-**Block**: Performance  
-**Criticality**: ~~HIGH~~ COMPLETED  
+**Block**: Performance
+**Criticality**: ~~HIGH~~ COMPLETED
 **Type**: CI
 
 **Description**: ~~SLOs are defined but not enforced in CI. Regressions can be released without detection.~~ Added SLO-based assertions to benchmark job with performance regression detection.
@@ -606,8 +606,8 @@ _All blockers resolved._
 
 ### ~~DOC-001: Create Architecture Decision Records (ADRs)~~ ✅ COMPLETED
 
-**Block**: Docs  
-**Criticality**: ~~HIGH~~ COMPLETED  
+**Block**: Docs
+**Criticality**: ~~HIGH~~ COMPLETED
 **Type**: Docs
 
 **Description**: ~~No documented rationale for key architecture decisions. Makes it hard for new contributors to understand design choices.~~ Created ADR directory with template and initial ADRs.
@@ -630,8 +630,8 @@ _All blockers resolved._
 
 ### ~~REL-003: Add chaos engineering tests to CI~~ ✅ COMPLETED
 
-**Block**: Core Reliability  
-**Criticality**: ~~MEDIUM~~ COMPLETED  
+**Block**: Core Reliability
+**Criticality**: ~~MEDIUM~~ COMPLETED
 **Type**: Tests
 
 **Description**: ~~No automated failure injection tests. System resilience not verified continuously.~~
@@ -664,8 +664,8 @@ _All blockers resolved._
 
 ### ~~REL-004: Add request timeout middleware~~ ✅ COMPLETED
 
-**Block**: Core Reliability  
-**Criticality**: ~~MEDIUM~~ COMPLETED  
+**Block**: Core Reliability
+**Criticality**: ~~MEDIUM~~ COMPLETED
 **Type**: Code
 
 **Description**: ~~No explicit request-level timeout in API layer. Long requests can block workers.~~
@@ -694,8 +694,8 @@ _All blockers resolved._
 
 ### ~~OBS-003: Create Grafana dashboard templates~~ ✅ COMPLETED
 
-**Block**: Observability  
-**Criticality**: ~~MEDIUM~~ COMPLETED  
+**Block**: Observability
+**Criticality**: ~~MEDIUM~~ COMPLETED
 **Type**: Config
 
 **Description**: ~~Prometheus metrics exist but no dashboards provided for visualization.~~ Grafana dashboards created.
@@ -717,8 +717,8 @@ _All blockers resolved._
 
 ### ~~OBS-004: Add structured error logging with error codes~~ ✅ COMPLETED
 
-**Block**: Observability  
-**Criticality**: ~~MEDIUM~~ COMPLETED  
+**Block**: Observability
+**Criticality**: ~~MEDIUM~~ COMPLETED
 **Type**: Code
 
 **Description**: ~~Errors logged as strings. Need structured error codes for automated alerting.~~ Added structured error logging with error code integration.
@@ -742,8 +742,8 @@ _All blockers resolved._
 
 ### ~~OBS-005: Add log aggregation configuration examples~~ ✅ COMPLETED
 
-**Block**: Observability  
-**Criticality**: ~~MEDIUM~~ COMPLETED  
+**Block**: Observability
+**Criticality**: ~~MEDIUM~~ COMPLETED
 **Type**: Docs
 
 **Description**: ~~No documentation for setting up log aggregation (ELK/Loki).~~ Added complete Loki stack configuration with Promtail and LogQL examples.
@@ -771,8 +771,8 @@ _All blockers resolved._
 
 ### ~~SEC-004: Add OAuth 2.0 / OIDC support~~ ✅ COMPLETED
 
-**Block**: Security  
-**Criticality**: ~~MEDIUM~~ COMPLETED  
+**Block**: Security
+**Criticality**: ~~MEDIUM~~ COMPLETED
 **Type**: Code
 
 **Description**: ~~Only API key auth supported. Enterprise deployments need OAuth/OIDC.~~ Added comprehensive OIDC authentication module.
@@ -799,8 +799,8 @@ _All blockers resolved._
 
 ### ~~SEC-005: Generate SBOM on release~~ ✅ COMPLETED
 
-**Block**: Security  
-**Criticality**: ~~MEDIUM~~ COMPLETED  
+**Block**: Security
+**Criticality**: ~~MEDIUM~~ COMPLETED
 **Type**: CI
 
 **Description**: ~~No Software Bill of Materials generated. Required for supply chain security.~~ Added SBOM generation to release workflow.
@@ -824,8 +824,8 @@ _All blockers resolved._
 
 ### ~~PERF-002: Add continuous benchmark tracking~~ ✅ COMPLETED
 
-**Block**: Performance  
-**Criticality**: ~~MEDIUM~~ COMPLETED  
+**Block**: Performance
+**Criticality**: ~~MEDIUM~~ COMPLETED
 **Type**: CI
 
 **Description**: ~~Benchmarks run but results not tracked over time. Can't detect gradual regression.~~ Added benchmark metrics extraction and regression detection.
@@ -849,8 +849,8 @@ _All blockers resolved._
 
 ### ~~PERF-003: Add error budget tracking dashboard~~ ✅ COMPLETED
 
-**Block**: Performance  
-**Criticality**: ~~MEDIUM~~ COMPLETED  
+**Block**: Performance
+**Criticality**: ~~MEDIUM~~ COMPLETED
 **Type**: Config
 
 **Description**: ~~Error budget defined in SLO_SPEC but not tracked.~~ Dashboard already exists, added documentation.
@@ -874,8 +874,8 @@ _All blockers resolved._
 
 ### ~~CICD-006: Add container image signing~~ ✅ COMPLETED
 
-**Block**: CI/CD  
-**Criticality**: ~~MEDIUM~~ COMPLETED  
+**Block**: CI/CD
+**Criticality**: ~~MEDIUM~~ COMPLETED
 **Type**: CI
 
 **Description**: ~~Docker images not signed. Can't verify image integrity.~~ Added cosign signing with GitHub OIDC.
@@ -899,8 +899,8 @@ _All blockers resolved._
 
 ### ~~CICD-007: Add canary deployment workflow~~ ✅ COMPLETED
 
-**Block**: CI/CD  
-**Criticality**: ~~MEDIUM~~ COMPLETED  
+**Block**: CI/CD
+**Criticality**: ~~MEDIUM~~ COMPLETED
 **Type**: CI
 
 **Description**: ~~No canary or blue-green deployment support. All-or-nothing releases are risky.~~ Added complete canary deployment manifests and documentation.
@@ -926,8 +926,8 @@ _All blockers resolved._
 
 ### ~~DOC-002: Add API versioning documentation~~ ✅ COMPLETED
 
-**Block**: Docs  
-**Criticality**: ~~MEDIUM~~ COMPLETED  
+**Block**: Docs
+**Criticality**: ~~MEDIUM~~ COMPLETED
 **Type**: Docs
 
 **Description**: ~~No documented API versioning strategy or breaking change policy.~~ Added comprehensive versioning documentation.
@@ -952,8 +952,8 @@ _All blockers resolved._
 
 ### ~~DOC-003: Auto-generate OpenAPI spec~~ ✅ COMPLETED
 
-**Block**: Docs  
-**Criticality**: ~~MEDIUM~~ COMPLETED  
+**Block**: Docs
+**Criticality**: ~~MEDIUM~~ COMPLETED
 **Type**: CI
 
 **Description**: ~~FastAPI generates OpenAPI at runtime but not exported as static file.~~ Script already existed, wired into CI.
@@ -979,8 +979,8 @@ _All blockers resolved._
 
 ### ~~REL-005: Add request prioritization~~ ✅ COMPLETED
 
-**Block**: Core Reliability  
-**Criticality**: ~~LOW~~ COMPLETED  
+**Block**: Core Reliability
+**Criticality**: ~~LOW~~ COMPLETED
 **Type**: Code
 
 **Description**: ~~All requests treated equally. Production may need priority lanes.~~
@@ -1012,8 +1012,8 @@ _All blockers resolved._
 
 ### ~~OBS-006: Add business metrics~~ ✅ COMPLETED
 
-**Block**: Observability  
-**Criticality**: ~~LOW~~ COMPLETED  
+**Block**: Observability
+**Criticality**: ~~LOW~~ COMPLETED
 **Type**: Code
 
 **Description**: ~~Only technical metrics tracked. No business-level metrics (events by type, etc.).~~ Added comprehensive business metrics.
@@ -1039,8 +1039,8 @@ _All blockers resolved._
 
 ### ~~SEC-006: Add mTLS support~~ ✅ COMPLETED
 
-**Block**: Security  
-**Criticality**: ~~LOW~~ COMPLETED  
+**Block**: Security
+**Criticality**: ~~LOW~~ COMPLETED
 **Type**: Code
 
 **Description**: ~~Only server-side TLS. Some enterprises require mutual TLS.~~ Added mTLS module.
@@ -1064,8 +1064,8 @@ _All blockers resolved._
 
 ### ~~SEC-007: Add request signing verification~~ ✅ COMPLETED
 
-**Block**: Security  
-**Criticality**: ~~LOW~~ COMPLETED  
+**Block**: Security
+**Criticality**: ~~LOW~~ COMPLETED
 **Type**: Code
 
 **Description**: ~~No request signature verification. May be needed for high-security environments.~~ Added HMAC-based signing.
@@ -1090,8 +1090,8 @@ _All blockers resolved._
 
 ### ~~PERF-004: Add caching layer~~ ✅ COMPLETED
 
-**Block**: Performance  
-**Criticality**: ~~LOW~~ COMPLETED  
+**Block**: Performance
+**Criticality**: ~~LOW~~ COMPLETED
 **Type**: Code
 
 **Description**: ~~No caching for repeated queries. May improve performance for common patterns.~~ Added unified caching layer.
@@ -1116,8 +1116,8 @@ _All blockers resolved._
 
 ### ~~CICD-008: Add changelog automation~~ ✅ COMPLETED
 
-**Block**: CI/CD  
-**Criticality**: ~~LOW~~ COMPLETED  
+**Block**: CI/CD
+**Criticality**: ~~LOW~~ COMPLETED
 **Type**: CI
 
 **Description**: ~~CHANGELOG manually maintained. Could be automated from commit messages.~~ Added changelog generation job.
@@ -1141,8 +1141,8 @@ _All blockers resolved._
 
 ### ~~DOC-004: Add interactive API playground~~ ✅ COMPLETED
 
-**Block**: Docs  
-**Criticality**: ~~LOW~~ COMPLETED  
+**Block**: Docs
+**Criticality**: ~~LOW~~ COMPLETED
 **Type**: Docs
 
 **Description**: ~~Swagger UI available at /docs but no curated examples.~~ Added API playground documentation.
@@ -1167,8 +1167,8 @@ _All blockers resolved._
 
 ### ~~DOC-005: Add troubleshooting decision tree~~ ✅ COMPLETED
 
-**Block**: Docs  
-**Criticality**: ~~LOW~~ COMPLETED  
+**Block**: Docs
+**Criticality**: ~~LOW~~ COMPLETED
 **Type**: Docs
 
 **Description**: ~~RUNBOOK has troubleshooting but no decision tree for quick diagnosis.~~ Added comprehensive troubleshooting guide.

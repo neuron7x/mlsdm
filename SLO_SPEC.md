@@ -1,8 +1,8 @@
 # Service Level Objectives (SLO) Specification
 
-**Document Version:** 1.0.0  
-**Project Version:** 1.0.0  
-**Last Updated:** November 2025  
+**Document Version:** 1.0.0
+**Project Version:** 1.0.0
+**Last Updated:** November 2025
 **Framework:** Google SRE Book - SLO/SLI/Error Budget Methodology
 
 ## Table of Contents
@@ -47,15 +47,15 @@ SLIs are quantitative measures of service behavior from the user perspective.
 **Measurement:**
 ```prometheus
 # Success rate
-sum(rate(http_requests_total{status=~"2.."}[5m])) 
-/ 
+sum(rate(http_requests_total{status=~"2.."}[5m]))
+/
 sum(rate(http_requests_total[5m]))
 ```
 
-**Good Event:** HTTP 2xx response  
+**Good Event:** HTTP 2xx response
 **Bad Event:** HTTP 5xx response (4xx excluded as user error)
 
-**Data Source:** 
+**Data Source:**
 - Prometheus metric: `http_requests_total{status}`
 - Scrape interval: 15 seconds
 - Retention: 90 days
@@ -69,7 +69,7 @@ sum(rate(http_requests_total[5m]))
 **Measurement:**
 ```prometheus
 # P95 latency
-histogram_quantile(0.95, 
+histogram_quantile(0.95,
   sum(rate(event_processing_time_seconds_bucket[5m])) by (le)
 )
 ```
@@ -93,12 +93,12 @@ histogram_quantile(0.95,
 **Measurement:**
 ```prometheus
 # Accept rate for moral_value >= threshold
-sum(rate(events_accepted_total[5m])) 
-/ 
+sum(rate(events_accepted_total[5m]))
+/
 sum(rate(events_evaluated_total[5m]))
 ```
 
-**Good Event:** Event accepted when moral_value ≥ threshold  
+**Good Event:** Event accepted when moral_value ≥ threshold
 **Bad Event:** Event rejected when moral_value ≥ threshold (false negative)
 
 **Data Source:**
@@ -137,7 +137,7 @@ sum(rate(http_requests_total[1m]))
 # Memory utilization
 process_resident_memory_bytes / memory_limit_bytes
 
-# CPU utilization  
+# CPU utilization
 rate(process_cpu_seconds_total[5m])
 ```
 
@@ -261,7 +261,7 @@ Availability = (Total Requests - 5xx Errors) / Total Requests
 
 **Measurement:**
 ```
-Latency Compliance = 
+Latency Compliance =
   (5-min periods with P95 < 120ms) / (Total 5-min periods)
 ```
 
@@ -291,7 +291,7 @@ Latency Compliance =
 
 **Measurement:**
 ```
-Accept Rate (moral ≥ 0.8) = 
+Accept Rate (moral ≥ 0.8) =
   Accepted(moral ≥ 0.8) / Total(moral ≥ 0.8)
 ```
 
@@ -339,7 +339,7 @@ Degradation = (Latency_at_1000RPS / Latency_at_100RPS) - 1
 
 **Measurement:**
 ```
-Memory Compliance = 
+Memory Compliance =
   (Samples with RSS < 50MB) / (Total Samples)
 ```
 
@@ -527,8 +527,8 @@ The error budget is tracked via Grafana dashboard:
 ```promql
 # Error budget remaining (30-day window)
 1 - (
-  sum(increase(mlsdm_http_requests_total{status=~"5.."}[30d])) 
-  / 
+  sum(increase(mlsdm_http_requests_total{status=~"5.."}[30d]))
+  /
   (sum(increase(mlsdm_http_requests_total[30d])) * 0.001)
 )
 
@@ -770,8 +770,8 @@ process_cpu_seconds_total
 **Availability (28-day rolling):**
 ```python
 availability = (
-    sum(requests[status=2xx]) 
-    / 
+    sum(requests[status=2xx])
+    /
     sum(requests)
 ) * 100
 ```
@@ -779,7 +779,7 @@ availability = (
 **P95 Latency (5-minute window):**
 ```python
 p95_latency = histogram_quantile(
-    0.95, 
+    0.95,
     event_processing_time_seconds_bucket
 )
 ```
@@ -793,10 +793,10 @@ budget_remaining = (
 
 ---
 
-**Document Status:** Production  
-**Review Cycle:** Quarterly  
-**Last Reviewed:** November 2025  
-**Next Review:** February 2026  
+**Document Status:** Production
+**Review Cycle:** Quarterly
+**Last Reviewed:** November 2025
+**Next Review:** February 2026
 **Owner:** SRE Team
 
 ---
@@ -912,7 +912,7 @@ pytest tests/validation/test_moral_filter_effectiveness.py -v
 
 ---
 
-**Document Version**: 2.0 (Verified Baselines)  
-**Document Status**: Production-Ready  
-**Last Updated**: November 24, 2025  
+**Document Version**: 2.0 (Verified Baselines)
+**Document Status**: Production-Ready
+**Last Updated**: November 24, 2025
 **Maintainer**: neuron7x / SRE Team

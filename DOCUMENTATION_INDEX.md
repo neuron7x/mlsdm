@@ -1,8 +1,8 @@
 # Documentation Index
 
-**Document Version:** 1.2.0  
-**Project Version:** 1.2.0  
-**Last Updated:** December 2025  
+**Document Version:** 1.2.0
+**Project Version:** 1.2.0
+**Last Updated:** December 2025
 **Total Documents:** 25+
 
 Complete documentation guide for MLSDM Governed Cognitive Memory v1.2.0.

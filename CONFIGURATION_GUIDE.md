@@ -1,8 +1,8 @@
 # Configuration Guide
 
-**Document Version:** 1.2.0  
-**Project Version:** 1.2.0  
-**Last Updated:** December 2025  
+**Document Version:** 1.2.0
+**Project Version:** 1.2.0
+**Last Updated:** December 2025
 **Status:** Production
 
 Complete guide to configuring MLSDM Governed Cognitive Memory for different deployment scenarios.
@@ -91,7 +91,7 @@ Vector dimension for embeddings.
 - **Type**: Integer
 - **Range**: 2 to 4096
 - **Default**: 384
-- **Common values**: 
+- **Common values**:
   - 384 (sentence-transformers/all-MiniLM-L6-v2)
   - 768 (BERT-base)
   - 1536 (OpenAI text-embedding-ada-002)
@@ -618,7 +618,7 @@ Validation errors provide clear, actionable messages:
 Configuration validation failed for 'config/custom.yaml':
 Decay rates must follow hierarchy: lambda_l3 (0.1) <= lambda_l2 (0.05) <= lambda_l1 (0.5)
 
-Please check your configuration file against the schema documentation 
+Please check your configuration file against the schema documentation
 in src/mlsdm/utils/config_schema.py
 ```
 

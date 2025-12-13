@@ -26,12 +26,12 @@ spec:
   selector:
     matchLabels:
       app: mlsdm-api
-  
+
   # Namespace where the service is located
   namespaceSelector:
     matchNames:
       - mlsdm-production
-  
+
   # Endpoint configuration
   endpoints:
     - port: http
@@ -39,14 +39,14 @@ spec:
       interval: 30s
       scrapeTimeout: 10s
       scheme: http
-      
+
       # Metric relabeling (optional)
       metricRelabelings:
         # Keep only metrics starting with mlsdm_
         - sourceLabels: [__name__]
           regex: 'mlsdm_.*'
           action: keep
-      
+
       # Target relabeling
       relabelings:
         - sourceLabels: [__meta_kubernetes_pod_name]
@@ -75,39 +75,39 @@ spec:
         # Request rate
         - record: mlsdm:requests:rate5m
           expr: sum(rate(mlsdm_events_processed_total[5m]))
-        
+
         # Error rate (with division-by-zero protection)
         - record: mlsdm:error_rate:ratio5m
           expr: |
             sum(rate(mlsdm_requests_total{status=~"5.."}[5m]))
             /
             (sum(rate(mlsdm_requests_total[5m])) > 0 or vector(1))
-        
+
         # P95 latency
         - record: mlsdm:latency_p95:5m
           expr: |
-            histogram_quantile(0.95, 
+            histogram_quantile(0.95,
               sum(rate(mlsdm_processing_latency_milliseconds_bucket[5m])) by (le)
             )
-        
+
         # P99 latency
         - record: mlsdm:latency_p99:5m
           expr: |
-            histogram_quantile(0.99, 
+            histogram_quantile(0.99,
               sum(rate(mlsdm_processing_latency_milliseconds_bucket[5m])) by (le)
             )
-        
+
         # Availability (1 - error rate)
         - record: mlsdm:availability:ratio5m
           expr: 1 - mlsdm:error_rate:ratio5m
-        
+
         # Moral rejection rate
         - record: mlsdm:moral_rejection_rate:ratio5m
           expr: |
             sum(rate(mlsdm_events_rejected_total[5m]))
             /
             (sum(rate(mlsdm_events_processed_total[5m])) + sum(rate(mlsdm_events_rejected_total[5m])))
-        
+
         # Memory utilization ratio
         # Note: 29370000 bytes = ~29.37 MB is the SLO target from SLO_SPEC.md
         - record: mlsdm:memory_utilization:ratio
@@ -128,11 +128,11 @@ spec:
   selector:
     matchLabels:
       app: mlsdm-api
-  
+
   namespaceSelector:
     matchNames:
       - mlsdm-production
-  
+
   podMetricsEndpoints:
     - port: http
       path: /health/metrics

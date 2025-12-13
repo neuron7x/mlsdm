@@ -1,9 +1,9 @@
 # AI Safety Risk Register
 
-**Document Version:** 1.0.0  
-**Project Version:** 1.2.0  
-**Last Updated:** November 2025  
-**Owner:** Principal AI Safety Engineer  
+**Document Version:** 1.0.0
+**Project Version:** 1.2.0
+**Last Updated:** November 2025
+**Owner:** Principal AI Safety Engineer
 **Status:** Active
 
 ---
@@ -102,7 +102,7 @@ Each risk is assessed using the Impact × Likelihood framework and tracked throu
 
 ### R001: Toxic Content Bypass via Threshold Drift
 
-**Category:** Content Safety  
+**Category:** Content Safety
 **Risk Owner:** Safety Team
 
 **Description:**
@@ -126,7 +126,7 @@ Under sustained adversarial input (e.g., 70% toxic content stream), the moral fi
 
 ### R002: Prompt Injection to Bypass Moral Filter
 
-**Category:** Content Safety  
+**Category:** Content Safety
 **Risk Owner:** Safety Team
 
 **Description:**
@@ -154,7 +154,7 @@ Adversarial prompts may attempt to circumvent moral filtering through:
 
 ### R003: Jailbreak via Multi-Turn Manipulation
 
-**Category:** Content Safety  
+**Category:** Content Safety
 **Risk Owner:** Safety Team
 
 **Description:**
@@ -181,7 +181,7 @@ Attackers may use multi-turn conversations to gradually shift model behavior, ex
 
 ### R004: Memory Poisoning via Adversarial Embeddings
 
-**Category:** Behavioral Safety  
+**Category:** Behavioral Safety
 **Risk Owner:** Engineering Team
 
 **Description:**
@@ -207,7 +207,7 @@ Malicious embeddings could be submitted to corrupt memory, causing:
 
 ### R005: Threshold Manipulation via Strategic Inputs
 
-**Category:** Behavioral Safety  
+**Category:** Behavioral Safety
 **Risk Owner:** Safety Team
 
 **Description:**
@@ -233,7 +233,7 @@ Attackers may submit strategic sequences of moral values to manipulate the filte
 
 ### R006: Memory Leakage of Sensitive User Data
 
-**Category:** Behavioral Safety  
+**Category:** Behavioral Safety
 **Risk Owner:** Security Team
 
 **Description:**
@@ -261,7 +261,7 @@ User prompts or responses could be leaked through:
 
 ### R007: Memory Exhaustion / OOM Crash
 
-**Category:** Technical Safety  
+**Category:** Technical Safety
 **Risk Owner:** Engineering Team
 
 **Description:**
@@ -288,7 +288,7 @@ Unbounded memory growth could cause system crashes, especially under:
 
 ### R010: Checkpoint Loading RCE (NeuroLang)
 
-**Category:** Technical Safety  
+**Category:** Technical Safety
 **Risk Owner:** Security Team
 
 **Description:**
@@ -312,7 +312,7 @@ PyTorch checkpoint files can contain arbitrary code that executes during `torch.
 
 ### R015: Hallucination Propagation via Memory
 
-**Category:** Content Safety  
+**Category:** Content Safety
 **Risk Owner:** Safety Team
 
 **Description:**
@@ -339,7 +339,7 @@ Hallucinated content from LLM responses could be stored in memory and retrieved 
 
 ### R018: Indirect Prompt Injection via Context
 
-**Category:** Content Safety  
+**Category:** Content Safety
 **Risk Owner:** Safety Team
 
 **Description:**
@@ -422,7 +422,7 @@ Malicious instructions embedded in retrieved context (from memory or external so
 
 ---
 
-**Document Status:** Active  
-**Classification:** Internal  
-**Last Reviewed:** November 2025  
+**Document Status:** Active
+**Classification:** Internal
+**Last Reviewed:** November 2025
 **Next Review:** February 2026

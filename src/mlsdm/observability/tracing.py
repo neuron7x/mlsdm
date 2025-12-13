@@ -41,6 +41,7 @@ try:
     from opentelemetry.sdk.trace import SpanProcessor, TracerProvider
     from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
     from opentelemetry.trace import SpanKind, Status, StatusCode
+
     OTEL_AVAILABLE = True
 except ImportError:
     OTEL_AVAILABLE = False
@@ -83,6 +84,7 @@ SPAN_ATTR_PREFIX_HTTP = "http."
 # No-op implementations for when OpenTelemetry is not available
 # ---------------------------------------------------------------------------
 
+
 # Helper to get SpanKind values safely
 def _get_span_kind_internal() -> Any:
     """Get SpanKind.INTERNAL if available, else None."""
@@ -90,11 +92,13 @@ def _get_span_kind_internal() -> Any:
         return SpanKind.INTERNAL
     return None
 
+
 def _get_span_kind_server() -> Any:
     """Get SpanKind.SERVER if available, else None."""
     if OTEL_AVAILABLE and SpanKind is not None:
         return SpanKind.SERVER
     return None
+
 
 def _get_span_kind_client() -> Any:
     """Get SpanKind.CLIENT if available, else None."""
@@ -216,9 +220,7 @@ class TracingConfig:
         else:
             self.enabled = os.getenv("OTEL_SDK_DISABLED", "false").lower() != "true"
 
-        self.exporter_type = exporter_type or os.getenv(
-            "OTEL_EXPORTER_TYPE", "console"
-        )
+        self.exporter_type = exporter_type or os.getenv("OTEL_EXPORTER_TYPE", "console")
 
         # Check for MLSDM-specific endpoint first, then fall back to OTEL standard
         mlsdm_endpoint = os.getenv("MLSDM_OTEL_ENDPOINT")
@@ -235,9 +237,7 @@ class TracingConfig:
         # Parse sample rate
         sample_rate_str = os.getenv("OTEL_TRACES_SAMPLER_ARG", "1.0")
         try:
-            self.sample_rate = (
-                sample_rate if sample_rate is not None else float(sample_rate_str)
-            )
+            self.sample_rate = sample_rate if sample_rate is not None else float(sample_rate_str)
         except ValueError:
             self.sample_rate = 1.0
 
@@ -317,7 +317,9 @@ class TracerManager:
             return
 
         if not OTEL_AVAILABLE:
-            logger.info("OpenTelemetry is not installed, tracing disabled. Install with: pip install 'mlsdm[observability]'")
+            logger.info(
+                "OpenTelemetry is not installed, tracing disabled. Install with: pip install 'mlsdm[observability]'"
+            )
             return
 
         if not self._config.enabled:
@@ -397,9 +399,7 @@ class TracerManager:
 
                     return OTLPSpanExporter(endpoint=self._config.otlp_endpoint)
             except ImportError:
-                logger.warning(
-                    "OTLP exporter not available, falling back to console exporter"
-                )
+                logger.warning("OTLP exporter not available, falling back to console exporter")
                 return ConsoleSpanExporter()
 
         if self._config.exporter_type == "jaeger":
@@ -408,9 +408,7 @@ class TracerManager:
 
                 return JaegerExporter()
             except ImportError:
-                logger.warning(
-                    "Jaeger exporter not available, falling back to console exporter"
-                )
+                logger.warning("Jaeger exporter not available, falling back to console exporter")
                 return ConsoleSpanExporter()
 
         return ConsoleSpanExporter()
