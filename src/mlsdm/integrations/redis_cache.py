@@ -7,7 +7,7 @@ Provides Redis-based distributed caching for multi-instance MLSDM deployments.
 import json
 import logging
 import pickle
-from typing import Any, Optional
+from typing import Any, Dict, Optional
 
 import numpy as np
 
@@ -200,7 +200,7 @@ class RedisCache:
             self.logger.error(f"Failed to clear pattern {pattern}: {e}")
             return 0
 
-    def get_stats(self) -> dict[str, Any]:
+    def get_stats(self) -> Dict[str, Any]:
         """Get cache statistics."""
         if self._client is None:
             return {}

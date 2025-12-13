@@ -2,9 +2,10 @@
 Tests for embedding service integration.
 """
 
+from unittest.mock import MagicMock, patch
+
 import numpy as np
 import pytest
-from unittest.mock import patch, MagicMock
 
 from mlsdm.integrations import EmbeddingServiceClient, EmbeddingProvider
 

@@ -108,7 +108,7 @@ class WebhookClient:
             signature = self._generate_signature(payload_json)
             headers["X-Webhook-Signature"] = signature
 
-        # Retry loop
+        # Retry loop with capped exponential backoff
         for attempt in range(self.max_retries):
             try:
                 response = requests.post(
@@ -130,7 +130,10 @@ class WebhookClient:
                     f"Webhook delivery failed (attempt {attempt + 1}/{self.max_retries}): {e}"
                 )
                 if attempt < self.max_retries - 1:
-                    time.sleep(2**attempt)  # Exponential backoff
+                    # Exponential backoff with max 5 seconds and jitter
+                    import random
+                    backoff = min(2**attempt, 5) + random.uniform(0, 0.5)
+                    time.sleep(backoff)
 
         self.logger.error(f"Webhook delivery failed after {self.max_retries} attempts")
         return False

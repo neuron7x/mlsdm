@@ -69,6 +69,7 @@ class SecretsManager:
 
         self.logger = logging.getLogger(__name__)
         self._cache: Dict[str, Any] = {}
+        self._cache_timestamps: Dict[str, float] = {}
 
     def get_secret(self, key: str, default: Optional[str] = None) -> Optional[str]:
         """
@@ -81,9 +82,16 @@ class SecretsManager:
         Returns:
             Secret value or default
         """
-        # Check cache first
+        # Check cache first and validate TTL
         if key in self._cache:
-            return self._cache[key]
+            import time
+            cache_age = time.time() - self._cache_timestamps.get(key, 0)
+            if cache_age < self.cache_ttl:
+                return self._cache[key]
+            else:
+                # Expired, remove from cache
+                del self._cache[key]
+                del self._cache_timestamps[key]
 
         # Fetch from provider
         if self.provider == SecretProvider.ENVIRONMENT:
@@ -98,9 +106,11 @@ class SecretsManager:
             self.logger.error(f"Unsupported provider: {self.provider}")
             return default
 
-        # Cache the result
+        # Cache the result with timestamp
         if value is not None:
+            import time
             self._cache[key] = value
+            self._cache_timestamps[key] = time.time()
 
         return value or default
 
@@ -193,4 +203,5 @@ class SecretsManager:
     def clear_cache(self) -> None:
         """Clear the secrets cache."""
         self._cache.clear()
+        self._cache_timestamps.clear()
         self.logger.info("Secrets cache cleared")
