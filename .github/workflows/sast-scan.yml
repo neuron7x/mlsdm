@@ -35,12 +35,12 @@ jobs:
       - name: Run bandit scan
         run: |
           # Run bandit with SARIF output for GitHub Security
+          # This will fail if medium+ severity issues are found
           bandit -r src/mlsdm \
             -f sarif \
             -o bandit-results.sarif \
             --severity-level medium \
-            --confidence-level medium \
-            || true  # Don't fail yet, check results below
+            --confidence-level medium
 
       - name: Validate Bandit SARIF JSON
         run: |
@@ -83,6 +83,9 @@ jobs:
         with:
           sarif_file: bandit-results.sarif
           category: bandit
+        # INFORMATIONAL: Upload failures should not block the workflow
+        # The actual security scan already passed/failed above
+        continue-on-error: true
 
       - name: Generate readable report
         if: always()
@@ -105,9 +108,8 @@ jobs:
     name: Semgrep SAST Scan
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    # Semgrep is optional for now - bandit is the primary SAST tool
-    # Remove continue-on-error once semgrep rules are tuned to minimize false positives
-    continue-on-error: true
+    # SECURITY GATE: Semgrep is now a blocking check
+    # Bandit remains the primary SAST tool, but Semgrep provides additional coverage
 
     steps:
       - name: Checkout code
@@ -128,4 +130,6 @@ jobs:
         with:
           sarif_file: semgrep.sarif
           category: semgrep
+        # INFORMATIONAL: Upload failures should not block the workflow
+        # The actual security scan already passed/failed above
         continue-on-error: true
