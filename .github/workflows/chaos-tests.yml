@@ -35,32 +35,31 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
+      - name: Set up Python ${{ matrix.python-version }} with uv
+        uses: astral-sh/uv-action@v3
         with:
           python-version: ${{ matrix.python-version }}
+          enable-cache: true
 
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -e ".[dev]"
+      - name: Sync dependencies from lockfile
+        run: uv sync --all-extras --frozen
 
       - name: Run chaos tests - Memory Pressure
         if: ${{ github.event.inputs.test_category == 'all' || github.event.inputs.test_category == 'memory' || github.event_name == 'schedule' }}
         run: |
-          pytest tests/chaos/test_memory_pressure.py -v -m chaos --tb=short --junitxml=chaos-memory-results.xml
+          uv run pytest tests/chaos/test_memory_pressure.py -v -m chaos --tb=short --junitxml=chaos-memory-results.xml
         continue-on-error: true
 
       - name: Run chaos tests - Slow LLM
         if: ${{ github.event.inputs.test_category == 'all' || github.event.inputs.test_category == 'llm' || github.event_name == 'schedule' }}
         run: |
-          pytest tests/chaos/test_slow_llm.py -v -m chaos --tb=short --junitxml=chaos-llm-results.xml
+          uv run pytest tests/chaos/test_slow_llm.py -v -m chaos --tb=short --junitxml=chaos-llm-results.xml
         continue-on-error: true
 
       - name: Run chaos tests - Network Timeout
         if: ${{ github.event.inputs.test_category == 'all' || github.event.inputs.test_category == 'network' || github.event_name == 'schedule' }}
         run: |
-          pytest tests/chaos/test_network_timeout.py -v -m chaos --tb=short --junitxml=chaos-network-results.xml
+          uv run pytest tests/chaos/test_network_timeout.py -v -m chaos --tb=short --junitxml=chaos-network-results.xml
         continue-on-error: true
 
       - name: Upload test results

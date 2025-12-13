@@ -38,28 +38,28 @@ classifiers = [
 ]
 requires-python = ">=3.10"
 dependencies = [
-    "numpy>=2.0.0",
-    "fastapi>=0.110.0",
-    "uvicorn>=0.29.0",
-    "pyyaml>=6.0.1",
-    "pydantic>=2.0.0",
+    "numpy>=2.0.0,<3.0.0",
+    "fastapi>=0.110.0,<1.0.0",
+    "uvicorn>=0.29.0,<1.0.0",
+    "pyyaml>=6.0.1,<7.0.0",
+    "pydantic>=2.0.0,<3.0.0",
     "prometheus-client>=0.20.0",
     "tenacity>=8.2.3",
-    "requests>=2.32.3",
-    "psutil>=5.9.0",
+    "requests>=2.32.3,<3.0.0",
+    "psutil>=5.9.0,<6.0.0",
 ]
 
 [project.optional-dependencies]
 observability = [
-    "opentelemetry-api>=1.24.0",
-    "opentelemetry-sdk>=1.24.0",
-    "pyjwt>=2.8.0",
+    "opentelemetry-api>=1.24.0,<2.0.0",
+    "opentelemetry-sdk>=1.24.0,<2.0.0",
+    "pyjwt>=2.8.0,<3.0.0",
 ]
 neurolang = [
-    "torch>=2.0.0",
+    "torch>=2.0.0,<3.0.0",
 ]
 embeddings = [
-    "sentence-transformers>=3.0.0",
+    "sentence-transformers>=3.0.0,<4.0.0",
 ]
 dev = [
     "pytest>=8.0.0",
@@ -71,8 +71,12 @@ dev = [
     "deptry>=0.12.0",
     "locust>=2.29.1",
     "httpx>=0.27.0",
-    "types-PyYAML>=6.0.0",
-    "types-requests>=2.31.0",
+    "types-PyYAML>=6.0.1",
+    "types-requests>=2.32.0",
+    "bandit[sarif]>=1.7.9",
+    "pip-audit>=2.10.0",
+    "build>=1.2.2",
+    "twine>=5.1.1",
 ]
 docs = [
     "sphinx>=7.0.0",
@@ -84,6 +88,14 @@ test = [
     "pytest-cov>=4.1.0",
     "hypothesis>=6.98.3",
     "httpx>=0.27.0",
+]
+security = [
+    "certifi>=2024.7.4",
+    "cryptography>=43.0.1",
+    "jinja2>=3.1.6",
+    "urllib3>=2.2.2",
+    "setuptools>=78.1.1",
+    "idna>=3.7",
 ]
 visualization = [
     "matplotlib>=3.8.4",
@@ -249,7 +261,7 @@ where = ["src"]
 
 [tool.deptry]
 # Exclude dev/test/docs dependencies from being treated as main dependencies
-exclude = ["tests", "docs"]
+exclude = ["tests", "docs", "benchmarks", "examples", "scripts", ".venv"]
 # Tell deptry to only check dependencies against src/ code, not test/docs code
 pep621_dev_dependency_groups = ["dev", "test", "docs", "visualization"]
 
@@ -257,12 +269,13 @@ pep621_dev_dependency_groups = ["dev", "test", "docs", "visualization"]
 # Allow certain missing imports that are optional/conditional
 DEP001 = ["openai", "anthropic", "fslgs", "redis"]
 # Allow transitive dependencies that are re-exported by parent packages
-DEP003 = ["starlette", "typing_extensions"]
+DEP003 = ["starlette", "typing_extensions", "mlsdm"]
 # Allow certain optional dependencies that are defined but not yet used in src/
-DEP002 = ["sentence-transformers"]
+DEP002 = ["sentence-transformers", "certifi", "cryptography", "jinja2", "urllib3", "setuptools", "idna"]
 
 [tool.deptry.package_module_name_map]
 opentelemetry-api = "opentelemetry"
 opentelemetry-sdk = "opentelemetry"
 pyjwt = "jwt"
 sentence-transformers = "sentence_transformers"
+pyyaml = "yaml"
