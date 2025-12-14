@@ -109,11 +109,27 @@ class EmbeddingServiceClient:
         return np.array(embeddings)
 
     def _embed_local(self, text: str) -> np.ndarray:
-        """Generate random embedding (placeholder for local model)."""
-        # In production, this would load a local sentence transformer model
-        # For now, return random vector for compatibility
-        self.logger.debug(f"Generating local embedding for text of length {len(text)}")
-        return np.random.randn(self.dimension).astype(np.float32)
+        """Generate deterministic pseudo-embedding from text hash."""
+        # Create deterministic embedding based on text hash for reproducibility
+        # This replaces random embedding to ensure consistent results
+        import hashlib
+        
+        # Hash text to get deterministic seed
+        text_bytes = text.encode('utf-8')
+        hash_bytes = hashlib.blake2b(text_bytes, digest_size=32).digest()
+        seed = int.from_bytes(hash_bytes[:8], 'big') % (2**32)
+        
+        # Generate deterministic pseudo-embedding
+        rng = np.random.default_rng(seed)
+        embedding = rng.standard_normal(self.dimension).astype(np.float32)
+        
+        # Normalize to unit length for consistency with real embeddings
+        norm = np.linalg.norm(embedding)
+        if norm > 0:
+            embedding = embedding / norm
+            
+        self.logger.debug(f"Generated deterministic local embedding for text of length {len(text)}")
+        return embedding
 
     def _embed_openai(self, text: str) -> np.ndarray:
         """Generate embedding using OpenAI API."""

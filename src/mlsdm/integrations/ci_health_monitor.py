@@ -110,20 +110,23 @@ class CIHealthMonitor:
             self.logger.warning("GitHub token or repository not configured")
             return CIStatus.UNKNOWN
 
-        # Validate repository format to prevent injection
+        # Validate and parse repository format to prevent injection
         if "/" not in self.repository or self.repository.count("/") != 1:
             self.logger.error(f"Invalid repository format: {self.repository}")
             return CIStatus.UNKNOWN
 
         try:
-            # Use proper URL encoding
+            # Split owner and repo, then URL encode separately
             from urllib.parse import quote
-            repo_encoded = quote(self.repository, safe="")
+            owner, repo = self.repository.split("/", 1)
+            owner_encoded = quote(owner, safe="")
+            repo_encoded = quote(repo, safe="")
             workflow_encoded = quote(workflow_name, safe="")
-            url = f"https://api.github.com/repos/{repo_encoded}/actions/workflows/{workflow_encoded}/runs"
+            url = f"https://api.github.com/repos/{owner_encoded}/{repo_encoded}/actions/workflows/{workflow_encoded}/runs"
             headers = {
                 "Authorization": f"Bearer {self.github_token}",
                 "Accept": "application/vnd.github.v3+json",
+                "User-Agent": "MLSDM-CIHealthMonitor/1.0",
             }
             response = requests.get(url, headers=headers, timeout=10)
             response.raise_for_status()
@@ -134,15 +137,17 @@ class CIHealthMonitor:
 
             latest_run = data["workflow_runs"][0]
             conclusion = latest_run.get("conclusion")
+            status = latest_run.get("status")
 
-            if conclusion == "success":
+            # Map status/conclusion to CIStatus
+            if status == "in_progress" or status == "queued":
+                return CIStatus.PENDING
+            elif conclusion == "success":
                 return CIStatus.SUCCESS
             elif conclusion == "failure":
                 return CIStatus.FAILURE
             elif conclusion == "cancelled":
                 return CIStatus.CANCELLED
-            elif latest_run.get("status") == "in_progress":
-                return CIStatus.PENDING
             else:
                 return CIStatus.UNKNOWN
 

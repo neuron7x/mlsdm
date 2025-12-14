@@ -9,6 +9,7 @@ import json
 import logging
 import os
 import re
+import threading
 from enum import Enum
 from typing import Any, Dict, Optional
 
@@ -71,6 +72,7 @@ class SecretsManager:
         self.logger = logging.getLogger(__name__)
         self._cache: Dict[str, Any] = {}
         self._cache_timestamps: Dict[str, float] = {}
+        self._cache_lock = threading.RLock()
 
     def get_secret(self, key: str, default: Optional[str] = None) -> Optional[str]:
         """
@@ -93,19 +95,20 @@ class SecretsManager:
             self.logger.error(f"Invalid secret name format: {key}")
             raise ValueError(f"Invalid secret name format: {key}. Only alphanumeric, underscore, hyphen, forward slash, and dot characters are allowed (no path traversal).")
         
-        # Check cache first and validate TTL
-        if key in self._cache:
-            import time
-            timestamp = self._cache_timestamps.get(key)
-            if timestamp is not None:
-                cache_age = time.time() - timestamp
-                if cache_age < self.cache_ttl:
-                    return self._cache[key]
-            # Expired or invalid timestamp, remove from cache
+        # Check cache first and validate TTL (with thread-safety)
+        with self._cache_lock:
             if key in self._cache:
-                del self._cache[key]
-            if key in self._cache_timestamps:
-                del self._cache_timestamps[key]
+                import time
+                timestamp = self._cache_timestamps.get(key)
+                if timestamp is not None:
+                    cache_age = time.time() - timestamp
+                    if cache_age < self.cache_ttl:
+                        return self._cache[key]
+                # Expired or invalid timestamp, remove from cache
+                if key in self._cache:
+                    del self._cache[key]
+                if key in self._cache_timestamps:
+                    del self._cache_timestamps[key]
 
         # Fetch from provider
         if self.provider == SecretProvider.ENVIRONMENT:
@@ -120,11 +123,12 @@ class SecretsManager:
             self.logger.error(f"Unsupported provider: {self.provider}")
             return default
 
-        # Cache the result with timestamp
+        # Cache the result with timestamp (thread-safe)
         if value is not None:
             import time
-            self._cache[key] = value
-            self._cache_timestamps[key] = time.time()
+            with self._cache_lock:
+                self._cache[key] = value
+                self._cache_timestamps[key] = time.time()
 
         return value or default
 
@@ -215,7 +219,8 @@ class SecretsManager:
             return None
 
     def clear_cache(self) -> None:
-        """Clear the secrets cache."""
-        self._cache.clear()
-        self._cache_timestamps.clear()
+        """Clear the secrets cache (thread-safe)."""
+        with self._cache_lock:
+            self._cache.clear()
+            self._cache_timestamps.clear()
         self.logger.info("Secrets cache cleared")
