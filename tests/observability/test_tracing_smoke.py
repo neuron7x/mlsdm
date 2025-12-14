@@ -8,15 +8,9 @@ NOTE: These tests require the OpenTelemetry SDK to be installed.
 Install with: pip install "mlsdm[observability]"
 """
 
+import importlib.util
+
 import pytest
-
-# Check if OpenTelemetry is available
-try:
-    import opentelemetry.trace  # noqa: F401
-
-    OTEL_AVAILABLE = True
-except ImportError:
-    OTEL_AVAILABLE = False
 
 from mlsdm.observability.tracing import (
     TracerManager,
@@ -32,6 +26,9 @@ from mlsdm.observability.tracing import (
     trace_request,
     trace_speech_governance,
 )
+
+# Check if OpenTelemetry is available
+OTEL_AVAILABLE = importlib.util.find_spec("opentelemetry") is not None
 
 # Skip all tests in this module if OpenTelemetry is not available
 pytestmark = pytest.mark.skipif(
