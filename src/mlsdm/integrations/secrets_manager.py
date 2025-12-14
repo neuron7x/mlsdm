@@ -8,6 +8,7 @@ and other secret management systems.
 import json
 import logging
 import os
+import re
 from enum import Enum
 from typing import Any, Dict, Optional
 
@@ -81,7 +82,17 @@ class SecretsManager:
 
         Returns:
             Secret value or default
+            
+        Raises:
+            ValueError: If secret name contains invalid characters
         """
+        # Validate secret name to prevent injection attacks
+        # Allow alphanumeric, underscores, hyphens, forward slashes, and single dots (not ..)
+        # Disallow path traversal (..), shell special chars, etc.
+        if not re.match(r'^[\w\-/]+(?:\.[\w\-/]+)*$', key) or '..' in key:
+            self.logger.error(f"Invalid secret name format: {key}")
+            raise ValueError(f"Invalid secret name format: {key}. Only alphanumeric, underscore, hyphen, forward slash, and dot characters are allowed (no path traversal).")
+        
         # Check cache first and validate TTL
         if key in self._cache:
             import time

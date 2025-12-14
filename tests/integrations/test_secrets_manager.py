@@ -84,3 +84,43 @@ class TestSecretsManager:
 
             manager.clear_cache()
             assert len(manager._cache) == 0
+
+    def test_invalid_secret_name_injection_prevention(self) -> None:
+        """Test that invalid secret names are rejected to prevent injection."""
+        manager = SecretsManager(provider=SecretProvider.ENVIRONMENT)
+
+        # Test various injection attempts
+        invalid_names = [
+            "../../../etc/passwd",  # Path traversal
+            "secret; rm -rf /",  # Command injection
+            "secret && malicious",  # Command chaining
+            "secret | cat",  # Pipe injection
+            "secret`whoami`",  # Command substitution
+            "secret$(whoami)",  # Command substitution
+            "secret<script>",  # Script injection
+            "secret\x00null",  # Null byte injection
+        ]
+
+        for invalid_name in invalid_names:
+            with pytest.raises(ValueError, match="Invalid secret name format"):
+                manager.get_secret(invalid_name)
+
+    def test_valid_secret_names(self) -> None:
+        """Test that valid secret names are accepted."""
+        manager = SecretsManager(provider=SecretProvider.ENVIRONMENT)
+
+        valid_names = [
+            "simple_secret",
+            "app/api_key",
+            "mlsdm/openai_api_key",
+            "my-app/db-password",
+            "service.config.key",
+            "APP_SECRET_123",
+        ]
+
+        for valid_name in valid_names:
+            # Should not raise ValueError
+            with patch.dict(os.environ, {valid_name: "test"}):
+                result = manager.get_secret(valid_name, default="default")
+                # Either returns the value or default, but doesn't raise
+                assert result in ["test", "default"]

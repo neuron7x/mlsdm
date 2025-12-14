@@ -60,6 +60,15 @@ neurolang = [
 embeddings = [
     "sentence-transformers>=3.0.0",
 ]
+integrations = [
+    # Core integration dependencies (required for most integrations)
+    "requests>=2.32.3",  # Already in main dependencies but listed for clarity
+    # Optional: Cloud provider SDKs (install separately as needed)
+    # "boto3>=1.28.0",  # For AWS Secrets Manager
+    # "azure-keyvault-secrets>=4.7.0",  # For Azure Key Vault
+    # "azure-identity>=1.15.0",  # For Azure authentication
+    # "redis>=4.5.0",  # For Redis cache
+]
 dev = [
     "pytest>=8.0.0",
     "pytest-asyncio>=0.23.0",
