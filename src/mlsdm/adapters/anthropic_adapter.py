@@ -72,8 +72,9 @@ def build_anthropic_llm_adapter() -> Callable[[str, int], str]:
 
             # Extract the text from the response
             if response.content and len(response.content) > 0:
-                # Type ignore: anthropic API response attributes not fully typed in stubs
-                return response.content[0].text  # type: ignore[no-any-return]
+                content_block = response.content[0]
+                # Anthropic returns ContentBlock objects with a text attribute
+                return getattr(content_block, "text", "")
             return ""
 
         except Exception as e:

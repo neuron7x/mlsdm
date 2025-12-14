@@ -105,6 +105,9 @@ def example_anthropic_conversation():
     llm_fn = build_anthropic_llm_adapter()
     wrapper = create_llm_wrapper(llm_generate_fn=llm_fn)
 
+    # Response preview length for output formatting
+    RESPONSE_PREVIEW_LENGTH = 150
+
     conversation = [
         ("What is cognitive architecture?", 0.9),
         ("How does it relate to AI safety?", 0.85),
@@ -117,11 +120,15 @@ def example_anthropic_conversation():
         result = wrapper.generate(
             prompt=prompt,
             moral_value=moral_value,
-            max_tokens=150,
+            max_tokens=RESPONSE_PREVIEW_LENGTH,
         )
 
         if result["accepted"]:
-            response_preview = result["response"][:150] + "..." if len(result["response"]) > 150 else result["response"]
+            response_preview = (
+                result["response"][:RESPONSE_PREVIEW_LENGTH] + "..."
+                if len(result["response"]) > RESPONSE_PREVIEW_LENGTH
+                else result["response"]
+            )
             print(f"Claude: {response_preview}")
         else:
             print(f"[Rejected: {result.get('note')}]")
