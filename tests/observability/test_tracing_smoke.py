@@ -3,7 +3,12 @@ Smoke tests for OpenTelemetry tracing.
 
 These tests verify that the tracing infrastructure is properly configured
 and creates spans for key operations.
+
+NOTE: These tests require the OpenTelemetry SDK to be installed.
+Install with: pip install "mlsdm[observability]"
 """
+
+import importlib.util
 
 import pytest
 
@@ -20,6 +25,15 @@ from mlsdm.observability.tracing import (
     trace_moral_filter,
     trace_request,
     trace_speech_governance,
+)
+
+# Check if OpenTelemetry is available
+OTEL_AVAILABLE = importlib.util.find_spec("opentelemetry") is not None
+
+# Skip all tests in this module if OpenTelemetry is not available
+pytestmark = pytest.mark.skipif(
+    not OTEL_AVAILABLE,
+    reason="OpenTelemetry SDK not installed. Install with: pip install 'mlsdm[observability]'",
 )
 
 
