@@ -104,25 +104,32 @@ jobs:
     name: Semgrep SAST Scan
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    # SECURITY GATE: Semgrep is now a blocking check
-    # Bandit remains the primary SAST tool, but Semgrep provides additional coverage
-    # Note: semgrep-action exits with non-zero code on findings by default
+    # SECURITY GATE: Semgrep is a blocking check
+    # Uses native CLI via official container image (supply-chain secure)
+    # Container image pinned by digest for reproducibility
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Run Semgrep
-        # Pinned to SHA for supply-chain security (v1.102.0)
-        uses: semgrep/semgrep-action@713efdd345f3b39f02f75b8ed6e4db044cde6c4d
-        with:
-          config: >-
-            p/python
-            p/security-audit
-            p/owasp-top-ten
-          generateSarif: "1"
-        # This action fails by default when security findings are detected
-        # No need for explicit exit-code handling
+      - name: Run Semgrep (SECURITY GATE)
+        # Uses official Semgrep container image pinned by digest
+        # Replaces third-party action for better supply-chain control
+        run: |
+          docker run --rm \
+            -v "${GITHUB_WORKSPACE}:/src" \
+            -w /src \
+            returntocorp/semgrep:1.102.0@sha256:cef085245254d15c66d96be413c730f0b458823a1d0c39afbc12f705b664ce8f \
+            semgrep scan \
+              --config p/python \
+              --config p/security-audit \
+              --config p/owasp-top-ten \
+              --sarif \
+              --sarif-output semgrep.sarif \
+              --error \
+              .
+        # --error flag makes semgrep exit with non-zero if findings detected
+        # This is the SECURITY GATE - findings block the build
 
       - name: Upload Semgrep SARIF
         if: always()
@@ -193,14 +200,23 @@ jobs:
         with:
           fetch-depth: 0  # Full history for secret detection
 
-      - name: Run Gitleaks
-        # Pinned to SHA for supply-chain security (v8.21.2)
-        uses: gitleaks/gitleaks-action@44c470ffc35e35545838ef9c8c209d75e23baebd
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITLEAKS_NOTIFY_USER_LIST: ""  # Disable user notifications
-        # SECURITY GATE: Fails if secrets are detected
-        # Output shows file paths and rule IDs only (no secret values)
+      - name: Run Gitleaks (SECURITY GATE)
+        # Uses official Gitleaks container image pinned by digest
+        # Replaces third-party action for better supply-chain control
+        run: |
+          docker run --rm \
+            -v "${GITHUB_WORKSPACE}:/src" \
+            -w /src \
+            zricethezav/gitleaks:v8.21.2@sha256:0e99e8821643ea5b235718642b93bb32486af9c8162c8b8731f7cbdc951a7f46 \
+            detect \
+              --source=/src \
+              --verbose \
+              --redact \
+              --report-format=sarif \
+              --report-path=/src/gitleaks-results.sarif \
+              --exit-code=1
+        # --exit-code=1 ensures non-zero exit on findings (SECURITY GATE)
+        # --redact prevents secret values from appearing in logs
 
       - name: Generate secrets scan summary
         if: always()
@@ -209,7 +225,7 @@ jobs:
           echo "" >> secrets-scan-summary.md
           echo "Gitleaks scan completed at: $(date -u)" >> secrets-scan-summary.md
           echo "" >> secrets-scan-summary.md
-          if [ -f "results.sarif" ]; then
+          if [ -f "gitleaks-results.sarif" ]; then
             echo "Results file generated - check SARIF for details" >> secrets-scan-summary.md
           else
             echo "No SARIF output file found (this may be normal if no secrets detected)" >> secrets-scan-summary.md
@@ -222,4 +238,6 @@ jobs:
           name: secrets-scan-report
           path: |
             secrets-scan-summary.md
+            gitleaks-results.sarif
           retention-days: 30
+        continue-on-error: true

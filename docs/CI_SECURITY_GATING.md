@@ -25,9 +25,9 @@ These jobs **BLOCK** merges and releases if they fail:
 | Tool | Workflow | Job/Step | Gate Type | Status |
 |------|----------|----------|-----------|--------|
 | **Bandit (HIGH)** | `sast-scan.yml` | `bandit` / Check for high severity issues | BLOCKING | ✅ No `continue-on-error` |
-| **Semgrep** | `sast-scan.yml` | `semgrep` / Run Semgrep | BLOCKING | ✅ No `continue-on-error` |
+| **Semgrep (container)** | `sast-scan.yml` | `semgrep` / Run Semgrep | BLOCKING | ✅ No `continue-on-error` |
 | **pip-audit** | `sast-scan.yml` | `dependency-audit` / Run pip-audit | BLOCKING | ✅ No `continue-on-error` |
-| **Gitleaks** | `sast-scan.yml` | `secrets-scan` / Run Gitleaks | BLOCKING | ✅ No `continue-on-error` |
+| **Gitleaks (container)** | `sast-scan.yml` | `secrets-scan` / Run Gitleaks | BLOCKING | ✅ No `continue-on-error` |
 | **pip-audit** | `ci-neuro-cognitive-engine.yml` | `security` / Run pip-audit | BLOCKING | ✅ No `continue-on-error` |
 | **pip-audit** | `prod-gate.yml` | `preflight` / Security vulnerability scan | BLOCKING | ✅ No `continue-on-error` |
 | **Trivy** | `release.yml` | `security-scan` / Run Trivy | BLOCKING | ✅ No `continue-on-error` |
@@ -47,12 +47,13 @@ These jobs **BLOCK** merges and releases if they fail:
 
 #### Semgrep SAST Scan (CRITICAL GATE)
 - **Job:** `semgrep`
-- **Tool:** Semgrep with security rulesets
+- **Tool:** Semgrep CLI via container image (pinned by digest)
+- **Container:** `returntocorp/semgrep:1.102.0@sha256:cef085245254d15c66d96be413c730f0b458823a1d0c39afbc12f705b664ce8f`
 - **Rulesets:** `p/python`, `p/security-audit`, `p/owasp-top-ten`
 - **Blocks on:** Any security finding from configured rulesets
-- **Exit behavior:** semgrep-action exits with non-zero code when findings are detected
+- **Exit behavior:** `--error` flag ensures non-zero exit code on findings
 - **Status:** ✅ BLOCKING (no `continue-on-error`)
-- **Note:** Semgrep action is pinned to SHA for supply-chain security
+- **Note:** Uses native CLI via container image for better supply-chain control
 
 ### 2. Dependency Vulnerability Scanning (CRITICAL GATE)
 
@@ -76,12 +77,13 @@ These jobs **BLOCK** merges and releases if they fail:
 
 #### Gitleaks Secrets Scan
 - **Job:** `secrets-scan`
-- **Tool:** Gitleaks (pinned to SHA)
+- **Tool:** Gitleaks CLI via container image (pinned by digest)
+- **Container:** `zricethezav/gitleaks:v8.21.2@sha256:0e99e8821643ea5b235718642b93bb32486af9c8162c8b8731f7cbdc951a7f46`
 - **Threshold:** Any detected secret
 - **Blocks on:** Committed secrets, API keys, tokens
-- **Exit behavior:** Non-zero exit code when secrets are detected
+- **Exit behavior:** `--exit-code=1` ensures non-zero exit when secrets are detected
 - **Status:** ✅ BLOCKING (no `continue-on-error`)
-- **Note:** Scans full git history; outputs file paths and rule IDs only (no secret values)
+- **Note:** Uses native CLI via container image; `--redact` prevents secret values from appearing in logs
 
 ### 4. Container Image Vulnerability Scanning (CRITICAL GATE)
 
