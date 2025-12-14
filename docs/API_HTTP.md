@@ -303,7 +303,7 @@ result = client.infer(
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `CONFIG_PATH` | `config/default_config.yaml` | Configuration file path |
-| `LLM_BACKEND` | `local_stub` | LLM backend (local_stub, openai) |
+| `LLM_BACKEND` | `local_stub` | LLM backend (local_stub, openai, anthropic) |
 | `DISABLE_RATE_LIMIT` | `0` | Set to `1` to disable rate limiting |
 | `OTEL_SDK_DISABLED` | `false` | Disable OpenTelemetry tracing |
 | `OTEL_EXPORTER_TYPE` | `none` | Tracing exporter (console, otlp, jaeger) |
