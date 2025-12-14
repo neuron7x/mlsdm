@@ -292,7 +292,8 @@ class TestPolicyWorkflowAlignment:
             content = yaml.safe_load(f)
 
         jobs = content.get("jobs", {})
-        sha_pattern = re.compile(r"@[a-f0-9]{40}$")
+        # Support both SHA-1 (40 chars) and SHA-256 (64 chars) commit hashes
+        sha_pattern = re.compile(r"@[a-f0-9]{40,64}$")
 
         third_party_actions = []
         for job_name, job_config in jobs.items():

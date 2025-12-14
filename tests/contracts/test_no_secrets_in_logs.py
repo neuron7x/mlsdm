@@ -282,9 +282,13 @@ class TestSecureModeEnforcement:
         """Verify MLSDM_SECURE_MODE environment variable is respected."""
         from mlsdm.security.payload_scrubber import is_secure_mode
 
-        # Default should be False
-        orig_value = os.environ.pop("MLSDM_SECURE_MODE", None)
+        # Save original value using get() to avoid modifying during lookup
+        orig_value = os.environ.get("MLSDM_SECURE_MODE")
         try:
+            # Clear the env var for testing
+            if "MLSDM_SECURE_MODE" in os.environ:
+                del os.environ["MLSDM_SECURE_MODE"]
+
             assert is_secure_mode() is False
 
             os.environ["MLSDM_SECURE_MODE"] = "1"
@@ -297,6 +301,7 @@ class TestSecureModeEnforcement:
             assert is_secure_mode() is False
 
         finally:
+            # Restore original value
             if orig_value is not None:
                 os.environ["MLSDM_SECURE_MODE"] = orig_value
             elif "MLSDM_SECURE_MODE" in os.environ:
