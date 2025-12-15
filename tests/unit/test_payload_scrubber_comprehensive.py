@@ -13,8 +13,6 @@ This test module expands coverage to include:
 import os
 from unittest.mock import patch
 
-import pytest
-
 from mlsdm.security.payload_scrubber import (
     DEFAULT_SECRET_KEYS,
     EMAIL_PATTERN,
@@ -26,7 +24,6 @@ from mlsdm.security.payload_scrubber import (
     scrub_log_record,
     scrub_request_payload,
     scrub_text,
-    should_log_payload,
 )
 
 

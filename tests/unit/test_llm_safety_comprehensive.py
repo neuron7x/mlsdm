@@ -11,7 +11,7 @@ This test module expands coverage to include:
 from __future__ import annotations
 
 import logging
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -21,7 +21,6 @@ from mlsdm.security.llm_safety import (
     SafetyResult,
     SafetyRiskLevel,
     SafetyViolation,
-    _analyzer,
     analyze_prompt,
     filter_output,
     get_llm_safety_analyzer,

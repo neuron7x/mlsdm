@@ -24,7 +24,6 @@ from mlsdm.security.signing import (
     SigningConfig,
     SigningMiddleware,
     compute_signature,
-    generate_signature,
     parse_signature_header,
     verify_signature,
 )

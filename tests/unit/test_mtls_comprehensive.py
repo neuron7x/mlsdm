@@ -245,7 +245,7 @@ class TestMTLSMiddlewareDispatch:
         mock_request.state = MagicMock()
 
         mock_call_next = AsyncMock(return_value=MagicMock())
-        result = await middleware.dispatch(mock_request, mock_call_next)
+        await middleware.dispatch(mock_request, mock_call_next)
         assert mock_request.state.client_cert is None
 
     @pytest.mark.asyncio
