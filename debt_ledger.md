@@ -7,3 +7,7 @@ DL-001
 - Smallest fix: Reduce magnitude of the test vectors or guard the computation (e.g., normalization/clipping) to avoid overflow or mark the warning as expected.
 - Proof command: source .venv/bin/activate && make test
 - Risk: Changing test data or numerical handling could hide real overflow issues or alter safety checks on extreme inputs.
+- Date: 2025-12-15
+- Owner: @copilot
+- Status: open
+- Next action: Decide whether to downscale vectors or mark the warning as expected, then rerun make test.

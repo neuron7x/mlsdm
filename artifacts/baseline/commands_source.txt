@@ -2,4 +2,4 @@ Makefile (lines 43-50):
 - test: pytest --ignore=tests/load
 - lint: ruff check src tests
 - type: mypy src/mlsdm
-Source: /home/runner/work/mlsdm/mlsdm/Makefile
+Source: Makefile
