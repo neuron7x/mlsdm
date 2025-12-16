@@ -13,6 +13,8 @@ from typing import Any
 
 import numpy as np
 
+from .math_constants import safe_normalize
+
 
 @dataclass
 class CoherenceMetrics:
@@ -93,8 +95,8 @@ class CoherenceSafetyAnalyzer:
             for j in range(len(window) - 1):
                 if len(window[j]) > 0 and len(window[j + 1]) > 0:
                     # Compare first vectors from consecutive retrievals
-                    v1 = window[j][0] / (np.linalg.norm(window[j][0]) + 1e-9)
-                    v2 = window[j + 1][0] / (np.linalg.norm(window[j + 1][0]) + 1e-9)
+                    v1 = safe_normalize(window[j][0])
+                    v2 = safe_normalize(window[j + 1][0])
                     sim = np.dot(v1, v2)
                     sims.append(sim)
             if sims:
@@ -126,13 +128,13 @@ class CoherenceSafetyAnalyzer:
             if len(retrieved) == 0:
                 continue
 
-            # Normalize query
-            q_norm = query / (np.linalg.norm(query) + 1e-9)
+            # Normalize query using safe_normalize for numerical stability
+            q_norm = safe_normalize(query)
 
             # Compute average similarity to retrieved vectors
             sims = []
             for ret_vec in retrieved:
-                r_norm = ret_vec / (np.linalg.norm(ret_vec) + 1e-9)
+                r_norm = safe_normalize(ret_vec)
                 sim = np.dot(q_norm, r_norm)
                 sims.append(sim)
 
@@ -158,13 +160,13 @@ class CoherenceSafetyAnalyzer:
         if not wake_retrievals or not sleep_retrievals:
             return 0.0
 
-        # Compute centroids
-        wake_centroid = np.mean([v / (np.linalg.norm(v) + 1e-9) for v in wake_retrievals], axis=0)
-        sleep_centroid = np.mean([v / (np.linalg.norm(v) + 1e-9) for v in sleep_retrievals], axis=0)
+        # Compute centroids using safe normalization
+        wake_centroid = np.mean([safe_normalize(v) for v in wake_retrievals], axis=0)
+        sleep_centroid = np.mean([safe_normalize(v) for v in sleep_retrievals], axis=0)
 
         # Normalize centroids
-        wake_centroid = wake_centroid / (np.linalg.norm(wake_centroid) + 1e-9)
-        sleep_centroid = sleep_centroid / (np.linalg.norm(sleep_centroid) + 1e-9)
+        wake_centroid = safe_normalize(wake_centroid)
+        sleep_centroid = safe_normalize(sleep_centroid)
 
         # Distance between centroids (converted to 0-1 score)
         cosine_sim = np.dot(wake_centroid, sleep_centroid)
@@ -197,12 +199,12 @@ class CoherenceSafetyAnalyzer:
             if len(curr) == 0 or len(next_ret) == 0:
                 continue
 
-            # Compute overlap in top-k results
+            # Compute overlap in top-k results using safe normalization
             overlap = 0
             for v1 in curr:
-                v1_norm = v1 / (np.linalg.norm(v1) + 1e-9)
+                v1_norm = safe_normalize(v1)
                 for v2 in next_ret:
-                    v2_norm = v2 / (np.linalg.norm(v2) + 1e-9)
+                    v2_norm = safe_normalize(v2)
                     if np.dot(v1_norm, v2_norm) > 0.95:  # High similarity threshold
                         overlap += 1
                         break
