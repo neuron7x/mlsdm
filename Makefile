@@ -82,9 +82,9 @@ bench:
 	python -c "import re, json, os; from datetime import datetime, timezone; \
 content=open('benchmark-output.txt').read(); \
 metrics={'timestamp': datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'), 'commit': os.environ.get('GITHUB_SHA','unknown')[:8], 'metrics': {}}; \
-m=re.findall(r'P95:\\s+([0-9.]+)ms', content); \
-metrics['metrics']['p95_latencies_ms']=[float(x) for x in m] if m else []; \
-metrics['metrics']['max_p95_ms']=max(float(x) for x in m) if m else None; \
+p95=[float(x) for x in re.findall(r'P95:\\s+([0-9.]+)ms', content)]; \
+metrics['metrics']['p95_latencies_ms']=p95; \
+metrics['metrics']['max_p95_ms']=max(p95) if p95 else None; \
 metrics['slo_compliant']='SLO met' in content; \
 json.dump(metrics, open('benchmark-metrics.json','w'), indent=2); \
 print(f'Extracted metrics: {json.dumps(metrics, indent=2)}')"
