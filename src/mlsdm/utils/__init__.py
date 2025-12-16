@@ -10,6 +10,7 @@ Provides common utilities for the MLSDM framework including:
 - Error handling
 - Input validation
 - Security logging
+- Mathematical constants and safe operations
 """
 
 from .array_pool import (
@@ -38,6 +39,23 @@ from .embedding_cache import (
     clear_default_cache,
     get_default_cache,
 )
+from .math_constants import (
+    EPSILON_ABS,
+    EPSILON_DIV,
+    EPSILON_LOG,
+    EPSILON_NORM,
+    EPSILON_REL,
+    batch_cosine_similarity,
+    cosine_similarity,
+    is_finite_array,
+    is_finite_scalar,
+    safe_divide,
+    safe_entropy,
+    safe_log,
+    safe_log2,
+    safe_normalize,
+    validate_finite,
+)
 from .rate_limiter import RateLimiter
 
 __all__ = [
@@ -65,4 +83,20 @@ __all__ = [
     "clear_default_cache",
     # Rate limiting
     "RateLimiter",
+    # Math constants and utilities
+    "EPSILON_NORM",
+    "EPSILON_DIV",
+    "EPSILON_LOG",
+    "EPSILON_REL",
+    "EPSILON_ABS",
+    "is_finite_scalar",
+    "is_finite_array",
+    "validate_finite",
+    "safe_divide",
+    "safe_normalize",
+    "safe_log",
+    "safe_log2",
+    "safe_entropy",
+    "cosine_similarity",
+    "batch_cosine_similarity",
 ]

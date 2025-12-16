@@ -5,6 +5,8 @@ from typing import Any
 
 import numpy as np
 
+from .math_constants import EPSILON_LOG
+
 
 class MetricsCollector:
     def __init__(self) -> None:
@@ -44,16 +46,22 @@ class MetricsCollector:
 
     @staticmethod
     def _entropy(vec: np.ndarray) -> float:
+        """Compute Shannon entropy with improved numerical stability.
+
+        Uses softmax transformation and log-sum-exp trick to avoid
+        overflow/underflow issues.
+        """
         if vec.size == 0:
             return 0.0
         v = np.abs(vec)
+        # Log-sum-exp trick: subtract max for numerical stability
         v = v - v.max()
         exp_v = np.exp(v)
         s = exp_v.sum()
-        if s == 0:
+        if s < EPSILON_LOG:
             return 0.0
         p = exp_v / s
-        return float(-np.sum(p * np.log2(p + 1e-12)))
+        return float(-np.sum(p * np.log2(p + EPSILON_LOG)))
 
     def record_memory_state(
         self, step: int, L1: np.ndarray, L2: np.ndarray, L3: np.ndarray, phase: str
