@@ -1,4 +1,4 @@
-.PHONY: test lint type cov bench bench-drift help run-dev run-cloud-local run-agent health-check eval-moral_filter test-memory-obs \
+.PHONY: test lint type cov coverage-gate ci-core smoke e2e effectiveness bench bench-drift help run-dev run-cloud-local run-agent health-check eval-moral_filter test-memory-obs \
         build-package test-package docker-build-neuro-engine docker-run-neuro-engine docker-smoke-neuro-engine \
         docker-compose-up docker-compose-down
 
@@ -11,9 +11,14 @@ help:
 	@echo "  make test     - Run all tests (uses pytest.ini config)"
 	@echo "  make lint     - Run ruff linter on src and tests"
 	@echo "  make type     - Run mypy type checker on src/mlsdm"
-	@echo "  make cov      - Run tests with coverage report"
+	@echo "  make coverage-gate - Run coverage gate (65% threshold, matches CI)"
+	@echo "  make cov      - Alias for coverage-gate"
+	@echo "  make ci-core  - Run lint, type, test, and coverage gate in sequence"
 	@echo "  make bench    - Run performance benchmarks (matches CI)"
 	@echo "  make bench-drift - Check benchmark results against baseline"
+	@echo "  make smoke    - Run fast smoke test suite"
+	@echo "  make e2e      - Run end-to-end tests (not slow)"
+	@echo "  make effectiveness - Run effectiveness validation with SLO checks"
 	@echo ""
 	@echo "Package Building:"
 	@echo "  make build-package  - Build wheel and sdist distributions"
@@ -42,7 +47,7 @@ help:
 
 # Testing & Linting
 test:
-	pytest --ignore=tests/load
+	pytest -q --ignore=tests/load
 
 lint:
 	ruff check src tests
@@ -51,11 +56,45 @@ type:
 	mypy src/mlsdm
 
 cov:
-	pytest --ignore=tests/load --cov=src --cov-report=html --cov-report=term-missing
+	$(MAKE) coverage-gate
+
+coverage-gate:
+	./coverage_gate.sh
+
+ci-core:
+	$(MAKE) lint
+	$(MAKE) type
+	$(MAKE) test
+	$(MAKE) coverage-gate
+
+smoke:
+	pytest tests/unit/ -v -m "not slow" --tb=short -q --maxfail=5
+
+e2e:
+	pytest tests/e2e -v -m "not slow" --tb=short
+
+effectiveness:
+	python scripts/run_effectiveness_suite.py --validate-slo
 
 bench:
 	@echo "Running performance benchmarks..."
-	pytest benchmarks/test_neuro_engine_performance.py -v -s --tb=short
+	bash -c 'set -o pipefail; pytest benchmarks/test_neuro_engine_performance.py -v -s --tb=short --junitxml=benchmark-results.xml 2>&1 | tee benchmark-output.txt'
+	python -c "import re, json, os; from datetime import datetime, timezone; \
+content=open('benchmark-output.txt').read(); \
+metrics={'timestamp': datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'), 'commit': os.environ.get('GITHUB_SHA','unknown')[:8], 'metrics': {}}; \
+m=re.findall(r'P95:\\s+([0-9.]+)ms', content); \
+metrics['metrics']['p95_latencies_ms']=[float(x) for x in m] if m else []; \
+metrics['metrics']['max_p95_ms']=max(float(x) for x in m) if m else None; \
+metrics['slo_compliant']='SLO met' in content; \
+json.dump(metrics, open('benchmark-metrics.json','w'), indent=2); \
+print(f'Extracted metrics: {json.dumps(metrics, indent=2)}')"
+	@if grep -q "SLO met" benchmark-output.txt; then \
+		echo "✅ All SLO targets met"; \
+		if [ -n "$$GITHUB_OUTPUT" ]; then echo "slo_status=passed" >> "$$GITHUB_OUTPUT"; fi; \
+	else \
+		echo "⚠️ Some SLO targets may not have been verified"; \
+		if [ -n "$$GITHUB_OUTPUT" ]; then echo "slo_status=unknown" >> "$$GITHUB_OUTPUT"; fi; \
+	fi
 
 bench-drift:
 	@echo "Checking benchmark drift against baseline..."

@@ -35,11 +35,7 @@ jobs:
           pip install -e ".[test]"
 
       - name: Run smoke tests (fast unit tests only)
-        run: |
-          # Run all unit tests except slow ones for fast feedback
-          # The 'slow' marker is already defined and used in the codebase
-          # This gives us fast feedback on basic functionality
-          pytest tests/unit/ -v -m "not slow" --tb=short -q --maxfail=5
+        run: make smoke
         timeout-minutes: 3
 
       - name: Run critical module imports
@@ -95,7 +91,7 @@ jobs:
           pip install -e ".[test]"
 
       - name: Run coverage gate
-        run: ./coverage_gate.sh
+        run: make coverage-gate
         env:
           COVERAGE_MIN: 65  # Current baseline is ~68%, set gate slightly below
 

@@ -59,84 +59,25 @@ cd "$SCRIPT_DIR"
 echo "Working directory: $(pwd)"
 echo ""
 
-# Run pytest with coverage
+# Run pytest with coverage (canonical command used in CI)
 echo "========================================================================"
 echo "Running tests with coverage..."
 echo "========================================================================"
 echo ""
 
-# Build pytest command
-# We run unit and state tests as the primary gate, but allow PYTEST_ARGS to customize
-#
-# NOTE: We use `|| true` after the pipeline because with `set -e` and `pipefail`,
-# a non-zero exit from pytest would terminate the script before we can capture
-# PIPESTATUS. We explicitly check the exit code below to fail appropriately.
-#
-# State tests are included because they are unit-level tests for state modules,
-# just organized in a separate directory for clarity.
-#
 # shellcheck disable=SC2086
-python -m pytest tests/unit/ tests/state/ \
+python -m pytest tests \
+    --ignore=tests/load \
     --cov=src/mlsdm \
-    --cov-report=term-missing \
     --cov-report=xml:coverage.xml \
-    --cov-fail-under=0 \
-    -m "not slow" \
-    -q \
+    --cov-report=term-missing \
+    --cov-fail-under="${COVERAGE_MIN}" \
+    -m "not slow and not benchmark" \
+    -v \
     --tb=short \
-    $PYTEST_ARGS 2>&1 | tee /tmp/coverage_output.txt || true
-
-# Capture exit code from pytest (first command in pipeline)
-PYTEST_EXIT_CODE="${PIPESTATUS[0]}"
-
-if [ "$PYTEST_EXIT_CODE" -ne 0 ]; then
-    echo ""
-    printf "${RED}ERROR: Tests failed with exit code %d${NC}\n" "$PYTEST_EXIT_CODE"
-    exit 1
-fi
+    $PYTEST_ARGS
 
 echo ""
 echo "========================================================================"
-echo "Extracting coverage percentage..."
+printf "${GREEN}✓ COVERAGE GATE PASSED (threshold %s%%)${NC}\n" "${COVERAGE_MIN}"
 echo "========================================================================"
-
-# Extract coverage percentage from the output
-# The coverage report outputs a line like: "TOTAL    8901   2631   2296    224  68.25%"
-COVERAGE_PERCENT=$(grep "^TOTAL" /tmp/coverage_output.txt | awk '{print $NF}' | sed 's/%//')
-
-if [ -z "$COVERAGE_PERCENT" ]; then
-    echo ""
-    printf "${RED}ERROR: Could not extract coverage percentage from output${NC}\n"
-    echo "Expected a line like: TOTAL    8901   2631   2296    224  68.25%"
-    exit 1
-fi
-
-echo ""
-echo "Coverage: ${COVERAGE_PERCENT}%"
-echo "Threshold: ${COVERAGE_MIN}%"
-echo ""
-
-# Compare coverage to threshold (using awk for floating point comparison)
-PASS=$(echo "$COVERAGE_PERCENT $COVERAGE_MIN" | awk '{if ($1 >= $2) print "1"; else print "0"}')
-
-if [ "$PASS" = "1" ]; then
-    echo "========================================================================"
-    printf "${GREEN}✓ COVERAGE GATE PASSED${NC}\n"
-    echo "========================================================================"
-    echo ""
-    echo "Coverage ${COVERAGE_PERCENT}% meets minimum threshold of ${COVERAGE_MIN}%"
-    exit 0
-else
-    echo "========================================================================"
-    printf "${RED}✗ COVERAGE GATE FAILED${NC}\n"
-    echo "========================================================================"
-    echo ""
-    printf "${RED}Coverage ${COVERAGE_PERCENT}%% is below minimum threshold of ${COVERAGE_MIN}%%${NC}\n"
-    echo ""
-    printf "${YELLOW}To view uncovered lines, run:${NC}\n"
-    echo "  python -m pytest tests/unit/ --cov=src/mlsdm --cov-report=term-missing"
-    echo ""
-    printf "${YELLOW}To adjust the threshold, set COVERAGE_MIN:${NC}\n"
-    echo "  COVERAGE_MIN=${COVERAGE_PERCENT%.*} ./coverage_gate.sh"
-    exit 1
-fi

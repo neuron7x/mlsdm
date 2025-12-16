@@ -8,19 +8,16 @@ MLSDM uses GitHub Actions for continuous integration and deployment. The CI pipe
 
 ## 🔒 Reproducible Dependencies
 
-**IMPORTANT:** The project uses `uv.lock` for reproducible dependency installation across all environments:
+**IMPORTANT:** CI installs dependencies from `requirements.txt` plus editable extras for the job (`.[dev]` or `.[test]`). To mirror CI locally:
 
-- **Lock File:** `uv.lock` pins all dependencies to specific versions
-- **Update Lock:** Run `uv lock` after changing `pyproject.toml` dependencies
-- **Install from Lock:** Use `uv sync` for reproducible installs matching CI
-- **GitHub Actions:** All workflows use pinned versions (@v4, @v5, etc.)
-
-**To reproduce CI environment locally:**
 ```bash
-pip install uv
-uv sync
-# Now you have the exact same dependencies as CI
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+pip install -e ".[dev]"   # for lint/type
+pip install -e ".[test]"  # for tests/coverage/e2e/bench/effectiveness
 ```
+
+> Note: `uv.lock` is available for reproducible local environments, but CI currently uses the pinned `requirements.txt` flow above.
 
 ## ⚠️ Security Gates
 
@@ -58,17 +55,9 @@ pip-audit --requirement requirements.txt --strict
 - `neuro-engine-eval`: Sapolsky cognitive safety evaluation (informational, non-blocking)
 - `all-ci-passed`: Gate job requiring all critical checks (excludes neuro-engine-eval)
 
-**Reproduce coverage locally:**
+**Reproduce coverage locally (canonical):**
 ```bash
-# Run tests with coverage (matches CI gate)
-pytest --cov=src/mlsdm --cov-report=xml --cov-report=term-missing \
-  --cov-fail-under=65 --ignore=tests/load -m "not slow and not benchmark" -v
-
-# Or use the coverage script
-./coverage_gate.sh
-
-# Or use Make
-make cov
+make coverage-gate  # Uses ./coverage_gate.sh with 65% threshold, -m "not slow and not benchmark"
 ```
 
 **When to modify:**
@@ -260,24 +249,20 @@ Configure these in GitHub repository secrets:
 ### Run Core Tests
 
 ```bash
-# Install dependencies
+# Install dependencies (matches CI)
+python -m pip install --upgrade pip
 pip install -r requirements.txt
-pip install -e ".[dev]"
+pip install -e ".[test]"
+pip install -e ".[dev]"  # for lint/type
 
-# Run linting
-ruff check src tests
-
-# Run type checking
-mypy src/mlsdm
-
-# Run unit tests
-pytest tests/unit -v
-
-# Run integration tests
-pytest tests/integration -v
-
-# Run all tests (like CI)
-pytest tests/ --ignore=tests/load -v
+# Run canonical gates
+make lint
+make type
+make test
+make coverage-gate
+make e2e
+make effectiveness
+make bench
 ```
 
 ### Run Security Scans
@@ -296,28 +281,23 @@ bandit -r src/
 ### Run Coverage Tests
 
 ```bash
-# Run tests with coverage (65% threshold, matching current ~68% coverage)
-DISABLE_RATE_LIMIT=1 LLM_BACKEND=local_stub \
-  pytest --cov=src/mlsdm --cov-report=xml --cov-report=term-missing \
-  --cov-fail-under=65 --ignore=tests/load -v
+# Run coverage gate (65% threshold, matching CI)
+DISABLE_RATE_LIMIT=1 LLM_BACKEND=local_stub make coverage-gate
 ```
 
 ### Run E2E and Effectiveness Tests
 
 ```bash
 # E2E tests
-DISABLE_RATE_LIMIT=1 LLM_BACKEND=local_stub \
-  pytest tests/e2e -v -m "not slow" --tb=short
+DISABLE_RATE_LIMIT=1 LLM_BACKEND=local_stub make e2e
 
 # Effectiveness validation with SLO
-DISABLE_RATE_LIMIT=1 LLM_BACKEND=local_stub \
-  python scripts/run_effectiveness_suite.py --validate-slo
+DISABLE_RATE_LIMIT=1 LLM_BACKEND=local_stub make effectiveness
 
 # Benchmark tests with SLO
-DISABLE_RATE_LIMIT=1 LLM_BACKEND=local_stub \
-  pytest benchmarks/test_neuro_engine_performance.py -v -s --tb=short
+DISABLE_RATE_LIMIT=1 LLM_BACKEND=local_stub make bench
 
-# Sapolsky evaluation suite
+# Sapolsky evaluation suite (informational)
 DISABLE_RATE_LIMIT=1 LLM_BACKEND=local_stub \
   pytest tests/eval/test_sapolsky_suite.py -v
 ```
