@@ -36,11 +36,11 @@ import numpy as np
 # =============================================================================
 
 # For normalization operations (avoiding zero-norm vectors)
-# Chosen as sqrt(machine epsilon) for float32 (~1e-3.8) rounded conservatively
+# Value chosen to be well above float32 denormals while small enough to detect zero-ish vectors
 EPSILON_NORM: float = 1e-9
 
 # For division operations (avoiding division by zero)
-# Same as EPSILON_NORM for consistency
+# Same as EPSILON_NORM for consistency across operations
 EPSILON_DIV: float = 1e-9
 
 # For log operations (log(0) protection)
@@ -415,7 +415,7 @@ def batch_cosine_similarity(
         epsilon: Minimum norm threshold for numerical stability.
 
     Returns:
-        Array of cosine similarities of shape (n,).
+        Array of cosine similarities of shape (n,), preserving the dtype of vectors.
 
     Examples:
         >>> q = np.array([1.0, 0.0])
@@ -423,9 +423,12 @@ def batch_cosine_similarity(
         >>> batch_cosine_similarity(q, vs)
         array([1., 0.])
     """
+    # Determine output dtype from input vectors
+    output_dtype = vectors.dtype if vectors.dtype in (np.float32, np.float64) else np.float64
+
     query_norm = float(np.linalg.norm(query))
     if query_norm < epsilon:
-        return np.zeros(len(vectors), dtype=np.float32)
+        return np.zeros(len(vectors), dtype=output_dtype)
 
     vector_norms = np.linalg.norm(vectors, axis=1)
     # Avoid division by zero
@@ -436,4 +439,4 @@ def batch_cosine_similarity(
     # Set similarity to 0 for zero-norm vectors
     similarities = np.where(vector_norms < epsilon, 0.0, similarities)
 
-    return similarities.astype(np.float32)
+    return similarities.astype(output_dtype)
