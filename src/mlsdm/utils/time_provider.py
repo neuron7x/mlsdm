@@ -86,7 +86,7 @@ class FakeTimeProvider:
         return self._current_time
 
     def monotonic(self) -> float:
-        """Return monotonic clock time (same as now for fake provider)."""
+        """Return time elapsed since initialization (0-based relative time)."""
         return self._current_time - self._monotonic_start
 
     def advance(self, seconds: float) -> None:

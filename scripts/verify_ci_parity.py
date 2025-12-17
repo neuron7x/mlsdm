@@ -22,7 +22,7 @@ from pathlib import Path
 
 # Canonical make targets that workflows should use
 CANONICAL_TARGETS = {
-    "lint": ["make lint", "./coverage_gate.sh"],
+    "lint": ["make lint"],
     "type": ["make type"],
     "test": ["make test", "make test-fast", "make coverage-gate", "./coverage_gate.sh"],
     "coverage": ["make cov", "make coverage-gate", "./coverage_gate.sh"],
