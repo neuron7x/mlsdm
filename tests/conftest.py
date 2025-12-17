@@ -7,18 +7,16 @@ for deterministic, reproducible testing across the test suite.
 
 from __future__ import annotations
 
-import os
-from typing import TYPE_CHECKING, Any
-
 import asyncio
+import os
+import random
 import time
+from typing import TYPE_CHECKING, Any
 
 # CRITICAL: Set environment variables BEFORE any imports that might load mlsdm.api.app
 # This ensures rate limiting is disabled before FastAPI middleware is initialized
 os.environ["DISABLE_RATE_LIMIT"] = "1"
 os.environ["LLM_BACKEND"] = "local_stub"
-
-import random
 
 import numpy as np
 import pytest
