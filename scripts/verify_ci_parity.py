@@ -48,6 +48,9 @@ ALLOWED_RAW_PATTERNS = [
     r"conftest test",  # Policy testing
 ]
 
+# YAML indentation constant for detecting run block boundaries
+YAML_RUN_INDENT = "    "  # 4 spaces
+
 # Patterns that indicate problematic drift
 PROBLEMATIC_PATTERNS = [
     # Direct ruff usage instead of make lint
@@ -56,7 +59,7 @@ PROBLEMATIC_PATTERNS = [
     (r"^\s+mypy ", "Use 'make type' instead of direct mypy"),
     # pytest on unit tests without make (except allowed specific suites)
     (
-        r"pytest tests/unit(?!/)",  # Match 'tests/unit' not followed by specific subdir
+        r"pytest tests/unit\b(?!/)",  # Match 'tests/unit' as word boundary not followed by /
         "Consider using 'make test' or 'make test-fast' for unit tests",
     ),
 ]
@@ -91,7 +94,7 @@ def check_workflow_file(filepath: Path) -> list[tuple[int, str, str]]:
                 run_content = stripped[4:].strip()
                 in_run_block = False
         elif in_run_block:
-            if stripped and not stripped.startswith("-") and not line.startswith(" " * 4):
+            if stripped and not stripped.startswith("-") and not line.startswith(YAML_RUN_INDENT):
                 # End of run block
                 in_run_block = False
             else:
