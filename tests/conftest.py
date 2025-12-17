@@ -393,3 +393,42 @@ def safe_prompt_samples() -> list[str]:
         "Describe the water cycle in nature.",
         "How do computers process information?",
     ]
+
+
+# ============================================================
+# Time Provider Fixtures
+# ============================================================
+
+
+@pytest.fixture
+def fake_time() -> "FakeTimeProvider":
+    """
+    Provide a FakeTimeProvider for deterministic time testing.
+
+    Returns:
+        A FakeTimeProvider starting at time 0.
+    """
+    from mlsdm.utils.time_provider import FakeTimeProvider
+
+    return FakeTimeProvider(start_time=0.0)
+
+
+@pytest.fixture
+def fake_time_with_start() -> Callable[[float], "FakeTimeProvider"]:
+    """
+    Factory fixture for creating FakeTimeProvider with custom start time.
+
+    Returns:
+        A function that creates a FakeTimeProvider with the specified start time.
+    """
+    from mlsdm.utils.time_provider import FakeTimeProvider
+
+    def _create(start_time: float) -> "FakeTimeProvider":
+        return FakeTimeProvider(start_time=start_time)
+
+    return _create
+
+
+# Type hint import for fixtures
+if True:  # Always true, just for import organization
+    from mlsdm.utils.time_provider import FakeTimeProvider
