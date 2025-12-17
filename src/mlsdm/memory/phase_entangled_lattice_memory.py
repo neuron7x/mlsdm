@@ -195,7 +195,7 @@ class PhaseEntangledLatticeMemory:
                 )
 
             vec_np = np.array(vector, dtype=np.float32)
-            norm = safe_norm(vec_np) or self.MIN_NORM_THRESHOLD
+            norm = max(safe_norm(vec_np), self.MIN_NORM_THRESHOLD)
             idx = self.pointer
             self.memory_bank[idx] = vec_np
             self.phase_bank[idx] = phase
@@ -302,7 +302,7 @@ class PhaseEntangledLatticeMemory:
                 if not np.all(np.isfinite(vec_np)):
                     raise ValueError(f"vector at index {i} contains NaN or infinity values")
 
-                norm = safe_norm(vec_np) or self.MIN_NORM_THRESHOLD
+                norm = max(safe_norm(vec_np), self.MIN_NORM_THRESHOLD)
                 idx = self.pointer
                 self.memory_bank[idx] = vec_np
                 self.phase_bank[idx] = phase
@@ -543,7 +543,7 @@ class PhaseEntangledLatticeMemory:
         # Recompute norms for all stored vectors (now safe to iterate)
         for i in range(self.size):
             vec = self.memory_bank[i]
-            self.norms[i] = safe_norm(vec) or 1e-9
+            self.norms[i] = max(safe_norm(vec), 1e-9)
 
     def _auto_recover_unsafe(self) -> bool:
         """
