@@ -1,10 +1,20 @@
-"""Unit tests for MetricsRegistry."""
+"""Unit tests for MetricsRegistry.
+
+This module provides comprehensive tests for the MetricsRegistry class,
+verifying counter operations, latency recording, summary statistics,
+and thread-safety guarantees.
+"""
+
+import threading
 
 from mlsdm.observability.metrics import MetricsRegistry
 
 
-def test_metrics_registry_initialization():
-    """Test that MetricsRegistry initializes with zero values."""
+def test_metrics_registry_initialization() -> None:
+    """Test that MetricsRegistry initializes with zero values.
+
+    Verifies all counters start at zero and all lists are empty.
+    """
     registry = MetricsRegistry()
 
     snapshot = registry.get_snapshot()
@@ -16,8 +26,11 @@ def test_metrics_registry_initialization():
     assert snapshot["latency_generation_ms"] == []
 
 
-def test_increment_requests_total():
-    """Test incrementing requests counter."""
+def test_increment_requests_total() -> None:
+    """Test incrementing requests counter.
+
+    Verifies single and batch increments work correctly.
+    """
     registry = MetricsRegistry()
 
     registry.increment_requests_total()
@@ -27,8 +40,11 @@ def test_increment_requests_total():
     assert registry.get_snapshot()["requests_total"] == 6
 
 
-def test_increment_rejections_total():
-    """Test incrementing rejections with labels."""
+def test_increment_rejections_total() -> None:
+    """Test incrementing rejections with labels.
+
+    Verifies rejection counters are properly labeled and accumulated.
+    """
     registry = MetricsRegistry()
 
     registry.increment_rejections_total("pre_flight")
@@ -40,8 +56,11 @@ def test_increment_rejections_total():
     assert snapshot["rejections_total"]["generation"] == 3
 
 
-def test_increment_errors_total():
-    """Test incrementing errors with type labels."""
+def test_increment_errors_total() -> None:
+    """Test incrementing errors with type labels.
+
+    Verifies error counters are properly labeled and accumulated.
+    """
     registry = MetricsRegistry()
 
     registry.increment_errors_total("moral_precheck")
@@ -54,8 +73,11 @@ def test_increment_errors_total():
     assert snapshot["errors_total"]["empty_response"] == 1
 
 
-def test_record_latencies():
-    """Test recording latency values."""
+def test_record_latencies() -> None:
+    """Test recording latency values.
+
+    Verifies all latency types are recorded correctly.
+    """
     registry = MetricsRegistry()
 
     registry.record_latency_total(100.5)
@@ -69,8 +91,11 @@ def test_record_latencies():
     assert snapshot["latency_generation_ms"] == [95.4]
 
 
-def test_get_summary_empty():
-    """Test summary with no data."""
+def test_get_summary_empty() -> None:
+    """Test summary with no data.
+
+    Verifies all statistics are zero when no data is recorded.
+    """
     registry = MetricsRegistry()
 
     summary = registry.get_summary()
@@ -90,8 +115,11 @@ def test_get_summary_empty():
         assert stats["p99"] == 0.0
 
 
-def test_get_summary_with_data():
-    """Test summary with actual data."""
+def test_get_summary_with_data() -> None:
+    """Test summary with actual data.
+
+    Verifies summary statistics are calculated correctly from recorded data.
+    """
     registry = MetricsRegistry()
 
     # Add some data
@@ -118,8 +146,11 @@ def test_get_summary_with_data():
     assert 95.0 <= stats["p99"] <= 100.0  # P99 very near high end
 
 
-def test_percentile_calculation():
-    """Test percentile calculation accuracy."""
+def test_percentile_calculation() -> None:
+    """Test percentile calculation accuracy.
+
+    Verifies P50, P95, and mean are calculated correctly for known data.
+    """
     registry = MetricsRegistry()
 
     # Add known values
@@ -140,8 +171,11 @@ def test_percentile_calculation():
     assert 5.4 <= stats["mean"] <= 5.6
 
 
-def test_reset():
-    """Test resetting all metrics."""
+def test_reset() -> None:
+    """Test resetting all metrics.
+
+    Verifies all counters and latency lists are cleared after reset.
+    """
     registry = MetricsRegistry()
 
     # Add data
@@ -165,13 +199,14 @@ def test_reset():
     assert snapshot["latency_generation_ms"] == []
 
 
-def test_thread_safety():
-    """Test that registry is thread-safe (basic check)."""
-    import threading
+def test_thread_safety() -> None:
+    """Test that registry is thread-safe (basic check).
 
+    Verifies concurrent increments from multiple threads produce correct totals.
+    """
     registry = MetricsRegistry()
 
-    def increment_requests():
+    def increment_requests() -> None:
         for _ in range(100):
             registry.increment_requests_total()
 

@@ -12,8 +12,11 @@ from hypothesis import strategies as st
 from mlsdm.rhythm.cognitive_rhythm import CognitiveRhythm
 
 
-def test_rhythm_initial_state():
-    """Test that rhythm starts in wake phase with correct counter."""
+def test_rhythm_initial_state() -> None:
+    """Test that rhythm starts in wake phase with correct counter.
+
+    Verifies initial state is wake with counter equal to wake_duration.
+    """
     rhythm = CognitiveRhythm(wake_duration=8, sleep_duration=3)
 
     assert rhythm.phase == "wake"
@@ -22,8 +25,11 @@ def test_rhythm_initial_state():
     assert not rhythm.is_sleep()
 
 
-def test_rhythm_wake_to_sleep_transition():
-    """Test transition from wake to sleep after wake_duration steps."""
+def test_rhythm_wake_to_sleep_transition() -> None:
+    """Test transition from wake to sleep after wake_duration steps.
+
+    Verifies phase transitions to sleep after wake_duration steps.
+    """
     wake_duration = 5
     rhythm = CognitiveRhythm(wake_duration=wake_duration, sleep_duration=3)
 
@@ -38,8 +44,11 @@ def test_rhythm_wake_to_sleep_transition():
     assert rhythm.counter == 3
 
 
-def test_rhythm_sleep_to_wake_transition():
-    """Test transition from sleep back to wake after sleep_duration steps."""
+def test_rhythm_sleep_to_wake_transition() -> None:
+    """Test transition from sleep back to wake after sleep_duration steps.
+
+    Verifies phase transitions back to wake after sleep_duration steps.
+    """
     wake_duration = 8
     sleep_duration = 3
     rhythm = CognitiveRhythm(wake_duration=wake_duration, sleep_duration=sleep_duration)
@@ -62,14 +71,17 @@ def test_rhythm_sleep_to_wake_transition():
     assert rhythm.counter == wake_duration
 
 
-def test_rhythm_full_cycle():
-    """Test complete wake→sleep→wake cycle maintains invariants."""
+def test_rhythm_full_cycle() -> None:
+    """Test complete wake→sleep→wake cycle maintains invariants.
+
+    Verifies phase pattern matches expected wake/sleep sequence.
+    """
     wake_duration = 4
     sleep_duration = 2
     rhythm = CognitiveRhythm(wake_duration=wake_duration, sleep_duration=sleep_duration)
 
     total_steps = (wake_duration + sleep_duration) * 3  # 3 full cycles
-    phase_log = []
+    phase_log: list[str] = []
 
     for step in range(total_steps):
         phase_log.append(rhythm.phase)
@@ -82,12 +94,15 @@ def test_rhythm_full_cycle():
     assert phase_log == expected_full, f"Phase pattern mismatch: {phase_log}"
 
 
-def test_rhythm_counter_decrements_correctly():
-    """Test that counter decrements properly in each phase."""
+def test_rhythm_counter_decrements_correctly() -> None:
+    """Test that counter decrements properly in each phase.
+
+    Verifies counter values decrease correctly during wake and sleep phases.
+    """
     rhythm = CognitiveRhythm(wake_duration=5, sleep_duration=3)
 
     # Track counter values during wake phase
-    wake_counters = []
+    wake_counters: list[int] = []
     for _ in range(5):
         wake_counters.append(rhythm.counter)
         rhythm.step()
@@ -96,7 +111,7 @@ def test_rhythm_counter_decrements_correctly():
     assert wake_counters == [5, 4, 3, 2, 1], f"Wake counters wrong: {wake_counters}"
 
     # Track counter values during sleep phase
-    sleep_counters = []
+    sleep_counters: list[int] = []
     for _ in range(3):
         sleep_counters.append(rhythm.counter)
         rhythm.step()
@@ -105,8 +120,11 @@ def test_rhythm_counter_decrements_correctly():
     assert sleep_counters == [3, 2, 1], f"Sleep counters wrong: {sleep_counters}"
 
 
-def test_rhythm_phase_boundaries():
-    """Test that phase transitions happen exactly at counter=0."""
+def test_rhythm_phase_boundaries() -> None:
+    """Test that phase transitions happen exactly at counter=0.
+
+    Verifies transitions occur at correct boundary points.
+    """
     rhythm = CognitiveRhythm(wake_duration=3, sleep_duration=2)
 
     # Step to counter=1 in wake
@@ -121,8 +139,11 @@ def test_rhythm_phase_boundaries():
     assert rhythm.is_sleep()
 
 
-def test_rhythm_to_dict_serialization():
-    """Test that rhythm state can be serialized correctly."""
+def test_rhythm_to_dict_serialization() -> None:
+    """Test that rhythm state can be serialized correctly.
+
+    Verifies to_dict returns expected state values.
+    """
     rhythm = CognitiveRhythm(wake_duration=8, sleep_duration=3)
 
     state = rhythm.to_dict()
@@ -133,8 +154,11 @@ def test_rhythm_to_dict_serialization():
     assert state["counter"] == 8
 
 
-def test_rhythm_invalid_durations():
-    """Test that invalid durations raise appropriate errors."""
+def test_rhythm_invalid_durations() -> None:
+    """Test that invalid durations raise appropriate errors.
+
+    Verifies ValueError is raised for invalid duration values.
+    """
     with pytest.raises(ValueError, match="Durations must be positive"):
         CognitiveRhythm(wake_duration=0, sleep_duration=3)
 
@@ -151,9 +175,12 @@ def test_rhythm_invalid_durations():
     sleep_duration=st.integers(min_value=1, max_value=20),
     num_cycles=st.integers(min_value=1, max_value=10),
 )
-def test_rhythm_property_cycle_consistency(wake_duration, sleep_duration, num_cycles):
-    """
-    Property test: After N complete cycles, rhythm returns to initial state.
+def test_rhythm_property_cycle_consistency(
+    wake_duration: int, sleep_duration: int, num_cycles: int
+) -> None:
+    """Property test: After N complete cycles, rhythm returns to initial state.
+
+    Verifies rhythm is cyclic and returns to initial state after complete cycles.
     """
     rhythm = CognitiveRhythm(wake_duration=wake_duration, sleep_duration=sleep_duration)
 
@@ -183,9 +210,12 @@ def test_rhythm_property_cycle_consistency(wake_duration, sleep_duration, num_cy
     sleep_duration=st.integers(min_value=1, max_value=20),
     steps=st.integers(min_value=0, max_value=100),
 )
-def test_rhythm_property_counter_bounds(wake_duration, sleep_duration, steps):
-    """
-    Property test: Counter always stays within valid bounds.
+def test_rhythm_property_counter_bounds(
+    wake_duration: int, sleep_duration: int, steps: int
+) -> None:
+    """Property test: Counter always stays within valid bounds.
+
+    Verifies counter is always positive and within duration limits.
     """
     rhythm = CognitiveRhythm(wake_duration=wake_duration, sleep_duration=sleep_duration)
 
@@ -205,8 +235,11 @@ def test_rhythm_property_counter_bounds(wake_duration, sleep_duration, steps):
         rhythm.step()
 
 
-def test_rhythm_deterministic_behavior():
-    """Test that rhythm behavior is deterministic given same inputs."""
+def test_rhythm_deterministic_behavior() -> None:
+    """Test that rhythm behavior is deterministic given same inputs.
+
+    Verifies two rhythms with same parameters produce same state sequence.
+    """
     rhythm1 = CognitiveRhythm(wake_duration=5, sleep_duration=3)
     rhythm2 = CognitiveRhythm(wake_duration=5, sleep_duration=3)
 
