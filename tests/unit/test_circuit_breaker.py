@@ -451,6 +451,7 @@ class TestCircuitBreakerThreadSafety:
         stats = cb.get_stats()
         assert stats.total_failures == N
 
+    @pytest.mark.slow
     def test_concurrent_state_checks(self) -> None:
         """Test concurrent state checks are thread-safe."""
         cb = CircuitBreaker(

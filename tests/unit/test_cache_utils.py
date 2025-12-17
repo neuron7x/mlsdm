@@ -17,6 +17,7 @@ import time
 from unittest.mock import patch
 
 import numpy as np
+import pytest
 
 from mlsdm.utils.cache import (
     CacheConfig,
@@ -171,6 +172,7 @@ class TestMemoryCache:
         cache = MemoryCache[str]()
         assert cache.get("nonexistent") is None
 
+    @pytest.mark.slow
     def test_get_expired_entry(self) -> None:
         """Test get with expired entry."""
         cache = MemoryCache[str](default_ttl=1)
@@ -178,6 +180,7 @@ class TestMemoryCache:
         time.sleep(1.1)  # Wait for expiration
         assert cache.get("key1") is None
 
+    @pytest.mark.slow
     def test_set_with_custom_ttl(self) -> None:
         """Test set with custom TTL."""
         cache = MemoryCache[str](default_ttl=3600)
@@ -227,6 +230,7 @@ class TestMemoryCache:
         assert stats.hits == 1
         assert stats.misses == 1
 
+    @pytest.mark.slow
     def test_cleanup_expired(self) -> None:
         """Test cleanup of expired entries."""
         cache = MemoryCache[str](default_ttl=1)

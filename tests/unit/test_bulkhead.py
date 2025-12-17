@@ -383,6 +383,7 @@ class TestBulkheadThreadSafety:
             assert stats.current_active == 0
             assert stats.total_acquired == N_PER_COMPARTMENT
 
+    @pytest.mark.slow
     def test_concurrent_stats_access(self):
         """Test that stats can be accessed concurrently with operations."""
         bulkhead = Bulkhead()
