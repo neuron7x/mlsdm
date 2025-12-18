@@ -32,13 +32,13 @@ import os
 from contextlib import contextmanager
 from functools import wraps
 from threading import Lock
-from typing import TYPE_CHECKING, Any, Literal, TypeAlias
+from typing import TYPE_CHECKING, Any, Literal, Sequence, TypeAlias
 
 # Runtime imports and fallbacks for OpenTelemetry
 try:
     from opentelemetry import trace
     from opentelemetry.sdk.resources import Resource
-    from opentelemetry.sdk.trace import SpanProcessor, TracerProvider
+    from opentelemetry.sdk.trace import ReadableSpan, SpanProcessor, TracerProvider
     from opentelemetry.sdk.trace.export import (
         BatchSpanProcessor,
         ConsoleSpanExporter,
@@ -54,6 +54,7 @@ except ImportError:
         trace = None
         Resource = None
         SpanProcessor = None
+        ReadableSpan = None
         TracerProvider = None
         BatchSpanProcessor = None
         ConsoleSpanExporter = None
@@ -175,7 +176,7 @@ if OTEL_AVAILABLE:
         This wrapper swallows those benign errors to keep tests clean and deterministic.
         """
 
-        def export(self, spans: Any) -> Any:  # type: ignore[override]
+        def export(self, spans: Sequence[ReadableSpan]) -> SpanExportResult:
             try:
                 return super().export(spans)
             except ValueError as exc:
