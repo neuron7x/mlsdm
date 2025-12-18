@@ -39,7 +39,11 @@ try:
     from opentelemetry import trace
     from opentelemetry.sdk.resources import Resource
     from opentelemetry.sdk.trace import SpanProcessor, TracerProvider
-    from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
+    from opentelemetry.sdk.trace.export import (
+        BatchSpanProcessor,
+        ConsoleSpanExporter,
+        SimpleSpanProcessor,
+    )
     from opentelemetry.trace import SpanKind, Status, StatusCode
 
     OTEL_AVAILABLE = True
@@ -53,6 +57,7 @@ except ImportError:
         TracerProvider = None
         BatchSpanProcessor = None
         ConsoleSpanExporter = None
+        SimpleSpanProcessor = None
         SpanKind = None
         Status = None
         StatusCode = None
@@ -342,13 +347,24 @@ class TracerManager:
             # Create exporter based on configuration
             exporter = self._create_exporter()
             if exporter is not None:
-                self._processor = BatchSpanProcessor(
-                    exporter,
-                    max_queue_size=self._config.batch_max_queue_size,
-                    max_export_batch_size=self._config.batch_max_export_batch_size,
-                    schedule_delay_millis=self._config.batch_schedule_delay_millis,
-                )
-                self._provider.add_span_processor(self._processor)
+                # Console exporter should flush synchronously to avoid writing to
+                # closed capture streams (e.g., pytest capsys) from background threads.
+                if (
+                    ConsoleSpanExporter is not None
+                    and SimpleSpanProcessor is not None
+                    and isinstance(exporter, ConsoleSpanExporter)
+                ):
+                    self._processor = SimpleSpanProcessor(exporter)
+                else:
+                    self._processor = BatchSpanProcessor(
+                        exporter,
+                        max_queue_size=self._config.batch_max_queue_size,
+                        max_export_batch_size=self._config.batch_max_export_batch_size,
+                        schedule_delay_millis=self._config.batch_schedule_delay_millis,
+                    )
+
+                if self._processor is not None:
+                    self._provider.add_span_processor(self._processor)
 
             # Register as global provider
             trace.set_tracer_provider(self._provider)
