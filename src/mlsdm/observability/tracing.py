@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import logging
 import os
+import sys
 from contextlib import contextmanager
 from functools import wraps
 from threading import Lock
@@ -382,7 +383,10 @@ class TracerManager:
             return None
 
         if self._config.exporter_type == "console":
-            return ConsoleSpanExporter()
+            # Use the original stdout to avoid pytest's capture objects being closed
+            # while the batch processor flushes spans asynchronously.
+            safe_stdout = getattr(sys, "__stdout__", sys.stdout)
+            return ConsoleSpanExporter(out=safe_stdout)
 
         if self._config.exporter_type == "otlp":
             try:
