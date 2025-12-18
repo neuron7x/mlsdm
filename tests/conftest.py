@@ -8,12 +8,20 @@ for deterministic, reproducible testing across the test suite.
 from __future__ import annotations
 
 import os
+import sys
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 # CRITICAL: Set environment variables BEFORE any imports that might load mlsdm.api.app
 # This ensures rate limiting is disabled before FastAPI middleware is initialized
 os.environ["DISABLE_RATE_LIMIT"] = "1"
 os.environ["LLM_BACKEND"] = "local_stub"
+
+# Ensure the source tree is importable without requiring installation
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+SRC_PATH = PROJECT_ROOT / "src"
+if str(SRC_PATH) not in sys.path:
+    sys.path.insert(0, str(SRC_PATH))
 
 import random
 
