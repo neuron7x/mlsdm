@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -13,6 +14,46 @@ try:
     from mlsdm.config import MORAL_FILTER_DEFAULTS
 except ImportError:
     MORAL_FILTER_DEFAULTS = None
+
+# Pre-compiled regex patterns for word boundary matching (module-level for performance)
+# These patterns match whole words only to avoid false positives like "harm" in "pharmacy"
+_HARMFUL_PATTERNS = [
+    "hate",
+    "violence",
+    "attack",
+    "kill",
+    "destroy",
+    "harm",
+    "abuse",
+    "exploit",
+    "discriminate",
+    "racist",
+    "sexist",
+    "terrorist",
+    "weapon",
+    "bomb",
+    "murder",
+]
+_POSITIVE_PATTERNS = [
+    "help",
+    "support",
+    "care",
+    "love",
+    "kind",
+    "respect",
+    "ethical",
+    "fair",
+    "honest",
+    "trust",
+    "safe",
+    "protect",
+    "collaborate",
+    "peace",
+    "understanding",
+]
+# Compile single regex patterns for O(n) matching instead of O(n*m)
+_HARMFUL_REGEX = re.compile(r"\b(" + "|".join(_HARMFUL_PATTERNS) + r")\b", re.IGNORECASE)
+_POSITIVE_REGEX = re.compile(r"\b(" + "|".join(_POSITIVE_PATTERNS) + r")\b", re.IGNORECASE)
 
 
 class MoralFilterV2:
@@ -92,3 +133,52 @@ class MoralFilterV2:
             Current EMA value (0.0-1.0).
         """
         return float(self.ema_accept_rate)
+
+    def compute_moral_value(self, text: str) -> float:
+        """Compute a moral value score for the given text.
+
+        This is a heuristic-based scoring method that analyzes text for
+        potentially harmful patterns. The approach is "innocent until proven
+        guilty" - text is considered acceptable (high score) unless harmful
+        patterns are detected.
+
+        Uses pre-compiled regex patterns with word boundary matching to avoid
+        false positives (e.g., "harm" won't match "pharmacy" or "harmless").
+        O(n) complexity for text length n due to single-pass regex matching.
+
+        Args:
+            text: Input text to analyze for moral content.
+
+        Returns:
+            Moral value score in [0.0, 1.0] where higher is more acceptable.
+            - 0.8: Neutral/normal text (no harmful patterns)
+            - 0.3-0.7: Text with some harmful patterns
+            - <0.3: Text with multiple harmful patterns
+
+        Note:
+            This implementation uses simple pattern matching. For production
+            use with higher accuracy, consider integrating with toxicity
+            detection APIs (e.g., Perspective API) or fine-tuned classifiers.
+        """
+        if not text or not text.strip():
+            return 0.8  # Assume empty text is acceptable
+
+        # Use pre-compiled regex patterns with word boundary matching
+        # This is O(n) for text length and avoids false positives
+        harmful_matches = _HARMFUL_REGEX.findall(text)
+        positive_matches = _POSITIVE_REGEX.findall(text)
+
+        harmful_count = len(harmful_matches)
+        positive_count = len(positive_matches)
+
+        # Base score is high (0.8) - "innocent until proven guilty"
+        # This ensures neutral text passes normal moral thresholds
+        base_score = 0.8
+
+        # Adjust score based on pattern matches
+        # Each harmful pattern reduces score by 0.15 (more aggressive penalty)
+        # Each positive pattern increases score by 0.05 (max 1.0)
+        adjusted_score = base_score - (harmful_count * 0.15) + (positive_count * 0.05)
+
+        # Clamp to valid range
+        return max(0.0, min(1.0, adjusted_score))

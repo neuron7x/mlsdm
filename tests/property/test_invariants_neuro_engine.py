@@ -10,6 +10,7 @@ import pytest
 from hypothesis import assume, given, settings
 from hypothesis import strategies as st
 
+from mlsdm.cognition.moral_filter_v2 import _HARMFUL_REGEX, _POSITIVE_REGEX
 from mlsdm.engine import NeuroCognitiveEngine, NeuroEngineConfig
 
 # Test tolerances
@@ -96,18 +97,29 @@ def create_test_engine(config=None):
 
 
 def get_moral_score_estimate(response_text, prompt):
-    """Estimate moral score from response (simplified)."""
-    # In real system, this would use actual moral filter
-    # Here we use heuristic: reject harmful patterns
-    prompt_lower = prompt.lower()
-    response_lower = response_text.lower()
+    """Estimate moral score for a prompt using same logic as MoralFilterV2.compute_moral_value.
 
-    if any(word in prompt_lower for word in HARMFUL_CONTENT_PATTERNS):
-        return 0.2  # Low moral score for harmful prompts
-    elif "cannot respond" in response_lower:
-        return 0.3  # Rejection response gets moderate score
-    else:
-        return 0.8  # Neutral responses get high score
+    Note: The pre-flight moral check analyzes the PROMPT (not response), so this function
+    primarily evaluates the prompt to match the behavior of compute_moral_value.
+
+    Uses the actual scoring logic:
+    - Base score 0.8 ("innocent until proven guilty")
+    - Harmful patterns reduce by 0.15 each
+    - Positive patterns increase by 0.05 each
+
+    Args:
+        response_text: The LLM response (kept for backward compatibility but not used)
+        prompt: The original prompt to analyze
+    """
+    # Use pre-compiled regex patterns from MoralFilterV2 module for consistency and performance
+    harmful_count = len(_HARMFUL_REGEX.findall(prompt))
+    positive_count = len(_POSITIVE_REGEX.findall(prompt))
+
+    # Same scoring as compute_moral_value
+    base_score = 0.8
+    adjusted_score = base_score - (harmful_count * 0.15) + (positive_count * 0.05)
+
+    return max(0.0, min(1.0, adjusted_score))
 
 
 # ============================================================================
