@@ -39,7 +39,11 @@ try:
     from opentelemetry import trace
     from opentelemetry.sdk.resources import Resource
     from opentelemetry.sdk.trace import SpanProcessor, TracerProvider
-    from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
+    from opentelemetry.sdk.trace.export import (
+        BatchSpanProcessor,
+        ConsoleSpanExporter,
+        SpanExportResult,
+    )
     from opentelemetry.trace import SpanKind, Status, StatusCode
 
     OTEL_AVAILABLE = True
@@ -53,6 +57,7 @@ except ImportError:
         TracerProvider = None
         BatchSpanProcessor = None
         ConsoleSpanExporter = None
+        SpanExportResult = None
         SpanKind = None
         Status = None
         StatusCode = None
@@ -159,6 +164,26 @@ if TYPE_CHECKING:
     TracerLike: TypeAlias = Tracer | NoOpTracer
 else:
     TracerLike: TypeAlias = Any
+
+
+if OTEL_AVAILABLE:
+    class SafeConsoleSpanExporter(ConsoleSpanExporter):
+        """Console exporter that tolerates closed output streams.
+
+        Pytest can close captured stdout/stderr streams before OpenTelemetry flushes
+        spans, which would normally raise ValueError from the underlying exporter.
+        This wrapper swallows those benign errors to keep tests clean and deterministic.
+        """
+
+        def export(self, spans: Any) -> Any:  # type: ignore[override]
+            try:
+                return super().export(spans)
+            except ValueError as exc:
+                logger.debug(
+                    "Console span export skipped because output stream is closed",
+                    exc_info=exc,
+                )
+                return SpanExportResult.SUCCESS
 
 
 # ---------------------------------------------------------------------------
@@ -382,7 +407,7 @@ class TracerManager:
             return None
 
         if self._config.exporter_type == "console":
-            return ConsoleSpanExporter()
+            return SafeConsoleSpanExporter()
 
         if self._config.exporter_type == "otlp":
             try:
@@ -400,7 +425,7 @@ class TracerManager:
                     return OTLPSpanExporter(endpoint=self._config.otlp_endpoint)
             except ImportError:
                 logger.warning("OTLP exporter not available, falling back to console exporter")
-                return ConsoleSpanExporter()
+                return SafeConsoleSpanExporter()
 
         if self._config.exporter_type == "jaeger":
             try:
@@ -409,9 +434,9 @@ class TracerManager:
                 return JaegerExporter()
             except ImportError:
                 logger.warning("Jaeger exporter not available, falling back to console exporter")
-                return ConsoleSpanExporter()
+                return SafeConsoleSpanExporter()
 
-        return ConsoleSpanExporter()
+        return SafeConsoleSpanExporter()
 
     def shutdown(self) -> None:
         """Shutdown the tracer provider and flush pending spans."""
