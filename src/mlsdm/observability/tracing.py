@@ -39,7 +39,11 @@ try:
     from opentelemetry import trace
     from opentelemetry.sdk.resources import Resource
     from opentelemetry.sdk.trace import SpanProcessor, TracerProvider
-    from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
+    from opentelemetry.sdk.trace.export import (
+        BatchSpanProcessor,
+        ConsoleSpanExporter,
+        SimpleSpanProcessor,
+    )
     from opentelemetry.trace import SpanKind, Status, StatusCode
 
     OTEL_AVAILABLE = True
@@ -53,6 +57,7 @@ except ImportError:
         TracerProvider = None
         BatchSpanProcessor = None
         ConsoleSpanExporter = None
+        SimpleSpanProcessor = None
         SpanKind = None
         Status = None
         StatusCode = None
@@ -342,12 +347,18 @@ class TracerManager:
             # Create exporter based on configuration
             exporter = self._create_exporter()
             if exporter is not None:
-                self._processor = BatchSpanProcessor(
-                    exporter,
-                    max_queue_size=self._config.batch_max_queue_size,
-                    max_export_batch_size=self._config.batch_max_export_batch_size,
-                    schedule_delay_millis=self._config.batch_schedule_delay_millis,
-                )
+                if self._config.exporter_type == "console" and SimpleSpanProcessor is not None:
+                    # Use synchronous processor for console to avoid background thread writing
+                    # to closed streams during interpreter shutdown (observed as
+                    # "ValueError: I/O operation on closed file").
+                    self._processor = SimpleSpanProcessor(exporter)
+                else:
+                    self._processor = BatchSpanProcessor(
+                        exporter,
+                        max_queue_size=self._config.batch_max_queue_size,
+                        max_export_batch_size=self._config.batch_max_export_batch_size,
+                        schedule_delay_millis=self._config.batch_schedule_delay_millis,
+                    )
                 self._provider.add_span_processor(self._processor)
 
             # Register as global provider

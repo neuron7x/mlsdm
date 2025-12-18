@@ -15,6 +15,7 @@ from unittest.mock import patch
 import pytest
 
 from mlsdm.observability.tracing import (
+    OTEL_AVAILABLE,
     TracerManager,
     TracingConfig,
     add_span_attributes,
@@ -104,6 +105,19 @@ class TestTracerManager:
         manager = TracerManager.get_instance(config)
         manager.initialize()
         assert manager.tracer is not None
+
+    def test_console_exporter_uses_simple_processor(self) -> None:
+        """Console exporter should use a synchronous processor to avoid stdout issues."""
+        if not OTEL_AVAILABLE:
+            pytest.skip("OpenTelemetry not available")
+
+        from opentelemetry.sdk.trace.export import SimpleSpanProcessor
+
+        config = TracingConfig(exporter_type="console")
+        manager = TracerManager.get_instance(config)
+        manager.initialize()
+
+        assert isinstance(manager._processor, SimpleSpanProcessor)
 
     def test_shutdown(self) -> None:
         """Test tracer shutdown."""
