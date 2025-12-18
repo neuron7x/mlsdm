@@ -15,8 +15,8 @@ Security updates are provided for the following versions:
 
 To report a vulnerability, please use the GitHub Security Advisory feature:
 
-1. Navigate to [Security Advisories](https://github.com/neuron7x/mlsdm/security/advisories/new)
-2. Click "Report a vulnerability"
+1. Navigate to the **Security** tab of this repository
+2. Click **Report a vulnerability** under "Private vulnerability reporting"
 3. Provide a detailed description of the vulnerability
 
 ### What to Include

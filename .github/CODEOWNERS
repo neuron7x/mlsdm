@@ -15,8 +15,8 @@
 src/mlsdm/security/** @neuron7x
 
 # Container definitions
-Dockerfile* @neuron7x
-docker/** @neuron7x
+/Dockerfile* @neuron7x
+/docker/** @neuron7x
 
 # Policy-as-code and security policies
 policies/** @neuron7x
