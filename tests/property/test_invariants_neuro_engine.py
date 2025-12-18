@@ -10,7 +10,7 @@ import pytest
 from hypothesis import assume, given, settings
 from hypothesis import strategies as st
 
-from mlsdm.cognition.moral_filter_v2 import _HARMFUL_PATTERNS, _POSITIVE_PATTERNS
+from mlsdm.cognition.moral_filter_v2 import _HARMFUL_REGEX, _POSITIVE_REGEX
 from mlsdm.engine import NeuroCognitiveEngine, NeuroEngineConfig
 
 # Test tolerances
@@ -111,16 +111,9 @@ def get_moral_score_estimate(response_text, prompt):
         response_text: The LLM response (kept for backward compatibility but not used)
         prompt: The original prompt to analyze
     """
-    import re
-
-    text = prompt.lower()
-
-    # Use patterns from MoralFilterV2 module for consistency
-    harmful_regex = re.compile(r"\b(" + "|".join(_HARMFUL_PATTERNS) + r")\b", re.IGNORECASE)
-    positive_regex = re.compile(r"\b(" + "|".join(_POSITIVE_PATTERNS) + r")\b", re.IGNORECASE)
-
-    harmful_count = len(harmful_regex.findall(text))
-    positive_count = len(positive_regex.findall(text))
+    # Use pre-compiled regex patterns from MoralFilterV2 module for consistency and performance
+    harmful_count = len(_HARMFUL_REGEX.findall(prompt))
+    positive_count = len(_POSITIVE_REGEX.findall(prompt))
 
     # Same scoring as compute_moral_value
     base_score = 0.8
