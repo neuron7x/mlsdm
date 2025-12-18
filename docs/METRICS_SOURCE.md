@@ -9,7 +9,7 @@
 
 | Metric | Value | Source |
 |--------|-------|--------|
-| **CI Coverage Threshold** | 65% | [ci-neuro-cognitive-engine.yml](../.github/workflows/ci-neuro-cognitive-engine.yml#L150) |
+| **CI Coverage Threshold** | 65% | [ci-neuro-cognitive-engine.yml](../.github/workflows/ci-neuro-cognitive-engine.yml#L149) |
 | **Actual Coverage** | ~86% | [Latest CI run coverage.xml artifact](https://github.com/neuron7x/mlsdm/actions/workflows/ci-neuro-cognitive-engine.yml) |
 | **Core Modules Coverage** | 90%+ | Critical modules (`core/`, `memory/`, `cognition/`) |
 
@@ -44,7 +44,7 @@ The CI coverage threshold (65%) is intentionally set below actual coverage (~86%
 The canonical coverage command used in CI:
 
 ```bash
-# From .github/workflows/ci-neuro-cognitive-engine.yml (coverage job)
+# From .github/workflows/ci-neuro-cognitive-engine.yml (coverage job, lines 148-149)
 pytest --cov=src/mlsdm --cov-report=xml --cov-report=term-missing \
   --cov-fail-under=65 --ignore=tests/load -m "not slow and not benchmark" -v
 ```
