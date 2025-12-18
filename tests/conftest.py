@@ -9,6 +9,14 @@ from __future__ import annotations
 
 import os
 from typing import TYPE_CHECKING, Any
+import sys
+from pathlib import Path
+
+# Ensure the repository's src directory is on sys.path for direct test runs
+ROOT = Path(__file__).resolve().parents[1]
+SRC_DIR = ROOT / "src"
+if SRC_DIR.exists():
+    sys.path.insert(0, str(SRC_DIR))
 
 # CRITICAL: Set environment variables BEFORE any imports that might load mlsdm.api.app
 # This ensures rate limiting is disabled before FastAPI middleware is initialized
