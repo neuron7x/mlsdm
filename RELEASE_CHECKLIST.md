@@ -61,7 +61,10 @@ ruff check src tests
 mypy src/mlsdm --ignore-missing-imports
 
 # 11. Gate: Coverage Check
-pytest --ignore=tests/load --cov=src --cov-report=term-missing --cov-fail-under=90 -q
+# Uses same command as CI (see docs/METRICS_SOURCE.md for current metrics)
+# Threshold: 65% (policy) | Actual: ~86% (see CI artifacts)
+pytest --cov=src/mlsdm --cov-report=term-missing --cov-fail-under=65 \
+  --ignore=tests/load -m "not slow and not benchmark" -q
 ```
 
 ---
