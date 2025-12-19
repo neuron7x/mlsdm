@@ -38,8 +38,8 @@ FORBIDDEN_PATTERNS_CFF = FORBIDDEN_PATTERNS_STRICT + [
     r"\.\.\.",  # Ellipsis placeholders (but allowed in APA author lists)
 ]
 
-# DOI format regex (basic validation)
-DOI_PATTERN = re.compile(r"^10\.\d{4,}/")
+# DOI format regex (basic validation - must have prefix and suffix)
+DOI_PATTERN = re.compile(r"^10\.\d{4,}/.+")
 
 # Year regex (4 digits, reasonable range)
 YEAR_PATTERN = re.compile(r"^(19|20)\d{2}$")
@@ -139,7 +139,9 @@ def validate_url(url: str) -> bool:
     """Validate URL uses HTTPS and is not example.com."""
     if not url.startswith("https://"):
         return False
-    if "example.com" in url.lower():
+    # Check for placeholder domains (intentional substring check for validation, not sanitization)
+    url_lower = url.lower()
+    if "example.com" in url_lower or "example.org" in url_lower:  # noqa: S105
         return False
     return True
 
