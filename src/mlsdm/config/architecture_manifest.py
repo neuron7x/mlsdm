@@ -13,12 +13,9 @@ The manifest is validated in tests to ensure:
 
 from __future__ import annotations
 
+from collections.abc import Iterable, Sequence  # noqa: TC003
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from collections.abc import Iterable, Sequence
 
 PACKAGE_ROOT = Path(__file__).resolve().parents[1]
 KNOWN_LAYERS = {
