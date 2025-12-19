@@ -327,17 +327,30 @@ class ConfigLoader:
             # Remove prefix and convert to lowercase
             config_key = env_key[len(prefix) :].lower()
 
-            # Handle nested keys of arbitrary depth (e.g., API__PRIORITY__HIGH_WEIGHT)
-            parts = config_key.split("__")
+            # Filter out empty segments (e.g., trailing '__') to avoid creating empty keys
+            parts = [p for p in config_key.split("__") if p]
+            if not parts:
+                continue
+
             target = config
+            skipped = False
 
-            # Traverse/create nested dictionaries except for the final key
+            # Traverse or create nested dictionaries except for the final key.
+            # If an intermediate node is not a dict, skip to avoid clobbering existing values.
             for part in parts[:-1]:
-                if part not in target or not isinstance(target[part], dict):
+                existing = target.get(part)
+                if existing is None:
                     target[part] = {}
-                target = target[part]
+                    target = target[part]
+                elif isinstance(existing, dict):
+                    target = existing
+                else:
+                    skipped = True
+                    break
 
-            # Set the final value
+            if skipped:
+                continue
+
             target[parts[-1]] = ConfigLoader._parse_env_value(env_value)
 
         return config
