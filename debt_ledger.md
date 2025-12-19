@@ -11,13 +11,13 @@
 
 | Status | Count |
 |--------|-------|
-| Resolved | 3 |
-| Open | 35 |
+| Resolved | 4 |
+| Open | 34 |
 | Total | 38 |
 
 ✅ **All critical technical debt items have been resolved.**
 
-⚠️ **35 open items remain** (0 Critical, 5 High, 13 Medium, 17 Low priority)
+⚠️ **34 open items remain** (0 Critical, 4 High, 13 Medium, 17 Low priority)
 
 See [TECHNICAL_DEBT_REGISTER.md](TECHNICAL_DEBT_REGISTER.md) for the **complete unified technical debt register** with all identified issues, classifications, and remediation plans.
 
@@ -80,3 +80,21 @@ See [ENGINEERING_DEFICIENCIES_REGISTER.md](ENGINEERING_DEFICIENCIES_REGISTER.md)
 - Owner: @copilot
 - Status: resolved
 - Next action: None - issue is resolved.
+
+---
+
+## DL-004 (RESOLVED)
+
+- Priority: P2 (High)
+- Gate: security
+- Symptom: pip 24.0 vulnerable to CVE-2025-8869 tarfile path traversal during sdist installs.
+- Evidence: `pip --version` returned 24.0 (Debian packaged), flagged in TD-001.
+- Likely root cause: Base environments used system pip without an enforced secure minimum version.
+- Fix applied: Enforced `pip>=25.3` in requirements.txt and upgraded tooling to pip 25.3.x to pick up upstream fix.
+- Proof command: `python -m pip install --upgrade "pip>=25.3"` && `pip --version`
+- Risk: Low - pip 25.3.x is backward compatible for our build matrix.
+- Date: 2025-12-19
+- Fixed: 2025-12-19
+- Owner: @copilot
+- Status: resolved
+- Next action: Ensure CI/bootstrap steps continue to upgrade pip before dependency installation.

@@ -6,6 +6,7 @@
 # For full dev install: pip install -r requirements.txt
 #
 # Core Dependencies (sync with pyproject.toml [project.dependencies])
+pip>=25.3  # Mitigate CVE-2025-8869 (tarfile traversal in pip<25.3)
 numpy>=2.0.0
 fastapi>=0.115.0
 uvicorn>=0.32.0
