@@ -158,12 +158,13 @@ class TestCascadingFailuresChaos:
         2. Process requests as failures cascade
         3. Verify each failure is isolated and handled
         """
-        failure_count = [0]
+        embedder_call_count = [0]
+        llm_call_count = [0]
 
         def sometimes_failing_embedder(text: str) -> np.ndarray:
-            failure_count[0] += 1
-            if failure_count[0] % 5 == 0:
-                # Every 5th embedding "fails" but returns valid data
+            embedder_call_count[0] += 1
+            if embedder_call_count[0] % 5 == 0:
+                # Every 5th embedding is slow (simulates degradation)
                 time.sleep(0.2)
             text_hash = abs(hash(text))
             local_rng = np.random.RandomState(text_hash % (2**31))
@@ -174,8 +175,8 @@ class TestCascadingFailuresChaos:
             return vec
 
         def sometimes_failing_llm(prompt: str, max_tokens: int = 100) -> str:
-            call_num = failure_count[0]
-            if call_num % 7 == 0:
+            llm_call_count[0] += 1
+            if llm_call_count[0] % 7 == 0:
                 raise ConnectionError("Periodic LLM failure")
             return f"Response: {prompt[:40]}..."
 
@@ -219,8 +220,8 @@ class TestCascadingFailuresChaos:
         """Test system recovery after a cascade of failures.
 
         Scenario:
-        1. Induce multiple failures in sequence
-        2. Let system stabilize
+        1. Induce multiple failures in sequence (failure_phase=True)
+        2. Switch to recovery mode (failure_phase=False)
         3. Verify full recovery to normal operation
         """
         calls = [0]
@@ -229,7 +230,7 @@ class TestCascadingFailuresChaos:
         def phased_llm(prompt: str, max_tokens: int = 100) -> str:
             calls[0] += 1
             current_call = calls[0]
-            # Only fail during failure phase AND for first 5 calls
+            # Fail while failure_phase is True, succeed when False
             if failure_phase[0]:
                 raise ConnectionError("Simulated cascade failure")
             return f"Recovered response {current_call}: {prompt[:30]}..."
@@ -259,9 +260,13 @@ class TestCascadingFailuresChaos:
             )
             failure_results.append(result)
 
-        # All failure phase should have errors or no response
+        # Failure phase should have errors (error field set or no valid response)
         for r in failure_results:
-            assert r.get("error") is not None or r.get("response") is None
+            has_error = r.get("error") is not None
+            has_no_valid_response = not r.get("response")
+            assert has_error or has_no_valid_response, (
+                f"Expected failure in failure phase, got: {r}"
+            )
 
         # End failure phase
         failure_phase[0] = False
