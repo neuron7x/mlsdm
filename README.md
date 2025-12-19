@@ -854,6 +854,14 @@ ruff check src/
 
 ---
 
+## 📚 Citing
+
+If you use MLSDM in research, please cite it using the metadata in [`CITATION.cff`](CITATION.cff). GitHub's "Cite this repository" button provides pre-formatted citations.
+
+For the curated bibliography (neuroscience, AI safety, LLM memory), see [`docs/bibliography/`](docs/bibliography/README.md).
+
+---
+
 ## 📄 License
 
 This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.

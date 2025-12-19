@@ -1,0 +1,28 @@
+cff-version: 1.2.0
+message: "If you use this software in research, engineering documentation, or production systems, please cite it using the metadata below."
+type: software
+title: "MLSDM — Governed Cognitive Memory"
+version: "1.2.0"
+date-released: "2025-12-19"
+license: "MIT"
+repository-code: "https://github.com/neuron7x/mlsdm"
+url: "https://github.com/neuron7x/mlsdm"
+authors:
+  - name: "neuron7x"
+abstract: >
+  MLSDM (Governed Cognitive Memory) is a research-to-production memory substrate for LLM systems,
+  combining multi-level memory (episodic/semantic/procedural), governance guardrails, and operational readiness.
+keywords:
+  - "LLM"
+  - "memory"
+  - "RAG"
+  - "agents"
+  - "governance"
+  - "AI safety"
+  - "supply chain security"
+references:
+  - type: generic
+    title: "Project bibliography (APA 7 + BibTeX) and verification protocol"
+    url: "https://github.com/neuron7x/mlsdm/blob/main/docs/bibliography/README.md"
+    authors:
+      - name: "neuron7x"
