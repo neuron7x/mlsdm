@@ -195,6 +195,68 @@ moral_filter:
             assert "new_section" in config
             assert config["new_section"]["new_key"] == "new_value"
 
+    def test_env_override_deeply_nested(self, tmp_path):
+        """Test environment variable override for deeper nested keys (depth=3) preserves siblings."""
+        config_file = tmp_path / "config.yaml"
+        config_file.write_text(
+            """
+api:
+  priority:
+    high_weight: 3
+    normal_weight: 2
+    levels:
+      critical: 10
+"""
+        )
+
+        with patch.dict(
+            os.environ,
+            {
+                "MLSDM_API__PRIORITY__HIGH_WEIGHT": "5",
+                "MLSDM_API__PRIORITY__LEVELS__CRITICAL": "12",
+                "MLSDM_API__PRIORITY__LEVELS__MAJOR": "7",
+            },
+        ):
+            config = ConfigLoader.load_config(str(config_file), validate=False)
+            assert config["api"]["priority"]["high_weight"] == 5
+            assert config["api"]["priority"]["normal_weight"] == 2
+            assert config["api"]["priority"]["levels"]["critical"] == 12
+            assert config["api"]["priority"]["levels"]["major"] == 7
+
+    def test_env_override_top_level_int(self, tmp_path):
+        """Test top-level override parses integers correctly."""
+        config_file = tmp_path / "config.yaml"
+        config_file.write_text("dimension: 256")
+
+        with patch.dict(os.environ, {"MLSDM_DIMENSION": "768"}):
+            config = ConfigLoader.load_config(str(config_file), validate=False)
+            assert config["dimension"] == 768
+
+    def test_env_override_path_collision_skips(self, tmp_path):
+        """Path collisions (non-dict in path) raise to avoid clobbering."""
+        config_file = tmp_path / "config.yaml"
+        config_file.write_text(
+            """
+api:
+  priority: strict
+"""
+        )
+
+        with patch.dict(os.environ, {"MLSDM_API__PRIORITY__HIGH_WEIGHT": "5"}):
+            with pytest.raises(ValueError) as exc:
+                ConfigLoader.load_config(str(config_file), validate=False)
+            assert "refusing to overwrite path 'api.priority'" in str(exc.value)
+
+    def test_env_override_top_level_bool_and_float(self, tmp_path):
+        """Top-level overrides parse bool and float correctly."""
+        config_file = tmp_path / "config.yaml"
+        config_file.write_text("strict_mode: false\nthreshold: 0.25\n")
+
+        with patch.dict(os.environ, {"MLSDM_STRICT_MODE": "true", "MLSDM_THRESHOLD": "0.75"}):
+            config = ConfigLoader.load_config(str(config_file), validate=False)
+            assert config["strict_mode"] is True
+            assert config["threshold"] == 0.75
+
 
 class TestParseEnvValue:
     """Tests for environment value parsing."""

@@ -327,17 +327,33 @@ class ConfigLoader:
             # Remove prefix and convert to lowercase
             config_key = env_key[len(prefix) :].lower()
 
-            # Handle nested keys (e.g., MORAL_FILTER__THRESHOLD)
-            if "__" in config_key:
-                parts = config_key.split("__")
-                if len(parts) == 2:
-                    section, key = parts
-                    if section not in config:
-                        config[section] = {}
-                    config[section][key] = ConfigLoader._parse_env_value(env_value)
-            else:
-                # Top-level key
-                config[config_key] = ConfigLoader._parse_env_value(env_value)
+            # Filter out empty segments (e.g., trailing '__') to avoid creating empty keys
+            parts = [p for p in config_key.split("__") if p]
+            if not parts:
+                continue
+
+            target = config
+            path_segments: list[str] = []
+
+            # Traverse or create nested dictionaries except for the final key.
+            # If an intermediate node is not a dict, raise a clear error to avoid clobbering.
+            for part in parts[:-1]:
+                path_segments.append(part)
+                current_path = ".".join(path_segments)
+                existing = target.get(part)
+                if existing is None:
+                    target[part] = {}
+                    target = target[part]
+                elif isinstance(existing, dict):
+                    target = existing
+                else:
+                    raise ValueError(
+                        "Environment override target is not a mapping; refusing to overwrite "
+                        f"path '{current_path}' (existing type: {type(existing).__name__}). "
+                        "Ensure intermediate keys are dictionaries before applying nested overrides."
+                    )
+
+            target[parts[-1]] = ConfigLoader._parse_env_value(env_value)
 
         return config
 
