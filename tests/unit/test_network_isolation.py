@@ -34,9 +34,10 @@ class TestNetworkIsolation:
         def blocking_socket(*args, **kwargs):
             raise RuntimeError("Network access is not allowed in unit tests")
 
-        with patch.object(socket, "socket", blocking_socket):
-            with pytest.raises(RuntimeError, match="Network access is not allowed"):
-                socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        with patch.object(socket, "socket", blocking_socket), pytest.raises(
+            RuntimeError, match="Network access is not allowed"
+        ):
+            socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
         # Verify original socket is restored after test
         assert socket.socket == original_socket
@@ -51,8 +52,8 @@ class TestNetworkIsolation:
         from mlsdm.cognition.moral_filter import MoralFilter
         from mlsdm.core.cognitive_controller import CognitiveController
         from mlsdm.core.llm_wrapper import LLMWrapper
-        from mlsdm.memory.phase_entangled_lattice_memory import PhaseEntangledLatticeMemory
         from mlsdm.memory.multi_level_memory import MultiLevelSynapticMemory
+        from mlsdm.memory.phase_entangled_lattice_memory import PhaseEntangledLatticeMemory
         from mlsdm.utils.coherence_safety_metrics import CoherenceSafetyAnalyzer
         from mlsdm.utils.config_validator import ConfigValidator
 
