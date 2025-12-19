@@ -7,7 +7,7 @@ Validates:
 - docs/bibliography/REFERENCES.bib parses successfully
 - BibTeX keys are unique
 - Each entry has title + year + author + at least one of (doi, url, eprint)
-- Year is 4 digits (1900-2099)
+- Year is 4 digits within range [1850..2026]
 - DOI format is valid (basic regex)
 - URLs use HTTPS protocol
 - No forbidden content (TODO, example.com, placeholder text)
