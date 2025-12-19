@@ -97,7 +97,7 @@ jobs:
       - name: Run coverage gate
         run: ./coverage_gate.sh
         env:
-          COVERAGE_MIN: 65  # Current baseline is ~68%, set gate slightly below
+          COVERAGE_MIN: 75  # Staged target: 65% -> 75% -> 85% -> 90%
 
       - name: Upload coverage report
         if: always()

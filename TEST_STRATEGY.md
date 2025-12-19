@@ -51,11 +51,36 @@ Tests are organized by purpose and scope:
 
 ## Coverage Strategy
 
-### Coverage Target: **65% threshold, ~86% actual**
+### Coverage Model (Staged Targets)
 
-> See [docs/METRICS_SOURCE.md](docs/METRICS_SOURCE.md) for current metrics and threshold rationale.
+The test coverage implementation follows a staged approach:
 
-The coverage gate enforces a minimum of **65%** (threshold) to allow for minor fluctuations while maintaining high quality. Current actual coverage is approximately **86%**.
+| Stage | Line Coverage | Branch Coverage | Status |
+|-------|---------------|-----------------|--------|
+| Legacy Baseline | 65% | Not enforced | ✅ Exceeded |
+| **Current Gate** | **75%** | **70%** | ✅ Active |
+| Target (Phase 2) | 85% | 80% | 🔄 Planned |
+| Target (Final) | 90% | 80% | 📋 Goal |
+
+> See [pyproject.toml](pyproject.toml) `[tool.coverage.report]` for current fail_under setting.
+
+### Current Metrics
+
+- **Line Coverage:** ~78% (exceeds 75% gate)
+- **Branch Coverage:** ~70% (enabled via `branch = true`)
+- **Tests:** 1900+ passing, 12 skipped
+
+### Coverage Exclusions (Documented)
+
+The following are intentionally excluded from coverage measurement (see pyproject.toml):
+
+1. **Entrypoints** (`src/mlsdm/entrypoints/*`, `src/mlsdm/main.py`, `src/mlsdm/service/*`)
+   - Thin CLI/service wrappers tested via E2E tests
+   - Minimal testable logic in isolation
+
+2. **Experimental Modules** (`src/mlsdm/memory/experimental/*`)
+   - GPU-accelerated memory requiring optional PyTorch
+   - Research/benchmarking purposes only
 
 ### Module Classification
 
@@ -229,6 +254,40 @@ Memory leak tests (`tests/unit/test_cognitive_controller.py::TestCognitiveContro
 - Stable RSS (Resident Set Size) after warm-up
 - Deterministic behavior with fixed random seeds
 
+## Property-Based Tests (Invariant Validation)
+
+Property-based tests in `tests/property/` validate core invariants using Hypothesis.
+
+### Core Invariants Tested (3+ as required)
+
+1. **Memory System Invariants** (`test_invariants_memory.py`)
+   - INV-MEM-S1: Capacity enforcement
+   - INV-MEM-S2: Vector dimensionality consistency
+   - INV-MEM-M3: Retrieval relevance ordering
+
+2. **Moral Filter Invariants** (`test_moral_filter_properties.py`)
+   - Threshold bounds within [MIN_THRESHOLD, MAX_THRESHOLD]
+   - Drift bounded under adversarial input
+   - Adaptation convergence
+
+3. **LLM Wrapper Invariants** (`test_invariants_llm_wrapper.py`)
+   - Memory bounds/capacity constraints
+   - Stateless mode behavior
+   - Governance metadata presence
+
+4. **AI Safety Invariants** (`tests/security/test_ai_safety_invariants.py`)
+   - Safety bounds [0, 1]
+   - Threshold stability under manipulation
+   - Input sanitization guarantees
+
+### Network Isolation Guards
+
+The test suite includes network isolation tests (`tests/unit/test_network_isolation.py`) that verify:
+- Socket blocking capability
+- HTTP client mocking
+- Core imports work offline
+- Environment enforces local LLM backend
+
 ## Maintenance Notes
 
 ### Adding New Tests
@@ -239,17 +298,20 @@ Memory leak tests (`tests/unit/test_cognitive_controller.py::TestCognitiveContro
 
 ### Updating Coverage Thresholds
 1. Measure current coverage: `pytest --cov=src/mlsdm --cov-report=term`
-2. Update `COVERAGE_MIN` in `coverage_gate.sh` if justified
+2. Update `fail_under` in `pyproject.toml` and `COVERAGE_MIN` in `coverage_gate.sh`
 3. Document reason in commit message and update `COVERAGE_REPORT_2025.md`
 
 ### Excluding Modules from Coverage
 1. Only exclude non-critical glue code or optional features
-2. Add `# pragma: no cover` to specific lines if needed
+2. Add exclusions to `[tool.coverage.run]` omit list in `pyproject.toml`
 3. Document exclusion reason in this file
 4. Consider adding smoke tests for excluded modules
 
 ## Future Improvements
 
+- [x] Add network isolation guard tests
+- [x] Enable branch coverage reporting
+- [x] Document staged coverage targets
 - [ ] Add mutation testing for critical paths
 - [ ] Implement contract testing for API boundaries
 - [ ] Add visual regression tests for documentation
