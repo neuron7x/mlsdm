@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.2.0] - 2025-11-23
 
 ### Changed
+- Minimum supported Python version is now **3.11** (aligns with pinned NumPy 2.3.x dependency and CI matrix)
 - **Renamed `QILM_v2` to Phase-Entangled Lattice Memory (PELM)** across code, configuration, and documentation
   - New module: `src/mlsdm/memory/phase_entangled_lattice_memory.py` (formerly `qilm_v2.py`)
   - New class: `PhaseEntangledLatticeMemory` (formerly `QILM_v2`)
