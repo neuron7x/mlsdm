@@ -1,7 +1,7 @@
 cff-version: 1.2.0
 message: "If you use this software in research, engineering documentation, or production systems, please cite it using the metadata below."
 type: software
-title: "MLSDM — Governed Cognitive Memory"
+title: "MLSDM - Governed Cognitive Memory"
 version: "1.2.0"
 date-released: "2025-12-19"
 license: "MIT"
@@ -20,6 +20,14 @@ keywords:
   - "governance"
   - "AI safety"
   - "supply chain security"
+preferred-citation:
+  type: software
+  title: "MLSDM - Governed Cognitive Memory"
+  authors:
+    - name: "neuron7x"
+  version: "1.2.0"
+  year: 2025
+  url: "https://github.com/neuron7x/mlsdm"
 references:
   - type: generic
     title: "Project bibliography (APA 7 + BibTeX) and verification protocol"

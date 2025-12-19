@@ -1,12 +1,17 @@
 #!/usr/bin/env python3
 """
-Offline bibliography validator for MLSDM repository.
+Production-grade offline bibliography validator for MLSDM repository.
 
 Validates:
-- CITATION.cff exists
+- CITATION.cff exists and has required fields
 - docs/bibliography/REFERENCES.bib parses successfully
 - BibTeX keys are unique
-- Each entry has title + year + at least one of (doi, url, eprint)
+- Each entry has title + year + author + at least one of (doi, url, eprint)
+- Year is 4 digits (1900-2099)
+- DOI format is valid (basic regex)
+- URLs use HTTPS protocol
+- No forbidden content (TODO, example.com, placeholder text)
+- BibTeX and APA files have 1:1 key mapping
 
 No network requests are made.
 Exit code 0 on success, non-zero on failure.
@@ -17,6 +22,27 @@ from __future__ import annotations
 import re
 import sys
 from pathlib import Path
+
+
+# Forbidden patterns (applied to CITATION.cff and REFERENCES.bib only, not APA)
+FORBIDDEN_PATTERNS_STRICT = [
+    r"\bTODO\b",
+    r"\bTBD\b",
+    r"\bFIXME\b",
+    r"example\.com",
+    r"\bplaceholder\b",
+]
+
+# Patterns that apply to CITATION.cff only (not bibliography files)
+FORBIDDEN_PATTERNS_CFF = FORBIDDEN_PATTERNS_STRICT + [
+    r"\.\.\.",  # Ellipsis placeholders (but allowed in APA author lists)
+]
+
+# DOI format regex (basic validation)
+DOI_PATTERN = re.compile(r"^10\.\d{4,}/")
+
+# Year regex (4 digits, reasonable range)
+YEAR_PATTERN = re.compile(r"^(19|20)\d{2}$")
 
 
 def find_repo_root() -> Path:
@@ -47,10 +73,15 @@ def check_citation_cff(repo_root: Path) -> list[str]:
     content = cff_path.read_text(encoding="utf-8")
 
     # Basic checks for required fields
-    required_fields = ["cff-version", "title", "version", "authors"]
+    required_fields = ["cff-version", "title", "version", "authors", "license"]
     for field in required_fields:
-        if field not in content:
+        if field + ":" not in content:
             errors.append(f"CITATION.cff missing required field: {field}")
+
+    # Check for forbidden patterns
+    for pattern in FORBIDDEN_PATTERNS_CFF:
+        if re.search(pattern, content, re.IGNORECASE):
+            errors.append(f"CITATION.cff contains forbidden pattern: {pattern}")
 
     return errors
 
@@ -63,7 +94,6 @@ def parse_bibtex_simple(content: str) -> tuple[list[dict], list[str]]:
     entries: list[dict] = []
     errors: list[str] = []
 
-    # Find all entry blocks: @type{key, ... }
     # Pattern to match BibTeX entries
     entry_pattern = re.compile(
         r"@(\w+)\s*\{\s*([^,\s]+)\s*,([^@]*?)(?=\n@|\Z)", re.DOTALL | re.MULTILINE
@@ -92,16 +122,56 @@ def parse_bibtex_simple(content: str) -> tuple[list[dict], list[str]]:
     return entries, errors
 
 
-def check_bibtex(repo_root: Path) -> list[str]:
-    """Check that REFERENCES.bib is valid and entries meet requirements."""
+def validate_doi(doi: str) -> bool:
+    """Validate DOI format (basic check)."""
+    return bool(DOI_PATTERN.match(doi))
+
+
+def validate_year(year: str) -> bool:
+    """Validate year is 4 digits in reasonable range."""
+    # Handle n.d. for "no date" entries
+    if year.lower() == "n.d.":
+        return True
+    return bool(YEAR_PATTERN.match(year))
+
+
+def validate_url(url: str) -> bool:
+    """Validate URL uses HTTPS and is not example.com."""
+    if not url.startswith("https://"):
+        return False
+    if "example.com" in url.lower():
+        return False
+    return True
+
+
+def check_forbidden_content(content: str, context: str, patterns: list[str] | None = None) -> list[str]:
+    """Check for forbidden patterns in content."""
+    if patterns is None:
+        patterns = FORBIDDEN_PATTERNS_STRICT
+    errors = []
+    for pattern in patterns:
+        if re.search(pattern, content, re.IGNORECASE):
+            errors.append(f"{context} contains forbidden pattern: {pattern}")
+    return errors
+
+
+def check_bibtex(repo_root: Path) -> tuple[list[str], set[str]]:
+    """Check that REFERENCES.bib is valid and entries meet requirements.
+    
+    Returns (errors, bib_keys) where bib_keys is the set of all BibTeX keys.
+    """
     errors: list[str] = []
+    bib_keys: set[str] = set()
     bib_path = repo_root / "docs" / "bibliography" / "REFERENCES.bib"
 
     if not bib_path.exists():
         errors.append(f"REFERENCES.bib not found at {bib_path}")
-        return errors
+        return errors, bib_keys
 
     content = bib_path.read_text(encoding="utf-8")
+
+    # Check for forbidden patterns
+    errors.extend(check_forbidden_content(content, "REFERENCES.bib"))
 
     # Try to use bibtexparser if available, otherwise use simple parser
     try:
@@ -125,15 +195,16 @@ def check_bibtex(repo_root: Path) -> list[str]:
 
     if not entries:
         errors.append("No BibTeX entries found in REFERENCES.bib")
-        return errors
+        return errors, bib_keys
 
     # Check for unique keys
-    keys = [e["key"] for e in entries]
     seen_keys: set[str] = set()
-    for key in keys:
+    for entry in entries:
+        key = entry["key"]
         if key in seen_keys:
             errors.append(f"Duplicate BibTeX key: {key}")
         seen_keys.add(key)
+    bib_keys = seen_keys.copy()
 
     # Check each entry has required fields
     for entry in entries:
@@ -144,20 +215,80 @@ def check_bibtex(repo_root: Path) -> list[str]:
         if "title" not in fields or not fields["title"]:
             errors.append(f"Entry '{key}' missing required field: title")
 
+        # Must have author
+        if "author" not in fields or not fields["author"]:
+            errors.append(f"Entry '{key}' missing required field: author")
+
         # Must have year
-        if "year" not in fields or not fields["year"]:
+        year = fields.get("year", "")
+        if not year:
             errors.append(f"Entry '{key}' missing required field: year")
+        elif not validate_year(year):
+            errors.append(f"Entry '{key}' has invalid year format: {year} (expected 4 digits)")
 
         # Must have at least one of: doi, url, eprint
-        has_identifier = any(
-            fields.get(f) for f in ["doi", "url", "eprint"]
-        )
+        has_identifier = any(fields.get(f) for f in ["doi", "url", "eprint"])
         if not has_identifier:
-            errors.append(
-                f"Entry '{key}' must have at least one of: doi, url, eprint"
-            )
+            errors.append(f"Entry '{key}' must have at least one of: doi, url, eprint")
+
+        # Validate DOI format if present
+        doi = fields.get("doi", "")
+        if doi and not validate_doi(doi):
+            errors.append(f"Entry '{key}' has invalid DOI format: {doi}")
+
+        # Validate URL if present
+        url = fields.get("url", "")
+        if url and not validate_url(url):
+            errors.append(f"Entry '{key}' has invalid URL (must be HTTPS, not example.com): {url}")
 
     print(f"Validated {len(entries)} BibTeX entries")
+    return errors, bib_keys
+
+
+def extract_apa_keys(repo_root: Path) -> tuple[list[str], set[str]]:
+    """Extract BibTeX key comments from APA file.
+    
+    Returns (errors, apa_keys) where apa_keys is the set of all keys found.
+    """
+    errors: list[str] = []
+    apa_keys: set[str] = set()
+    apa_path = repo_root / "docs" / "bibliography" / "REFERENCES_APA7.md"
+
+    if not apa_path.exists():
+        errors.append(f"REFERENCES_APA7.md not found at {apa_path}")
+        return errors, apa_keys
+
+    content = apa_path.read_text(encoding="utf-8")
+
+    # Check for forbidden patterns
+    errors.extend(check_forbidden_content(content, "REFERENCES_APA7.md"))
+
+    # Extract keys from HTML comments: <!-- key: bibkey -->
+    key_pattern = re.compile(r"<!--\s*key:\s*(\S+)\s*-->")
+    for match in key_pattern.finditer(content):
+        key = match.group(1)
+        if key in apa_keys:
+            errors.append(f"Duplicate APA key comment: {key}")
+        apa_keys.add(key)
+
+    print(f"Found {len(apa_keys)} key comments in APA file")
+    return errors, apa_keys
+
+
+def check_bib_apa_consistency(bib_keys: set[str], apa_keys: set[str]) -> list[str]:
+    """Check 1:1 mapping between BibTeX and APA keys."""
+    errors: list[str] = []
+
+    # Keys in BibTeX but not in APA
+    missing_in_apa = bib_keys - apa_keys
+    for key in sorted(missing_in_apa):
+        errors.append(f"BibTeX key '{key}' has no corresponding APA entry (add <!-- key: {key} --> comment)")
+
+    # Keys in APA but not in BibTeX
+    missing_in_bib = apa_keys - bib_keys
+    for key in sorted(missing_in_bib):
+        errors.append(f"APA key '{key}' has no corresponding BibTeX entry")
+
     return errors
 
 
@@ -169,7 +300,7 @@ def main() -> int:
     all_errors: list[str] = []
 
     # Check CITATION.cff
-    print("\n[1/2] Checking CITATION.cff...")
+    print("\n[1/4] Checking CITATION.cff...")
     cff_errors = check_citation_cff(repo_root)
     all_errors.extend(cff_errors)
     if cff_errors:
@@ -179,14 +310,34 @@ def main() -> int:
         print("  OK: CITATION.cff is valid")
 
     # Check REFERENCES.bib
-    print("\n[2/2] Checking REFERENCES.bib...")
-    bib_errors = check_bibtex(repo_root)
+    print("\n[2/4] Checking REFERENCES.bib...")
+    bib_errors, bib_keys = check_bibtex(repo_root)
     all_errors.extend(bib_errors)
     if bib_errors:
         for err in bib_errors:
             print(f"  ERROR: {err}")
     else:
         print("  OK: REFERENCES.bib is valid")
+
+    # Check REFERENCES_APA7.md
+    print("\n[3/4] Checking REFERENCES_APA7.md...")
+    apa_errors, apa_keys = extract_apa_keys(repo_root)
+    all_errors.extend(apa_errors)
+    if apa_errors:
+        for err in apa_errors:
+            print(f"  ERROR: {err}")
+    else:
+        print("  OK: REFERENCES_APA7.md is valid")
+
+    # Check BibTeX-APA consistency
+    print("\n[4/4] Checking BibTeX-APA consistency...")
+    consistency_errors = check_bib_apa_consistency(bib_keys, apa_keys)
+    all_errors.extend(consistency_errors)
+    if consistency_errors:
+        for err in consistency_errors:
+            print(f"  ERROR: {err}")
+    else:
+        print("  OK: BibTeX and APA files are consistent")
 
     # Summary
     print("\n" + "=" * 50)

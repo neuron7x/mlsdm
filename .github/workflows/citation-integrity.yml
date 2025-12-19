@@ -7,12 +7,14 @@ on:
       - 'CITATION.bib'
       - 'docs/bibliography/**'
       - 'scripts/validate_bibliography.py'
+      - 'scripts/check_bidi.py'
   pull_request:
     paths:
       - 'CITATION.cff'
       - 'CITATION.bib'
       - 'docs/bibliography/**'
       - 'scripts/validate_bibliography.py'
+      - 'scripts/check_bidi.py'
 
 permissions:
   contents: read
@@ -29,10 +31,16 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+          cache: 'pip'
 
       - name: Install validation tools
         run: |
-          pip install cffconvert==2.0.0 bibtexparser
+          python -m pip install --upgrade pip
+          python -m pip install cffconvert==2.0.0 bibtexparser==1.4.3
+
+      - name: Check for bidi/control Unicode characters
+        run: |
+          python scripts/check_bidi.py
 
       - name: Validate CITATION.cff
         run: |
