@@ -554,7 +554,8 @@ All configuration parameters can be overridden using environment variables with 
 
 - Top-level keys: `MLSDM_<KEY>`
 - Nested keys: `MLSDM_<SECTION>__<KEY>`
-- Deeply nested keys: `MLSDM_<SECTION>__<SUBSECTION>__<KEY>` (arbitrary depth, siblings preserved)
+- Deeply nested keys: `MLSDM_<SECTION>__<SUBSECTION>__<KEY>` (arbitrary depth, siblings preserved, lowercase segments)
+- Conflict handling: if any intermediate segment resolves to a non-dictionary value, nested overrides fail fast with a clear error rather than clobbering existing data.
 - Use uppercase for environment variables
 - Use double underscores (`__`) for nesting
 
@@ -583,6 +584,8 @@ export MLSDM_APHASIA__DETECT_ENABLED=true
 export MLSDM_APHASIA__REPAIR_ENABLED=true
 export MLSDM_APHASIA__SEVERITY_THRESHOLD=0.3
 export MLSDM_API__PRIORITY__LEVELS__CRITICAL=12  # deep override without clobbering siblings
+export MLSDM_SECURITY__STRICT_MODE=true           # boolean parsing via _parse_env_value
+export MLSDM_SAFETY__THRESHOLD=0.65               # float parsing via _parse_env_value
 
 # NeuroLang performance configuration (NeuroLangWrapper only)
 export MLSDM_NEUROLANG__MODE=disabled

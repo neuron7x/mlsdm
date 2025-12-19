@@ -333,11 +333,13 @@ class ConfigLoader:
                 continue
 
             target = config
-            skipped = False
+            path_segments: list[str] = []
 
             # Traverse or create nested dictionaries except for the final key.
-            # If an intermediate node is not a dict, skip to avoid clobbering existing values.
+            # If an intermediate node is not a dict, raise a clear error to avoid clobbering.
             for part in parts[:-1]:
+                path_segments.append(part)
+                current_path = ".".join(path_segments)
                 existing = target.get(part)
                 if existing is None:
                     target[part] = {}
@@ -345,11 +347,11 @@ class ConfigLoader:
                 elif isinstance(existing, dict):
                     target = existing
                 else:
-                    skipped = True
-                    break
-
-            if skipped:
-                continue
+                    raise ValueError(
+                        "Environment override target is not a mapping; refusing to overwrite "
+                        f"path '{current_path}' (existing type: {type(existing).__name__}). "
+                        "Ensure intermediate keys are dictionaries before applying nested overrides."
+                    )
 
             target[parts[-1]] = ConfigLoader._parse_env_value(env_value)
 

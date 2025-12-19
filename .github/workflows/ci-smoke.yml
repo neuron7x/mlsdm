@@ -23,6 +23,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Guard against hidden/bidirectional Unicode
+        run: python scripts/check_bidi.py
+
       - name: Set up Python 3.11
         uses: actions/setup-python@v5
         with:

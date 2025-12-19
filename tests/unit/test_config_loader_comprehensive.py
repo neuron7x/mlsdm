@@ -214,12 +214,14 @@ api:
             {
                 "MLSDM_API__PRIORITY__HIGH_WEIGHT": "5",
                 "MLSDM_API__PRIORITY__LEVELS__CRITICAL": "12",
+                "MLSDM_API__PRIORITY__LEVELS__MAJOR": "7",
             },
         ):
             config = ConfigLoader.load_config(str(config_file), validate=False)
             assert config["api"]["priority"]["high_weight"] == 5
             assert config["api"]["priority"]["normal_weight"] == 2
             assert config["api"]["priority"]["levels"]["critical"] == 12
+            assert config["api"]["priority"]["levels"]["major"] == 7
 
     def test_env_override_top_level_int(self, tmp_path):
         """Test top-level override parses integers correctly."""
@@ -231,7 +233,7 @@ api:
             assert config["dimension"] == 768
 
     def test_env_override_path_collision_skips(self, tmp_path):
-        """Path collisions (non-dict in path) do not clobber existing values."""
+        """Path collisions (non-dict in path) raise to avoid clobbering."""
         config_file = tmp_path / "config.yaml"
         config_file.write_text(
             """
@@ -241,10 +243,19 @@ api:
         )
 
         with patch.dict(os.environ, {"MLSDM_API__PRIORITY__HIGH_WEIGHT": "5"}):
+            with pytest.raises(ValueError) as exc:
+                ConfigLoader.load_config(str(config_file), validate=False)
+            assert "refusing to overwrite path 'api.priority'" in str(exc.value)
+
+    def test_env_override_top_level_bool_and_float(self, tmp_path):
+        """Top-level overrides parse bool and float correctly."""
+        config_file = tmp_path / "config.yaml"
+        config_file.write_text("strict_mode: false\nthreshold: 0.25\n")
+
+        with patch.dict(os.environ, {"MLSDM_STRICT_MODE": "true", "MLSDM_THRESHOLD": "0.75"}):
             config = ConfigLoader.load_config(str(config_file), validate=False)
-            assert config["api"]["priority"] == "strict"
-            # Ensure we did not create nested dict
-            assert not isinstance(config["api"]["priority"], dict)
+            assert config["strict_mode"] is True
+            assert config["threshold"] == 0.75
 
 
 class TestParseEnvValue:
