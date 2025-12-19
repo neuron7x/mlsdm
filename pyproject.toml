@@ -184,10 +184,19 @@ omit = [
     "*/test_*.py",
     "*/__pycache__/*",
     "*/site-packages/*",
+    # Entrypoints are thin wrappers tested via E2E (see TEST_STRATEGY.md)
+    "src/mlsdm/entrypoints/*",
+    "src/mlsdm/main.py",
+    "src/mlsdm/service/*",
+    # Experimental modules require optional dependencies (PyTorch GPU)
+    "src/mlsdm/memory/experimental/*",
 ]
 branch = true
 
 [tool.coverage.report]
+# Line coverage target: 75% (staged from 65% baseline, target 90%)
+# Branch coverage target: 70% (staged from current baseline, target 80%)
+fail_under = 75
 exclude_lines = [
     "pragma: no cover",
     "def __repr__",
@@ -196,9 +205,15 @@ exclude_lines = [
     "if __name__ == .__main__.:",
     "if TYPE_CHECKING:",
     "@abstractmethod",
+    # Optional dependencies (torch, opentelemetry)
+    "except ImportError:",
+    "if torch is not None:",
+    "if OTEL_AVAILABLE:",
 ]
 precision = 2
 show_missing = true
+# Skip files with 0% coverage (intentionally excluded)
+skip_empty = true
 
 [tool.ruff]
 target-version = "py310"

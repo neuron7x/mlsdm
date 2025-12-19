@@ -16,16 +16,17 @@
 #   1 - Tests failed or coverage below threshold
 #
 # Environment Variables:
-#   COVERAGE_MIN - Minimum coverage percentage required (default: 65)
+#   COVERAGE_MIN - Minimum coverage percentage required (default: 75)
 #   PYTEST_ARGS  - Additional arguments to pass to pytest
 # ============================================================================
 
 set -euo pipefail
 
 # Default coverage threshold (can be overridden via environment variable)
-# Set to match CI gate threshold for consistency
-# CI workflow uses --cov-fail-under=65 in ci-neuro-cognitive-engine.yml
-COVERAGE_MIN="${COVERAGE_MIN:-65}"
+# Staged targets: 65% (legacy) -> 75% (current) -> 85% -> 90% (target)
+# Current threshold set to 75% to match pyproject.toml fail_under setting
+# See TEST_STRATEGY.md for coverage model and rationale
+COVERAGE_MIN="${COVERAGE_MIN:-75}"
 
 # Additional pytest arguments (can be extended via environment variable)
 PYTEST_ARGS="${PYTEST_ARGS:-}"
