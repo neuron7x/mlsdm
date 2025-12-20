@@ -30,6 +30,12 @@ moral_threshold_gauge = Gauge(
     ["filter_id"],
 )
 
+moral_threshold_drift_rate = Gauge(
+    "mlsdm_moral_threshold_drift_rate",
+    "Rate of threshold change per operation (aggregated per minute)",
+    ["filter_id"],
+)
+
 moral_threshold_violations = Counter(
     "mlsdm_moral_threshold_violations_total",
     "Total boundary violations (MIN/MAX)",
@@ -70,6 +76,7 @@ def record_threshold_change(
 
     # Calculate drift magnitude
     drift = abs(new_threshold - old_threshold)
+    moral_threshold_drift_rate.labels(filter_id=filter_id).set(drift)
 
     # Check for boundary violations
     if new_threshold <= 0.30:
