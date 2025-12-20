@@ -3,12 +3,15 @@ from __future__ import annotations
 import hashlib
 import math
 import time
+import uuid
 from dataclasses import dataclass
+from datetime import datetime
 from threading import Lock
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 import numpy as np
 
+from mlsdm.memory.provenance import MemoryProvenance, MemorySource
 from mlsdm.utils.math_constants import safe_norm
 
 if TYPE_CHECKING:
@@ -45,11 +48,15 @@ class MemoryRetrieval:
         vector: The retrieved embedding vector
         phase: The phase value associated with this memory
         resonance: Cosine similarity score (higher = better match)
+        provenance: Metadata about memory origin and confidence
+        memory_id: Unique identifier for this memory
     """
 
     vector: np.ndarray
     phase: float
     resonance: float
+    provenance: MemoryProvenance
+    memory_id: str
 
 
 class PhaseEntangledLatticeMemory:
@@ -106,6 +113,11 @@ class PhaseEntangledLatticeMemory:
         # Optimization: Pre-allocate query buffer to reduce allocations during retrieval
         self._query_buffer = np.zeros(dimension, dtype=np.float32)
         self._checksum = self._compute_checksum()
+        
+        # Provenance tracking - NEW
+        self._provenance: list[MemoryProvenance] = []
+        self._memory_ids: list[str] = []
+        self._confidence_threshold = 0.5  # Minimum confidence for storage
 
     def _ensure_integrity(self) -> None:
         """
@@ -138,6 +150,7 @@ class PhaseEntangledLatticeMemory:
         vector: list[float],
         phase: float,
         correlation_id: str | None = None,
+        provenance: Optional[MemoryProvenance] = None,
     ) -> int:
         """Store a vector with associated phase in memory.
 
@@ -145,9 +158,10 @@ class PhaseEntangledLatticeMemory:
             vector: Embedding vector to store (must match dimension)
             phase: Phase value in [0.0, 1.0] representing cognitive state
             correlation_id: Optional correlation ID for observability tracking
+            provenance: Optional provenance metadata (source, confidence, etc.)
 
         Returns:
-            Index where the vector was stored
+            Index where the vector was stored, or -1 if rejected due to low confidence
 
         Raises:
             TypeError: If vector is not a list or phase is not numeric
@@ -159,6 +173,34 @@ class PhaseEntangledLatticeMemory:
         with self._lock:
             # Ensure integrity before operation
             self._ensure_integrity()
+            
+            # Generate unique memory ID
+            memory_id = str(uuid.uuid4())
+            
+            # Create default provenance if not provided
+            if provenance is None:
+                provenance = MemoryProvenance(
+                    source=MemorySource.SYSTEM_PROMPT,
+                    confidence=1.0,
+                    timestamp=datetime.now()
+                )
+            
+            # Check confidence threshold - reject low-confidence memories
+            if provenance.confidence < self._confidence_threshold:
+                # Log rejection for observability
+                if _OBSERVABILITY_AVAILABLE and start_time is not None:
+                    latency_ms = (time.perf_counter() - start_time) * 1000
+                    record_pelm_store(
+                        index=-1,
+                        phase=phase,
+                        vector_norm=0.0,
+                        capacity_used=self.size,
+                        capacity_total=self.capacity,
+                        memory_bytes=self.memory_usage_bytes(),
+                        latency_ms=latency_ms,
+                        correlation_id=correlation_id,
+                    )
+                return -1  # Rejection sentinel value
 
             # Validate vector type
             if not isinstance(vector, list):
@@ -196,10 +238,23 @@ class PhaseEntangledLatticeMemory:
 
             vec_np = np.array(vector, dtype=np.float32)
             norm = max(safe_norm(vec_np), self.MIN_NORM_THRESHOLD)
+            
+            # Check capacity and evict if necessary
+            if self.size >= self.capacity:
+                self._evict_lowest_confidence()
+            
             idx = self.pointer
             self.memory_bank[idx] = vec_np
             self.phase_bank[idx] = phase
             self.norms[idx] = norm
+            
+            # Store provenance metadata
+            if idx < len(self._provenance):
+                self._provenance[idx] = provenance
+                self._memory_ids[idx] = memory_id
+            else:
+                self._provenance.append(provenance)
+                self._memory_ids.append(memory_id)
 
             # Update pointer with wraparound check
             new_pointer = self.pointer + 1
@@ -233,6 +288,7 @@ class PhaseEntangledLatticeMemory:
         vectors: list[list[float]],
         phases: list[float],
         correlation_id: str | None = None,
+        provenances: Optional[list[MemoryProvenance]] = None,
     ) -> list[int]:
         """Store multiple vectors with associated phases in memory (batch operation).
 
@@ -246,9 +302,10 @@ class PhaseEntangledLatticeMemory:
             vectors: List of embedding vectors to store (each must match dimension)
             phases: List of phase values in [0.0, 1.0] (must match vectors length)
             correlation_id: Optional correlation ID for observability tracking
+            provenances: Optional list of provenance metadata (must match vectors length if provided)
 
         Returns:
-            List of indices where the vectors were stored
+            List of indices where the vectors were stored (-1 for rejected)
 
         Raises:
             TypeError: If vectors/phases are not lists or contain invalid types
@@ -265,6 +322,12 @@ class PhaseEntangledLatticeMemory:
                 f"vectors and phases must have same length: "
                 f"{len(vectors)} vectors, {len(phases)} phases"
             )
+        
+        if provenances is not None and len(provenances) != len(vectors):
+            raise ValueError(
+                f"provenances must match vectors length: "
+                f"{len(vectors)} vectors, {len(provenances)} provenances"
+            )
 
         if len(vectors) == 0:
             return []
@@ -276,6 +339,23 @@ class PhaseEntangledLatticeMemory:
             indices: list[int] = []
 
             for i, (vector, phase) in enumerate(zip(vectors, phases, strict=True)):
+                # Get or create provenance for this vector
+                if provenances is not None:
+                    provenance = provenances[i]
+                else:
+                    provenance = MemoryProvenance(
+                        source=MemorySource.SYSTEM_PROMPT,
+                        confidence=1.0,
+                        timestamp=datetime.now()
+                    )
+                
+                # Check confidence threshold
+                if provenance.confidence < self._confidence_threshold:
+                    indices.append(-1)  # Reject
+                    continue
+                
+                # Generate unique memory ID
+                memory_id = str(uuid.uuid4())
                 # Validate vector type
                 if not isinstance(vector, list):
                     raise TypeError(
@@ -303,10 +383,23 @@ class PhaseEntangledLatticeMemory:
                     raise ValueError(f"vector at index {i} contains NaN or infinity values")
 
                 norm = max(safe_norm(vec_np), self.MIN_NORM_THRESHOLD)
+                
+                # Check capacity and evict if necessary
+                if self.size >= self.capacity:
+                    self._evict_lowest_confidence()
+                
                 idx = self.pointer
                 self.memory_bank[idx] = vec_np
                 self.phase_bank[idx] = phase
                 self.norms[idx] = norm
+                
+                # Store provenance metadata
+                if idx < len(self._provenance):
+                    self._provenance[idx] = provenance
+                    self._memory_ids[idx] = memory_id
+                else:
+                    self._provenance.append(provenance)
+                    self._memory_ids.append(memory_id)
 
                 indices.append(idx)
 
@@ -317,7 +410,9 @@ class PhaseEntangledLatticeMemory:
                 self.pointer = new_pointer
 
             # Update size only once at the end (more efficient)
-            self.size = min(self.size + len(vectors), self.capacity)
+            # Count only accepted vectors (not -1)
+            accepted_count = sum(1 for idx in indices if idx != -1)
+            self.size = min(self.size + accepted_count, self.capacity)
 
             # Update checksum only once after all modifications
             self._checksum = self._compute_checksum()
@@ -346,6 +441,7 @@ class PhaseEntangledLatticeMemory:
         phase_tolerance: float | None = None,
         top_k: int | None = None,
         correlation_id: str | None = None,
+        min_confidence: float = 0.0,
     ) -> list[MemoryRetrieval]:
         # Use calibration defaults if not specified
         if phase_tolerance is None:
@@ -389,7 +485,17 @@ class PhaseEntangledLatticeMemory:
             # Optimize: use in-place operations and avoid intermediate arrays
             phase_diff = np.abs(self.phase_bank[: self.size] - current_phase)
             phase_mask = phase_diff <= phase_tolerance
-            if not np.any(phase_mask):
+            
+            # Add confidence filtering
+            confidence_mask = np.array([
+                (i < len(self._provenance) and self._provenance[i].confidence >= min_confidence)
+                for i in range(self.size)
+            ])
+            
+            # Combine phase and confidence masks
+            valid_mask = phase_mask & confidence_mask
+            
+            if not np.any(valid_mask):
                 # Record empty result due to phase mismatch
                 if _OBSERVABILITY_AVAILABLE and start_time is not None:
                     latency_ms = (time.perf_counter() - start_time) * 1000
@@ -403,7 +509,7 @@ class PhaseEntangledLatticeMemory:
                     )
                 return []
 
-            candidates_idx = np.nonzero(phase_mask)[0]
+            candidates_idx = np.nonzero(valid_mask)[0]
             # Optimize: compute cosine similarity without intermediate array copies
             candidate_vectors = self.memory_bank[candidates_idx]
             candidate_norms = self.norms[candidates_idx]
@@ -426,11 +532,26 @@ class PhaseEntangledLatticeMemory:
             results: list[MemoryRetrieval] = []
             for loc in top_local:
                 glob = candidates_idx[loc]
+                # Get provenance (use default if not available for backward compatibility)
+                if glob < len(self._provenance):
+                    prov = self._provenance[glob]
+                    mem_id = self._memory_ids[glob]
+                else:
+                    # Fallback for memories created before provenance was added
+                    prov = MemoryProvenance(
+                        source=MemorySource.SYSTEM_PROMPT,
+                        confidence=1.0,
+                        timestamp=datetime.now()
+                    )
+                    mem_id = str(uuid.uuid4())
+                
                 results.append(
                     MemoryRetrieval(
                         vector=self.memory_bank[glob],
                         phase=self.phase_bank[glob],
                         resonance=float(cosine_sims[loc]),
+                        provenance=prov,
+                        memory_id=mem_id,
                     )
                 )
 
@@ -544,6 +665,50 @@ class PhaseEntangledLatticeMemory:
         for i in range(self.size):
             vec = self.memory_bank[i]
             self.norms[i] = max(safe_norm(vec), 1e-9)
+    
+    def _evict_lowest_confidence(self) -> None:
+        """Evict the memory with the lowest confidence score.
+        
+        This is called when the memory is at capacity and a new high-confidence
+        memory needs to be stored. Removes the least confident memory to make room.
+        
+        Should only be called from within a lock context.
+        """
+        if self.size == 0:
+            return
+        
+        # Find the index with lowest confidence
+        confidences = [
+            self._provenance[i].confidence if i < len(self._provenance) else 0.0
+            for i in range(self.size)
+        ]
+        min_idx = int(np.argmin(confidences))
+        
+        # Shift all arrays to remove the element at min_idx
+        if min_idx < self.size - 1:
+            # Shift memory_bank, phase_bank, and norms
+            self.memory_bank[min_idx:-1] = self.memory_bank[min_idx+1:self.size]
+            self.phase_bank[min_idx:-1] = self.phase_bank[min_idx+1:self.size]
+            self.norms[min_idx:-1] = self.norms[min_idx+1:self.size]
+            
+            # Shift provenance lists
+            self._provenance[min_idx:self.size-1] = self._provenance[min_idx+1:self.size]
+            self._memory_ids[min_idx:self.size-1] = self._memory_ids[min_idx+1:self.size]
+        
+        # Remove the last element from lists
+        if len(self._provenance) > 0:
+            self._provenance.pop()
+        if len(self._memory_ids) > 0:
+            self._memory_ids.pop()
+        
+        # Decrease size
+        self.size -= 1
+        
+        # Adjust pointer if it was pointing beyond the evicted item
+        if self.pointer > min_idx:
+            self.pointer -= 1
+        if self.pointer >= self.size and self.size > 0:
+            self.pointer = self.size - 1
 
     def _auto_recover_unsafe(self) -> bool:
         """
