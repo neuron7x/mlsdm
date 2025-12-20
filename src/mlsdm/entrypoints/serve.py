@@ -49,7 +49,10 @@ def serve(
         uvicorn_kwargs["timeout_keep_alive"] = timeout_keep_alive
     uvicorn_kwargs.update(extra)
 
-    uvicorn.run(app, **uvicorn_kwargs)
+    # Uvicorn expects an import string for multi-worker mode
+    target = "mlsdm.api.app:app" if uvicorn_kwargs.get("workers", 1) > 1 else app
+
+    uvicorn.run(target, **uvicorn_kwargs)
     return 0
 
 
