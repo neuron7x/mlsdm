@@ -131,12 +131,18 @@ class TestPolicyDriftDetection:
 
         mf = MoralFilterV2(initial_threshold=0.5, filter_id="test")
 
-        # Simulate no change
+        # Simulate no change (drift magnitude = 0)
         mf._record_drift(0.5, 0.5)
 
-        # Should not log drift warnings
-        assert "DRIFT" not in caplog.text
-        assert "drift" not in caplog.text.lower() or "0.000" in caplog.text
+        # Should not log any drift warnings (checking for any log records)
+        # When drift is 0, no warning or error should be logged
+        drift_logs = [
+            record
+            for record in caplog.records
+            if "drift" in record.message.lower()
+            and record.levelname in ("WARNING", "ERROR")
+        ]
+        assert len(drift_logs) == 0, f"Expected no drift logs, but found: {drift_logs}"
 
     def test_filter_id_passed_to_metrics(self):
         """Filter ID is correctly passed to metrics."""

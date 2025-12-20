@@ -6,7 +6,6 @@ for dangerous threshold changes.
 
 Metrics:
     - moral_threshold_current: Current threshold value per filter
-    - moral_threshold_drift_rate: Rate of threshold change
     - moral_threshold_violations: Boundary violations (MIN/MAX)
     - moral_ema_deviation: Deviation from target 0.5
     - moral_drift_events: Total drift events by severity
@@ -28,12 +27,6 @@ from prometheus_client import Counter, Gauge
 moral_threshold_gauge = Gauge(
     "mlsdm_moral_threshold_current",
     "Current moral filter threshold value",
-    ["filter_id"],
-)
-
-moral_threshold_drift_rate = Gauge(
-    "mlsdm_moral_threshold_drift_rate",
-    "Rate of threshold change per minute",
     ["filter_id"],
 )
 
@@ -68,12 +61,14 @@ def record_threshold_change(
         ema_value: Current EMA acceptance rate
 
     Side Effects:
-        Updates Prometheus metrics for monitoring and alerting
+        Updates Prometheus metrics for monitoring and alerting.
+        Tracks current threshold, boundary violations, EMA deviation,
+        and drift event severity.
     """
     # Update current value
     moral_threshold_gauge.labels(filter_id=filter_id).set(new_threshold)
 
-    # Calculate drift rate (per operation, will be aggregated)
+    # Calculate drift magnitude
     drift = abs(new_threshold - old_threshold)
 
     # Check for boundary violations
@@ -86,8 +81,8 @@ def record_threshold_change(
     deviation = abs(ema_value - 0.5)
     moral_ema_deviation.labels(filter_id=filter_id).set(deviation)
 
-    # Detect drift severity
-    if drift > 0.1:  # CRITICAL: >10% change
+    # Detect drift severity (using absolute threshold differences)
+    if drift > 0.1:  # CRITICAL: >0.1 absolute change
         moral_drift_events.labels(filter_id=filter_id, severity="critical").inc()
-    elif drift > 0.05:  # WARNING: >5% change
+    elif drift > 0.05:  # WARNING: >0.05 absolute change
         moral_drift_events.labels(filter_id=filter_id, severity="warning").inc()
