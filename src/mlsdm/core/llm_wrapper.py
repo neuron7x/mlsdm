@@ -677,7 +677,7 @@ class LLMWrapper:
         response_text: str = "",
     ) -> None:
         """Update memory with provenance tracking (skip if in stateless mode).
-        
+
         Args:
             prompt_vector: The embedding vector to store
             phase_val: The current phase value
@@ -686,24 +686,21 @@ class LLMWrapper:
         if not self.stateless_mode:
             try:
                 self.synaptic.update(prompt_vector)
-                
+
                 # Estimate confidence for LLM-generated response
                 confidence = self._estimate_confidence(response_text)
-                
+
                 # Create provenance metadata
                 provenance = MemoryProvenance(
                     source=MemorySource.LLM_GENERATION,
                     confidence=confidence,
                     timestamp=datetime.now(),
-                    llm_model=getattr(self, 'model_name', None)
+                    llm_model=getattr(self, "model_name", None),
                 )
-                
+
                 # Store with provenance
                 self._safe_pelm_operation(
-                    "entangle",
-                    prompt_vector.tolist(),
-                    phase=phase_val,
-                    provenance=provenance
+                    "entangle", prompt_vector.tolist(), phase=phase_val, provenance=provenance
                 )
                 self.consolidation_buffer.append(prompt_vector)
             except Exception as mem_err:
@@ -765,15 +762,13 @@ class LLMWrapper:
         consolidation_provenance = MemoryProvenance(
             source=MemorySource.SYSTEM_PROMPT,
             confidence=0.8,  # Consolidated memories have good confidence
-            timestamp=datetime.now()
+            timestamp=datetime.now(),
         )
-        
+
         for vector in self.consolidation_buffer:
             # Re-entangle with sleep phase for long-term storage
             self.pelm.entangle(
-                vector.tolist(),
-                phase=self.SLEEP_PHASE,
-                provenance=consolidation_provenance
+                vector.tolist(), phase=self.SLEEP_PHASE, provenance=consolidation_provenance
             )
 
         # Clear buffer
@@ -788,7 +783,7 @@ class LLMWrapper:
         context_parts = []
         for i, mem in enumerate(memories[:3]):  # Use top 3
             resonance = getattr(mem, "resonance", 0.0)
-            context_parts.append(f"[Context {i+1}, relevance: {resonance:.2f}]")
+            context_parts.append(f"[Context {i + 1}, relevance: {resonance:.2f}]")
 
         return " ".join(context_parts) if context_parts else ""
 
@@ -828,30 +823,38 @@ class LLMWrapper:
     def _is_error_response(self, result: Any) -> bool:
         """Check if a result is an error response dict."""
         return isinstance(result, dict) and "note" in result and "error" in result.get("note", "")
-    
+
     def _estimate_confidence(self, response: str) -> float:
         """Estimate confidence level of LLM-generated response using heuristics.
-        
+
         This provides a basic confidence estimation to help prevent hallucination
         propagation. Lower confidence responses are stored with appropriate metadata
         for filtering during retrieval.
-        
+
         Heuristic factors that reduce confidence:
         1. Uncertainty markers (e.g., "I think", "maybe", "probably")
         2. Very short responses (< 10 words)
         3. High repetition ratio (potential hallucination indicator)
-        
+
         Args:
             response: The LLM-generated text to evaluate
-            
+
         Returns:
             Confidence score in [0.0, 1.0] where 1.0 = highest confidence
         """
         # Constants for confidence calculation
         UNCERTAINTY_MARKERS = [
-            "i think", "maybe", "probably", "might be",
-            "i'm not sure", "possibly", "could be", "perhaps",
-            "seems like", "appears to", "likely"
+            "i think",
+            "maybe",
+            "probably",
+            "might be",
+            "i'm not sure",
+            "possibly",
+            "could be",
+            "perhaps",
+            "seems like",
+            "appears to",
+            "likely",
         ]
         MIN_WORDS_THRESHOLD = 10
         SHORT_RESPONSE_PENALTY = 0.2
@@ -859,30 +862,30 @@ class LLMWrapper:
         REPETITION_THRESHOLD = 0.3  # 30% repetition is concerning
         REPETITION_PENALTY_FACTOR = 0.3
         EMPTY_RESPONSE_CONFIDENCE = 0.1
-        
+
         if not response or len(response.strip()) == 0:
             return EMPTY_RESPONSE_CONFIDENCE
-        
+
         confidence = 1.0
-        
+
         # Factor 1: Uncertainty markers reduce confidence
         response_lower = response.lower()
         for marker in UNCERTAINTY_MARKERS:
             if marker in response_lower:
                 confidence -= UNCERTAINTY_PENALTY
-        
+
         # Factor 2: Very short responses have lower confidence
         words = response.split()
         if len(words) < MIN_WORDS_THRESHOLD:
             confidence -= SHORT_RESPONSE_PENALTY
-        
+
         # Factor 3: High repetition can indicate hallucination
         if len(words) > 0:
             unique_words = len(set(words))
             repetition_ratio = 1.0 - (unique_words / len(words))
             if repetition_ratio > REPETITION_THRESHOLD:
                 confidence -= repetition_ratio * REPETITION_PENALTY_FACTOR
-        
+
         # Ensure confidence stays in valid range
         return max(0.0, min(1.0, confidence))
 
