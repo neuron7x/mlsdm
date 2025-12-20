@@ -6,7 +6,6 @@ import os
 
 from fastapi import FastAPI
 
-from mlsdm.api.app import app as _canonical_app
 from mlsdm.api.app import create_app as _create_canonical_app
 from mlsdm.entrypoints.serve import serve as _serve
 
