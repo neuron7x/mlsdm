@@ -53,5 +53,4 @@ def serve(
     return 0
 
 
-__all__ = ["serve", "get_canonical_app", "_canonical_app"]
-
+__all__ = ["serve", "get_canonical_app"]

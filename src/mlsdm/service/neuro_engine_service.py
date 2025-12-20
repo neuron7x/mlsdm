@@ -23,5 +23,4 @@ def main() -> None:
     _serve(host=host, port=port)
 
 
-__all__ = ["create_app", "main", "_canonical_app"]
-
+__all__ = ["create_app", "main"]

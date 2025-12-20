@@ -8,8 +8,12 @@ from mlsdm.service.neuro_engine_service import create_app
 
 
 def test_canonical_app_factory_is_single_source():
-    assert serve_entrypoint.get_canonical_app() is canonical_app
-    assert create_app() is canonical_app
+    app_from_entrypoint = serve_entrypoint.get_canonical_app()
+    app_from_service = create_app()
+
+    # All factories must surface the same canonical instance
+    assert app_from_entrypoint is app_from_service
+    assert app_from_entrypoint is canonical_app
 
 
 def test_cli_serve_delegates_to_canonical_runtime(monkeypatch):
