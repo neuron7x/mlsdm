@@ -125,9 +125,6 @@ class TestEndToEnd:
 
     def test_multiple_requests_update_metrics(self, client):
         """Test that multiple requests update metrics endpoint."""
-        # Get initial metrics
-        metrics_before = client.get("/health/metrics").text
-
         # Make several requests
         for i in range(3):
             client.post("/generate", json={"prompt": f"Test request {i}"})
