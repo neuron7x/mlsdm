@@ -22,6 +22,7 @@ from __future__ import annotations
 import re
 import sys
 from pathlib import Path
+from urllib.parse import urlparse
 
 # Forbidden patterns (applied to CITATION.cff and REFERENCES.bib only, not APA)
 FORBIDDEN_PATTERNS_STRICT = [
@@ -49,6 +50,14 @@ YEAR_PATTERN = re.compile(r"^\d{4}$")
 
 ISO_DATE_PATTERN = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 ALLOWED_EVIDENCE_TYPES = {"peer_reviewed", "preprint", "standard"}
+PLACEHOLDER_DOMAINS = {"example.com", "example.org"}
+
+
+def is_placeholder_domain(host: str) -> bool:
+    """Return True if host matches placeholder domains or their subdomains."""
+    return host in PLACEHOLDER_DOMAINS or any(
+        host.endswith(f".{domain}") for domain in PLACEHOLDER_DOMAINS
+    )
 
 
 def find_repo_root() -> Path:
@@ -262,9 +271,12 @@ def validate_url(url: str) -> bool:
     """Validate URL uses HTTPS and is not example.com."""
     if not url.startswith("https://"):
         return False
-    # Check for placeholder domains (intentional substring check for validation, not sanitization)
-    url_lower = url.lower()
-    return not ("example.com" in url_lower or "example.org" in url_lower)  # noqa: S105
+    parsed = urlparse(url)
+    host = (parsed.hostname or "").lower()
+    if not host:
+        return False
+    # Reject placeholder domains exactly or as subdomains (e.g., foo.example.com)
+    return not is_placeholder_domain(host)
 
 
 def check_forbidden_content(content: str, context: str, patterns: list[str] | None = None) -> list[str]:
