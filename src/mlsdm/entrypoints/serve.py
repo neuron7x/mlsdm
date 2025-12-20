@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from fastapi import FastAPI
+if TYPE_CHECKING:
+    from fastapi import FastAPI
 
 from mlsdm.api.app import create_app as _create_canonical_app
 

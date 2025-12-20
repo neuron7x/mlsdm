@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import os
-
-from fastapi import FastAPI
+from typing import TYPE_CHECKING
 
 from mlsdm.api.app import create_app as _create_canonical_app
 from mlsdm.entrypoints.serve import serve as _serve
+
+if TYPE_CHECKING:
+    from fastapi import FastAPI
 
 
 def create_app() -> FastAPI:
