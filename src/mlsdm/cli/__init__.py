@@ -177,32 +177,28 @@ def cmd_demo(args: argparse.Namespace) -> int:
 
 def cmd_serve(args: argparse.Namespace) -> int:
     """Start the HTTP API server."""
-    from mlsdm.entrypoints.serve import serve
-
-    # Set environment variables from args
-    if args.config:
-        os.environ["CONFIG_PATH"] = args.config
-
-    if args.backend:
-        os.environ["LLM_BACKEND"] = args.backend
-
-    if args.disable_rate_limit:
-        os.environ["DISABLE_RATE_LIMIT"] = "1"
+    from mlsdm.serve import run_server
 
     print("=" * 60)
     print("MLSDM HTTP API Server")
     print("=" * 60)
+    print(f"Mode: {args.mode}")
     print(f"Starting server on {args.host}:{args.port}")
-    print(f"Backend: {os.environ.get('LLM_BACKEND', 'local_stub')}")
-    print(f"Config: {os.environ.get('CONFIG_PATH', 'config/default_config.yaml')}")
+    print(f"Backend: {args.backend or os.environ.get('LLM_BACKEND', 'local_stub')}")
+    print(f"Config: {args.config or os.environ.get('CONFIG_PATH', 'config/default_config.yaml')}")
     print()
 
-    return serve(
+    run_server(
+        mode=args.mode,
         host=args.host,
         port=args.port,
         log_level=args.log_level,
         reload=args.reload,
+        config=args.config,
+        backend=args.backend,
+        disable_rate_limit=args.disable_rate_limit,
     )
+    return 0
 
 
 def cmd_check(args: argparse.Namespace) -> int:
@@ -486,6 +482,13 @@ def main() -> int:
 
     # Serve command
     serve_parser = subparsers.add_parser("serve", help="Start HTTP API server")
+    serve_parser.add_argument(
+        "--mode",
+        type=str,
+        choices=["api", "neuro"],
+        default="api",
+        help="Server mode to run (api or neuro, default: api)",
+    )
     serve_parser.add_argument(
         "--host",
         type=str,

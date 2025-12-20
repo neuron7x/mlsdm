@@ -30,12 +30,15 @@ if __name__ == "__main__":
     # Add src to path only when running as script
     sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-    from mlsdm.entrypoints.serve import serve
+    from mlsdm.serve import run_server
+
+    host = os.environ.get("HOST", "0.0.0.0")
+    port = int(os.environ.get("PORT", "8000"))
 
     print("🚀 Starting NeuroCognitiveEngine HTTP API Service...")
     print(f"   Backend: {os.environ.get('LLM_BACKEND', 'local_stub')}")
-    print(f"   Host: {os.environ.get('HOST', '0.0.0.0')}")
-    print(f"   Port: {os.environ.get('PORT', '8000')}")
+    print(f"   Host: {host}")
+    print(f"   Port: {port}")
     print(f"   FSLGS: {os.environ.get('ENABLE_FSLGS', 'true')}")
     print(f"   Metrics: {os.environ.get('ENABLE_METRICS', 'true')}")
     print()
@@ -47,4 +50,13 @@ if __name__ == "__main__":
     print("  - GET  http://localhost:8000/docs (Swagger UI)")
     print()
 
-    serve(host=os.environ.get("HOST", "0.0.0.0"), port=int(os.environ.get("PORT", "8000")))
+    run_server(
+        mode="neuro",
+        host=host,
+        port=port,
+        log_level=os.environ.get("LOG_LEVEL", "info"),
+        reload=os.environ.get("RELOAD", "").lower() == "true",
+        config=os.environ.get("CONFIG_PATH"),
+        backend=os.environ.get("LLM_BACKEND"),
+        disable_rate_limit=os.environ.get("DISABLE_RATE_LIMIT") == "1",
+    )
