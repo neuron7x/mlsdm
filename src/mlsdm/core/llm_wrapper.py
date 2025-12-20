@@ -7,6 +7,7 @@ This module provides a production-ready wrapper around any LLM that enforces:
 3. Circadian rhythm with wake/sleep cycles
 4. Multi-level synaptic memory
 5. Phase-entangling retrieval
+6. Memory provenance tracking for AI safety
 
 Prevents LLM degradation, memory bloat, toxicity, and identity loss.
 """
@@ -16,6 +17,7 @@ from __future__ import annotations
 import logging
 import time
 from collections.abc import Callable  # noqa: TC003 - used at runtime in type hints
+from datetime import datetime
 from enum import Enum
 from threading import Lock
 from typing import TYPE_CHECKING, Any, cast
@@ -31,6 +33,7 @@ from tenacity import (
 from ..cognition.moral_filter_v2 import MoralFilterV2
 from ..memory.multi_level_memory import MultiLevelSynapticMemory
 from ..memory.phase_entangled_lattice_memory import PhaseEntangledLatticeMemory
+from ..memory.provenance import MemoryProvenance, MemorySource
 from ..observability.tracing import get_tracer_manager
 from ..rhythm.cognitive_rhythm import CognitiveRhythm
 from ..speech.governance import (  # noqa: TC001 - used at runtime in function signatures
@@ -210,6 +213,7 @@ class LLMWrapper:
         llm_retry_attempts: int | None = None,
         speech_governor: SpeechGovernor | None = None,
         embedding_cache_config: EmbeddingCacheConfig | None = None,
+        model_name: str | None = None,
     ):
         """
         Initialize the LLM wrapper with cognitive governance.
@@ -228,12 +232,15 @@ class LLMWrapper:
             embedding_cache_config: Optional configuration for embedding cache.
                 If provided, enables caching of embedding results to improve performance.
                 If None (default), caching is disabled for backward compatibility.
+            model_name: Optional name of the LLM model for provenance tracking
         """
         # Apply calibration defaults
         defaults = self._apply_calibration_defaults(
             capacity, wake_duration, sleep_duration, llm_timeout, llm_retry_attempts
         )
         capacity, wake_duration, sleep_duration, llm_timeout, llm_retry_attempts = defaults
+        # Store model name for provenance
+        self.model_name = model_name
         # Initialize core parameters
         self._init_core_params(dim, llm_timeout, llm_retry_attempts)
         # Initialize embedding cache (before core components so embed can use it)
@@ -547,7 +554,7 @@ class LLMWrapper:
                     "mlsdm.stateless_mode": self.stateless_mode,
                 },
             ):
-                self._update_memory_after_generate(prompt_vector, phase_val)
+                self._update_memory_after_generate(prompt_vector, phase_val, response_text)
 
             # Step 7: Advance rhythm and consolidate
             self._advance_rhythm_and_consolidate()
@@ -667,12 +674,37 @@ class LLMWrapper:
         self,
         prompt_vector: np.ndarray,
         phase_val: float,
+        response_text: str = "",
     ) -> None:
-        """Update memory (skip if in stateless mode)."""
+        """Update memory with provenance tracking (skip if in stateless mode).
+        
+        Args:
+            prompt_vector: The embedding vector to store
+            phase_val: The current phase value
+            response_text: The LLM-generated response (for confidence estimation)
+        """
         if not self.stateless_mode:
             try:
                 self.synaptic.update(prompt_vector)
-                self._safe_pelm_operation("entangle", prompt_vector.tolist(), phase=phase_val)
+                
+                # Estimate confidence for LLM-generated response
+                confidence = self._estimate_confidence(response_text)
+                
+                # Create provenance metadata
+                provenance = MemoryProvenance(
+                    source=MemorySource.LLM_GENERATION,
+                    confidence=confidence,
+                    timestamp=datetime.now(),
+                    llm_model=getattr(self, 'model_name', None)
+                )
+                
+                # Store with provenance
+                self._safe_pelm_operation(
+                    "entangle",
+                    prompt_vector.tolist(),
+                    phase=phase_val,
+                    provenance=provenance
+                )
                 self.consolidation_buffer.append(prompt_vector)
             except Exception as mem_err:
                 _logger.debug("Memory update failed (graceful degradation): %s", mem_err)
@@ -729,9 +761,20 @@ class LLMWrapper:
             return
 
         # During sleep, re-encode memories with sleep phase
+        # Use higher confidence for consolidated memories
+        consolidation_provenance = MemoryProvenance(
+            source=MemorySource.SYSTEM_PROMPT,
+            confidence=0.8,  # Consolidated memories have good confidence
+            timestamp=datetime.now()
+        )
+        
         for vector in self.consolidation_buffer:
             # Re-entangle with sleep phase for long-term storage
-            self.pelm.entangle(vector.tolist(), phase=self.SLEEP_PHASE)
+            self.pelm.entangle(
+                vector.tolist(),
+                phase=self.SLEEP_PHASE,
+                provenance=consolidation_provenance
+            )
 
         # Clear buffer
         self.consolidation_buffer.clear()
@@ -785,6 +828,55 @@ class LLMWrapper:
     def _is_error_response(self, result: Any) -> bool:
         """Check if a result is an error response dict."""
         return isinstance(result, dict) and "note" in result and "error" in result.get("note", "")
+    
+    def _estimate_confidence(self, response: str) -> float:
+        """Estimate confidence level of LLM-generated response using heuristics.
+        
+        This provides a basic confidence estimation to help prevent hallucination
+        propagation. Lower confidence responses are stored with appropriate metadata
+        for filtering during retrieval.
+        
+        Heuristic factors that reduce confidence:
+        1. Uncertainty markers (e.g., "I think", "maybe", "probably")
+        2. Very short responses (< 10 words)
+        3. High repetition ratio (potential hallucination indicator)
+        
+        Args:
+            response: The LLM-generated text to evaluate
+            
+        Returns:
+            Confidence score in [0.0, 1.0] where 1.0 = highest confidence
+        """
+        if not response or len(response.strip()) == 0:
+            return 0.1  # Empty responses have very low confidence
+        
+        confidence = 1.0
+        
+        # Factor 1: Uncertainty markers reduce confidence
+        uncertainty_markers = [
+            "i think", "maybe", "probably", "might be",
+            "i'm not sure", "possibly", "could be", "perhaps",
+            "seems like", "appears to", "likely"
+        ]
+        response_lower = response.lower()
+        for marker in uncertainty_markers:
+            if marker in response_lower:
+                confidence -= 0.1
+        
+        # Factor 2: Very short responses have lower confidence
+        words = response.split()
+        if len(words) < 10:
+            confidence -= 0.2
+        
+        # Factor 3: High repetition can indicate hallucination
+        if len(words) > 0:
+            unique_words = len(set(words))
+            repetition_ratio = 1.0 - (unique_words / len(words))
+            if repetition_ratio > 0.3:  # More than 30% repetition
+                confidence -= repetition_ratio * 0.3
+        
+        # Ensure confidence stays in valid range
+        return max(0.0, min(1.0, confidence))
 
     def get_state(self) -> dict[str, Any]:
         """
