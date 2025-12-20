@@ -195,12 +195,12 @@ class TestPolicyDriftDetection:
             _mf = MoralFilterV2(initial_threshold=0.6, filter_id="init-test")
 
             # Should have been called once in __init__
-        assert mock_record.call_count == 1
-        call_args = mock_record.call_args
-        assert call_args.kwargs["filter_id"] == "init-test"
-        assert call_args.kwargs["new_threshold"] == 0.6
-        assert call_args.kwargs["old_threshold"] == 0.6
-        assert call_args.kwargs["ema_value"] == 0.5
+            assert mock_record.call_count == 1
+            call_args = mock_record.call_args
+            assert call_args.kwargs["filter_id"] == "init-test"
+            assert call_args.kwargs["new_threshold"] == 0.6
+            assert call_args.kwargs["old_threshold"] == 0.6
+            assert call_args.kwargs["ema_value"] == 0.5
 
     def test_drift_rate_metric_set(self):
         """Drift rate metric is calculated."""
@@ -213,9 +213,11 @@ class TestPolicyDriftDetection:
 
         samples = moral_threshold_drift_rate.collect()[0].samples
         value = next(
-            s.value for s in samples if s.labels.get("filter_id") == "drift-rate-test"
+            (s.value for s in samples if s.labels.get("filter_id") == "drift-rate-test"),
+            None,
         )
 
+        assert value is not None
         assert value == pytest.approx(0.15)
 
 

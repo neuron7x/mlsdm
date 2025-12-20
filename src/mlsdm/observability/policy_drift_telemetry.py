@@ -6,6 +6,7 @@ for dangerous threshold changes.
 
 Metrics:
     - moral_threshold_current: Current threshold value per filter
+    - moral_threshold_drift_rate: Rate of threshold change per operation
     - moral_threshold_violations: Boundary violations (MIN/MAX)
     - moral_ema_deviation: Deviation from target 0.5
     - moral_drift_events: Total drift events by severity
@@ -32,7 +33,7 @@ moral_threshold_gauge = Gauge(
 
 moral_threshold_drift_rate = Gauge(
     "mlsdm_moral_threshold_drift_rate",
-    "Rate of threshold change per operation (aggregated per minute)",
+    "Rate of threshold change per operation",
     ["filter_id"],
 )
 
