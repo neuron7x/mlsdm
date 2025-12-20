@@ -92,6 +92,7 @@ class TestGenerateEndpoint:
     def test_generate_with_empty_prompt(self, client):
         """Test that empty prompt returns validation error."""
         response = client.post("/generate", json={"prompt": ""})
+        # Pydantic validation can surface as 422, runtime validation returns 400
         assert response.status_code in (400, 422)
 
     def test_generate_with_invalid_moral_value(self, client):
@@ -100,6 +101,7 @@ class TestGenerateEndpoint:
             "/generate",
             json={"prompt": "Test", "moral_value": 1.5},  # Out of range
         )
+        # Pydantic validation can surface as 422, runtime validation returns 400
         assert response.status_code in (400, 422)
 
     def test_generate_with_invalid_max_tokens(self, client):
@@ -108,6 +110,7 @@ class TestGenerateEndpoint:
             "/generate",
             json={"prompt": "Test", "max_tokens": -1},  # Negative
         )
+        # Pydantic validation can surface as 422, runtime validation returns 400
         assert response.status_code in (400, 422)
 
     def test_generate_timing_metrics(self, client):

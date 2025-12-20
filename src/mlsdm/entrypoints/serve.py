@@ -11,7 +11,8 @@ from mlsdm.api.app import create_app as _create_canonical_app
 
 def get_canonical_app() -> FastAPI:
     """Return the single canonical FastAPI application instance."""
-    # create_app currently returns the module-level app; keeping indirection for future-proofing
+    # create_app currently returns the module-level app; indirection keeps a single hook
+    # if the factory ever needs to perform lazy initialization without changing callers.
     return _create_canonical_app()
 
 
