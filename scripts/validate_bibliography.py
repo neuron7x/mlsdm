@@ -23,7 +23,6 @@ import re
 import sys
 from pathlib import Path
 
-
 # Forbidden patterns (applied to CITATION.cff and REFERENCES.bib only, not APA)
 FORBIDDEN_PATTERNS_STRICT = [
     r"\bTODO\b",
@@ -245,7 +244,7 @@ def validate_doi(doi: str) -> bool:
 
 def validate_year(year: str) -> tuple[bool, str]:
     """Validate year is 4 digits in reasonable range [1850..2026].
-    
+
     Returns (is_valid, error_message).
     """
     # Handle n.d. for "no date" entries
@@ -265,9 +264,7 @@ def validate_url(url: str) -> bool:
         return False
     # Check for placeholder domains (intentional substring check for validation, not sanitization)
     url_lower = url.lower()
-    if "example.com" in url_lower or "example.org" in url_lower:  # noqa: S105
-        return False
-    return True
+    return not ("example.com" in url_lower or "example.org" in url_lower)  # noqa: S105
 
 
 def check_forbidden_content(content: str, context: str, patterns: list[str] | None = None) -> list[str]:
@@ -283,7 +280,7 @@ def check_forbidden_content(content: str, context: str, patterns: list[str] | No
 
 def check_bibtex(repo_root: Path) -> tuple[list[str], set[str]]:
     """Check that REFERENCES.bib is valid and entries meet requirements.
-    
+
     Returns (errors, bib_keys) where bib_keys is the set of all BibTeX keys.
     """
     errors: list[str] = []
@@ -358,7 +355,7 @@ def check_bibtex(repo_root: Path) -> tuple[list[str], set[str]]:
 
 def extract_apa_keys(repo_root: Path) -> tuple[list[str], set[str]]:
     """Extract BibTeX key comments from APA file.
-    
+
     Returns (errors, apa_keys) where apa_keys is the set of all keys found.
     """
     errors: list[str] = []
