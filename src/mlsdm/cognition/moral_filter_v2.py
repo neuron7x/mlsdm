@@ -1,10 +1,16 @@
 from __future__ import annotations
 
+import logging
 import re
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from mlsdm.config import MoralFilterCalibration
+
+# Import drift telemetry
+from mlsdm.observability.policy_drift_telemetry import record_threshold_change
+
+logger = logging.getLogger(__name__)
 
 # Import calibration defaults - these can be overridden via config
 # Type hints use Optional to allow None when calibration module unavailable
@@ -72,10 +78,14 @@ class MoralFilterV2:
     _ONE_MINUS_ALPHA = 1.0 - EMA_ALPHA
     _ADAPT_DELTA = 0.05
 
-    def __init__(self, initial_threshold: float | None = None) -> None:
+    def __init__(
+        self, initial_threshold: float | None = None, filter_id: str = "default"
+    ) -> None:
         # Use calibration default if not specified
         if initial_threshold is None:
-            initial_threshold = MORAL_FILTER_DEFAULTS.threshold if MORAL_FILTER_DEFAULTS else 0.50
+            initial_threshold = (
+                MORAL_FILTER_DEFAULTS.threshold if MORAL_FILTER_DEFAULTS else 0.50
+            )
 
         # Validate input
         if not isinstance(initial_threshold, int | float):
@@ -84,8 +94,23 @@ class MoralFilterV2:
             )
 
         # Optimization: Use pure Python min/max instead of np.clip for scalar
-        self.threshold = max(self.MIN_THRESHOLD, min(float(initial_threshold), self.MAX_THRESHOLD))
+        self.threshold = max(
+            self.MIN_THRESHOLD, min(float(initial_threshold), self.MAX_THRESHOLD)
+        )
         self.ema_accept_rate = 0.5
+
+        # NEW: Drift detection
+        self._filter_id = filter_id
+        self._drift_history: list[float] = []
+        self._max_history = 100  # Keep last 100 changes
+
+        # Initialize metrics
+        record_threshold_change(
+            filter_id=self._filter_id,
+            old_threshold=self.threshold,
+            new_threshold=self.threshold,
+            ema_value=self.ema_accept_rate,
+        )
 
     def evaluate(self, moral_value: float) -> bool:
         # Optimize: fast-path for clear accept/reject cases
@@ -96,12 +121,17 @@ class MoralFilterV2:
         return moral_value >= self.threshold
 
     def adapt(self, accepted: bool) -> None:
-        # Optimization: Use pre-computed constant and avoid np.sign for scalar
+        """Adapt threshold with drift detection."""
+        # Store old value for drift calculation
+        old_threshold = self.threshold
+
+        # Existing adaptation logic
         signal = 1.0 if accepted else 0.0
         self.ema_accept_rate = (
             self.EMA_ALPHA * signal + self._ONE_MINUS_ALPHA * self.ema_accept_rate
         )
         error = self.ema_accept_rate - 0.5
+
         if error > self.DEAD_BAND:
             # Positive error - increase threshold
             new_threshold = self.threshold + self._ADAPT_DELTA
@@ -111,8 +141,88 @@ class MoralFilterV2:
             new_threshold = self.threshold - self._ADAPT_DELTA
             self.threshold = max(new_threshold, self.MIN_THRESHOLD)
 
+        # NEW: Record drift if threshold changed
+        if self.threshold != old_threshold:
+            self._record_drift(old_threshold, self.threshold)
+
     def get_state(self) -> dict[str, float]:
         return {"threshold": float(self.threshold), "ema": float(self.ema_accept_rate)}
+
+    def _record_drift(self, old: float, new: float) -> None:
+        """Record and analyze threshold drift.
+
+        Args:
+            old: Previous threshold value
+            new: New threshold value
+
+        Side Effects:
+            - Updates drift history
+            - Records Prometheus metrics
+            - Logs warnings/errors for significant drift
+        """
+        # Update drift history
+        self._drift_history.append(new)
+        if len(self._drift_history) > self._max_history:
+            self._drift_history.pop(0)
+
+        # Record metrics
+        record_threshold_change(
+            filter_id=self._filter_id,
+            old_threshold=old,
+            new_threshold=new,
+            ema_value=self.ema_accept_rate,
+        )
+
+        # Analyze for anomalous drift
+        drift_magnitude = abs(new - old)
+
+        if drift_magnitude > 0.1:  # >10% single change
+            logger.error(
+                f"CRITICAL DRIFT: threshold changed {drift_magnitude:.3f} "
+                f"({old:.3f} → {new:.3f}) for filter '{self._filter_id}'"
+            )
+        elif drift_magnitude > 0.05:  # >5% single change
+            logger.warning(
+                f"Significant drift: threshold changed {drift_magnitude:.3f} "
+                f"({old:.3f} → {new:.3f}) for filter '{self._filter_id}'"
+            )
+
+        # Check for sustained drift (trend over history)
+        if len(self._drift_history) >= 10:
+            recent_drift = self._drift_history[-1] - self._drift_history[-10]
+            if abs(recent_drift) > 0.15:  # >15% over 10 operations
+                logger.error(
+                    f"SUSTAINED DRIFT: threshold drifted {recent_drift:.3f} "
+                    f"over last 10 operations for filter '{self._filter_id}'"
+                )
+
+    def get_drift_stats(self) -> dict:
+        """Get drift statistics.
+
+        Returns:
+            Dictionary with drift statistics including:
+            - total_changes: Number of threshold changes recorded
+            - drift_range: Range of threshold values seen
+            - min_threshold: Minimum threshold in history
+            - max_threshold: Maximum threshold in history
+            - current_threshold: Current threshold value
+            - ema_acceptance: Current EMA acceptance rate
+        """
+        if len(self._drift_history) < 2:
+            return {
+                "total_changes": 0,
+                "drift_range": 0.0,
+                "current_threshold": self.threshold,
+            }
+
+        return {
+            "total_changes": len(self._drift_history),
+            "drift_range": max(self._drift_history) - min(self._drift_history),
+            "min_threshold": min(self._drift_history),
+            "max_threshold": max(self._drift_history),
+            "current_threshold": self.threshold,
+            "ema_acceptance": self.ema_accept_rate,
+        }
 
     def get_current_threshold(self) -> float:
         """Get the current moral threshold value.
