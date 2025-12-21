@@ -28,4 +28,4 @@ data:
           component: deployment
         annotations:
           summary: "Deployment not fully ready"
-          description: "Available: {{ $value }}, Desired: {{ $labels.replicas }}"
+          description: "Deployment mlsdm-neuro-engine available replicas are below desired threshold"

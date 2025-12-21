@@ -1,3 +1,4 @@
+import os
 import pytest
 import requests
 import time
@@ -13,8 +14,6 @@ class TestDeploymentSmoke:
     @classmethod
     def setup_class(cls):
         """Setup smoke test configuration"""
-        import os
-
         cls.BASE_URL = os.getenv("SMOKE_TEST_URL", "http://localhost:8000")
 
         # Wait for service to be ready
@@ -70,8 +69,6 @@ class TestDeploymentSmoke:
 
     def test_api_version_matches(self):
         """CRITICAL: API version matches deployment"""
-        import os
-
         expected_version = os.getenv("EXPECTED_VERSION", "1.2.0")
 
         response = requests.get(f"{self.BASE_URL}/version", timeout=self.TIMEOUT)

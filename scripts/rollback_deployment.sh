@@ -22,10 +22,20 @@ fi
 # Get deployment name
 DEPLOYMENT="mlsdm-neuro-engine"
 
+CURRENT_REVISION=$(kubectl get deployment $DEPLOYMENT -n $NAMESPACE -o jsonpath='{.metadata.annotations.deployment\.kubernetes\.io/revision}')
+if [ -z "$CURRENT_REVISION" ] || ! [[ "$CURRENT_REVISION" =~ ^[0-9]+$ ]]; then
+    echo "ERROR: Unable to determine current revision for $DEPLOYMENT"
+    exit 1
+fi
+
 # Auto-detect previous version if not provided
 if [ -z "$PREVIOUS_VERSION" ]; then
     echo "Auto-detecting previous version..."
-    PREVIOUS_VERSION=$(kubectl rollout history deployment/$DEPLOYMENT -n $NAMESPACE | tail -2 | head -1 | awk '{print $1}')
+    PREVIOUS_VERSION=$((CURRENT_REVISION - 1))
+    if [ "$PREVIOUS_VERSION" -lt 1 ]; then
+        echo "ERROR: No previous revision found for rollback"
+        exit 1
+    fi
     echo "Detected revision: $PREVIOUS_VERSION"
 fi
 
@@ -68,7 +78,10 @@ fi
 # Run smoke tests
 echo "Running smoke tests..."
 export SMOKE_TEST_URL="http://mlsdm-neuro-engine.$NAMESPACE.svc.cluster.local:8000"
-export EXPECTED_VERSION="$PREVIOUS_VERSION"
+
+ROLLED_BACK_IMAGE=$(kubectl get deployment $DEPLOYMENT -n $NAMESPACE -o jsonpath='{.spec.template.spec.containers[0].image}')
+EXPECTED_VERSION=$(echo "$ROLLED_BACK_IMAGE" | awk -F':' '{print $NF}')
+export EXPECTED_VERSION
 
 if pytest tests/smoke/test_deployment_smoke.py -v --tb=short; then
     echo ""

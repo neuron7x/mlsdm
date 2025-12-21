@@ -37,8 +37,11 @@ jobs:
       - name: Record current deployment state
         id: pre_deploy
         run: |
-          CURRENT_REVISION=$(kubectl rollout history deployment/mlsdm-neuro-engine -n mlsdm \
-            | tail -1 | awk '{print $1}')
+          CURRENT_REVISION=$(kubectl get deployment mlsdm-neuro-engine -n mlsdm -o jsonpath='{.metadata.annotations.deployment\.kubernetes\.io/revision}')
+          if [ -z "$CURRENT_REVISION" ]; then
+            echo "Failed to determine current revision"
+            exit 1
+          fi
           echo "current_revision=$CURRENT_REVISION" >> $GITHUB_OUTPUT
 
           CURRENT_IMAGE=$(kubectl get deployment mlsdm-neuro-engine -n mlsdm \
@@ -115,7 +118,7 @@ jobs:
 
           # Verify old version works
           export SMOKE_TEST_URL="http://localhost:8000"
-          export EXPECTED_VERSION=$(echo "${{ steps.pre_deploy.outputs.current_image }}" | cut -d':' -f2)
+          export EXPECTED_VERSION=$(echo "${{ steps.pre_deploy.outputs.current_image }}" | awk -F':' '{print $NF}')
 
           pytest tests/smoke/test_deployment_smoke.py -v --tb=short
           VERIFY_RESULT=$?
