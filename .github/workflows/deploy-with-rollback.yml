@@ -1,0 +1,146 @@
+name: Deploy with Automated Rollback
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+      version:
+        required: true
+        type: string
+    secrets:
+      KUBE_CONFIG:
+        required: true
+
+jobs:
+  deploy:
+    name: Deploy to ${{ inputs.environment }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'v1.28.0'
+
+      - name: Configure kubectl
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > ~/.kube/config
+          kubectl config use-context mlsdm-${{ inputs.environment }}
+
+      - name: Record current deployment state
+        id: pre_deploy
+        run: |
+          CURRENT_REVISION=$(kubectl rollout history deployment/mlsdm-neuro-engine -n mlsdm \
+            | tail -1 | awk '{print $1}')
+          echo "current_revision=$CURRENT_REVISION" >> $GITHUB_OUTPUT
+
+          CURRENT_IMAGE=$(kubectl get deployment mlsdm-neuro-engine -n mlsdm \
+            -o jsonpath='{.spec.template.spec.containers[0].image}')
+          echo "current_image=$CURRENT_IMAGE" >> $GITHUB_OUTPUT
+
+          echo "Pre-deploy state:"
+          echo "  Revision: $CURRENT_REVISION"
+          echo "  Image: $CURRENT_IMAGE"
+
+      - name: Deploy new version
+        id: deploy
+        run: |
+          kubectl set image deployment/mlsdm-neuro-engine \
+            neuro-engine=ghcr.io/neuron7x/mlsdm-neuro-engine:${{ inputs.version }} \
+            -n mlsdm
+
+          kubectl rollout status deployment/mlsdm-neuro-engine -n mlsdm --timeout=300s
+
+      - name: Wait for pods to stabilize
+        run: |
+          echo "Waiting 30s for pods to stabilize..."
+          sleep 30
+
+      - name: Run smoke tests
+        id: smoke_tests
+        continue-on-error: true
+        run: |
+          # Install test dependencies
+          pip install pytest requests
+
+          # Port-forward to service
+          kubectl port-forward -n mlsdm svc/mlsdm-neuro-engine 8000:8000 &
+          FORWARD_PID=$!
+          sleep 5
+
+          # Run smoke tests
+          export SMOKE_TEST_URL="http://localhost:8000"
+          export EXPECTED_VERSION="${{ inputs.version }}"
+
+          pytest tests/smoke/test_deployment_smoke.py -v --tb=short
+          SMOKE_RESULT=$?
+
+          # Cleanup port-forward
+          kill $FORWARD_PID || true
+
+          exit $SMOKE_RESULT
+
+      - name: Automated rollback on failure
+        if: steps.smoke_tests.outcome == 'failure'
+        run: |
+          echo "❌ Smoke tests FAILED - Initiating automated rollback"
+
+          # Rollback to previous revision
+          kubectl rollout undo deployment/mlsdm-neuro-engine -n mlsdm \
+            --to-revision=${{ steps.pre_deploy.outputs.current_revision }}
+
+          kubectl rollout status deployment/mlsdm-neuro-engine -n mlsdm --timeout=300s
+
+          echo ""
+          echo "Rollback completed. Image restored to:"
+          kubectl get deployment mlsdm-neuro-engine -n mlsdm \
+            -o jsonpath='{.spec.template.spec.containers[0].image}'
+
+      - name: Verify rollback with smoke tests
+        if: steps.smoke_tests.outcome == 'failure'
+        run: |
+          sleep 30  # Wait for rollback stabilization
+
+          # Port-forward again
+          kubectl port-forward -n mlsdm svc/mlsdm-neuro-engine 8000:8000 &
+          FORWARD_PID=$!
+          sleep 5
+
+          # Verify old version works
+          export SMOKE_TEST_URL="http://localhost:8000"
+          export EXPECTED_VERSION=$(echo "${{ steps.pre_deploy.outputs.current_image }}" | cut -d':' -f2)
+
+          pytest tests/smoke/test_deployment_smoke.py -v --tb=short
+          VERIFY_RESULT=$?
+
+          kill $FORWARD_PID || true
+
+          if [ $VERIFY_RESULT -ne 0 ]; then
+            echo "❌ CRITICAL: Rollback verification FAILED!"
+            echo "Manual intervention required immediately!"
+            exit 1
+          fi
+
+          echo "✅ Rollback verified successful"
+
+      - name: Fail workflow if deployment failed
+        if: steps.smoke_tests.outcome == 'failure'
+        run: |
+          echo "Deployment failed and was rolled back"
+          exit 1
+
+      - name: Deployment successful
+        if: steps.smoke_tests.outcome == 'success'
+        run: |
+          echo "✅ Deployment successful!"
+          echo "Version: ${{ inputs.version }}"
+          echo "Environment: ${{ inputs.environment }}"
+
+          kubectl get deployment mlsdm-neuro-engine -n mlsdm

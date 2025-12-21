@@ -1,0 +1,31 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mlsdm-deployment-alerts
+  namespace: mlsdm
+data:
+  deployment_rules.yml: |
+    groups:
+    - name: mlsdm_deployment
+      interval: 30s
+      rules:
+
+      - alert: DeploymentRollbackOccurred
+        expr: increase(kube_deployment_status_observed_generation{deployment="mlsdm-neuro-engine"}[5m]) > 1
+        for: 1m
+        labels:
+          severity: warning
+          component: deployment
+        annotations:
+          summary: "Deployment rollback detected"
+          description: "mlsdm-neuro-engine experienced a rollback in the last 5 minutes"
+
+      - alert: DeploymentNotReady
+        expr: kube_deployment_status_replicas_available{deployment="mlsdm-neuro-engine"} < kube_deployment_spec_replicas{deployment="mlsdm-neuro-engine"}
+        for: 5m
+        labels:
+          severity: critical
+          component: deployment
+        annotations:
+          summary: "Deployment not fully ready"
+          description: "Available: {{ $value }}, Desired: {{ $labels.replicas }}"

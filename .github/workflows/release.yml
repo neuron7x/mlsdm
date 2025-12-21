@@ -368,6 +368,8 @@ jobs:
       contents: write
       packages: write
       id-token: write  # Required for OIDC cosign signing
+    outputs:
+      version: ${{ steps.get_version.outputs.VERSION }}
 
     steps:
       - name: Checkout code
@@ -557,3 +559,29 @@ jobs:
         # INFORMATIONAL: Upload failures should not block the workflow
         # The actual security scan already passed/failed above
         continue-on-error: true
+
+  deploy-staging-with-rollback:
+    name: Deploy to Staging (with Rollback)
+    needs: [build-and-push-docker, security-scan]
+    if: startsWith(github.ref, 'refs/tags/v')
+    uses: ./.github/workflows/deploy-with-rollback.yml
+    with:
+      environment: staging
+      version: ${{ needs.build-and-push-docker.outputs.version }}
+    secrets:
+      KUBE_CONFIG: ${{ secrets.STAGING_KUBE_CONFIG }}
+
+  deploy-production-with-rollback:
+    name: Deploy to Production (with Rollback)
+    needs: [deploy-staging-with-rollback]
+    if: startsWith(github.ref, 'refs/tags/v') && !contains(github.ref, 'rc')
+    uses: ./.github/workflows/deploy-with-rollback.yml
+    with:
+      environment: production
+      version: ${{ needs.build-and-push-docker.outputs.version }}
+    secrets:
+      KUBE_CONFIG: ${{ secrets.PRODUCTION_KUBE_CONFIG }}
+    # Manual approval required for production
+    environment:
+      name: production
+      url: https://api.mlsdm.io
