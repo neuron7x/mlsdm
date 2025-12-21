@@ -38,6 +38,7 @@ locust>=2.32.0
 httpx>=0.28.0
 types-PyYAML>=6.0.12
 types-requests>=2.32.0
+typing_extensions>=4.0.0
 
 # Visualization (optional, from pyproject.toml [project.optional-dependencies].visualization)
 matplotlib>=3.8.4
