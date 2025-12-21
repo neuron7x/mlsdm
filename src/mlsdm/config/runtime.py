@@ -130,6 +130,9 @@ class RuntimeConfig:
             "LLM_BACKEND": self.engine.llm_backend,
             "EMBEDDING_DIM": str(self.engine.embedding_dim),
             "ENABLE_FSLGS": "true" if self.engine.enable_fslgs else "false",
+            "MLSDM_ENGINE_ENABLE_METRICS": "true"
+            if self.engine.enable_metrics
+            else "false",
             "CONFIG_PATH": self.engine.config_path,
             # Debug
             "MLSDM_DEBUG": "1" if self.debug else "0",
@@ -342,7 +345,9 @@ def get_runtime_config(mode: RuntimeMode | None = None) -> RuntimeConfig:
         llm_backend=_get_env_str("LLM_BACKEND", defaults["engine"]["llm_backend"]),
         embedding_dim=_get_env_int("EMBEDDING_DIM", defaults["engine"]["embedding_dim"]),
         enable_fslgs=_get_env_bool("ENABLE_FSLGS", defaults["engine"]["enable_fslgs"]),
-        enable_metrics=_get_env_bool("ENABLE_METRICS", defaults["engine"]["enable_metrics"]),
+        enable_metrics=_get_env_bool(
+            "MLSDM_ENGINE_ENABLE_METRICS", defaults["engine"]["enable_metrics"]
+        ),
         config_path=_get_env_str("CONFIG_PATH", defaults["engine"]["config_path"]),
     )
 
