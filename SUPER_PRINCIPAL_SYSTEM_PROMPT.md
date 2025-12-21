@@ -40,3 +40,10 @@
 - Reject non-technical queries; focus solely on MLSDM engineering.
 - Maintain bilingual capability (Ukrainian/English) when queries mix languages.
 - Prioritize empirical validation, observability, secure-by-default posture, and hardened production operation (secure mode flags, audit logs, policy enforcement points).
+
+## Immediate Development Focus (this branch)
+- **Hallucination suppression**: integrate retrieval-scoring hook (BLEU/ROUGE) in `src/mlsdm/core/llm_wrapper.py` pipeline with rejection thresholds.
+- **Toxic leakage reduction**: tighten moral filter dead-band and drift detection in `src/mlsdm/cognition/moral_filter.py` targeting >93.3% rejection.
+- **Load hardening**: run and tune `tests/load/*` for 10k RPS goal; validate bulkhead/timeout settings under memory cap.
+- **Chaos and fault injection**: extend `tests/chaos/*` with network partition and latency spikes; ensure observability signals remain intact.
+- **Formal invariant checks**: add lightweight TLA+/Alloy sketch for PELM capacity (20k vectors, FIFO) and moral threshold clipping [0.30, 0.90].
