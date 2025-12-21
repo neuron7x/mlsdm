@@ -573,10 +573,6 @@ class LLMWrapper:
             self.rejected_count += 1
             return self._build_rejection_response("morally rejected")
 
-        is_wake = self.rhythm.is_wake()
-        if not is_wake:
-            return self._build_rejection_response("sleep phase - consolidating")
-
         return None
 
     def _embed_and_validate_prompt(self, prompt: str) -> np.ndarray | dict[str, Any]:
@@ -730,12 +726,21 @@ class LLMWrapper:
         governed_metadata: dict[str, Any] | None,
     ) -> dict[str, Any]:
         """Build the successful response dictionary."""
+        note = "processed"
+        note_suffixes = []
+        if self.stateless_mode:
+            note_suffixes.append("stateless mode")
+        if self.rhythm.is_sleep():
+            note_suffixes.append("sleep phase")
+        if note_suffixes:
+            note = f"{note} ({', '.join(note_suffixes)})"
+
         result = {
             "response": response_text,
             "accepted": True,
             "phase": self.rhythm.phase,
             "step": self.step_counter,
-            "note": "processed (stateless mode)" if self.stateless_mode else "processed",
+            "note": note,
             "moral_threshold": round(self.moral.threshold, 4),
             "context_items": len(memories),
             "max_tokens_used": max_tokens,
