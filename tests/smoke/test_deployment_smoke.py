@@ -1,20 +1,23 @@
 import os
+import time
+
 import pytest
 import requests
-import time
-from typing import Optional
 
 
 class TestDeploymentSmoke:
     """Critical smoke tests for post-deployment validation"""
 
-    BASE_URL: Optional[str] = None  # Set via env var
+    BASE_URL: str | None = None  # Set via env var
     TIMEOUT = 30  # seconds
 
     @classmethod
     def setup_class(cls):
         """Setup smoke test configuration"""
-        cls.BASE_URL = os.getenv("SMOKE_TEST_URL", "http://localhost:8000")
+        cls.BASE_URL = os.getenv("SMOKE_TEST_URL")
+
+        if not cls.BASE_URL:
+            pytest.skip("SMOKE_TEST_URL not configured; skipping deployment smoke tests", allow_module_level=True)
 
         # Wait for service to be ready
         max_wait = 60
@@ -115,4 +118,5 @@ class TestDeploymentSmoke:
         elapsed = time.time() - start
 
         # P99 should be <150ms, smoke test allows 500ms
+        assert response.status_code in [200, 401, 403], f"Inference endpoint broken: {response.status_code}"
         assert elapsed < 0.5, f"Response too slow: {elapsed:.3f}s"
