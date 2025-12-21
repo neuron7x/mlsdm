@@ -40,6 +40,12 @@ from .embedding_cache import (
     clear_default_cache,
     get_default_cache,
 )
+from .errors import (
+    StateCorruptError,
+    StateFileNotFoundError,
+    StateIncompleteError,
+    StateVersionMismatchError,
+)
 from .math_constants import (
     EPSILON_ABS,
     EPSILON_DIV,
@@ -90,6 +96,11 @@ __all__ = [
     "EmbeddingCacheStats",
     "get_default_cache",
     "clear_default_cache",
+    # State persistence errors
+    "StateFileNotFoundError",
+    "StateCorruptError",
+    "StateVersionMismatchError",
+    "StateIncompleteError",
     # Rate limiting
     "RateLimiter",
     # Time provider
