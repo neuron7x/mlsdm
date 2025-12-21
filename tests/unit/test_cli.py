@@ -12,7 +12,7 @@ import argparse
 import os
 from pathlib import Path
 from typing import TYPE_CHECKING
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 if TYPE_CHECKING:
     from _pytest.capture import CaptureFixture

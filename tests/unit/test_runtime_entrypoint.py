@@ -1,8 +1,8 @@
 from types import SimpleNamespace
 
 from mlsdm.api.app import app as canonical_app
-from mlsdm.service.neuro_engine_service import create_app
 from mlsdm.serve import get_app
+from mlsdm.service.neuro_engine_service import create_app
 
 
 def test_canonical_app_factory_is_single_source():
