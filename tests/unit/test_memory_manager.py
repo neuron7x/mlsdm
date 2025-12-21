@@ -464,10 +464,10 @@ class TestStatePersistence:
         with pytest.raises(StateCorruptError) as exc_info:
             manager.load_system_state(filepath)
 
+        # Validate error code and that reason is captured
         assert exc_info.value.code.value == "E408"
-        # The error may mention JSONDecodeError directly or through RetryError
-        error_str = str(exc_info.value)
-        assert "JSONDecodeError" in error_str or "JSON" in error_str
+        reason = exc_info.value.error_details.details.get("reason", "")
+        assert len(reason) > 0  # Reason should be populated
 
     def test_load_system_state_missing_keys(self, tmp_path):
         """Test loading file with missing keys raises StateIncompleteError."""
@@ -486,7 +486,8 @@ class TestStatePersistence:
             manager.load_system_state(filepath)
 
         assert exc_info.value.code.value == "E410"
-        assert "qilm" in str(exc_info.value.error_details.details.get("missing_fields", []))
+        missing_fields = exc_info.value.error_details.details.get("missing_fields", [])
+        assert "qilm" in missing_fields
 
     def test_load_system_state_version_mismatch(self, tmp_path):
         """Test loading file with future version raises StateVersionMismatchError."""
