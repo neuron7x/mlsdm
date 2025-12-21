@@ -73,6 +73,10 @@ class ErrorCode(Enum):
     E404_VECTOR_NORMALIZATION_FAILED = "E404"
     E405_PELM_ENTANGLE_FAILED = "E405"
     E406_MEMORY_BOUNDS_EXCEEDED = "E406"
+    E407_STATE_FILE_NOT_FOUND = "E407"
+    E408_STATE_CORRUPT = "E408"
+    E409_STATE_VERSION_MISMATCH = "E409"
+    E410_STATE_INCOMPLETE = "E410"
 
     # E5xx: Cognitive rhythm errors
     E500_RHYTHM_ERROR = "E500"
@@ -155,6 +159,10 @@ ERROR_MESSAGES: dict[ErrorCode, str] = {
     ErrorCode.E404_VECTOR_NORMALIZATION_FAILED: "Failed to normalize vector",
     ErrorCode.E405_PELM_ENTANGLE_FAILED: "PELM entanglement operation failed",
     ErrorCode.E406_MEMORY_BOUNDS_EXCEEDED: "Memory bounds exceeded",
+    ErrorCode.E407_STATE_FILE_NOT_FOUND: "State file not found",
+    ErrorCode.E408_STATE_CORRUPT: "State file is corrupt or not valid JSON",
+    ErrorCode.E409_STATE_VERSION_MISMATCH: "State file format version is incompatible",
+    ErrorCode.E410_STATE_INCOMPLETE: "State file is missing required fields",
     # Rhythm
     ErrorCode.E500_RHYTHM_ERROR: "Cognitive rhythm error",
     ErrorCode.E501_SLEEP_PHASE_REJECTION: "Request rejected during sleep phase",
@@ -390,6 +398,137 @@ class MemoryError(MLSDMError):
         **kwargs: Any,
     ) -> None:
         super().__init__(code, message, **kwargs)
+
+
+class StateFileNotFoundError(MLSDMError):
+    """State file not found error.
+
+    Raised when attempting to load state from a non-existent file.
+    """
+
+    def __init__(
+        self,
+        filepath: str,
+        message: str | None = None,
+        **kwargs: Any,
+    ) -> None:
+        if message is None:
+            message = (
+                f"State file not found: {filepath}. "
+                "How to fix: Ensure the file exists or use save_system_state() to create it first."
+            )
+        details: dict[str, Any] = kwargs.pop("details", {})
+        details["filepath"] = filepath
+        super().__init__(
+            ErrorCode.E407_STATE_FILE_NOT_FOUND,
+            message,
+            details=details,
+            **kwargs,
+        )
+
+
+class StateCorruptError(MLSDMError):
+    """State file is corrupt or not valid format.
+
+    Raised when the state file cannot be parsed as valid JSON or
+    contains malformed data.
+    """
+
+    def __init__(
+        self,
+        filepath: str,
+        reason: str,
+        message: str | None = None,
+        **kwargs: Any,
+    ) -> None:
+        if message is None:
+            message = (
+                f"State file is corrupt: {filepath}. Reason: {reason}. "
+                "How to fix: Delete the corrupt file and use save_system_state() to create a new one."
+            )
+        details: dict[str, Any] = kwargs.pop("details", {})
+        details["filepath"] = filepath
+        details["reason"] = reason
+        super().__init__(
+            ErrorCode.E408_STATE_CORRUPT,
+            message,
+            details=details,
+            **kwargs,
+        )
+
+
+class StateVersionMismatchError(MLSDMError):
+    """State file format version is incompatible.
+
+    Raised when the state file has a format_version that cannot
+    be migrated to the current version.
+    """
+
+    def __init__(
+        self,
+        filepath: str,
+        file_version: int,
+        current_version: int,
+        message: str | None = None,
+        **kwargs: Any,
+    ) -> None:
+        if message is None:
+            message = (
+                f"State file version mismatch: {filepath}. "
+                f"File version: {file_version}, Current version: {current_version}. "
+                "How to fix: Use a state file with a compatible format version, "
+                "or recreate state with save_system_state()."
+            )
+        details: dict[str, Any] = kwargs.pop("details", {})
+        details["filepath"] = filepath
+        details["file_version"] = file_version
+        details["current_version"] = current_version
+        super().__init__(
+            ErrorCode.E409_STATE_VERSION_MISMATCH,
+            message,
+            details=details,
+            **kwargs,
+        )
+
+
+class StateIncompleteError(MLSDMError):
+    """State file is missing required fields.
+
+    Raised when the state file is valid JSON but is missing
+    required keys or has invalid field types.
+    """
+
+    def __init__(
+        self,
+        filepath: str,
+        missing_fields: list[str] | None = None,
+        invalid_fields: dict[str, str] | None = None,
+        message: str | None = None,
+        **kwargs: Any,
+    ) -> None:
+        if message is None:
+            msg_parts = [f"State file is incomplete: {filepath}."]
+            if missing_fields:
+                msg_parts.append(f"Missing fields: {', '.join(missing_fields)}.")
+            if invalid_fields:
+                invalid_desc = ", ".join(f"{k}: {v}" for k, v in invalid_fields.items())
+                msg_parts.append(f"Invalid fields: {invalid_desc}.")
+            msg_parts.append(
+                "How to fix: Ensure all required fields are present with correct types."
+            )
+            message = " ".join(msg_parts)
+        details: dict[str, Any] = kwargs.pop("details", {})
+        details["filepath"] = filepath
+        if missing_fields:
+            details["missing_fields"] = missing_fields
+        if invalid_fields:
+            details["invalid_fields"] = invalid_fields
+        super().__init__(
+            ErrorCode.E410_STATE_INCOMPLETE,
+            message,
+            details=details,
+            **kwargs,
+        )
 
 
 class RhythmError(MLSDMError):
