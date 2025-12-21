@@ -6,7 +6,6 @@ import os
 from typing import TYPE_CHECKING
 
 from mlsdm.api.app import create_app as _create_canonical_app
-from mlsdm.entrypoints.serve import serve as _serve
 
 if TYPE_CHECKING:
     from fastapi import FastAPI
@@ -21,7 +20,21 @@ def main() -> None:
     """Start the canonical HTTP API server (legacy shim)."""
     host = os.environ.get("HOST", "0.0.0.0")
     port = int(os.environ.get("PORT", "8000"))
-    _serve(host=host, port=port)
+    log_level = os.environ.get("LOG_LEVEL", "info")
+    disable_rate_limit = os.environ.get("DISABLE_RATE_LIMIT") == "1"
+
+    from mlsdm.serve import run_server
+
+    run_server(
+        mode="neuro",
+        host=host,
+        port=port,
+        log_level=log_level,
+        reload=False,
+        config=None,
+        backend=None,
+        disable_rate_limit=disable_rate_limit,
+    )
 
 
 __all__ = ["create_app", "main"]

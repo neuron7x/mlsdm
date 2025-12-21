@@ -30,7 +30,7 @@ if __name__ == "__main__":
     # Add src to path only when running as script
     sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-    from mlsdm.entrypoints.serve import serve
+    from mlsdm.serve import run_server
 
     print("🚀 Starting NeuroCognitiveEngine HTTP API Service...")
     print(f"   Backend: {os.environ.get('LLM_BACKEND', 'local_stub')}")
@@ -40,11 +40,19 @@ if __name__ == "__main__":
     print(f"   Metrics: {os.environ.get('ENABLE_METRICS', 'true')}")
     print()
     print("API endpoints:")
-    print("  - POST http://localhost:8000/generate")
-    print("  - POST http://localhost:8000/infer")
-    print("  - GET  http://localhost:8000/health")
-    print("  - GET  http://localhost:8000/health/metrics")
+    print("  - POST http://localhost:8000/v1/neuro/generate")
+    print("  - GET  http://localhost:8000/healthz")
+    print("  - GET  http://localhost:8000/metrics")
     print("  - GET  http://localhost:8000/docs (Swagger UI)")
     print()
 
-    serve(host=os.environ.get("HOST", "0.0.0.0"), port=int(os.environ.get("PORT", "8000")))
+    run_server(
+        mode="neuro",
+        host=os.environ.get("HOST", "0.0.0.0"),
+        port=int(os.environ.get("PORT", "8000")),
+        log_level=os.environ.get("LOG_LEVEL", "info"),
+        reload=False,
+        config=None,
+        backend=None,
+        disable_rate_limit=os.environ.get("DISABLE_RATE_LIMIT") == "1",
+    )

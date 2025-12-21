@@ -177,7 +177,8 @@ def cmd_demo(args: argparse.Namespace) -> int:
 
 def cmd_serve(args: argparse.Namespace) -> int:
     """Start the HTTP API server."""
-    from mlsdm.entrypoints.serve import serve
+    from mlsdm.serve import run_server
+    mode = getattr(args, "mode", "api")
 
     # Set environment variables from args
     if args.config:
@@ -193,15 +194,20 @@ def cmd_serve(args: argparse.Namespace) -> int:
     print("MLSDM HTTP API Server")
     print("=" * 60)
     print(f"Starting server on {args.host}:{args.port}")
+    print(f"Mode: {mode}")
     print(f"Backend: {os.environ.get('LLM_BACKEND', 'local_stub')}")
     print(f"Config: {os.environ.get('CONFIG_PATH', 'config/default_config.yaml')}")
     print()
 
-    return serve(
+    return run_server(
+        mode=mode,
         host=args.host,
         port=args.port,
         log_level=args.log_level,
         reload=args.reload,
+        config=args.config,
+        backend=args.backend,
+        disable_rate_limit=args.disable_rate_limit,
     )
 
 
@@ -497,6 +503,13 @@ def main() -> int:
         type=int,
         default=8000,
         help="Port to bind to (default: 8000)",
+    )
+    serve_parser.add_argument(
+        "--mode",
+        type=str,
+        default="api",
+        choices=["api", "neuro"],
+        help="Service mode to run (api or neuro)",
     )
     serve_parser.add_argument(
         "--config",

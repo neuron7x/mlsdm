@@ -1,27 +1,27 @@
 from types import SimpleNamespace
 
 from mlsdm.api.app import app as canonical_app
-from mlsdm.entrypoints import serve as serve_entrypoint
 from mlsdm.service.neuro_engine_service import create_app
+from mlsdm.serve import get_app
 
 
 def test_canonical_app_factory_is_single_source():
-    app_from_entrypoint = serve_entrypoint.get_canonical_app()
     app_from_service = create_app()
+    app_from_serve = get_app("api")
 
     # All factories must surface the same canonical instance
-    assert app_from_entrypoint is app_from_service
-    assert app_from_entrypoint is canonical_app
+    assert app_from_service is canonical_app
+    assert app_from_serve is canonical_app
 
 
 def test_cli_serve_delegates_to_canonical_runtime(monkeypatch):
     called: dict[str, object] = {}
 
-    def fake_serve(**kwargs):
+    def fake_run(**kwargs):
         called.update(kwargs)
         return 0
 
-    monkeypatch.setattr("mlsdm.entrypoints.serve.serve", fake_serve)
+    monkeypatch.setattr("mlsdm.serve.run_server", fake_run)
 
     from mlsdm.cli import cmd_serve
 
@@ -33,6 +33,7 @@ def test_cli_serve_delegates_to_canonical_runtime(monkeypatch):
         config=None,
         backend=None,
         disable_rate_limit=False,
+        mode="api",
     )
 
     result = cmd_serve(args)

@@ -154,6 +154,12 @@ app.add_middleware(BulkheadMiddleware)
 # Include health check router
 app.include_router(health.router)
 
+
+@app.get("/healthz", include_in_schema=False)
+async def healthz() -> health.SimpleHealthStatus:
+    """Alias for liveness/health checks."""
+    return await health.health_check()
+
 # Set memory manager for health checks
 health.set_memory_manager(_manager)
 

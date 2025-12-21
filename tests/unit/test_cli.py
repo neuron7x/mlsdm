@@ -344,31 +344,35 @@ class TestCmdServe:
         """
         from mlsdm.cli import cmd_serve
 
-        # Mock uvicorn to prevent actually starting server
-        mock_uvicorn = MagicMock()
+        args = argparse.Namespace(
+            host="0.0.0.0",
+            port=8080,
+            config="custom_config.yaml",
+            backend="openai",
+            log_level="debug",
+            reload=True,
+            disable_rate_limit=True,
+            mode="neuro",
+        )
 
-        with patch.dict("sys.modules", {"uvicorn": mock_uvicorn}):
-            args = argparse.Namespace(
-                host="0.0.0.0",
-                port=8080,
-                config="custom_config.yaml",
-                backend="openai",
-                log_level="debug",
-                reload=True,
-                disable_rate_limit=True,
-            )
+        with patch("mlsdm.serve.run_server") as mock_run_server:
+            cmd_serve(args)
 
-            # We need to mock the app import too
-            with patch("mlsdm.api.app.app"):
-                try:
-                    cmd_serve(args)
-                except Exception:
-                    pass  # May fail on import, but env vars should be set
+        # Check environment variables were set
+        assert os.environ.get("CONFIG_PATH") == "custom_config.yaml"
+        assert os.environ.get("LLM_BACKEND") == "openai"
+        assert os.environ.get("DISABLE_RATE_LIMIT") == "1"
 
-            # Check environment variables were set
-            assert os.environ.get("CONFIG_PATH") == "custom_config.yaml"
-            assert os.environ.get("LLM_BACKEND") == "openai"
-            assert os.environ.get("DISABLE_RATE_LIMIT") == "1"
+        mock_run_server.assert_called_once_with(
+            mode="neuro",
+            host="0.0.0.0",
+            port=8080,
+            log_level="debug",
+            reload=True,
+            config="custom_config.yaml",
+            backend="openai",
+            disable_rate_limit=True,
+        )
 
     def test_serve_missing_uvicorn(
         self, monkeypatch: "MonkeyPatch", capsys: "CaptureFixture[str]"

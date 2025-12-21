@@ -183,6 +183,7 @@ class TestCLIHelp:
         assert result.returncode == 0
         assert "--host" in result.stdout
         assert "--port" in result.stdout
+        assert "--mode" in result.stdout
 
     def test_check_help(self):
         """Test check --help."""
@@ -232,6 +233,7 @@ class TestCLIServe:
         assert "--port" in result.stdout
         assert "--backend" in result.stdout
         assert "--config" in result.stdout
+        assert "--mode" in result.stdout
 
 
 if __name__ == "__main__":
