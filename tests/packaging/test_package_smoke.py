@@ -219,11 +219,12 @@ def test_stub_dependencies_are_pinned() -> None:
     pyproject = tomllib.loads((root / "pyproject.toml").read_text())
 
     dev_deps = pyproject["project"]["optional-dependencies"]["dev"]
-    pins = {
-        dep.split("==")[0]: dep
-        for dep in dev_deps
-        if dep.startswith(("types-PyYAML", "types-requests"))
-    }
+    pins: dict[str, str] = {}
+    for dep in dev_deps:
+        if dep.startswith(("types-PyYAML", "types-requests")):
+            name, sep, _ = dep.partition("==")
+            assert sep == "==", "Stub dependencies must be pinned with '=='"
+            pins[name] = dep
 
     assert pins.get("types-PyYAML", "").startswith("types-PyYAML==")
     assert pins.get("types-requests", "").startswith("types-requests==")
@@ -234,7 +235,13 @@ def test_stub_dependencies_are_pinned() -> None:
         for line in (root / "requirements.txt").read_text().splitlines()
         if line.strip() and not line.startswith("#")
     ]
-    req_map = {line.split("==")[0]: line for line in req_lines if "types-" in line}
+    req_map: dict[str, str] = {}
+    for line in req_lines:
+        if "types-" not in line:
+            continue
+        name, sep, _ = line.partition("==")
+        assert sep == "==", "Stub requirements must be pinned with '=='"
+        req_map[name] = line
 
     assert req_map.get("types-PyYAML") == pins["types-PyYAML"]
     assert req_map.get("types-requests") == pins["types-requests"]
