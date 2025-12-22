@@ -13,6 +13,7 @@ ROOT = Path(__file__).resolve().parent.parent
 READINESS_PATH = ROOT / "docs" / "status" / "READINESS.md"
 MAX_AGE_DAYS = 14
 LAST_UPDATED_PATTERN = r"Last updated:\s*(\d{4}-\d{2}-\d{2})"
+SCOPED_PREFIXES = ("src/", "tests/", "config/", ".github/workflows/")
 
 
 class GitDiffResult(NamedTuple):
@@ -137,7 +138,7 @@ def collect_changed_files() -> List[str]:
 
 def is_scoped(path: str) -> bool:
     normalized = path.replace("\\", "/")
-    if normalized.startswith(("src/", "tests/", "config/", ".github/workflows/")):
+    if normalized.startswith(SCOPED_PREFIXES):
         return True
     if Path(normalized).name.startswith("Dockerfile"):
         return True
