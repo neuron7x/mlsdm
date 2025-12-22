@@ -110,12 +110,16 @@ def collect_changed_files() -> List[str]:
             diff_result = run_git_diff(candidate)
             had_git_errors = had_git_errors or not diff_result.success
             if diff_result.files:
+                if had_git_errors:
+                    log_error("Git diff reported errors; proceeding with available file list.")
                 return diff_result.files
 
     if ref_exists("HEAD^"):
         diff_result = run_git_diff("HEAD^")
         had_git_errors = had_git_errors or not diff_result.success
         if diff_result.files:
+            if had_git_errors:
+                log_error("Git diff reported errors; proceeding with available file list.")
             return diff_result.files
 
     diff_result = working_tree_diff()
@@ -133,7 +137,7 @@ def collect_changed_files() -> List[str]:
 
 def is_scoped(path: str) -> bool:
     normalized = path.replace("\\", "/")
-    if normalized.startswith(("src/", "tests/", "config/", "configs/", ".github/workflows/")):
+    if normalized.startswith(("src/", "tests/", "config/", ".github/workflows/")):
         return True
     if Path(normalized).name.startswith("Dockerfile"):
         return True

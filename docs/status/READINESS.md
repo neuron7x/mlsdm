@@ -29,7 +29,7 @@ Blocking issues: 3
 - End-to-end tests: NOT VERIFIED — Evidence: `tests/e2e/`; Run: `pytest tests/e2e/ -v`
 - Property tests: NOT VERIFIED — Evidence: `tests/property/`; Run: `pytest tests/property/ -v`
 - Coverage gate: NOT VERIFIED — Evidence: `coverage_gate.sh`; Run: `./coverage_gate.sh`
-- Local attempt in this PR: `python -m pytest -q` failed (pytest not installed in environment), so no test results are available for this commit.
+- Current PR execution: tests were not run because `python -m pytest -q` failed (pytest is not installed in the runner environment), so no results are available for this commit.
 
 ## Operational Readiness
 - Logging: PARTIAL — Evidence: `tests/observability/test_aphasia_logging.py`, `docs/OBSERVABILITY_GUIDE.md` — No runtime verification in this PR.
