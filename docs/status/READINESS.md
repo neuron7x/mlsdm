@@ -19,7 +19,7 @@ Blocking issues: 3
 | Cognitive rhythm & state management | PARTIAL | `tests/validation/test_wake_sleep_effectiveness.py`, `tests/validation/test_rhythm_state_machine.py` | Rhythm behavior validated in tests; not re-run here. |
 | HTTP API surface (health/inference) | NOT VERIFIED | `tests/api/test_health.py`, `tests/e2e/test_http_inference_api.py` | No current passing run for API endpoints in this PR. |
 | Observability pipeline (logging/metrics/tracing) | NOT VERIFIED | `tests/observability/test_aphasia_logging.py`, `tests/observability/test_aphasia_metrics.py`, `docs/OBSERVABILITY_GUIDE.md` | Instrumentation documented; no execution evidence in this PR. |
-| CI / quality gates (coverage, property tests) | NOT VERIFIED | `.github/workflows/readiness-evidence.yml` (run #2 action_required/pending approval), `.github/workflows/property-tests.yml`, `coverage_gate.sh` | Evidence workflow created; run awaiting approval, so no results yet. |
+| CI / quality gates (coverage, property tests) | NOT VERIFIED | `.github/workflows/readiness-evidence.yml` (jobs: unit, coverage_gate, property), `.github/workflows/property-tests.yml`, `coverage_gate.sh` | Evidence workflow added; latest runs awaiting approval/execution, so no PASS artifacts yet. |
 | Config & calibration pipeline | NOT VERIFIED | `config/`, `docs/CONFIGURATION_GUIDE.md`, `tests/integration/test_public_api.py` | Config paths defined; validation runs absent for this commit. |
 | CLI / entrypoints | NOT VERIFIED | `src/mlsdm/entrypoints/`, `Makefile` | Entrypoints exist; no execution evidence tied to this revision. |
 | Benchmarks / performance tooling | NOT VERIFIED | `tests/perf/test_slo_api_endpoints.py`, `benchmarks/README.md` | Perf tooling present; benchmarks not executed in this PR. |
@@ -32,11 +32,12 @@ Blocking issues: 3
 - Error handling — Status: PARTIAL — Evidence: `tests/resilience/test_llm_failures.py`, `tests/api/test_health.py` — No dated passing result attached to this revision.
 
 ## Testing & Verification
-- Unit tests: NOT VERIFIED — Evidence: `.github/workflows/readiness-evidence.yml` run #2 (action_required, pending approval); Command: `python -m pytest tests/unit -q`
-- Integration tests: NOT VERIFIED — Evidence: `.github/workflows/readiness-evidence.yml` run #2 (action_required, pending approval); Command: `python -m pytest tests/integration -q`
+- Unit tests: NOT VERIFIED — Evidence: `.github/workflows/readiness-evidence.yml` (job: unit, command: `python -m pytest tests/unit -q --disable-warnings --maxfail=1 --junitxml=reports/junit-unit.xml`); latest run awaiting approval/execution.
+- Integration tests: NOT VERIFIED — Evidence: `.github/workflows/readiness-evidence.yml` (job: integration — currently skipped in PR runs; command recorded in log to run on workflow_dispatch); Command when executed: `python -m pytest tests/integration -q --disable-warnings --maxfail=1`
 - End-to-end tests: NOT VERIFIED — Evidence: `tests/e2e/`; Command: `python -m pytest tests/e2e -v`
-- Property tests: NOT VERIFIED — Evidence: `.github/workflows/readiness-evidence.yml` run #2 (action_required, pending approval); Command: `python -m pytest tests/property -q`
-- Coverage gate: NOT VERIFIED — Evidence: `.github/workflows/readiness-evidence.yml` run #2 (action_required, pending approval); Command: `bash ./coverage_gate.sh`
+- Property tests: NOT VERIFIED — Evidence: `.github/workflows/readiness-evidence.yml` (job: property — skipped in PR runs; workflow_dispatch command: `python -m pytest tests/property -q --maxfail=3`)
+- Coverage gate: NOT VERIFIED — Evidence: `.github/workflows/readiness-evidence.yml` (job: coverage_gate, command: `bash ./coverage_gate.sh` with `PYTEST_ARGS` set to skip heavy markers); awaiting run.
+- Security-lite: NOT VERIFIED — Evidence: `.github/workflows/readiness-evidence.yml` (job: security-lite, command: `ruff check . --exit-zero`); awaiting run.
 - Observability checks: NOT VERIFIED — Evidence: `tests/observability/`; Command: `python -m pytest tests/observability/ -v`
 - Current PR execution: readiness gate passes locally (`python scripts/readiness_check.py`), and unit tests for the gate added (`tests/unit/test_readiness_check.py`).
 
@@ -47,9 +48,9 @@ Blocking issues: 3
 - Alerting: NOT VERIFIED — Evidence: `deploy/monitoring/alertmanager-rules.yaml`; no validation run provided.
 
 ## Known Blocking Gaps
-1. Evidence workflow pending approval: `.github/workflows/readiness-evidence.yml` run #1 concluded `action_required`, so no test/coverage artifacts exist for this commit.
-2. Coverage gate unverified: `bash ./coverage_gate.sh` not executed successfully in CI; need passing run with coverage report artifact.
-3. Integration and property tests unverified: `python -m pytest tests/integration -q` and `python -m pytest tests/property -q` not executed successfully in CI; need passing logs/artifacts.
+1. Evidence workflow pending execution/approval: `.github/workflows/readiness-evidence.yml` (unit, coverage_gate, property, security-lite) needs a passing run with artifacts for this commit.
+2. Coverage gate unverified: `bash ./coverage_gate.sh` (job: coverage_gate) not yet executed successfully in CI; need coverage.xml/log artifacts.
+3. Integration and property suites skipped in PR runs: need workflow_dispatch run of `.github/workflows/readiness-evidence.yml` executing `python -m pytest tests/integration -q --disable-warnings --maxfail=1` and `python -m pytest tests/property -q --maxfail=3`, with artifacts.
 4. Observability pipeline unvalidated: `python -m pytest tests/observability/ -v` not executed; need metrics/logging evidence.
 5. Deployment artifacts unvalidated: `deploy/k8s/` manifests lack smoke-test logs for this commit; need deployment verification evidence.
 6. Config and calibration paths unvalidated: `pytest tests/integration/test_public_api.py -v` or equivalent config validation has not been recorded.
