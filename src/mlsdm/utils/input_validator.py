@@ -6,6 +6,7 @@ data corruption, and ensure data integrity as per SECURITY_POLICY.md.
 
 import math
 import re
+import unicodedata
 from typing import Any
 
 import numpy as np
@@ -16,6 +17,7 @@ _CLIENT_ID_PATTERN = re.compile(r"^[a-zA-Z0-9\.\:\-_]+$")
 # Control character removal patterns - pre-compiled for sanitize_string
 _CONTROL_CHARS_ALLOW_NEWLINES = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
 _CONTROL_CHARS_NO_NEWLINES = re.compile(r"[\x00-\x08\x0a-\x0d\x0e-\x1f\x7f]")
+_BIDI_CONTROL_CHARS = re.compile(r"[\u061C\u200E\u200F\u202A-\u202E\u2066-\u2069]")
 
 
 class InputValidator:
@@ -191,6 +193,17 @@ class InputValidator:
             return ""
 
         # Optimization: Check length first before expensive processing
+        text_len = len(text)
+        if text_len > max_length:
+            raise ValueError(f"String length {text_len} exceeds maximum {max_length}")
+
+        # Normalize Unicode to prevent canonicalization bypasses
+        text = unicodedata.normalize("NFC", text)
+
+        # Remove bidirectional control characters to prevent text spoofing
+        text = _BIDI_CONTROL_CHARS.sub("", text)
+
+        # Re-check length in case normalization expanded the string
         text_len = len(text)
         if text_len > max_length:
             raise ValueError(f"String length {text_len} exceeds maximum {max_length}")

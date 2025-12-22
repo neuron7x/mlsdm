@@ -14,6 +14,7 @@ Author: Principal AI Safety Engineer (Distinguished Level)
 """
 
 import sys
+import unicodedata
 
 import numpy as np
 import pytest
@@ -60,17 +61,26 @@ class TestAdversarialPayloads:
         """
         validator = InputValidator()
 
-        # These are different Unicode representations
-        test_strings = [
-            "café",  # NFC form
-            "cafe\u0301",  # NFD form (combining acute accent)
-            "\u202ehidden\u202c",  # Right-to-left override
-        ]
+        nfc_text = "café"  # NFC form
+        nfd_text = "cafe\u0301"  # NFD form (combining acute accent)
 
-        for text in test_strings:
-            # Should not crash
-            result = validator.sanitize_string(text)
-            assert isinstance(result, str)
+        # NFC string should remain NFC-normalized
+        assert validator.sanitize_string(nfc_text) == unicodedata.normalize("NFC", nfc_text)
+
+        # NFD input should normalize to NFC
+        assert validator.sanitize_string(nfd_text) == unicodedata.normalize("NFC", nfd_text)
+
+    def test_bidi_control_characters_removed(self):
+        """
+        SECURITY: Bidirectional control characters are removed to prevent spoofing
+        """
+        validator = InputValidator()
+
+        payload = "safe\u202ehidden\u202c"
+        result = validator.sanitize_string(payload)
+
+        assert "\u202e" not in result
+        assert "\u202c" not in result
 
     def test_oversized_input_rejected(self):
         """
