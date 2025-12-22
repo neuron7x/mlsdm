@@ -214,38 +214,45 @@ class TestCLISmoke:
         assert result == 0
 
 
-def test_stub_dependencies_are_pinned() -> None:
-    """Ensure stub dependencies stay pinned to exact versions."""
-    root = Path(__file__).resolve().parent.parent.parent
-    pyproject = tomllib.loads((root / "pyproject.toml").read_text())
+class TestDependencyPins:
+    """Guards for dependency pinning."""
 
-    dev_deps = pyproject["project"]["optional-dependencies"]["dev"]
-    pins: dict[str, str] = {}
-    for dep in dev_deps:
-        if dep.startswith(("types-PyYAML", "types-requests")):
-            assert "==" in dep, "Stub dependencies must be pinned with '=='"
-            name = dep.split("==", 1)[0]
-            pins[name] = dep
+    def test_stub_dependencies_are_pinned(self) -> None:
+        """Ensure stub dependencies stay pinned to exact versions."""
+        root = Path(__file__).resolve().parent.parent.parent
+        pyproject = tomllib.loads((root / "pyproject.toml").read_text())
 
-    assert pins.get("types-PyYAML", "").startswith("types-PyYAML==")
-    assert pins.get("types-requests", "").startswith("types-requests==")
+        dev_deps = pyproject["project"]["optional-dependencies"]["dev"]
+        pins: dict[str, str] = {}
+        for dep in dev_deps:
+            if dep.startswith(("types-PyYAML", "types-requests")):
+                assert "==" in dep, "Stub dependencies must be pinned with '=='"
+                name = dep.split("==", 1)[0]
+                pins[name] = dep
 
-    # Keep requirements.txt aligned with pyproject pins
-    req_lines = [
-        line.strip()
-        for line in (root / "requirements.txt").read_text().splitlines()
-        if line.strip() and not line.startswith("#")
-    ]
-    req_map: dict[str, str] = {}
-    for line in req_lines:
-        if not line.startswith(("types-PyYAML", "types-requests")):
-            continue
-        assert "==" in line, "Stub requirements must be pinned with '=='"
-        name = line.split("==", 1)[0]
-        req_map[name] = line
+        assert "types-PyYAML" in pins
+        assert "types-requests" in pins
+        assert pins["types-PyYAML"].startswith("types-PyYAML==")
+        assert pins["types-requests"].startswith("types-requests==")
 
-    assert req_map.get("types-PyYAML") == pins["types-PyYAML"]
-    assert req_map.get("types-requests") == pins["types-requests"]
+        # Keep requirements.txt aligned with pyproject pins
+        req_lines = [
+            line.strip()
+            for line in (root / "requirements.txt").read_text().splitlines()
+            if line.strip() and not line.startswith("#")
+        ]
+        req_map: dict[str, str] = {}
+        for line in req_lines:
+            if not line.startswith(("types-PyYAML", "types-requests")):
+                continue
+            assert "==" in line, "Stub requirements must be pinned with '=='"
+            name = line.split("==", 1)[0]
+            req_map[name] = line
+
+        assert "types-PyYAML" in req_map
+        assert "types-requests" in req_map
+        assert req_map["types-PyYAML"] == pins["types-PyYAML"]
+        assert req_map["types-requests"] == pins["types-requests"]
 
 
 class TestAPISmoke:
