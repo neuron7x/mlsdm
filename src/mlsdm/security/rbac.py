@@ -420,9 +420,12 @@ class RBACMiddleware(BaseHTTPMiddleware):
         if path in self.permissions:
             return self.permissions[path]
 
-        # Check prefix matches
+        # Check prefix matches with a path boundary to avoid overmatching.
         for pattern, roles in self.permissions.items():
-            if path.startswith(pattern.rstrip("/")):
+            normalized = pattern.rstrip("/")
+            if not normalized:
+                continue
+            if path == normalized or path.startswith(f"{normalized}/"):
                 return roles
 
         # No specific permission defined - default to write
