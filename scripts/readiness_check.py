@@ -7,12 +7,17 @@ import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Iterable, List, Optional
+from typing import Iterable, List, NamedTuple, Optional
 
 ROOT = Path(__file__).resolve().parent.parent
 READINESS_PATH = ROOT / "docs" / "status" / "READINESS.md"
 MAX_AGE_DAYS = 14
 LAST_UPDATED_PATTERN = r"Last updated:\s*(\d{4}-\d{2}-\d{2})"
+
+
+class GitDiffResult(NamedTuple):
+    files: List[str]
+    success: bool
 
 
 def log_error(message: str) -> None:
@@ -50,7 +55,7 @@ def last_updated_is_fresh(last_updated: datetime) -> bool:
     return True
 
 
-def run_git_diff(ref: str) -> tuple[List[str], bool]:
+def run_git_diff(ref: str) -> GitDiffResult:
     result = subprocess.run(
         ["git", "diff", "--name-only", f"{ref}..HEAD"],
         cwd=ROOT,
@@ -59,11 +64,13 @@ def run_git_diff(ref: str) -> tuple[List[str], bool]:
     )
     if result.returncode != 0:
         log_error(f"git diff failed for {ref}: {result.stderr.strip()}")
-        return [], False
-    return [line.strip() for line in result.stdout.splitlines() if line.strip()], True
+        return GitDiffResult([], False)
+    return GitDiffResult(
+        [line.strip() for line in result.stdout.splitlines() if line.strip()], True
+    )
 
 
-def working_tree_diff() -> tuple[List[str], bool]:
+def working_tree_diff() -> GitDiffResult:
     result = subprocess.run(
         ["git", "diff", "--name-only"],
         cwd=ROOT,
@@ -72,8 +79,10 @@ def working_tree_diff() -> tuple[List[str], bool]:
     )
     if result.returncode != 0:
         log_error(f"git diff failed for working tree: {result.stderr.strip()}")
-        return [], False
-    return [line.strip() for line in result.stdout.splitlines() if line.strip()], True
+        return GitDiffResult([], False)
+    return GitDiffResult(
+        [line.strip() for line in result.stdout.splitlines() if line.strip()], True
+    )
 
 
 def ref_exists(ref: str) -> bool:
@@ -98,25 +107,28 @@ def collect_changed_files() -> List[str]:
 
     for candidate in refs_to_try:
         if ref_exists(candidate):
-            diff, ok = run_git_diff(candidate)
-            had_git_errors = had_git_errors or not ok
-            if diff:
-                return diff
+            diff_result = run_git_diff(candidate)
+            had_git_errors = had_git_errors or not diff_result.success
+            if diff_result.files:
+                return diff_result.files
 
     if ref_exists("HEAD^"):
-        diff, ok = run_git_diff("HEAD^")
-        had_git_errors = had_git_errors or not ok
-        if diff:
-            return diff
+        diff_result = run_git_diff("HEAD^")
+        had_git_errors = had_git_errors or not diff_result.success
+        if diff_result.files:
+            return diff_result.files
 
-    diff, ok = working_tree_diff()
-    had_git_errors = had_git_errors or not ok
+    diff_result = working_tree_diff()
+    had_git_errors = had_git_errors or not diff_result.success
 
-    if had_git_errors and not diff:
+    if had_git_errors and not diff_result.files:
         log_error("Unable to determine changed files due to git errors.")
         return []
 
-    return diff
+    if had_git_errors and diff_result.files:
+        log_error("Git diff reported errors; proceeding with available file list.")
+
+    return diff_result.files
 
 
 def is_scoped(path: str) -> bool:
