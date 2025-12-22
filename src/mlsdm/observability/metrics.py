@@ -285,7 +285,7 @@ class MetricsExporter:
 
         # HTTP request latency histogram with endpoint label (buckets in seconds)
         self.http_request_latency_seconds = Histogram(
-            "mlsdm_http_request_latency_seconds_bucket",
+            "mlsdm_http_request_latency_seconds",
             "HTTP request latency in seconds by endpoint",
             ["endpoint"],
             buckets=(0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0),
@@ -305,7 +305,7 @@ class MetricsExporter:
 
         # LLM request latency by model
         self.llm_request_latency_seconds = Histogram(
-            "mlsdm_llm_request_latency_seconds_bucket",
+            "mlsdm_llm_request_latency_seconds",
             "LLM request latency in seconds by model",
             ["model"],
             buckets=(0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0, 30.0, 60.0, 120.0),
