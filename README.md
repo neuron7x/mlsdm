@@ -61,9 +61,9 @@
 </table>
 
 <p>
-  <img alt="Quick Glance" src="https://img.shields.io/badge/Quick%20Glance-Production--ready%20patterns-0b7285?style=for-the-badge">
-  <img alt="Docs" src="https://img.shields.io/badge/Docs-Extensive%20Coverage-6f42c1?style=for-the-badge">
-  <img alt="Safety" src="https://img.shields.io/badge/Safety-Defense--in--Depth-8a2be2?style=for-the-badge">
+  <img alt="Quick Glance" src="https://img.shields.io/badge/Quick%20Glance-Production--ready%20patterns-2f80ed?style=for-the-badge">
+  <img alt="Docs" src="https://img.shields.io/badge/Docs-Extensive%20Coverage-6d28d9?style=for-the-badge">
+  <img alt="Safety" src="https://img.shields.io/badge/Safety-Defense--in--Depth-0f766e?style=for-the-badge">
 </p>
 
 </div>
