@@ -46,6 +46,7 @@ class TestHTTPLevelMetrics:
         metrics_text = fresh_metrics.get_metrics_text()
 
         assert "mlsdm_http_request_latency_seconds_bucket" in metrics_text
+        assert "mlsdm_http_request_latency_seconds_bucket_bucket" not in metrics_text
         assert 'endpoint="/generate"' in metrics_text
         assert 'endpoint="/infer"' in metrics_text
 
@@ -74,6 +75,7 @@ class TestLLMIntegrationMetrics:
         metrics_text = fresh_metrics.get_metrics_text()
 
         assert "mlsdm_llm_request_latency_seconds_bucket" in metrics_text
+        assert "mlsdm_llm_request_latency_seconds_bucket_bucket" not in metrics_text
         assert 'model="gpt-4"' in metrics_text
         assert 'model="claude-3"' in metrics_text
 
