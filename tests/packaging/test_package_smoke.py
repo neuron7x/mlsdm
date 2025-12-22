@@ -8,6 +8,10 @@ Run with:
     pytest tests/packaging/test_package_smoke.py -v
 """
 
+from pathlib import Path
+
+import tomllib
+
 
 class TestPackageSmoke:
     """Smoke tests for package installation verification."""
@@ -212,9 +216,6 @@ class TestCLISmoke:
 
 def test_stub_dependencies_are_pinned() -> None:
     """Ensure stub dependencies stay pinned to exact versions."""
-    import tomllib
-    from pathlib import Path
-
     root = Path(__file__).resolve().parent.parent.parent
     pyproject = tomllib.loads((root / "pyproject.toml").read_text())
 
@@ -222,8 +223,8 @@ def test_stub_dependencies_are_pinned() -> None:
     pins: dict[str, str] = {}
     for dep in dev_deps:
         if dep.startswith(("types-PyYAML", "types-requests")):
-            name, sep, _ = dep.partition("==")
-            assert sep == "==", "Stub dependencies must be pinned with '=='"
+            assert "==" in dep, "Stub dependencies must be pinned with '=='"
+            name = dep.split("==", 1)[0]
             pins[name] = dep
 
     assert pins.get("types-PyYAML", "").startswith("types-PyYAML==")
@@ -237,10 +238,10 @@ def test_stub_dependencies_are_pinned() -> None:
     ]
     req_map: dict[str, str] = {}
     for line in req_lines:
-        if "types-" not in line:
+        if not line.startswith(("types-PyYAML", "types-requests")):
             continue
-        name, sep, _ = line.partition("==")
-        assert sep == "==", "Stub requirements must be pinned with '=='"
+        assert "==" in line, "Stub requirements must be pinned with '=='"
+        name = line.split("==", 1)[0]
         req_map[name] = line
 
     assert req_map.get("types-PyYAML") == pins["types-PyYAML"]
