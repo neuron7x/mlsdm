@@ -479,6 +479,13 @@ class NeuroCognitiveEngine:
         6. POST: moral check on response
         7. Record metrics and build response
         """
+        # Step 0: Request validation (fast-fail on malformed inputs)
+        validation_error = self._run_request_validation(
+            prompt, max_tokens, context_top_k, timing, validation_steps
+        )
+        if validation_error is not None:
+            return validation_error
+
         # Step 1: Prepare request context
         user_intent, cognitive_load, moral_value, context_top_k = self._prepare_request_context(
             user_intent, cognitive_load, moral_value, context_top_k
@@ -912,6 +919,54 @@ class NeuroCognitiveEngine:
                 raise
 
         return response_text, mlsdm_state, fslgs_result
+
+    def _run_request_validation(
+        self,
+        prompt: str,
+        max_tokens: int,
+        context_top_k: int | None,
+        timing: dict[str, float],
+        validation_steps: list[dict[str, Any]],
+    ) -> dict[str, Any] | None:
+        """Validate request parameters before running any pipeline steps.
+
+        Returns:
+            Structured rejection response if validation fails, otherwise None.
+        """
+        with TimingContext(timing, "request_validation"):
+            errors: list[str] = []
+
+            if not isinstance(prompt, str) or not prompt.strip():
+                errors.append("prompt must be a non-empty string")
+            if not isinstance(max_tokens, int) or max_tokens <= 0:
+                errors.append("max_tokens must be a positive integer")
+            if context_top_k is not None and (
+                not isinstance(context_top_k, int) or context_top_k <= 0
+            ):
+                errors.append("context_top_k must be a positive integer when provided")
+
+            if errors:
+                validation_steps.append(
+                    {
+                        "step": "request_validation",
+                        "passed": False,
+                        "errors": errors,
+                    }
+                )
+                return self._build_error_response(
+                    error_type="request_validation",
+                    message="; ".join(errors),
+                    rejected_at="pre_flight",
+                    mlsdm_state=None,
+                    fslgs_result=None,
+                    timing=timing,
+                    validation_steps=validation_steps,
+                    record_generation_metrics=False,
+                )
+
+            validation_steps.append({"step": "request_validation", "passed": True})
+
+        return None
 
     def _execute_generation(
         self,
