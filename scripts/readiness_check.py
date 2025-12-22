@@ -12,6 +12,7 @@ from typing import Iterable, List, Optional
 ROOT = Path(__file__).resolve().parent.parent
 READINESS_PATH = ROOT / "docs" / "status" / "READINESS.md"
 MAX_AGE_DAYS = 14
+LAST_UPDATED_PATTERN = r"Last updated:\s*(\d{4}-\d{2}-\d{2})"
 
 
 def log_error(message: str) -> None:
@@ -27,7 +28,7 @@ def ensure_readiness_file() -> bool:
 
 def parse_last_updated() -> Optional[datetime]:
     content = READINESS_PATH.read_text(encoding="utf-8")
-    match = re.search(r"Last updated:\s*(\d{4}-\d{2}-\d{2})", content)
+    match = re.search(LAST_UPDATED_PATTERN, content)
     if not match:
         log_error("Last updated date not found in docs/status/READINESS.md")
         return None
@@ -49,7 +50,7 @@ def last_updated_is_fresh(last_updated: datetime) -> bool:
     return True
 
 
-def run_git_diff(ref: str) -> List[str]:
+def run_git_diff(ref: str) -> tuple[List[str], bool]:
     result = subprocess.run(
         ["git", "diff", "--name-only", f"{ref}..HEAD"],
         cwd=ROOT,
@@ -57,11 +58,12 @@ def run_git_diff(ref: str) -> List[str]:
         text=True,
     )
     if result.returncode != 0:
-        return []
-    return [line.strip() for line in result.stdout.splitlines() if line.strip()]
+        log_error(f"git diff failed for {ref}: {result.stderr.strip()}")
+        return [], False
+    return [line.strip() for line in result.stdout.splitlines() if line.strip()], True
 
 
-def working_tree_diff() -> List[str]:
+def working_tree_diff() -> tuple[List[str], bool]:
     result = subprocess.run(
         ["git", "diff", "--name-only"],
         cwd=ROOT,
@@ -69,8 +71,9 @@ def working_tree_diff() -> List[str]:
         text=True,
     )
     if result.returncode != 0:
-        return []
-    return [line.strip() for line in result.stdout.splitlines() if line.strip()]
+        log_error(f"git diff failed for working tree: {result.stderr.strip()}")
+        return [], False
+    return [line.strip() for line in result.stdout.splitlines() if line.strip()], True
 
 
 def ref_exists(ref: str) -> bool:
@@ -86,6 +89,7 @@ def ref_exists(ref: str) -> bool:
 
 
 def collect_changed_files() -> List[str]:
+    had_git_errors = False
     refs_to_try: List[str] = []
     base_ref = os.environ.get("GITHUB_BASE_REF")
     if base_ref:
@@ -94,16 +98,25 @@ def collect_changed_files() -> List[str]:
 
     for candidate in refs_to_try:
         if ref_exists(candidate):
-            diff = run_git_diff(candidate)
+            diff, ok = run_git_diff(candidate)
+            had_git_errors = had_git_errors or not ok
             if diff:
                 return diff
 
     if ref_exists("HEAD^"):
-        diff = run_git_diff("HEAD^")
+        diff, ok = run_git_diff("HEAD^")
+        had_git_errors = had_git_errors or not ok
         if diff:
             return diff
 
-    return working_tree_diff()
+    diff, ok = working_tree_diff()
+    had_git_errors = had_git_errors or not ok
+
+    if had_git_errors and not diff:
+        log_error("Unable to determine changed files due to git errors.")
+        return []
+
+    return diff
 
 
 def is_scoped(path: str) -> bool:
@@ -132,6 +145,8 @@ def main() -> int:
 
     if scoped_changes and not readiness_updated(changed_files):
         scoped_list = ", ".join(scoped_changes[:10])
+        if len(scoped_changes) > 10:
+            scoped_list += f", ... (+{len(scoped_changes) - 10} more)"
         log_error(
             "Code/test/config/workflow changes detected without updating docs/status/READINESS.md. "
             f"Touched files: {scoped_list}"
