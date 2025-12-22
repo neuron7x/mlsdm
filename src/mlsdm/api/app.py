@@ -66,8 +66,12 @@ _config_path = os.getenv("CONFIG_PATH", "config/default_config.yaml")
 _manager = MemoryManager(ConfigLoader.load_config(_config_path))
 
 # Initialize rate limiter (5 RPS per client as per SECURITY_POLICY.md)
-# Can be disabled in testing with DISABLE_RATE_LIMIT=1
-_rate_limiting_enabled = os.getenv("DISABLE_RATE_LIMIT") != "1"
+# Can be disabled in testing with DISABLE_RATE_LIMIT=1 or MLSDM_RATE_LIMIT_ENABLED=0
+_rate_limit_flag = os.getenv("MLSDM_RATE_LIMIT_ENABLED", "1").lower()
+_rate_limiting_enabled = (
+    os.getenv("DISABLE_RATE_LIMIT") != "1"
+    and _rate_limit_flag in ("1", "true", "yes", "on")
+)
 _rate_limiter = RateLimiter(rate=5.0, capacity=10)
 
 # Initialize input validator
