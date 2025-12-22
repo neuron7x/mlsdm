@@ -7,7 +7,7 @@ Provides integration with OpenAI's API for text generation.
 from __future__ import annotations
 
 import os
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -47,7 +47,19 @@ def build_openai_llm_adapter() -> Callable[[str, int], str]:
         ) from e
 
     # Initialize OpenAI client
-    client = openai.OpenAI(api_key=api_key)
+    timeout_seconds = _get_env_float(
+        "OPENAI_TIMEOUT_SECONDS",
+        "LLM_REQUEST_TIMEOUT_SECONDS",
+        "LLM_TIMEOUT_SECONDS",
+    )
+    max_retries = _get_env_int("OPENAI_MAX_RETRIES", "LLM_MAX_RETRIES")
+
+    client_kwargs: dict[str, Any] = {"api_key": api_key}
+    if timeout_seconds is not None:
+        client_kwargs["timeout"] = timeout_seconds
+    if max_retries is not None:
+        client_kwargs["max_retries"] = max_retries
+    client = openai.OpenAI(**client_kwargs)
 
     def llm_generate_fn(prompt: str, max_tokens: int) -> str:
         """
@@ -76,8 +88,50 @@ def build_openai_llm_adapter() -> Callable[[str, int], str]:
                 return response.choices[0].message.content or ""
             return ""
 
+        except openai.APITimeoutError as e:
+            raise TimeoutError(f"OpenAI API call timed out: {e}") from e
+        except openai.APIConnectionError as e:
+            raise ConnectionError(f"OpenAI API connection failed: {e}") from e
+        except openai.RateLimitError as e:
+            raise RuntimeError(f"OpenAI API rate limit exceeded: {e}") from e
+        except openai.APIStatusError as e:
+            if e.status_code >= 500:
+                raise RuntimeError(f"OpenAI API error (status {e.status_code}): {e}") from e
+            raise Exception(f"OpenAI API error (status {e.status_code}): {e}") from e
         except Exception as e:
             # Re-raise with more context
             raise Exception(f"OpenAI API call failed: {e}") from e
 
     return llm_generate_fn
+
+
+def _get_env_float(*keys: str) -> float | None:
+    """Parse first available float environment variable."""
+    for key in keys:
+        value = os.environ.get(key)
+        if value is None:
+            continue
+        try:
+            parsed = float(value)
+        except ValueError:
+            continue
+        if parsed <= 0:
+            continue
+        return parsed
+    return None
+
+
+def _get_env_int(*keys: str) -> int | None:
+    """Parse first available integer environment variable."""
+    for key in keys:
+        value = os.environ.get(key)
+        if value is None:
+            continue
+        try:
+            parsed = int(value)
+        except ValueError:
+            continue
+        if parsed < 0:
+            continue
+        return parsed
+    return None

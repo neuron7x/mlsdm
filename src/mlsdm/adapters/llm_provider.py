@@ -15,6 +15,42 @@ from typing import Any
 _logger = logging.getLogger(__name__)
 
 
+def _get_env_float(*keys: str) -> float | None:
+    """Parse first available float environment variable."""
+    for key in keys:
+        value = os.environ.get(key)
+        if value is None:
+            continue
+        try:
+            parsed = float(value)
+        except ValueError:
+            _logger.warning("Invalid float for %s=%r; ignoring.", key, value)
+            continue
+        if parsed <= 0:
+            _logger.warning("Non-positive value for %s=%r; ignoring.", key, value)
+            continue
+        return parsed
+    return None
+
+
+def _get_env_int(*keys: str) -> int | None:
+    """Parse first available integer environment variable."""
+    for key in keys:
+        value = os.environ.get(key)
+        if value is None:
+            continue
+        try:
+            parsed = int(value)
+        except ValueError:
+            _logger.warning("Invalid int for %s=%r; ignoring.", key, value)
+            continue
+        if parsed < 0:
+            _logger.warning("Negative value for %s=%r; ignoring.", key, value)
+            continue
+        return parsed
+    return None
+
+
 # ---------------------------------------------------------------------------
 # Custom Exceptions
 # ---------------------------------------------------------------------------
@@ -115,12 +151,20 @@ class LLMProvider(ABC):
 class OpenAIProvider(LLMProvider):
     """OpenAI LLM provider implementation."""
 
-    def __init__(self, api_key: str | None = None, model: str | None = None) -> None:
+    def __init__(
+        self,
+        api_key: str | None = None,
+        model: str | None = None,
+        timeout_seconds: float | None = None,
+        max_retries: int | None = None,
+    ) -> None:
         """Initialize OpenAI provider.
 
         Args:
             api_key: OpenAI API key (if None, reads from OPENAI_API_KEY env var)
             model: Model name (if None, uses gpt-3.5-turbo)
+            timeout_seconds: Optional request timeout for OpenAI client.
+            max_retries: Optional max retries for OpenAI client.
 
         Raises:
             ValueError: If api_key is not provided and OPENAI_API_KEY env var is not set
@@ -134,6 +178,15 @@ class OpenAIProvider(LLMProvider):
             )
 
         self.model = model or os.environ.get("OPENAI_MODEL", "gpt-3.5-turbo")
+        self.timeout_seconds = timeout_seconds or _get_env_float(
+            "OPENAI_TIMEOUT_SECONDS",
+            "LLM_REQUEST_TIMEOUT_SECONDS",
+            "LLM_TIMEOUT_SECONDS",
+        )
+        self.max_retries = max_retries if max_retries is not None else _get_env_int(
+            "OPENAI_MAX_RETRIES",
+            "LLM_MAX_RETRIES",
+        )
 
         try:
             import openai
@@ -143,7 +196,12 @@ class OpenAIProvider(LLMProvider):
                 "Install it with: pip install openai"
             ) from e
 
-        self.client = openai.OpenAI(api_key=self.api_key)
+        client_kwargs: dict[str, Any] = {"api_key": self.api_key}
+        if self.timeout_seconds is not None:
+            client_kwargs["timeout"] = self.timeout_seconds
+        if self.max_retries is not None:
+            client_kwargs["max_retries"] = self.max_retries
+        self.client = openai.OpenAI(**client_kwargs)
 
     def generate(self, prompt: str, max_tokens: int, **kwargs: Any) -> str:
         """Generate text using OpenAI API.
@@ -220,12 +278,20 @@ class OpenAIProvider(LLMProvider):
 class AnthropicProvider(LLMProvider):
     """Anthropic (Claude) LLM provider implementation (stub)."""
 
-    def __init__(self, api_key: str | None = None, model: str | None = None) -> None:
+    def __init__(
+        self,
+        api_key: str | None = None,
+        model: str | None = None,
+        timeout_seconds: float | None = None,
+        max_retries: int | None = None,
+    ) -> None:
         """Initialize Anthropic provider.
 
         Args:
             api_key: Anthropic API key (if None, reads from ANTHROPIC_API_KEY env var)
             model: Model name (if None, uses claude-3-sonnet-20240229)
+            timeout_seconds: Optional request timeout for Anthropic client.
+            max_retries: Optional max retries for Anthropic client.
 
         Raises:
             ValueError: If api_key is not provided and ANTHROPIC_API_KEY env var is not set
@@ -239,6 +305,15 @@ class AnthropicProvider(LLMProvider):
             )
 
         self.model = model or os.environ.get("ANTHROPIC_MODEL", "claude-3-sonnet-20240229")
+        self.timeout_seconds = timeout_seconds or _get_env_float(
+            "ANTHROPIC_TIMEOUT_SECONDS",
+            "LLM_REQUEST_TIMEOUT_SECONDS",
+            "LLM_TIMEOUT_SECONDS",
+        )
+        self.max_retries = max_retries if max_retries is not None else _get_env_int(
+            "ANTHROPIC_MAX_RETRIES",
+            "LLM_MAX_RETRIES",
+        )
 
         try:
             import anthropic
@@ -248,7 +323,12 @@ class AnthropicProvider(LLMProvider):
                 "Install it with: pip install anthropic"
             ) from e
 
-        self.client = anthropic.Anthropic(api_key=self.api_key)
+        client_kwargs: dict[str, Any] = {"api_key": self.api_key}
+        if self.timeout_seconds is not None:
+            client_kwargs["timeout"] = self.timeout_seconds
+        if self.max_retries is not None:
+            client_kwargs["max_retries"] = self.max_retries
+        self.client = anthropic.Anthropic(**client_kwargs)
 
     def generate(self, prompt: str, max_tokens: int, **kwargs: Any) -> str:
         """Generate text using Anthropic API.

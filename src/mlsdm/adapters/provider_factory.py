@@ -38,8 +38,14 @@ def build_provider_from_env(
         LLM_BACKEND: Backend to use ("openai", "anthropic", "local_stub")
         OPENAI_API_KEY: Required when backend="openai"
         OPENAI_MODEL: Optional OpenAI model name (default: "gpt-3.5-turbo")
+        OPENAI_TIMEOUT_SECONDS: Optional request timeout for OpenAI client.
+        OPENAI_MAX_RETRIES: Optional max retries for OpenAI client.
         ANTHROPIC_API_KEY: Required when backend="anthropic"
         ANTHROPIC_MODEL: Optional Anthropic model name (default: "claude-3-sonnet-20240229")
+        ANTHROPIC_TIMEOUT_SECONDS: Optional request timeout for Anthropic client.
+        ANTHROPIC_MAX_RETRIES: Optional max retries for Anthropic client.
+        LLM_REQUEST_TIMEOUT_SECONDS: Optional global request timeout fallback.
+        LLM_MAX_RETRIES: Optional global max retries fallback.
         LOCAL_STUB_PROVIDER_ID: Optional custom ID for local stub (default: "local_stub")
 
     Example:
@@ -50,15 +56,31 @@ def build_provider_from_env(
     backend = backend or os.environ.get("LLM_BACKEND", "local_stub")
     backend = backend.lower().strip()
 
+    timeout_seconds = _get_env_float(
+        "LLM_REQUEST_TIMEOUT_SECONDS",
+        "LLM_TIMEOUT_SECONDS",
+    )
+    max_retries = _get_env_int("LLM_MAX_RETRIES")
+
     if backend == "openai":
         api_key = kwargs.get("api_key") or os.environ.get("OPENAI_API_KEY")
         model = kwargs.get("model") or os.environ.get("OPENAI_MODEL")
-        return OpenAIProvider(api_key=api_key, model=model)
+        return OpenAIProvider(
+            api_key=api_key,
+            model=model,
+            timeout_seconds=timeout_seconds,
+            max_retries=max_retries,
+        )
 
     elif backend == "anthropic":
         api_key = kwargs.get("api_key") or os.environ.get("ANTHROPIC_API_KEY")
         model = kwargs.get("model") or os.environ.get("ANTHROPIC_MODEL")
-        return AnthropicProvider(api_key=api_key, model=model)
+        return AnthropicProvider(
+            api_key=api_key,
+            model=model,
+            timeout_seconds=timeout_seconds,
+            max_retries=max_retries,
+        )
 
     elif backend == "local_stub":
         provider_id = kwargs.get("provider_id") or os.environ.get(
@@ -71,6 +93,38 @@ def build_provider_from_env(
             f"Invalid LLM_BACKEND: {backend}. "
             f"Valid options are: 'openai', 'anthropic', 'local_stub'"
         )
+
+
+def _get_env_float(*keys: str) -> float | None:
+    """Parse first available float environment variable."""
+    for key in keys:
+        value = os.environ.get(key)
+        if value is None:
+            continue
+        try:
+            parsed = float(value)
+        except ValueError:
+            continue
+        if parsed <= 0:
+            continue
+        return parsed
+    return None
+
+
+def _get_env_int(*keys: str) -> int | None:
+    """Parse first available integer environment variable."""
+    for key in keys:
+        value = os.environ.get(key)
+        if value is None:
+            continue
+        try:
+            parsed = int(value)
+        except ValueError:
+            continue
+        if parsed < 0:
+            continue
+        return parsed
+    return None
 
 
 def build_multiple_providers_from_env() -> dict[str, LLMProvider]:
