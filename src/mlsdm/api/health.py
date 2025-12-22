@@ -262,7 +262,7 @@ def _check_moral_filter_health() -> tuple[bool, str | None]:
             if moral is not None:
                 try:
                     threshold = getattr(moral, "threshold", None)
-                    return True, f"threshold={threshold:.2f}" if threshold else None
+                    return True, f"threshold={threshold:.2f}" if threshold is not None else None
                 except Exception:
                     return True, "initialized"
             return False, "moral_filter_not_initialized"
@@ -273,7 +273,7 @@ def _check_moral_filter_health() -> tuple[bool, str | None]:
         if moral is not None:
             try:
                 threshold = getattr(moral, "threshold", None)
-                return True, f"threshold={threshold:.2f}" if threshold else None
+                return True, f"threshold={threshold:.2f}" if threshold is not None else None
             except Exception:
                 return True, "initialized"
         return False, "moral_filter_not_initialized"
