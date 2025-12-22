@@ -219,18 +219,22 @@ class CircuitBreaker:
             True if request is allowed, False if circuit is blocking.
 
         Note:
-            For HALF_OPEN state, returns True only if under the probe request limit.
-            Caller should still handle CircuitOpenError in case of race conditions.
+            For HALF_OPEN state, this method reserves a probe slot to enforce
+            half_open_max_requests. Callers should follow up with record_success()
+            or record_failure() after executing the request.
         """
         with self._lock:
             self._check_state_transition()
 
             if self._state == CircuitState.CLOSED:
                 return True
-            elif self._state == CircuitState.OPEN:
+
+            try:
+                self._acquire_execution_slot()
+            except CircuitBreakerError:
                 return False
-            else:  # HALF_OPEN
-                return self._half_open_requests < self.config.half_open_max_requests
+
+            return True
 
     @contextmanager
     def __call__(self) -> Iterator[None]:
