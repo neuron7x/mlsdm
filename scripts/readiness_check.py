@@ -25,6 +25,14 @@ MAX_LISTED_FILES = 10
 class GitDiffResult(NamedTuple):
     files: List[str]
     success: bool
+    error: Optional[str] = None
+
+
+class DiffOutcome(NamedTuple):
+    files: List[str]
+    base_ref: str
+    success: bool
+    error: Optional[str] = None
 
 
 def log_error(message: str) -> None:
@@ -70,10 +78,9 @@ def run_git_diff(ref: str) -> GitDiffResult:
         text=True,
     )
     if result.returncode != 0:
-        log_error(f"git diff failed for {ref}: {result.stderr.strip()}")
-        return GitDiffResult([], False)
+        return GitDiffResult([], False, result.stderr.strip())
     return GitDiffResult(
-        [line.strip() for line in result.stdout.splitlines() if line.strip()], True
+        [line.strip() for line in result.stdout.splitlines() if line.strip()], True, None
     )
 
 
@@ -85,10 +92,9 @@ def working_tree_diff() -> GitDiffResult:
         text=True,
     )
     if result.returncode != 0:
-        log_error(f"git diff failed for working tree: {result.stderr.strip()}")
-        return GitDiffResult([], False)
+        return GitDiffResult([], False, result.stderr.strip())
     return GitDiffResult(
-        [line.strip() for line in result.stdout.splitlines() if line.strip()], True
+        [line.strip() for line in result.stdout.splitlines() if line.strip()], True, None
     )
 
 
@@ -104,42 +110,50 @@ def ref_exists(ref: str) -> bool:
     )
 
 
-def collect_changed_files() -> List[str]:
+def collect_changed_files() -> DiffOutcome:
     had_git_errors = False
+    last_error: Optional[str] = None
     refs_to_try: List[str] = []
-    base_ref = os.environ.get("GITHUB_BASE_REF")
-    if base_ref:
-        refs_to_try.append(f"origin/{base_ref}")
+    event_name = os.environ.get("GITHUB_EVENT_NAME", "")
+    base_ref_env = os.environ.get("GITHUB_BASE_REF")
+    ref_name = os.environ.get("GITHUB_REF_NAME")
+
+    if event_name == "pull_request" and base_ref_env:
+        refs_to_try.append(f"origin/{base_ref_env}")
+    if ref_name:
+        refs_to_try.append(f"origin/{ref_name}")
     refs_to_try.extend(["origin/main", "main"])
 
     for candidate in refs_to_try:
         if ref_exists(candidate):
             diff_result = run_git_diff(candidate)
             had_git_errors = had_git_errors or not diff_result.success
-            if diff_result.files:
-                if had_git_errors:
-                    log_error("Git diff reported errors; proceeding with available file list.")
-                return diff_result.files
+            last_error = diff_result.error or last_error
+            if diff_result.success:
+                return DiffOutcome(diff_result.files, candidate, True, None)
 
     if ref_exists("HEAD^"):
         diff_result = run_git_diff("HEAD^")
         had_git_errors = had_git_errors or not diff_result.success
-        if diff_result.files:
-            if had_git_errors:
-                log_error("Git diff reported errors; proceeding with available file list.")
-            return diff_result.files
+        last_error = diff_result.error or last_error
+        if diff_result.success:
+            return DiffOutcome(diff_result.files, "HEAD^", True, None)
 
     diff_result = working_tree_diff()
     had_git_errors = had_git_errors or not diff_result.success
+    last_error = diff_result.error or last_error
+    if diff_result.success:
+        return DiffOutcome(diff_result.files, "working-tree", True, None)
 
-    if had_git_errors and not diff_result.files:
-        log_error("Unable to determine changed files due to git errors.")
-        return []
-
-    if had_git_errors and diff_result.files:
-        log_error("Git diff reported errors; proceeding with available file list.")
-
-    return diff_result.files
+    guidance = (
+        "Unable to determine changed files. Git history may be shallow; "
+        "ensure actions/checkout uses fetch-depth: 0 or fetch the base ref."
+    )
+    if last_error:
+        guidance += f" git error: {last_error}"
+    if had_git_errors:
+        return DiffOutcome([], "", False, guidance)
+    return DiffOutcome([], "", False, "Unable to determine changed files.")
 
 
 def is_scoped(path: str) -> bool:
@@ -163,10 +177,19 @@ def main() -> int:
     if last_updated is None or not last_updated_is_fresh(last_updated):
         return 1
 
-    changed_files = collect_changed_files()
-    scoped_changes = [f for f in changed_files if is_scoped(f)]
+    diff_outcome = collect_changed_files()
+    if not diff_outcome.success:
+        log_error(diff_outcome.error or "Failed to compute git diff.")
+        return 1
 
-    if scoped_changes and not readiness_updated(changed_files):
+    print(
+        f"Readiness diff base: {diff_outcome.base_ref or 'unknown'}; "
+        f"scope prefixes: {', '.join(SCOPED_PREFIXES)}"
+    )
+
+    scoped_changes = [f for f in diff_outcome.files if is_scoped(f)]
+
+    if scoped_changes and not readiness_updated(diff_outcome.files):
         scoped_list = ", ".join(scoped_changes[:MAX_LISTED_FILES])
         if len(scoped_changes) > MAX_LISTED_FILES:
             scoped_list += f", ... (+{len(scoped_changes) - MAX_LISTED_FILES} more)"
