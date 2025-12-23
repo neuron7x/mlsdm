@@ -375,13 +375,11 @@ class ConfigLoader:
         try:
             return int(value)
         except ValueError:
-            pass
-
-        # Try float
-        try:
-            return float(value)
-        except ValueError:
-            pass
+            # Try float next
+            try:
+                return float(value)
+            except ValueError:
+                return value
 
         # Return as string
         return value

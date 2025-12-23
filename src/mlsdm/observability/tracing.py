@@ -110,25 +110,31 @@ def _get_span_kind_client() -> Any:
 class NoOpSpan:
     """No-op span implementation when OpenTelemetry is not available."""
 
+    def __init__(self) -> None:
+        self.attributes: dict[str, Any] = {}
+        self.events: list[tuple[str, dict[str, Any] | None]] = []
+        self.exceptions: list[Exception] = []
+        self.status: Any | None = None
+
     def set_attribute(self, key: str, value: Any) -> None:
         """No-op set attribute."""
-        pass
+        self.attributes[key] = value
 
     def set_attributes(self, attributes: dict[str, Any]) -> None:
         """No-op set attributes."""
-        pass
+        self.attributes.update(attributes)
 
     def add_event(self, name: str, attributes: dict[str, Any] | None = None) -> None:
         """No-op add event."""
-        pass
+        self.events.append((name, attributes))
 
     def record_exception(self, exception: Exception) -> None:
         """No-op record exception."""
-        pass
+        self.exceptions.append(exception)
 
     def set_status(self, status: Any) -> None:
         """No-op set status."""
-        pass
+        self.status = status
 
     def __enter__(self) -> NoOpSpan:
         """No-op context manager entry."""
@@ -136,7 +142,7 @@ class NoOpSpan:
 
     def __exit__(self, *args: Any) -> None:
         """No-op context manager exit."""
-        pass
+        return None
 
 
 class NoOpTracer:
