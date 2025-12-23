@@ -16,7 +16,7 @@ import logging
 import time
 from dataclasses import dataclass
 from threading import Lock
-from typing import Any, Optional
+from typing import Any
 
 import numpy as np
 import psutil
@@ -50,16 +50,16 @@ class CPUHealthCache:
     value: float
     timestamp: float
     is_valid: bool = True
-    
+
     def is_stale(self, ttl_seconds: float = 2.0) -> bool:
         """Check if cached value exceeded TTL."""
         return (time.time() - self.timestamp) > ttl_seconds
 
 
 # Global CPU health cache with thread-safe access
-_cpu_health_cache: Optional[CPUHealthCache] = None
+_cpu_health_cache: CPUHealthCache | None = None
 _cpu_health_lock = Lock()
-_cpu_background_task: Optional[asyncio.Task] = None
+_cpu_background_task: asyncio.Task | None = None
 
 
 class SimpleHealthStatus(BaseModel):
@@ -327,24 +327,24 @@ def _check_aphasia_health() -> tuple[bool, str | None]:
 
 async def _cpu_background_sampler() -> None:
     """Background task to continuously sample CPU with interval.
-    
+
     Runs independently to keep psutil warmed up and cache fresh.
     Prevents blocking health checks with synchronous interval measurements.
-    
+
     Performance:
     - Samples every 0.5s to maintain fresh cache
     - Uses asyncio.to_thread for non-blocking interval measurements
     - Atomic cache updates with thread lock
     """
     global _cpu_health_cache
-    
+
     logger.info("CPU background sampler started")
-    
+
     while True:
         try:
             # Non-blocking call first (instant)
             cpu_instant = psutil.cpu_percent(interval=0)
-            
+
             # If we get 0.0, do a proper measurement in thread pool
             if cpu_instant == 0.0:
                 # This blocks for 0.1s but runs in background thread
@@ -352,7 +352,7 @@ async def _cpu_background_sampler() -> None:
                 cpu_value = cpu_measured
             else:
                 cpu_value = cpu_instant
-            
+
             # Update cache atomically
             with _cpu_health_lock:
                 _cpu_health_cache = CPUHealthCache(
@@ -360,10 +360,10 @@ async def _cpu_background_sampler() -> None:
                     timestamp=time.time(),
                     is_valid=True
                 )
-            
+
             # Sample every 0.5s to keep cache fresh (2.0s TTL / 4 = 0.5s)
             await asyncio.sleep(0.5)
-            
+
         except asyncio.CancelledError:
             logger.info("CPU background sampler cancelled")
             break
@@ -373,23 +373,23 @@ async def _cpu_background_sampler() -> None:
                 if _cpu_health_cache:
                     _cpu_health_cache.is_valid = False
             await asyncio.sleep(1.0)
-    
+
     logger.info("CPU background sampler stopped")
 
 
 def _check_cpu_health() -> tuple[bool, str | None]:
     """Check CPU availability using cached background sampling.
-    
+
     PERFORMANCE: O(1) - instant read from cache, no blocking I/O.
     RELIABILITY: Falls back to instant measurement if cache unavailable.
-    
+
     Returns:
         Tuple of (healthy, details) where:
         - healthy: True if CPU < 98% or initializing/degraded
         - details: String describing CPU state with source indicator
     """
     global _cpu_health_cache
-    
+
     try:
         # Try to use cached value first (instant, no blocking)
         with _cpu_health_lock:
@@ -397,22 +397,22 @@ def _check_cpu_health() -> tuple[bool, str | None]:
                 if not _cpu_health_cache.is_valid:
                     # Cache exists but marked invalid - fail open
                     return True, "degraded (cache_invalid)"
-                
+
                 cpu_percent = _cpu_health_cache.value
                 cpu_available = cpu_percent < 98.0
                 return cpu_available, f"usage: {cpu_percent:.1f}% (cached)"
-        
+
         # Cache miss or stale - use instant non-blocking measurement
         cpu_percent = psutil.cpu_percent(interval=0)
-        
+
         # If we get 0.0, report as initializing (healthy, not blocking)
         # Background sampler will populate cache on next cycle
         if cpu_percent == 0.0:
             return True, "initializing (0.0%)"
-        
+
         cpu_available = cpu_percent < 98.0
         return cpu_available, f"usage: {cpu_percent:.1f}%"
-        
+
     except Exception as e:
         logger.warning(f"Failed to check CPU availability: {e}")
         # Fail open - don't block readiness on CPU check failure
