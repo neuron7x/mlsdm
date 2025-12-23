@@ -255,6 +255,22 @@ class TestSaveAndLoadState:
             assert loaded.memory_state.dimension == 5
             assert len(loaded.memory_state.state_l1) == 5
 
+    def test_save_creates_parent_directories(self):
+        """Saving should create missing parent directories automatically."""
+        state = create_empty_system_state(dimension=4)
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            nested_dir = os.path.join(tmpdir, "nested", "state_dir")
+            filepath = os.path.join(nested_dir, "state.json")
+
+            assert not os.path.exists(nested_dir)
+
+            save_system_state(state, filepath)
+            assert os.path.exists(filepath)
+
+            loaded = load_system_state(filepath)
+            assert loaded.memory_state.dimension == 4
+
     def test_read_after_write_consistency(self):
         """Test that loaded state is identical to saved state (logically)."""
         state = create_empty_system_state(dimension=10)
