@@ -175,7 +175,8 @@ def e2e_http_client():
         time.sleep(0.2)
 
         # Verify readiness before yielding client
-        max_retries = 10
+        max_retries = 5
+        response = None
         for attempt in range(max_retries):
             response = client.get("/health/ready")
             if response.status_code == 200:
@@ -184,7 +185,7 @@ def e2e_http_client():
                 time.sleep(0.5)
 
         # Log warning if not ready after retries (non-blocking for other tests)
-        if response.status_code != 200:
+        if response and response.status_code != 200:
             logger = logging.getLogger(__name__)
             logger.warning(
                 f"E2E HTTP client: API not ready after {max_retries} attempts. "
