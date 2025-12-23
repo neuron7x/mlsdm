@@ -81,6 +81,7 @@ python -m pytest tests/unit/ tests/state/ \
     --cov=src/mlsdm \
     --cov-report=term-missing \
     --cov-report=xml:coverage.xml \
+    --cov-report=json:coverage.json \
     --cov-fail-under=0 \
     -m "not slow" \
     -q \
@@ -116,6 +117,26 @@ echo ""
 echo "Coverage: ${COVERAGE_PERCENT}%"
 echo "Threshold: ${COVERAGE_MIN}%"
 echo ""
+
+# Show top uncovered files to make failures actionable
+if [ -f "coverage.json" ]; then
+    echo "Top uncovered files (by missing lines):"
+    python - << 'EOF'
+import json
+from pathlib import Path
+
+data = json.load(open("coverage.json"))
+files = []
+for path, info in data.get("files", {}).items():
+    missing = info.get("summary", {}).get("missing_lines", 0)
+    if missing:
+        files.append((missing, path))
+
+for missing, path in sorted(files, reverse=True)[:5]:
+    print(f"- {path}: {missing} missing lines")
+EOF
+    echo ""
+fi
 
 # Compare coverage to threshold (using awk for floating point comparison)
 PASS=$(echo "$COVERAGE_PERCENT $COVERAGE_MIN" | awk '{if ($1 >= $2) print "1"; else print "0"}')

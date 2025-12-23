@@ -3,27 +3,32 @@ Last updated: 2025-12-23
 Owner: neuron7x / MLSDM maintainers
 Scope: MLSDM cognitive engine repository (src/, tests/, deploy/, workflows)
 
+## Evidence Format (must be filled for VERIFIED/READY)
+- Run: <Actions URL>
+- Artifacts: <artifact names>
+- Commands: <exact commands executed>
+
 ## Overall Readiness
 Status: NOT READY  
 Confidence: LOW  
-Blocking issues: 3
+Blocking issues: 3 (all evidence pending)
 
 ## Functional Readiness
 | Subsystem | Status | Evidence | Notes |
 | --- | --- | --- | --- |
-| Neuro engine runtime (service/orchestration) | PARTIAL | `tests/unit/test_neuro_cognitive_engine.py`, `tests/e2e/test_full_stack.py` | Runtime paths covered by tests but no recent passing CI for this branch. |
-| Cognitive wrapper & routing (LLMWrapper/NeuroLang) | PARTIAL | `tests/integration/test_llm_wrapper_integration.py`, `tests/extensions/test_neurolang_modes.py` | Integration coverage exists; not re-run in this PR. |
-| Memory storage & PELM | PARTIAL | `tests/unit/test_pelm.py`, `tests/property/test_multilevel_synaptic_memory_properties.py` | Memory invariants covered; latest results not verified here. |
-| Embedding cache / retrieval | PARTIAL | `tests/unit/test_embedding_cache.py` | Cache behavior tested; no dated execution for this commit. |
-| Moral filter & safety invariants | PARTIAL | `tests/validation/test_moral_filter_effectiveness.py`, `tests/property/test_moral_filter_properties.py` | Safety metrics tested; CI evidence missing for this branch. |
-| Cognitive rhythm & state management | PARTIAL | `tests/validation/test_wake_sleep_effectiveness.py`, `tests/validation/test_rhythm_state_machine.py` | Rhythm behavior validated in tests; not re-run here. |
-| HTTP API surface (health/inference) | PARTIAL | `tests/api/test_health.py`, `tests/e2e/test_http_inference_api.py` | Health endpoint optimized with async CPU monitoring (PR #359); perf validation pending. |
-| Observability pipeline (logging/metrics/tracing) | NOT VERIFIED | `tests/observability/test_aphasia_logging.py`, `tests/observability/test_aphasia_metrics.py`, `docs/OBSERVABILITY_GUIDE.md` | Instrumentation documented; no execution evidence in this PR. |
-| CI / quality gates (coverage, property tests) | NOT VERIFIED | `.github/workflows/readiness-evidence.yml` (jobs: deps_smoke, unit, coverage_gate), `.github/workflows/property-tests.yml`, `coverage_gate.sh` | Evidence workflow (uv-based) runs on pull_request/workflow_dispatch; awaiting current run artifacts for this PR. |
-| Config & calibration pipeline | NOT VERIFIED | `config/`, `docs/CONFIGURATION_GUIDE.md`, `tests/integration/test_public_api.py` | Config paths defined; validation runs absent for this commit. |
-| CLI / entrypoints | NOT VERIFIED | `src/mlsdm/entrypoints/`, `Makefile` | Entrypoints exist; no execution evidence tied to this revision. |
-| Benchmarks / performance tooling | NOT VERIFIED | `tests/perf/test_slo_api_endpoints.py`, `benchmarks/README.md` | Perf tooling present; benchmarks not executed in this PR. |
-| Deployment artifacts (k8s/manifests) | NOT VERIFIED | `deploy/k8s/`, `deploy/grafana/mlsdm_observability_dashboard.json` | Deployment manifests exist; no deployment validation evidence in this PR. |
+| Neuro engine runtime (service/orchestration) | NOT VERIFIED | Evidence: Pending (no recent run link) | Tests exist; require current Actions run + artifacts. |
+| Cognitive wrapper & routing (LLMWrapper/NeuroLang) | NOT VERIFIED | Evidence: Pending | Integration coverage exists; no current run. |
+| Memory storage & PELM | NOT VERIFIED | Evidence: Pending | Property/unit suites present; awaiting CI artifact. |
+| Embedding cache / retrieval | NOT VERIFIED | Evidence: Pending | Needs run + artifact link. |
+| Moral filter & safety invariants | NOT VERIFIED | Evidence: Pending | Safety metrics tests present; no run evidence. |
+| Cognitive rhythm & state management | NOT VERIFIED | Evidence: Pending | Requires run with artifact link. |
+| HTTP API surface (health/inference) | NOT VERIFIED | Evidence: Pending | Perf validation pending for current commit. |
+| Observability pipeline (logging/metrics/tracing) | NOT VERIFIED | Evidence: Pending | No execution evidence in this PR. |
+| CI / quality gates (coverage, property tests) | NOT VERIFIED | Evidence: Pending | Awaiting readiness-evidence/property workflow run links. |
+| Config & calibration pipeline | NOT VERIFIED | Evidence: Pending | Validation run not recorded for this commit. |
+| CLI / entrypoints | NOT VERIFIED | Evidence: Pending | No execution evidence tied to this revision. |
+| Benchmarks / performance tooling | NOT VERIFIED | Evidence: Pending | Benchmarks not executed for this commit. |
+| Deployment artifacts (k8s/manifests) | NOT VERIFIED | Evidence: Pending | Deployment validation absent. |
 
 ## Safety & Compliance
 - Input validation — Status: PARTIAL — Evidence: `src/mlsdm/security/guardrails.py`, `tests/security/test_ai_safety_invariants.py` — Not re-run in this PR.
