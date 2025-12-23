@@ -28,7 +28,7 @@ from mlsdm.observability.metrics import get_metrics_exporter
 
 logger = logging.getLogger(__name__)
 
-# Export public API and background sampler for lifecycle integration
+# Export public API
 __all__ = [
     "router",
     "set_memory_manager",
@@ -37,11 +37,14 @@ __all__ = [
     "get_cognitive_controller",
     "set_neuro_engine",
     "get_neuro_engine",
-    "_cpu_background_sampler",  # Export for lifespan integration
 ]
 
 # Health check router
 router = APIRouter(prefix="/health", tags=["health"])
+
+# CPU monitoring configuration
+CPU_SAMPLE_INTERVAL = 0.5  # seconds between background samples
+CPU_CACHE_TTL = 2.0  # seconds before cache is considered stale
 
 
 @dataclass
@@ -51,7 +54,7 @@ class CPUHealthCache:
     timestamp: float
     is_valid: bool = True
 
-    def is_stale(self, ttl_seconds: float = 2.0) -> bool:
+    def is_stale(self, ttl_seconds: float = CPU_CACHE_TTL) -> bool:
         """Check if cached value exceeded TTL."""
         return (time.time() - self.timestamp) > ttl_seconds
 
@@ -59,7 +62,6 @@ class CPUHealthCache:
 # Global CPU health cache with thread-safe access
 _cpu_health_cache: CPUHealthCache | None = None
 _cpu_health_lock = Lock()
-_cpu_background_task: asyncio.Task | None = None
 
 
 class SimpleHealthStatus(BaseModel):
@@ -346,12 +348,7 @@ async def _cpu_background_sampler() -> None:
             cpu_instant = psutil.cpu_percent(interval=0)
 
             # If we get 0.0, do a proper measurement in thread pool
-            if cpu_instant == 0.0:
-                # This blocks for 0.1s but runs in background thread
-                cpu_measured = await asyncio.to_thread(psutil.cpu_percent, 0.1)
-                cpu_value = cpu_measured
-            else:
-                cpu_value = cpu_instant
+            cpu_value = await asyncio.to_thread(psutil.cpu_percent, 0.1) if cpu_instant == 0.0 else cpu_instant
 
             # Update cache atomically
             with _cpu_health_lock:
@@ -361,8 +358,8 @@ async def _cpu_background_sampler() -> None:
                     is_valid=True
                 )
 
-            # Sample every 0.5s to keep cache fresh (2.0s TTL / 4 = 0.5s)
-            await asyncio.sleep(0.5)
+            # Sample at configured interval to keep cache fresh
+            await asyncio.sleep(CPU_SAMPLE_INTERVAL)
 
         except asyncio.CancelledError:
             logger.info("CPU background sampler cancelled")
@@ -393,7 +390,7 @@ def _check_cpu_health() -> tuple[bool, str | None]:
     try:
         # Try to use cached value first (instant, no blocking)
         with _cpu_health_lock:
-            if _cpu_health_cache and not _cpu_health_cache.is_stale(ttl_seconds=2.0):
+            if _cpu_health_cache and not _cpu_health_cache.is_stale():
                 if not _cpu_health_cache.is_valid:
                     # Cache exists but marked invalid - fail open
                     return True, "degraded (cache_invalid)"

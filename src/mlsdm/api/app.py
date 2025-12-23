@@ -24,6 +24,7 @@ except ImportError:
         SpanKind = None
 
 from mlsdm.api import health
+from mlsdm.api.health import _cpu_background_sampler
 from mlsdm.api.lifecycle import cleanup_memory_manager, get_lifecycle_manager
 from mlsdm.api.middleware import (
     BulkheadMiddleware,
@@ -133,7 +134,6 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     lifecycle.register_cleanup(lambda: cleanup_memory_manager(_manager))
 
     # Start CPU background sampler for non-blocking health checks
-    from mlsdm.api.health import _cpu_background_sampler
     _cpu_background_task = asyncio.create_task(_cpu_background_sampler())
     logger.info("Started CPU background sampler for health checks")
 
