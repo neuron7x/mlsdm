@@ -132,9 +132,15 @@ def e2e_http_client():
     HTTP endpoints directly. Initializes health check components
     to ensure readiness checks work properly in E2E tests.
 
+    Ensures lifespan startup completes before yielding client to avoid race
+    conditions with CPU monitoring initialization.
+
     Yields:
         FastAPI TestClient instance.
     """
+    import logging
+    import time
+
     os.environ["DISABLE_RATE_LIMIT"] = "1"
     os.environ["LLM_BACKEND"] = "local_stub"
 
@@ -163,6 +169,29 @@ def e2e_http_client():
         set_memory_manager(engine.manager)
 
     with TestClient(app) as client:
+        # Give lifespan 200ms to complete CPU initialization (psutil warmup)
+        # The TestClient starts the lifespan context, but we need to verify
+        # readiness before proceeding with tests to avoid race conditions
+        time.sleep(0.2)
+
+        # Verify readiness before yielding client
+        max_retries = 5
+        response = None
+        for attempt in range(max_retries):
+            response = client.get("/health/ready")
+            if response.status_code == 200:
+                break
+            if attempt < max_retries - 1:
+                time.sleep(0.5)
+
+        # Log warning if not ready after retries (non-blocking for other tests)
+        if response and response.status_code != 200:
+            logger = logging.getLogger(__name__)
+            logger.warning(
+                f"E2E HTTP client: API not ready after {max_retries} attempts. "
+                f"Status: {response.status_code}, Details: {response.json()}"
+            )
+
         yield client
 
 
