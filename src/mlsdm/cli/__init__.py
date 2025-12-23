@@ -179,14 +179,17 @@ def cmd_serve(args: argparse.Namespace) -> int:
     """Start the HTTP API server."""
     from mlsdm.entrypoints.serve import serve
 
+    dry_run = getattr(args, "dry_run", False)
     # Set environment variables from args
-    if args.config:
+    if dry_run:
+        os.environ["MLSDM_DRY_RUN"] = "1"
+    if getattr(args, "config", None):
         os.environ["CONFIG_PATH"] = args.config
 
-    if args.backend:
+    if getattr(args, "backend", None):
         os.environ["LLM_BACKEND"] = args.backend
 
-    if args.disable_rate_limit:
+    if getattr(args, "disable_rate_limit", False):
         os.environ["DISABLE_RATE_LIMIT"] = "1"
 
     print("=" * 60)
@@ -197,12 +200,17 @@ def cmd_serve(args: argparse.Namespace) -> int:
     print(f"Config: {os.environ.get('CONFIG_PATH', 'config/default_config.yaml')}")
     print()
 
-    return serve(
-        host=args.host,
-        port=args.port,
-        log_level=args.log_level,
-        reload=args.reload,
-    )
+    args_map = vars(args).copy()
+    if "dry_run" not in args_map:
+        args_map["dry_run"] = dry_run
+    args_map.pop("command", None)
+    return serve(**args_map)
+
+
+def _serve_cmd(args: argparse.Namespace) -> int:
+    from mlsdm.entrypoints.serve import serve
+
+    return serve(**vars(args))
 
 
 def cmd_check(args: argparse.Namespace) -> int:
@@ -520,6 +528,11 @@ def main() -> int:
         "--reload",
         action="store_true",
         help="Enable auto-reload for development",
+    )
+    serve_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Initialize application without binding network sockets",
     )
     serve_parser.add_argument(
         "--disable-rate-limit",

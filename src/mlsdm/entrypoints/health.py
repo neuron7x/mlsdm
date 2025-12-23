@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import logging
 import os
+import sys
 import time
 from typing import Any
 
@@ -181,9 +182,11 @@ def _get_version() -> str:
         return "unknown"
 
 
-# CLI support
-if __name__ == "__main__":
+def _cli_main() -> None:
     import json
 
-    result = health_check()
-    print(json.dumps(result, indent=2))
+    print(json.dumps(health_check(), indent=2))
+
+
+if "__main__" == __name__ or (sys.argv and sys.argv[0].endswith("mlsdm.entrypoints.health")):
+    _cli_main()

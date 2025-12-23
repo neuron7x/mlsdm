@@ -19,15 +19,21 @@ def get_canonical_app() -> FastAPI:
 
 def serve(
     *,
-    host: str,
-    port: int,
+    host: str = "0.0.0.0",
+    port: int = 8000,
     log_level: str = "info",
     reload: bool = False,
     workers: int | None = None,
     timeout_keep_alive: int | None = None,
+    dry_run: bool = False,
     **extra: Any,
 ) -> int:
     """Start the canonical HTTP API server."""
+    if dry_run:
+        from mlsdm.api.app import app  # noqa: F401
+
+        return 0
+
     try:
         import uvicorn
     except ImportError:

@@ -153,16 +153,20 @@ test-memory-obs:
 
 # Runtime Modes
 run-dev:
-	python -m mlsdm.entrypoints.dev
+	mlsdm serve --profile dev
 
 run-cloud-local:
-	python -m mlsdm.entrypoints.cloud
+	mlsdm serve --profile cloud
 
 run-agent:
-	python -m mlsdm.entrypoints.agent
+	mlsdm serve --profile agent
 
 health-check:
-	python -m mlsdm.entrypoints.health
+	python - <<'PY'
+	from mlsdm.entrypoints.health import health_check
+	import json
+	print(json.dumps(health_check(), indent=2))
+	PY
 
 # Evaluation Suites
 eval-moral_filter:
