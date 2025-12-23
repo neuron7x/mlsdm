@@ -252,8 +252,15 @@ jobs:
     name: Performance Benchmarks (SLO Gate)
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    # HEAVY PATH: Benchmarks are informational for PRs, blocking only on main push
-    # This prevents flaky CI from timing-sensitive tests while still running them
+    # HEAVY PATH CONFIGURATION:
+    # - For pull_request: continue-on-error=true (informational, not blocking)
+    #   Benchmark failures in PRs are reported but don't block merge.
+    # - For push to main: continue-on-error=false (blocking)
+    #   Regressions on main must be investigated.
+    # 
+    # WHY: Benchmark tests are timing-sensitive and may fail due to CI VM 
+    # overhead variability, not actual code regressions. Making them
+    # non-blocking for PRs prevents flaky CI while still running/reporting.
     continue-on-error: ${{ github.event_name == 'pull_request' }}
     env:
       DISABLE_RATE_LIMIT: "1"
