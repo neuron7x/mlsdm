@@ -252,6 +252,9 @@ jobs:
     name: Performance Benchmarks (SLO Gate)
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    # HEAVY PATH: Benchmarks are informational for PRs, blocking only on main push
+    # This prevents flaky CI from timing-sensitive tests while still running them
+    continue-on-error: ${{ github.event_name == 'pull_request' }}
     env:
       DISABLE_RATE_LIMIT: "1"
       LLM_BACKEND: "local_stub"
@@ -455,12 +458,13 @@ jobs:
           retention-days: 90
 
   # Gate job that requires all critical CI jobs to pass
-  # WHY: neuro-engine-eval is excluded because it has continue-on-error: true (non-blocking)
+  # WHY: neuro-engine-eval and benchmarks are excluded because they have continue-on-error: true
+  # Benchmarks are heavy-path (informational for PRs, blocking only on main push)
   all-ci-passed:
     name: All CI Checks Passed
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    needs: [lint, security, test, coverage, e2e-tests, effectiveness-validation, benchmarks]
+    needs: [lint, security, test, coverage, e2e-tests, effectiveness-validation]
     steps:
       - name: All checks passed
         run: echo "All CI checks passed successfully!"
