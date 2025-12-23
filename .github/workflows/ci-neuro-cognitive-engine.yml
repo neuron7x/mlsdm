@@ -467,6 +467,9 @@ jobs:
   # Gate job that requires all critical CI jobs to pass
   # WHY: neuro-engine-eval and benchmarks are excluded because they have continue-on-error: true
   # Benchmarks are heavy-path (informational for PRs, blocking only on main push)
+  # NOTE: For branch protection, use this job as required check. On main pushes,
+  # benchmarks will still block the workflow (continue-on-error: false on push)
+  # even though not in needs list, because the overall workflow status shows failure.
   all-ci-passed:
     name: All CI Checks Passed
     runs-on: ubuntu-latest
