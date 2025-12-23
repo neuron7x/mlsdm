@@ -52,7 +52,7 @@ logger = logging.getLogger(__name__)
 security_logger = get_security_logger()
 
 # Global reference to CPU background sampler task
-_cpu_background_task: asyncio.Task | None = None
+_cpu_background_task: asyncio.Task[None] | None = None
 
 
 def _get_env_bool(key: str, default: bool = False) -> bool:
