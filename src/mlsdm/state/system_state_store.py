@@ -210,8 +210,6 @@ def save_system_state(
 
         logger.info(f"Saved system state to {filepath} (version {state.version})")
 
-    except StateSaveError:
-        raise
     except Exception as e:
         raise StateSaveError(f"Failed to save system state to {filepath}: {e}") from e
 
