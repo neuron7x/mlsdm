@@ -285,6 +285,8 @@ def create_app_instance(config_path: str | None = None) -> FastAPI:
         config_path: Optional path to configuration file. Defaults to current CONFIG_PATH resolution.
     """
     path = config_path or os.getenv("CONFIG_PATH", DEFAULT_CONFIG_PATH)
+    if path is None:
+        raise ValueError("CONFIG_PATH must not be None")
     config_data, _, _ = _load_config_with_runtime_policy(path)
     manager = MemoryManager(config_data)
     return _build_app(manager)
