@@ -177,9 +177,9 @@ def cmd_demo(args: argparse.Namespace) -> int:
 
 def cmd_serve(args: argparse.Namespace) -> int:
     """Start the HTTP API server."""
-    from mlsdm.entrypoints.serve import serve
-
-    # Set environment variables from args
+    # IMPORTANT: Environment variables MUST be set BEFORE importing serve/app.
+    # The app module reads CONFIG_PATH, LLM_BACKEND, etc. at import time.
+    # Setting env vars after import will have no effect on those module-level reads.
     if args.config:
         os.environ["CONFIG_PATH"] = args.config
 
@@ -188,6 +188,9 @@ def cmd_serve(args: argparse.Namespace) -> int:
 
     if args.disable_rate_limit:
         os.environ["DISABLE_RATE_LIMIT"] = "1"
+
+    # Now it's safe to import serve (which triggers import of mlsdm.api.app)
+    from mlsdm.entrypoints.serve import serve
 
     print("=" * 60)
     print("MLSDM HTTP API Server")

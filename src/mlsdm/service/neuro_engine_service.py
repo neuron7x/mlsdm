@@ -25,3 +25,7 @@ def main() -> None:
 
 
 __all__ = ["create_app", "main"]
+
+
+if __name__ == "__main__":
+    main()

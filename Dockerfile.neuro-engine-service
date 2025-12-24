@@ -44,6 +44,7 @@ COPY --from=builder --chown=neuro:neuro /opt/venv /opt/venv
 
 # Copy application code
 COPY --chown=neuro:neuro src/ ./src/
+COPY --chown=neuro:neuro config/ ./config/
 COPY --chown=neuro:neuro pyproject.toml .
 COPY --chown=neuro:neuro README.md .
 
@@ -54,6 +55,7 @@ ENV PATH="/opt/venv/bin:$PATH" \
     # Default configuration
     HOST="0.0.0.0" \
     PORT="8000" \
+    CONFIG_PATH="config/production.yaml" \
     LLM_BACKEND="local_stub" \
     ENABLE_FSLGS="true" \
     ENABLE_METRICS="true" \

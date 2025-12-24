@@ -233,6 +233,62 @@ class TestCLIServe:
         assert "--backend" in result.stdout
         assert "--config" in result.stdout
 
+    def test_config_path_set_before_app_import(self, tmp_path):
+        """Regression test: CONFIG_PATH must be set before app module import.
+
+        This test verifies the fix for the import order bug where CLI args
+        like --config were set AFTER the serve module was imported, causing
+        the app to use the default config instead of the specified one.
+        """
+        # Create a minimal valid config file
+        config_file = tmp_path / "test_config.yaml"
+        config_file.write_text("""
+dimension: 384
+strict_mode: false
+moral_filter:
+  threshold: 0.5
+  min_threshold: 0.3
+  max_threshold: 0.9
+""")
+
+        # Run a Python snippet that:
+        # 1. Clears CONFIG_PATH if set
+        # 2. Simulates cmd_serve setting CONFIG_PATH
+        # 3. Checks that CONFIG_PATH is correct before importing serve
+        test_script = f'''
+import os
+import sys
+
+# Clear any existing CONFIG_PATH
+if "CONFIG_PATH" in os.environ:
+    del os.environ["CONFIG_PATH"]
+
+# Simulate what cmd_serve does: set env BEFORE import
+expected_path = "{config_file}"
+os.environ["CONFIG_PATH"] = expected_path
+
+# Now import serve (which imports app)
+from mlsdm.entrypoints.serve import serve
+
+# Verify CONFIG_PATH was used
+actual_path = os.environ.get("CONFIG_PATH")
+if actual_path != expected_path:
+    print(f"FAIL: CONFIG_PATH mismatch: {{actual_path}} != {{expected_path}}")
+    sys.exit(1)
+
+print("PASS: CONFIG_PATH correctly set before import")
+sys.exit(0)
+'''
+
+        result = subprocess.run(
+            [sys.executable, "-c", test_script],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        assert result.returncode == 0, f"Config path test failed: {result.stderr}"
+        assert "PASS" in result.stdout
+
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

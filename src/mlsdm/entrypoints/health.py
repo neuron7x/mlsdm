@@ -28,17 +28,32 @@ logger = logging.getLogger(__name__)
 def _check_config_valid() -> tuple[bool, str]:
     """Check if configuration is valid.
 
+    The health check MUST accurately reflect whether the app can start.
+    ConfigLoader.load_config() raises FileNotFoundError if the config file
+    is missing, so this check must match that behavior.
+
+    Policy:
+    - dev mode: Missing config is acceptable (system uses defaults)
+    - non-dev modes (cloud-prod, agent-api, local-prod): Config MUST exist
+
     Returns:
         Tuple of (is_valid, details)
     """
     config_path = os.environ.get("CONFIG_PATH", "config/default_config.yaml")
+    runtime_mode = os.environ.get("MLSDM_RUNTIME_MODE", "dev").lower()
 
     # Check if config file exists (if it's a path)
     if not config_path.startswith("{") and config_path.endswith(".yaml"):
         if os.path.exists(config_path):
             return True, f"config_found: {config_path}"
-        # Config file not found, but may still work with defaults
-        return True, f"config_not_found_using_defaults: {config_path}"
+
+        # Config file not found - behavior depends on runtime mode
+        if runtime_mode == "dev":
+            # Dev mode tolerates missing config (logs warning at startup)
+            return True, f"config_not_found_dev_mode_allows_defaults: {config_path}"
+        else:
+            # Non-dev modes require config file to exist for fail-fast behavior
+            return False, f"config_not_found: {config_path} (required in {runtime_mode} mode)"
 
     return True, "config_ok"
 

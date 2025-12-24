@@ -1,8 +1,22 @@
 #!/usr/bin/env python3
 """
-Run NeuroCognitiveEngine HTTP API Service.
+EXAMPLE ONLY: Run NeuroCognitiveEngine HTTP API Service.
 
-This script starts the FastAPI HTTP server for the NeuroCognitiveEngine.
+╔══════════════════════════════════════════════════════════════════════╗
+║  This is an EXAMPLE script demonstrating direct use of serve().     ║
+║  For production or normal usage, use the canonical CLI:             ║
+║                                                                      ║
+║      mlsdm serve --port 8000                                        ║
+║      mlsdm serve --config config/production.yaml --backend openai   ║
+║                                                                      ║
+║  See 'mlsdm serve --help' for all options.                          ║
+╚══════════════════════════════════════════════════════════════════════╝
+
+This script demonstrates how to programmatically start the MLSDM HTTP server.
+It is useful for:
+- Understanding how the server is started
+- Custom integrations that need to embed the server
+- Development and testing scenarios
 
 Usage:
     # Using local stub backend (default, no API key needed)
@@ -32,6 +46,11 @@ if __name__ == "__main__":
 
     from mlsdm.entrypoints.serve import serve
 
+    print("╔══════════════════════════════════════════════════════════════════════╗")
+    print("║  NOTE: This is an example script. For production, use:              ║")
+    print("║        mlsdm serve --port 8000                                      ║")
+    print("╚══════════════════════════════════════════════════════════════════════╝")
+    print()
     print("🚀 Starting NeuroCognitiveEngine HTTP API Service...")
     print(f"   Backend: {os.environ.get('LLM_BACKEND', 'local_stub')}")
     print(f"   Host: {os.environ.get('HOST', '0.0.0.0')}")
