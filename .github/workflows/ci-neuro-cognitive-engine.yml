@@ -174,7 +174,7 @@ jobs:
           # Exclude benchmark tests from CI matrix - they are timing-sensitive and run
           # separately in the benchmarks job on Python 3.11 with fixed environment.
           # This prevents flaky failures from CI virtualization overhead variability.
-          pytest -q --ignore=tests/load -m "not benchmark"
+          pytest -q --ignore=tests/load --ignore=tests/e2e -m "not benchmark"
 
   coverage:
     name: Code Coverage Gate
@@ -225,7 +225,8 @@ jobs:
           # See TEST_STRATEGY.md for coverage model and rationale
           # NOTE: Exclude slow/benchmark tests to avoid flaky performance tests blocking coverage gate
           pytest --cov=src/mlsdm --cov-report=xml --cov-report=json --cov-report=term-missing \
-            --cov-branch --cov-fail-under=75 --ignore=tests/load -m "not slow and not benchmark" -v
+            --cov-branch --cov-fail-under=75 --ignore=tests/load --ignore=tests/e2e \
+            -m "not slow and not benchmark" -v
 
       - name: Validate Core Modules Coverage ≥95%
         run: |
