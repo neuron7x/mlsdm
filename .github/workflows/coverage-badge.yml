@@ -68,6 +68,8 @@ jobs:
       - name: Commit badge to badges branch
         run: |
           set -euo pipefail
+          tmp_svg="$(mktemp)"
+          cp coverage.svg "$tmp_svg"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
@@ -78,7 +80,7 @@ jobs:
             git checkout --orphan badges
             git rm -rf . || true
           fi
-
+          cp "$tmp_svg" coverage.svg
           git add coverage.svg
           if git diff --cached --quiet; then
             echo "No changes to commit"
