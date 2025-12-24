@@ -72,4 +72,4 @@ jobs:
           git checkout -B badges
           git add coverage.svg
           git commit -m "chore: update coverage badge [skip ci]" || { echo "No changes to commit"; exit 0; }
-          git push origin badges
+          git push origin badges || { echo "Failed to push badges branch"; exit 1; }
