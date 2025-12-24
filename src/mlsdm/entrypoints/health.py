@@ -42,7 +42,9 @@ def _check_config_valid() -> tuple[bool, str]:
     config_path = os.environ.get("CONFIG_PATH", "config/default_config.yaml")
     runtime_mode = os.environ.get("MLSDM_RUNTIME_MODE", "dev").lower()
 
-    # Check if config file exists (if it's a path)
+    # Check if config file exists (if it's a file path, not an inline JSON config)
+    # NOTE: The "{" check is for inline JSON config which starts with "{".
+    # Regular file paths would be like "config/default_config.yaml".
     if not config_path.startswith("{") and config_path.endswith(".yaml"):
         if os.path.exists(config_path):
             return True, f"config_found: {config_path}"

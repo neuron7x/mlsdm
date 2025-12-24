@@ -4,6 +4,7 @@ Integration tests for the MLSDM CLI.
 Tests the CLI commands: demo, serve, check
 """
 
+import os
 import subprocess
 import sys
 from unittest.mock import patch
@@ -251,11 +252,9 @@ moral_filter:
   max_threshold: 0.9
 """)
 
-        # Run a Python snippet that:
-        # 1. Clears CONFIG_PATH if set
-        # 2. Simulates cmd_serve setting CONFIG_PATH
-        # 3. Checks that CONFIG_PATH is correct before importing serve
-        test_script = f'''
+        # Test script verifies that CONFIG_PATH is set before serve import
+        # The expected path is passed via TEST_EXPECTED_PATH env var to avoid f-string injection
+        test_script = '''
 import os
 import sys
 
@@ -263,8 +262,13 @@ import sys
 if "CONFIG_PATH" in os.environ:
     del os.environ["CONFIG_PATH"]
 
+# Get expected path from environment (passed safely from test)
+expected_path = os.environ.get("TEST_EXPECTED_PATH", "")
+if not expected_path:
+    print("FAIL: TEST_EXPECTED_PATH not set")
+    sys.exit(1)
+
 # Simulate what cmd_serve does: set env BEFORE import
-expected_path = "{config_file}"
 os.environ["CONFIG_PATH"] = expected_path
 
 # Now import serve (which imports app)
@@ -273,18 +277,23 @@ from mlsdm.entrypoints.serve import serve
 # Verify CONFIG_PATH was used
 actual_path = os.environ.get("CONFIG_PATH")
 if actual_path != expected_path:
-    print(f"FAIL: CONFIG_PATH mismatch: {{actual_path}} != {{expected_path}}")
+    print(f"FAIL: CONFIG_PATH mismatch: {actual_path} != {expected_path}")
     sys.exit(1)
 
 print("PASS: CONFIG_PATH correctly set before import")
 sys.exit(0)
 '''
 
+        # Pass the config path via environment variable to avoid code injection
+        env = os.environ.copy()
+        env["TEST_EXPECTED_PATH"] = str(config_file)
+
         result = subprocess.run(
             [sys.executable, "-c", test_script],
             capture_output=True,
             text=True,
             timeout=30,
+            env=env,
         )
         assert result.returncode == 0, f"Config path test failed: {result.stderr}"
         assert "PASS" in result.stdout
