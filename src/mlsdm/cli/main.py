@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sys
+
 from mlsdm.cli import main as _canonical_main
 
 
