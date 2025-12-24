@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -16,10 +16,15 @@ jobs:
   coverage-badge:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    if: github.repository_owner == 'neuron7x' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: write
     
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
       
       - name: Set up Python
         uses: actions/setup-python@v6
@@ -60,10 +65,25 @@ jobs:
         run: |
           coverage-badge -o coverage.svg -f
       
-      - name: Commit badge
+      - name: Commit badge to badges branch
         run: |
+          set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git fetch origin badges || true
+          if git show-ref --verify --quiet refs/remotes/origin/badges; then
+            git checkout -B badges origin/badges
+          else
+            git checkout --orphan badges
+            git rm -rf . || true
+          fi
+
           git add coverage.svg
-          git commit -m "chore: update coverage badge [skip ci]" || echo "No changes to commit"
-          git push || echo "Nothing to push"
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+
+          git commit -m "chore: update coverage badge [skip ci]"
+          git push origin badges
