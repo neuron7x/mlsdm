@@ -301,7 +301,7 @@ def generate_security_report(
         report.append("• Implement missing security features")
     if not pip_ok:
         report.append("• Upgrade pip: python -m pip install --upgrade pip")
-    if vuln_count == 0 and config_check and impl_check:
+    if vuln_count == 0 and config_check and impl_check and pip_ok:
         report.append("• All security checks passed! ✓")
 
     return "\n".join(report)
