@@ -207,38 +207,88 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     await lifecycle.shutdown()
 
 
-# Initialize FastAPI with production-ready settings
-app = FastAPI(
-    title="mlsdm-governed-cognitive-memory",
-    version="1.0.0",
-    description="Production-ready neurobiologically-grounded cognitive architecture",
-    docs_url="/docs",
-    redoc_url="/redoc",
-    lifespan=lifespan,
-)
+def _build_app(manager: MemoryManager) -> FastAPI:
+    """Construct a FastAPI application with the provided memory manager."""
 
-# Canonical app factory used by all runtime entrypoints
+    @asynccontextmanager
+    async def _lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+        nonlocal manager
+        global _cpu_background_task
+
+        lifecycle = get_lifecycle_manager()
+        await lifecycle.startup()
+        lifecycle.register_cleanup(lambda: cleanup_memory_manager(manager))
+        _cpu_background_task = asyncio.create_task(_cpu_background_sampler())
+        logger.info("Started CPU background sampler for health checks")
+        try:
+            psutil.cpu_percent(interval=0.1)
+        except Exception as e:
+            logger.warning(f"Failed to initialize CPU monitoring: {e}")
+
+        security_logger.log_system_event(
+            SecurityEventType.STARTUP,
+            "MLSDM Governed Cognitive Memory API started",
+            additional_data={"version": "1.0.0", "dimension": manager.dimension},
+        )
+
+        yield
+
+        if _cpu_background_task and not _cpu_background_task.done():
+            _cpu_background_task.cancel()
+            try:
+                await _cpu_background_task
+            except asyncio.CancelledError:
+                logger.debug("CPU background sampler cancelled during shutdown")
+            logger.info("Stopped CPU background sampler")
+
+        security_logger.log_system_event(
+            SecurityEventType.SHUTDOWN, "MLSDM Governed Cognitive Memory API shutting down"
+        )
+
+        shutdown_tracing()
+        await lifecycle.shutdown()
+
+    app_instance = FastAPI(
+        title="mlsdm-governed-cognitive-memory",
+        version="1.0.0",
+        description="Production-ready neurobiologically-grounded cognitive architecture",
+        docs_url="/docs",
+        redoc_url="/redoc",
+        lifespan=_lifespan,
+    )
+
+    app_instance.add_middleware(SecurityHeadersMiddleware)
+    app_instance.add_middleware(RequestIDMiddleware)
+    app_instance.add_middleware(TimeoutMiddleware)
+    app_instance.add_middleware(PriorityMiddleware)
+    app_instance.add_middleware(BulkheadMiddleware)
+
+    health.set_memory_manager(manager)
+    app_instance.include_router(health.router)
+
+    return app_instance
+
+
+# Initialize FastAPI with production-ready settings (singleton)
+app = _build_app(_manager)
+
+
 def create_app() -> FastAPI:
-    """Return the canonical FastAPI application instance."""
+    """Return the canonical FastAPI application instance (singleton)."""
     return app
 
-# Add production middleware (order matters: outer to inner)
-# 1. SecurityHeaders - adds security headers to all responses
-# 2. RequestID - adds request ID for tracking
-# 3. Timeout - enforces request-level timeouts (REL-004)
-# 4. Priority - parses priority header (REL-005)
-# 5. Bulkhead - limits concurrent requests (REL-002)
-app.add_middleware(SecurityHeadersMiddleware)
-app.add_middleware(RequestIDMiddleware)
-app.add_middleware(TimeoutMiddleware)
-app.add_middleware(PriorityMiddleware)
-app.add_middleware(BulkheadMiddleware)
 
-# Include health check router
-app.include_router(health.router)
+def create_app_instance(config_path: str | None = None) -> FastAPI:
+    """Build a new FastAPI application instance.
 
-# Set memory manager for health checks
-health.set_memory_manager(_manager)
+    Args:
+        config_path: Optional path to configuration file. Defaults to current CONFIG_PATH resolution.
+    """
+    path = config_path or os.getenv("CONFIG_PATH", DEFAULT_CONFIG_PATH)
+    config_data, _, _ = _load_config_with_runtime_policy(path)
+    manager = MemoryManager(config_data)
+    return _build_app(manager)
+
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token", auto_error=False)
 
