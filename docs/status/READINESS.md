@@ -27,6 +27,7 @@ Blocking issues: 3
 
 ## Safety & Compliance
 - Input validation — Status: PARTIAL — Evidence: `src/mlsdm/security/guardrails.py`, `tests/security/test_ai_safety_invariants.py` — Not re-run in this PR.
+- Dependency hygiene — Status: IMPROVED — Evidence: `scripts/security_audit.py` (pip ≥25.3 gate), `tests/scripts/test_security_audit.py` — Enforced in PR #377; audit runs manually (not yet in CI).
 - Fail-safe behavior — Status: PARTIAL — Evidence: `tests/resilience/test_fault_tolerance.py`, `tests/resilience/test_llm_failures.py` — Execution status unknown for this commit.
 - Determinism / reproducibility — Status: PARTIAL — Evidence: `tests/validation/test_rhythm_state_machine.py`, `tests/utils/fixtures.py::deterministic_seed` — Needs current run confirmation.
 - Error handling — Status: IMPROVED — Evidence: `src/mlsdm/api/health.py` — CPU health check now fail-open with degraded states; resilience test coverage required.
@@ -40,6 +41,7 @@ Blocking issues: 3
 - Security-lite: NOT VERIFIED — Evidence: lint/security workflows not executed in this PR; no artifacts.
 - Observability checks: NOT VERIFIED — Evidence: `tests/observability/`; Command: `python -m pytest tests/observability/ -v`
 - Current PR execution: readiness gate passes locally (`python scripts/readiness_check.py`), and unit tests for the gate added (`tests/unit/test_readiness_check.py`).
+- Script-level tests: PARTIAL — Evidence: `tests/scripts/test_security_audit.py` (security_audit pip gate); Command: `python -m pytest tests/scripts/ -q`
 
 ## Operational Readiness
 - Logging: PARTIAL — Evidence: `tests/observability/test_aphasia_logging.py`, `docs/OBSERVABILITY_GUIDE.md` — No runtime verification in this PR.
@@ -56,6 +58,14 @@ Blocking issues: 3
 6. Config and calibration paths unvalidated: `pytest tests/integration/test_public_api.py -v` or equivalent config validation has not been recorded.
 
 ## Change Log
+- 2025-12-24 — **Added pip version gate to security audit** — PR: #377
+  - Updated `scripts/security_audit.py`: Enforced minimum pip version 25.3 for dependency hygiene
+  - Added `scripts/security_audit.check_pip_version()` function with parsing logic (no new deps)
+  - Created `tests/scripts/test_security_audit.py`: Unit tests covering pip version accept/reject scenarios
+  - **Problem**: Outdated pip versions pose supply-chain vulnerability; no automated gate existed
+  - **Solution**: Fail security audit early if pip < 25.3; validate with focused unit tests
+  - **Evidence impact**: Security audit now enforces dependency floor; test coverage: 2 focused cases (outdated/minimum)
+  - **Testing posture**: `pytest tests/scripts/test_security_audit.py -q` passes; no runtime deps added
 - 2025-12-24 — **Fixed coverage badge workflow orphan branch artifact loss** — PR: #376
   - Updated `.github/workflows/coverage-badge.yml`: Preserve `coverage.svg` through branch operations
   - **Problem**: `git checkout --orphan badges` + `git rm -rf .` deleted generated badge before commit
