@@ -10,6 +10,10 @@ permissions:
   packages: write
   security-events: write
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   # Gate 1: Unit Tests
   unit-tests:
@@ -32,6 +36,18 @@ jobs:
           cache-dependency-path: |
             requirements.txt
             pyproject.toml
+
+      - name: Restore Python cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/pip
+            ~/.cache/uv
+            .venv
+          key: ${{ runner.os }}-py${{ matrix.python-version }}-${{ hashFiles('**/requirements.txt', '**/pyproject.toml', '**/uv.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-py${{ matrix.python-version }}-
+            ${{ runner.os }}-
 
       - name: Install dependencies
         run: |
