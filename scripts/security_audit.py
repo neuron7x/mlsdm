@@ -43,6 +43,47 @@ def install_pip_audit() -> bool:
         return False
 
 
+MIN_PIP_VERSION = "25.3"
+
+
+def _parse_version(version: str) -> tuple[int, ...]:
+    """Parse a semver-like version string into a tuple of ints.
+
+    This avoids adding a packaging dependency to the script.
+    """
+    parts: list[int] = []
+    for segment in version.split("."):
+        numeric = "".join(ch for ch in segment if ch.isdigit())
+        if not numeric:
+            break
+        parts.append(int(numeric))
+    return tuple(parts)
+
+
+def check_pip_version(min_version: str = MIN_PIP_VERSION) -> tuple[bool, str]:
+    """Validate that the installed pip meets the minimum secure version."""
+    try:
+        result = subprocess.run(
+            ["pip", "--version"], capture_output=True, text=True, check=True
+        )
+        tokens = result.stdout.strip().split()
+        current_version = tokens[1] if len(tokens) >= 2 else "unknown"
+    except Exception as exc:  # noqa: BLE001 - best-effort logging for CLI tool
+        print(f"✗ Could not determine pip version: {exc}")
+        return False, "unknown"
+
+    current_tuple = _parse_version(current_version)
+    min_tuple = _parse_version(min_version)
+    is_secure = bool(current_tuple) and current_tuple >= min_tuple
+
+    if is_secure:
+        print(f"✓ pip version {current_version} meets minimum {min_version}")
+    else:
+        print(f"✗ pip version {current_version} is below recommended {min_version}")
+
+    return is_secure, current_version
+
+
 def run_pip_audit(fix: bool = False) -> tuple[bool, dict[str, Any]]:
     """Run pip-audit to check for vulnerabilities.
 
@@ -186,7 +227,12 @@ def check_security_implementations() -> tuple[bool, list[str]]:
 
 
 def generate_security_report(
-    audit_results: dict, config_check: bool, impl_check: bool, impl_findings: list[str]
+    audit_results: dict,
+    config_check: bool,
+    impl_check: bool,
+    impl_findings: list[str],
+    pip_ok: bool,
+    pip_version: str,
 ) -> str:
     """Generate security audit report.
 
@@ -195,6 +241,8 @@ def generate_security_report(
         config_check: Whether config files check passed
         impl_check: Whether implementation check passed
         impl_findings: List of implementation findings
+        pip_ok: Whether pip meets the minimum secure version
+        pip_version: Detected pip version string
 
     Returns:
         Report as string
@@ -218,6 +266,8 @@ def generate_security_report(
     report.append(f"Vulnerabilities found: {vuln_count}")
     report.append(f"Configuration files: {'✓ Present' if config_check else '✗ Missing'}")
     report.append(f"Security implementations: {'✓ Complete' if impl_check else '✗ Incomplete'}")
+    pip_status = "✓ Secure" if pip_ok else f"✗ Upgrade to >= {MIN_PIP_VERSION}"
+    report.append(f"pip version: {pip_version} ({pip_status})")
     report.append("")
 
     # Details
@@ -249,6 +299,8 @@ def generate_security_report(
         report.append("• Create missing security configuration files")
     if impl_findings:
         report.append("• Implement missing security features")
+    if not pip_ok:
+        report.append("• Upgrade pip: python -m pip install --upgrade pip")
     if vuln_count == 0 and config_check and impl_check:
         report.append("• All security checks passed! ✓")
 
@@ -280,6 +332,8 @@ def main(argv: list[str] | None = None) -> int:
     print("MLSDM Governed Cognitive Memory - Security Audit")
     print("=" * 60)
 
+    pip_ok, pip_version = check_pip_version()
+
     # Ensure pip-audit is installed
     if not check_pip_audit_installed():
         print("pip-audit not found. Attempting to install...")
@@ -294,7 +348,9 @@ def main(argv: list[str] | None = None) -> int:
     impl_check, impl_findings = check_security_implementations()
 
     # Generate report
-    report = generate_security_report(audit_results, config_check, impl_check, impl_findings)
+    report = generate_security_report(
+        audit_results, config_check, impl_check, impl_findings, pip_ok, pip_version
+    )
 
     print("\n" + report)
 
@@ -305,7 +361,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"\n✓ Report saved to {args.report}")
 
     # Exit with appropriate code
-    all_passed = audit_success and config_check and impl_check
+    all_passed = audit_success and config_check and impl_check and pip_ok
     return 0 if all_passed else 1
 
 
