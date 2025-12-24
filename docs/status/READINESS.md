@@ -56,6 +56,16 @@ Blocking issues: 3
 6. Config and calibration paths unvalidated: `pytest tests/integration/test_public_api.py -v` or equivalent config validation has not been recorded.
 
 ## Change Log
+- 2025-12-24 — **Align canonical entrypoints, config handling, and Docker defaults** — PR: #379
+  - Updated `Dockerfile.neuro-engine-service`: switched CMD to `python -m mlsdm.entrypoints.cloud` and now copies `config/` into the image to ensure runtime config availability.
+  - Updated `src/mlsdm/api/app.py`: enforced runtime-mode-aware config loading with strict/fallback policy and centralized config constants.
+  - Modified `src/mlsdm/cli/__init__.py`: set env overrides (CONFIG_PATH, backend, rate-limit toggle) before importing the server to honor `--config`.
+  - Added `src/mlsdm/config/constants.py`: shared DEFAULT_CONFIG_PATH and strict-mode set for entrypoints/health.
+  - Updated `src/mlsdm/entrypoints/health.py`: aligned config readiness checks with strict vs. dev fallback behavior.
+  - Updated `src/mlsdm/utils/config_loader.py`: prevented MLSDM_RUNTIME_MODE from overriding config during loads.
+  - Updated tests (`tests/integration/test_cli.py`): regression coverage for `mlsdm serve --config` import-order behavior.
+  - **Evidence impact**: Targeted unit/integration tests re-run (compileall, CLI serve/config, config_loader, runtime_entrypoint); Docker build still pending due to external SSL in the environment.
+  - **Testing posture**: No new suites added; existing targeted tests executed locally as above.
 - 2025-12-24 — **Fixed coverage badge workflow orphan branch artifact loss** — PR: #376
   - Updated `.github/workflows/coverage-badge.yml`: Preserve `coverage.svg` through branch operations
   - **Problem**: `git checkout --orphan badges` + `git rm -rf .` deleted generated badge before commit
