@@ -16,7 +16,7 @@ jobs:
   coverage-badge:
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    if: github.repository == 'neuron7x/mlsdm' && github.ref == 'refs/heads/main'
+    if: github.repository_owner == 'neuron7x' && github.ref == 'refs/heads/main'
     permissions:
       contents: write
     
@@ -67,13 +67,14 @@ jobs:
       
       - name: Commit badge to badges branch
         run: |
+          set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git checkout -B badges
+          git checkout -B badges || { echo "Failed to prepare badges branch"; exit 1; }
           git add coverage.svg
           if git diff --cached --quiet; then
             echo "No changes to commit"
             exit 0
           fi
           git commit -m "chore: update coverage badge [skip ci]"
-          git push origin badges
+          git push origin badges || { echo "Failed to push badges branch"; exit 1; }
