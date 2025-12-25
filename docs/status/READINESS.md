@@ -1,5 +1,5 @@
 # System Readiness Status
-Last updated: 2025-12-24
+Last updated: 2025-12-25
 Owner: neuron7x / MLSDM maintainers
 Scope: MLSDM cognitive engine repository (src/, tests/, deploy/, workflows)
 
@@ -56,6 +56,11 @@ Blocking issues: 3
 6. Config and calibration paths unvalidated: `pytest tests/integration/test_public_api.py -v` or equivalent config validation has not been recorded.
 
 ## Change Log
+- 2025-12-25 — **Synaptic transfer diagnostics and norm accessor** — PR: #???
+  - Updated `src/mlsdm/memory/multi_level_memory.py`: added transfer sum metadata, derived consolidation flags from sums, and exposed `get_norms()` for read-only L1/L2/L3 norms
+  - Updated `src/mlsdm/observability/memory_telemetry.py`: included transfer sum metrics in synaptic update logs
+  - **Behavior unchanged**: No changes to decay/transfer/gating formulas—instrumentation only
+  - **Evidence impact**: Improves observability of synaptic transfers; no new test evidence collected
 - 2025-12-25 — **MoralFilterV2 observability enhancements** — PR: #387
   - Updated `src/mlsdm/cognition/moral_filter_v2.py`: Added boundary-case DEBUG logging
   - Added `_log_boundary_cases()` helper to log moral values near MIN/MAX/threshold boundaries (±0.01) when DEBUG level enabled
