@@ -16,6 +16,17 @@ import sys
 from typing import Any
 
 
+def _get_env_port(default: int = 8000) -> int:
+    """Get port from PORT environment variable with safe parsing."""
+    port_str = os.environ.get("PORT")
+    if port_str is None:
+        return default
+    try:
+        return int(port_str)
+    except ValueError:
+        return default
+
+
 def cmd_info(args: argparse.Namespace) -> int:
     """Show version, status, and basic configuration."""
     try:
@@ -495,7 +506,7 @@ def main() -> int:
     serve_parser.add_argument(
         "--port",
         type=int,
-        default=int(os.environ.get("PORT", "8000")),
+        default=_get_env_port(8000),
         help="Port to bind to (default: 8000, or PORT env var)",
     )
     serve_parser.add_argument(
