@@ -33,6 +33,7 @@ Blocking issues: 3
 
 ## Testing & Verification
 - Unit tests: NOT VERIFIED — Evidence: `.github/workflows/readiness-evidence.yml` (job: unit, command: `uv run python -m pytest tests/unit -q --junitxml=reports/junit-unit.xml --maxfail=1`, artifact: readiness-unit); awaiting current PR run.
+- Readiness gate unit tests: IMPROVED — Evidence: `tests/unit/test_readiness_change_analyzer.py` — Scope prefix matching and workflow detection cases expanded.
 - Integration tests: NOT VERIFIED — Evidence: `.github/workflows/readiness-evidence.yml` (job: integration — currently skipped in PR runs; command recorded in log to run on workflow_dispatch); Command when executed: `python -m pytest tests/integration -q --disable-warnings --maxfail=1`
 - End-to-end tests: NOT VERIFIED — Evidence: `tests/e2e/`; Command: `python -m pytest tests/e2e -v`
 - Property tests: NOT VERIFIED — Evidence: `.github/workflows/readiness-evidence.yml` (job: property — skipped in PR runs; workflow_dispatch command: `python -m pytest tests/property -q --maxfail=3`)
@@ -56,10 +57,28 @@ Blocking issues: 3
 6. Config and calibration paths unvalidated: `pytest tests/integration/test_public_api.py -v` or equivalent config validation has not been recorded.
 
 ## Change Log
+## Change Log
+- 2025-12-25 — **Preserve filter results in pipeline stage metadata** — PR: #???
+  - Updated `src/mlsdm/core/llm_pipeline.py`: keep `PipelineStageResult.result` as `FilterResult` to preserve integration expectations
+  - **Behavior unchanged**: pipeline output and decision logic remain the same; metadata format restored
+  - **Evidence impact**: readiness check required due to src/ changes; no additional tests run here
+- 2025-12-25 — **LLM pipeline telemetry metadata updates** — PR: #???
+  - Updated `src/mlsdm/core/llm_pipeline.py`: cached `time.perf_counter` in pipeline stages for consistent timing reads
+  - Added `stage_durations_ms` to `PipelineResult.metadata` for pre-filter blocks, LLM failures, and successful runs
+  - Stored filter `decision` and `reason` in `PipelineStageResult.result` when filters return `FilterResult`
+  - Telemetry callback failures now log exceptions for visibility
+  - **Behavior unchanged**: pipeline decision and output content remain the same; metadata only
+  - **Evidence impact**: readiness check required due to src/ changes; no additional tests run here
 - 2025-12-25 — **Readiness change analyzer unit tests** — PR: #395
-  - Updated `tests/unit/test_readiness_change_analyzer.py`: Added or improved unit tests for readiness gate change detection logic
-  - **Evidence impact**: Strengthens test coverage for readiness enforcement; ensures change analyzer correctly identifies touched files in scope
-  - **Testing posture**: Unit tests validate analyzer behavior; readiness gate itself verified by this update
+  - Updated `tests/unit/test_readiness_change_analyzer.py`: Added cases for scope prefix matching and workflow file detection assertions
+  - **Evidence impact**: Improved test coverage for readiness gate validation logic; reduces false negatives/positives in scope/workflow detection
+  - **Testing posture**: Gate validation tests cover scope prefix matching and workflow detection scenarios
+- 2025-12-25 — **Rate limiter observability and aggregation helpers** — PR: #392
+  - Updated `src/mlsdm/utils/rate_limiter.py`: Added `get_all_stats()` method returning `{"client_count": int, "average_tokens": float}` for monitoring
+  - Extended `cleanup_old_entries(max_age_seconds=3600.0, return_keys=False)` to optionally return `(count, [client_ids])` when `return_keys=True`
+  - **Behavior unchanged**: Leaky-bucket token refill and rate limiting logic remain identical; added observability-only helpers
+  - **Evidence impact**: No automated tests executed in this PR; existing rate limiter behavior preserved
+
 - 2025-12-25 — **Rate limiter observability and aggregation helpers** — PR: #392
   - Updated `src/mlsdm/utils/rate_limiter.py`: Added `get_all_stats()` method returning `{"client_count": int, "average_tokens": float}` for monitoring
   - Extended `cleanup_old_entries(max_age_seconds=3600.0, return_keys=False)` to optionally return `(count, [client_ids])` when `return_keys=True`
