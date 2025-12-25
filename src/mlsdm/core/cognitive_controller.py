@@ -10,6 +10,7 @@ import psutil
 from ..cognition.moral_filter_v2 import MoralFilterV2
 from ..memory.multi_level_memory import MultiLevelSynapticMemory
 from ..memory.phase_entangled_lattice_memory import MemoryRetrieval, PhaseEntangledLatticeMemory
+from ..observability.metrics import get_metrics_exporter
 from ..observability.tracing import get_tracer_manager
 from ..rhythm.cognitive_rhythm import CognitiveRhythm
 
@@ -217,6 +218,11 @@ class CognitiveController:
         """
         # Get tracer manager for spans (graceful fallback if tracing disabled)
         tracer_manager = get_tracer_manager()
+        metrics_exporter = None
+        try:
+            metrics_exporter = get_metrics_exporter()
+        except Exception:
+            logger.debug("Failed to initialize metrics exporter for process_event", exc_info=True)
 
         with self._lock:  # noqa: SIM117 - Lock must be held for entire operation
             # Create span for the entire process_event operation
@@ -230,14 +236,37 @@ class CognitiveController:
             ) as event_span:
                 # Check emergency shutdown and attempt auto-recovery if applicable
                 if self.emergency_shutdown:
+                    steps_since_emergency = self.step_counter - self._last_emergency_step
+                    time_since_emergency = (
+                        time.time() - self._last_emergency_time
+                        if self._last_emergency_time > 0
+                        else 0.0
+                    )
+                    logger.info(
+                        "Emergency shutdown active; evaluating auto-recovery "
+                        f"(reason={self._emergency_reason}, steps_since={steps_since_emergency}, "
+                        f"time_since={time_since_emergency:.1f}s, "
+                        f"recovery_attempts={self._recovery_attempts})"
+                    )
                     if self._try_auto_recovery():
                         logger.info(
                             "auto-recovery succeeded after emergency_shutdown "
                             f"(cooldown_steps={self.step_counter - self._last_emergency_step}, "
                             f"recovery_attempt={self._recovery_attempts})"
                         )
+                        if metrics_exporter is not None:
+                            metrics_exporter.increment_auto_recovery("success")
+                            metrics_exporter.set_emergency_shutdown_active(False)
                         event_span.set_attribute("mlsdm.auto_recovery", True)
                     else:
+                        logger.debug(
+                            "Auto-recovery conditions not met; rejecting event "
+                            f"(reason={self._emergency_reason}, steps_since={steps_since_emergency}, "
+                            f"time_since={time_since_emergency:.1f}s)"
+                        )
+                        if metrics_exporter is not None:
+                            metrics_exporter.increment_auto_recovery("failure")
+                            metrics_exporter.set_emergency_shutdown_active(True)
                         event_span.set_attribute("mlsdm.rejected", True)
                         event_span.set_attribute("mlsdm.rejected_reason", "emergency_shutdown")
                         return self._build_state(rejected=True, note="emergency shutdown")
@@ -250,7 +279,14 @@ class CognitiveController:
                 # Check memory usage before processing (psutil-based, legacy)
                 memory_mb = self._check_memory_usage()
                 if memory_mb > self.memory_threshold_mb:
+                    logger.info(
+                        "Entering emergency shutdown due to process memory threshold "
+                        f"(memory_mb={memory_mb:.2f}, threshold_mb={self.memory_threshold_mb:.2f})"
+                    )
                     self._enter_emergency_shutdown("process_memory_exceeded")
+                    if metrics_exporter is not None:
+                        metrics_exporter.increment_emergency_shutdown("process_memory_exceeded")
+                        metrics_exporter.set_emergency_shutdown_active(True)
                     event_span.set_attribute("mlsdm.rejected", True)
                     event_span.set_attribute("mlsdm.rejected_reason", "memory_exceeded")
                     event_span.set_attribute("mlsdm.emergency_shutdown", True)
@@ -304,11 +340,18 @@ class CognitiveController:
                 # Check global memory bound (CORE-04) after memory-modifying operations
                 current_memory_bytes = self.memory_usage_bytes()
                 if current_memory_bytes > self.max_memory_bytes:
+                    logger.info(
+                        "Entering emergency shutdown due to global memory limit "
+                        f"(current_bytes={current_memory_bytes}, max_bytes={self.max_memory_bytes})"
+                    )
                     self._enter_emergency_shutdown("memory_limit_exceeded")
                     logger.warning(
                         f"Global memory limit exceeded: {current_memory_bytes} > {self.max_memory_bytes} bytes. "
                         "Emergency shutdown triggered."
                     )
+                    if metrics_exporter is not None:
+                        metrics_exporter.increment_emergency_shutdown("memory_limit_exceeded")
+                        metrics_exporter.set_emergency_shutdown_active(True)
                     event_span.set_attribute("mlsdm.rejected", True)
                     event_span.set_attribute("mlsdm.rejected_reason", "memory_limit_exceeded")
                     event_span.set_attribute("mlsdm.emergency_shutdown", True)
