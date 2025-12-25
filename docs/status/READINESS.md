@@ -1,5 +1,5 @@
 # System Readiness Status
-Last updated: 2025-12-24
+Last updated: 2025-12-25
 Owner: neuron7x / MLSDM maintainers
 Scope: MLSDM cognitive engine repository (src/, tests/, deploy/, workflows)
 
@@ -56,6 +56,10 @@ Blocking issues: 3
 6. Config and calibration paths unvalidated: `pytest tests/integration/test_public_api.py -v` or equivalent config validation has not been recorded.
 
 ## Change Log
+- 2025-12-25 — **Perf-resilience gating and test updates** — PR: #386
+  - Updated `.github/workflows/perf-resilience.yml` to add path-based gating and explicit skip/error handling for expected perf/resilience jobs.
+  - Adjusted observability tests to skip only when `opentelemetry-sdk` is missing.
+  - Added unit test coverage for the safe `examples/run_neuro_service.py` launcher (dry-run and invalid port handling).
 - 2025-12-24 — **Pipeline observability enhancements** — PR: #???
   - Updated `src/mlsdm/core/llm_pipeline.py`: cache `time.perf_counter` in hot paths
   - Added `stage_durations_ms` to `PipelineResult.metadata` for per-stage timing visibility
