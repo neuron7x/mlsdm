@@ -101,14 +101,36 @@ class RateLimiter:
                 return {"tokens": float(tokens), "last_update": float(last_update)}
             return {"tokens": float(self.capacity), "last_update": float(time.time())}
 
-    def cleanup_old_entries(self, max_age_seconds: float = 3600.0) -> int:
+    def get_all_stats(self) -> dict[str, float]:
+        """Get aggregate rate limit stats across all clients.
+
+        Returns:
+            Dictionary with 'client_count' and 'average_tokens' keys
+        """
+        with self.lock:
+            client_count = len(self.buckets)
+            if client_count == 0:
+                average_tokens = 0.0
+            else:
+                average_tokens = sum(
+                    tokens for tokens, _ in self.buckets.values()
+                ) / client_count
+            return {
+                "client_count": float(client_count),
+                "average_tokens": float(average_tokens),
+            }
+
+    def cleanup_old_entries(
+        self, max_age_seconds: float = 3600.0, return_keys: bool = False
+    ) -> int | tuple[int, list[str]]:
         """Remove entries that haven't been accessed recently.
 
         Args:
             max_age_seconds: Maximum age in seconds for entries (default: 1 hour)
+            return_keys: Whether to return the list of removed client IDs
 
         Returns:
-            Number of entries cleaned up
+            Number of entries cleaned up, optionally with removed client IDs
         """
         with self.lock:
             current_time = time.time()
@@ -121,4 +143,6 @@ class RateLimiter:
             for client_id in old_clients:
                 del self.buckets[client_id]
 
+            if return_keys:
+                return len(old_clients), old_clients
             return len(old_clients)
