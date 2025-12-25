@@ -245,10 +245,7 @@ class TestExampleWrapperSubprocessDelegation:
 
         # Use path relative to repository root for robustness
         example_path = Path(__file__).parent.parent.parent / "examples" / "run_neuro_service.py"
-        spec = importlib.util.spec_from_file_location(
-            "run_neuro_service",
-            str(example_path)
-        )
+        spec = importlib.util.spec_from_file_location("run_neuro_service", str(example_path))
         assert spec is not None
         assert spec.loader is not None
 
@@ -264,11 +261,12 @@ class TestExampleWrapperSubprocessDelegation:
         # Verify subprocess.run was called with constant argv
         assert mock_run.called
         assert mock_run.call_args is not None, "subprocess.run was not called with args"
-        cmd = mock_run.call_args[0][0] if mock_run.call_args[0] else mock_run.call_args[1].get("cmd")
+        cmd = (
+            mock_run.call_args[0][0] if mock_run.call_args[0] else mock_run.call_args[1].get("cmd")
+        )
 
         # The command should be constant: [sys.executable, "-m", "mlsdm.cli", "serve"]
-        assert cmd[1:] == ["-m", "mlsdm.cli", "serve"], \
-            f"Expected constant argv, got: {cmd}"
+        assert cmd[1:] == ["-m", "mlsdm.cli", "serve"], f"Expected constant argv, got: {cmd}"
 
     def test_example_wrapper_passes_config_via_env(self) -> None:
         """Verify the example wrapper passes host/port/config via environment."""
@@ -277,10 +275,7 @@ class TestExampleWrapperSubprocessDelegation:
         from unittest.mock import MagicMock, patch
 
         example_path = Path(__file__).parent.parent.parent / "examples" / "run_neuro_service.py"
-        spec = importlib.util.spec_from_file_location(
-            "run_neuro_service",
-            str(example_path)
-        )
+        spec = importlib.util.spec_from_file_location("run_neuro_service", str(example_path))
         assert spec is not None
         assert spec.loader is not None
         example_module = importlib.util.module_from_spec(spec)
@@ -308,10 +303,7 @@ class TestExampleWrapperSubprocessDelegation:
         from unittest.mock import MagicMock, patch
 
         example_path = Path(__file__).parent.parent.parent / "examples" / "run_neuro_service.py"
-        spec = importlib.util.spec_from_file_location(
-            "run_neuro_service",
-            str(example_path)
-        )
+        spec = importlib.util.spec_from_file_location("run_neuro_service", str(example_path))
         assert spec is not None
         assert spec.loader is not None
         example_module = importlib.util.module_from_spec(spec)
@@ -334,10 +326,7 @@ class TestExampleWrapperSubprocessDelegation:
         from unittest.mock import MagicMock, patch
 
         example_path = Path(__file__).parent.parent.parent / "examples" / "run_neuro_service.py"
-        spec = importlib.util.spec_from_file_location(
-            "run_neuro_service",
-            str(example_path)
-        )
+        spec = importlib.util.spec_from_file_location("run_neuro_service", str(example_path))
         assert spec is not None
         assert spec.loader is not None
         example_module = importlib.util.module_from_spec(spec)
