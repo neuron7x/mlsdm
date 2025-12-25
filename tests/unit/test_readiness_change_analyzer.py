@@ -105,7 +105,7 @@ def test_semantic_diff_added_removed_modified(tmp_path):
     assert "mod:changed(x)->None -> mod:changed(x,y)->None" in semantic["functions_modified"]
 
 
-def test_handles_empty_deleted_and_unparseable(tmp_path):
+def test_handles_empty_deleted_and_unparsable(tmp_path):
     empty_result = ca.analyze_paths([], base_ref="HEAD", root=tmp_path)
     assert empty_result["summary"]["files_analyzed"] == 0
     assert all(count == 0 for count in empty_result["summary"]["categories"].values())

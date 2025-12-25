@@ -12,7 +12,8 @@ ROOT = Path(__file__).resolve().parent.parent.parent
 
 SRC_PREFIX = "src/"
 TESTS_PREFIX = "tests/"
-SECURITY_KEYWORD = "moral_filter"
+SECURITY_KEYWORD = "moral_filter"  # Security-sensitive subsystem marker
+INFRA_PREFIXES = (".github/workflows/", "deploy/", "config/")
 
 CATEGORIES: List[str] = [
     "security_critical",
@@ -58,7 +59,7 @@ def classify_category(path: str) -> str:
         return "security_critical"
     if normalized.startswith(SRC_PREFIX):
         return "functional_core"
-    if normalized.startswith(".github/workflows/") or normalized.startswith("deploy/") or normalized.startswith("config/"):
+    if normalized.startswith(INFRA_PREFIXES):
         return "infrastructure"
     if any(key in lower for key in ("observability", "metrics", "logging", "tracing")):
         return "observability"
@@ -119,7 +120,7 @@ def format_return_annotation(node: ast.AST) -> str:
     if returns is not None:
         try:
             return ast.unparse(returns)
-        except Exception:
+        except (TypeError, ValueError):
             return "None"
     return "None"
 
@@ -127,6 +128,7 @@ def format_return_annotation(node: ast.AST) -> str:
 def canonical_function_signature(
     node: ast.FunctionDef | ast.AsyncFunctionDef, module: str, class_name: str | None = None
 ) -> str:
+    """Build canonical signature for a top-level function or class method."""
     qualname = f"{class_name}.{node.name}" if class_name else node.name
     args = format_args(node.args)
     ret = format_return_annotation(node)
