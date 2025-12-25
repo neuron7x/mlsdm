@@ -489,14 +489,14 @@ def main() -> int:
     serve_parser.add_argument(
         "--host",
         type=str,
-        default="0.0.0.0",
-        help="Host to bind to (default: 0.0.0.0)",
+        default=os.environ.get("HOST", "0.0.0.0"),
+        help="Host to bind to (default: 0.0.0.0, or HOST env var)",
     )
     serve_parser.add_argument(
         "--port",
         type=int,
-        default=8000,
-        help="Port to bind to (default: 8000)",
+        default=int(os.environ.get("PORT", "8000")),
+        help="Port to bind to (default: 8000, or PORT env var)",
     )
     serve_parser.add_argument(
         "--config",
