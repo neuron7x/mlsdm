@@ -555,7 +555,8 @@ class LLMPipeline:
         Returns:
             PipelineResult with response and processing details.
         """
-        start_time = time.perf_counter()
+        perf = time.perf_counter
+        start_time = perf()
         stages: list[PipelineStageResult] = []
         max_tokens = max_tokens or self._config.max_tokens_default
 
@@ -570,7 +571,13 @@ class LLMPipeline:
         # Stage 1: Pre-filters
         pre_filter_result = self._run_pre_filters(prompt, full_context, stages)
         if pre_filter_result is not None:
-            pre_filter_result.total_duration_ms = (time.perf_counter() - start_time) * 1000
+            pre_filter_result.total_duration_ms = (perf() - start_time) * 1000
+            pre_filter_result.metadata = {
+                **(pre_filter_result.metadata or {}),
+                "stage_durations_ms": {
+                    stage.stage_name: stage.duration_ms for stage in pre_filter_result.stages
+                },
+            }
             self._emit_telemetry(pre_filter_result)
             return pre_filter_result
 
@@ -583,7 +590,12 @@ class LLMPipeline:
                 blocked_at="llm_call",
                 block_reason="generation_failed",
                 stages=stages,
-                total_duration_ms=(time.perf_counter() - start_time) * 1000,
+                total_duration_ms=(perf() - start_time) * 1000,
+                metadata={
+                    "stage_durations_ms": {
+                        stage.stage_name: stage.duration_ms for stage in stages
+                    }
+                },
             )
             self._emit_telemetry(error_result)
             return error_result
@@ -594,7 +606,7 @@ class LLMPipeline:
         response_text = self._run_post_filters(response_text, full_context, stages)
 
         # Stage 4: Build result
-        total_duration = (time.perf_counter() - start_time) * 1000
+        total_duration = (perf() - start_time) * 1000
 
         result = PipelineResult(
             response=response_text,
@@ -604,6 +616,9 @@ class LLMPipeline:
             metadata={
                 "max_tokens": max_tokens,
                 "moral_value": moral_value,
+                "stage_durations_ms": {
+                    stage.stage_name: stage.duration_ms for stage in stages
+                },
             },
         )
 
@@ -620,11 +635,12 @@ class LLMPipeline:
 
         Returns PipelineResult if blocked, None if all passed.
         """
+        perf = time.perf_counter
         for filter_name, pre_filter in self._pre_filters:
-            stage_start = time.perf_counter()
+            stage_start = perf()
             try:
                 result = pre_filter.evaluate(prompt, context)
-                stage_duration = (time.perf_counter() - stage_start) * 1000
+                stage_duration = (perf() - stage_start) * 1000
 
                 stages.append(
                     PipelineStageResult(
@@ -646,7 +662,7 @@ class LLMPipeline:
                     )
 
             except Exception as e:
-                stage_duration = (time.perf_counter() - stage_start) * 1000
+                stage_duration = (perf() - stage_start) * 1000
                 stages.append(
                     PipelineStageResult(
                         stage_name=filter_name,
@@ -711,11 +727,12 @@ class LLMPipeline:
         """
         current_text = response
 
+        perf = time.perf_counter
         for filter_name, post_filter in self._post_filters:
-            stage_start = time.perf_counter()
+            stage_start = perf()
             try:
                 result = post_filter.evaluate(current_text, context)
-                stage_duration = (time.perf_counter() - stage_start) * 1000
+                stage_duration = (perf() - stage_start) * 1000
 
                 stages.append(
                     PipelineStageResult(
@@ -730,7 +747,7 @@ class LLMPipeline:
                     current_text = result.modified_content
 
             except Exception as e:
-                stage_duration = (time.perf_counter() - stage_start) * 1000
+                stage_duration = (perf() - stage_start) * 1000
                 stages.append(
                     PipelineStageResult(
                         stage_name=filter_name,
