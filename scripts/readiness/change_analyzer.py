@@ -123,9 +123,11 @@ def format_return_annotation(node: ast.AST) -> str:
     return "None"
 
 
-def canonical_function_signature(node: ast.AST, module: str, class_name: str | None = None) -> str:
-    qualname = f"{class_name}.{node.name}" if class_name else node.name  # type: ignore[attr-defined]
-    args = format_args(node.args)  # type: ignore[attr-defined]
+def canonical_function_signature(
+    node: ast.FunctionDef | ast.AsyncFunctionDef, module: str, class_name: str | None = None
+) -> str:
+    qualname = f"{class_name}.{node.name}" if class_name else node.name
+    args = format_args(node.args)
     ret = format_return_annotation(node)
     decorators = decorator_names(node)
     decorator_suffix = f"|decorators={','.join(decorators)}" if decorators else ""
@@ -184,13 +186,11 @@ def read_after_content(path: str, root: Path) -> str | None:
         return None
     try:
         return target.read_text(encoding="utf-8")
-    except UnicodeDecodeError:
+    except (UnicodeDecodeError, OSError):
         try:
             return target.read_text(encoding="utf-8", errors="replace")
         except OSError:
             return None
-    except OSError:
-        return None
 
 
 def diff_signatures(before: Mapping[str, str], after: Mapping[str, str]) -> Dict[str, List[str]]:
@@ -269,7 +269,9 @@ def analyze_paths(paths: Sequence[str], base_ref: str, root: Path = ROOT) -> Dic
 
     result = {
         "primary_category": primary_category(categories),
-        "max_risk": next(name for name, rank in RISK_ORDER.items() if rank == max_risk_rank),
+        "max_risk": next(
+            (name for name, rank in RISK_ORDER.items() if rank == max_risk_rank), "informational"
+        ),
         "summary": summary,
         "files": files_block,
     }

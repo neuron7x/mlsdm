@@ -124,6 +124,7 @@ def test_handles_empty_deleted_and_unparseable(tmp_path):
     deleted_path.unlink()
 
     unparseable_path = repo / "src" / "broken.py"
+    # Intentionally malformed Python to verify graceful handling
     unparseable_path.write_text("def broken(:\n", encoding="utf-8")
 
     result = ca.analyze_paths(["src/gone.py", "src/broken.py"], base_ref="HEAD", root=repo)
