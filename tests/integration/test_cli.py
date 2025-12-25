@@ -240,12 +240,14 @@ class TestExampleWrapperSubprocessDelegation:
     def test_example_wrapper_uses_constant_argv(self) -> None:
         """Verify the example wrapper uses constant argv without env-derived CLI args."""
         import importlib.util
+        from pathlib import Path
         from unittest.mock import MagicMock, patch
 
-        # Load the example module without executing __main__
+        # Use path relative to repository root for robustness
+        example_path = Path(__file__).parent.parent.parent / "examples" / "run_neuro_service.py"
         spec = importlib.util.spec_from_file_location(
             "run_neuro_service",
-            "examples/run_neuro_service.py"
+            str(example_path)
         )
         assert spec is not None
         assert spec.loader is not None
@@ -261,8 +263,8 @@ class TestExampleWrapperSubprocessDelegation:
 
         # Verify subprocess.run was called with constant argv
         assert mock_run.called
-        call_args = mock_run.call_args
-        cmd = call_args[0][0] if call_args[0] else call_args[1].get("cmd")
+        assert mock_run.call_args is not None, "subprocess.run was not called with args"
+        cmd = mock_run.call_args[0][0] if mock_run.call_args[0] else mock_run.call_args[1].get("cmd")
 
         # The command should be constant: [sys.executable, "-m", "mlsdm.cli", "serve"]
         assert cmd[1:] == ["-m", "mlsdm.cli", "serve"], \
@@ -271,11 +273,13 @@ class TestExampleWrapperSubprocessDelegation:
     def test_example_wrapper_passes_config_via_env(self) -> None:
         """Verify the example wrapper passes host/port/config via environment."""
         import importlib.util
+        from pathlib import Path
         from unittest.mock import MagicMock, patch
 
+        example_path = Path(__file__).parent.parent.parent / "examples" / "run_neuro_service.py"
         spec = importlib.util.spec_from_file_location(
             "run_neuro_service",
-            "examples/run_neuro_service.py"
+            str(example_path)
         )
         assert spec is not None
         assert spec.loader is not None
@@ -289,6 +293,7 @@ class TestExampleWrapperSubprocessDelegation:
             example_module.main()
 
         # Verify env contains HOST, PORT, CONFIG_PATH
+        assert mock_run.call_args is not None, "subprocess.run was not called"
         call_kwargs = mock_run.call_args[1] if mock_run.call_args[1] else {}
         env = call_kwargs.get("env", {})
 
@@ -299,11 +304,13 @@ class TestExampleWrapperSubprocessDelegation:
     def test_example_wrapper_uses_check_false(self) -> None:
         """Verify the example wrapper uses check=False explicitly."""
         import importlib.util
+        from pathlib import Path
         from unittest.mock import MagicMock, patch
 
+        example_path = Path(__file__).parent.parent.parent / "examples" / "run_neuro_service.py"
         spec = importlib.util.spec_from_file_location(
             "run_neuro_service",
-            "examples/run_neuro_service.py"
+            str(example_path)
         )
         assert spec is not None
         assert spec.loader is not None
@@ -316,17 +323,20 @@ class TestExampleWrapperSubprocessDelegation:
             spec.loader.exec_module(example_module)
             example_module.main()
 
+        assert mock_run.call_args is not None, "subprocess.run was not called"
         call_kwargs = mock_run.call_args[1] if mock_run.call_args[1] else {}
         assert call_kwargs.get("check") is False, "subprocess.run should use check=False"
 
     def test_example_wrapper_propagates_returncode(self) -> None:
         """Verify the example wrapper propagates subprocess return code."""
         import importlib.util
+        from pathlib import Path
         from unittest.mock import MagicMock, patch
 
+        example_path = Path(__file__).parent.parent.parent / "examples" / "run_neuro_service.py"
         spec = importlib.util.spec_from_file_location(
             "run_neuro_service",
-            "examples/run_neuro_service.py"
+            str(example_path)
         )
         assert spec is not None
         assert spec.loader is not None
