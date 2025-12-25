@@ -571,12 +571,11 @@ class LLMPipeline:
         # Stage 1: Pre-filters
         pre_filter_result = self._run_pre_filters(prompt, full_context, stages)
         if pre_filter_result is not None:
+            stage_durations_ms = {stage.stage_name: stage.duration_ms for stage in stages}
             pre_filter_result.total_duration_ms = (perf() - start_time) * 1000
             pre_filter_result.metadata = {
                 **(pre_filter_result.metadata or {}),
-                "stage_durations_ms": {
-                    stage.stage_name: stage.duration_ms for stage in pre_filter_result.stages
-                },
+                "stage_durations_ms": stage_durations_ms,
             }
             self._emit_telemetry(pre_filter_result)
             return pre_filter_result
@@ -584,6 +583,7 @@ class LLMPipeline:
         # Stage 2: LLM Generation
         llm_result = self._run_llm_generation(prompt, max_tokens, stages)
         if llm_result is None:
+            stage_durations_ms = {stage.stage_name: stage.duration_ms for stage in stages}
             error_result = PipelineResult(
                 response="",
                 accepted=False,
@@ -592,9 +592,7 @@ class LLMPipeline:
                 stages=stages,
                 total_duration_ms=(perf() - start_time) * 1000,
                 metadata={
-                    "stage_durations_ms": {
-                        stage.stage_name: stage.duration_ms for stage in stages
-                    }
+                    "stage_durations_ms": stage_durations_ms
                 },
             )
             self._emit_telemetry(error_result)
@@ -606,6 +604,7 @@ class LLMPipeline:
         response_text = self._run_post_filters(response_text, full_context, stages)
 
         # Stage 4: Build result
+        stage_durations_ms = {stage.stage_name: stage.duration_ms for stage in stages}
         total_duration = (perf() - start_time) * 1000
 
         result = PipelineResult(
@@ -616,9 +615,7 @@ class LLMPipeline:
             metadata={
                 "max_tokens": max_tokens,
                 "moral_value": moral_value,
-                "stage_durations_ms": {
-                    stage.stage_name: stage.duration_ms for stage in stages
-                },
+                "stage_durations_ms": stage_durations_ms,
             },
         )
 
@@ -641,13 +638,23 @@ class LLMPipeline:
             try:
                 result = pre_filter.evaluate(prompt, context)
                 stage_duration = (perf() - stage_start) * 1000
+                result_payload: Any = result
+                if isinstance(result, FilterResult):
+                    result_payload = {
+                        "decision": result.decision,
+                        "reason": result.reason,
+                    }
+                    if result.modified_content is not None:
+                        result_payload["modified_content"] = result.modified_content
+                    if result.metadata:
+                        result_payload["metadata"] = result.metadata
 
                 stages.append(
                     PipelineStageResult(
                         stage_name=filter_name,
                         success=True,
                         duration_ms=stage_duration,
-                        result=result,
+                        result=result_payload,
                     )
                 )
 
@@ -733,13 +740,23 @@ class LLMPipeline:
             try:
                 result = post_filter.evaluate(current_text, context)
                 stage_duration = (perf() - stage_start) * 1000
+                result_payload: Any = result
+                if isinstance(result, FilterResult):
+                    result_payload = {
+                        "decision": result.decision,
+                        "reason": result.reason,
+                    }
+                    if result.modified_content is not None:
+                        result_payload["modified_content"] = result.modified_content
+                    if result.metadata:
+                        result_payload["metadata"] = result.metadata
 
                 stages.append(
                     PipelineStageResult(
                         stage_name=filter_name,
                         success=True,
                         duration_ms=stage_duration,
-                        result=result,
+                        result=result_payload,
                     )
                 )
 
@@ -770,7 +787,7 @@ class LLMPipeline:
             try:
                 callback(result)
             except Exception as e:
-                _logger.warning("Telemetry callback failed: %s", e)
+                _logger.exception("Telemetry callback failed: %s", e)
 
     def register_telemetry_callback(self, callback: Callable[[PipelineResult], None]) -> None:
         """Register a telemetry callback.
