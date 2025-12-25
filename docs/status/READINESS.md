@@ -56,6 +56,28 @@ Blocking issues: 3
 6. Config and calibration paths unvalidated: `pytest tests/integration/test_public_api.py -v` or equivalent config validation has not been recorded.
 
 ## Change Log
+- 2025-12-25 — **Log threshold adaptations and expose EMA alpha in moral filter state** — PR: #397
+  - Updated `src/mlsdm/cognition/moral_filter_v2.py`: Added DEBUG logging for threshold adaptations with old→new values, EMA, and error metrics
+  - Extended `get_state()` to expose `ema_alpha` as read-only calibration parameter for introspection
+  - Updated `tests/conftest.py`: Added src/ layout to sys.path for editable-install compatibility in test environments
+  - **Behavior unchanged**: Accept/reject decision logic and adaptation algorithm remain identical; observability-only enhancements
+  - **Evidence impact**: Improved debugging visibility for threshold drift; no functional behavior changes
+  - **Testing posture**: Existing property tests (`tests/property/test_moral_filter_properties.py`) continue to validate core behavior
+- 2025-12-25 — **Preserve filter results in pipeline stage metadata** — PR: #???
+  - Updated `src/mlsdm/core/llm_pipeline.py`: keep `PipelineStageResult.result` as `FilterResult` to preserve integration expectations
+  - **Behavior unchanged**: pipeline output and decision logic remain the same; metadata format restored
+  - **Evidence impact**: readiness check required due to src/ changes; no additional tests run here
+- 2025-12-25 — **Readiness change analyzer unit tests updated** — PR: #395
+  - Updated `tests/unit/test_readiness_change_analyzer.py`: Added cases for scope prefix matching and workflow file detection assertions
+  - **Evidence impact**: Improved test coverage for readiness gate validation logic
+  - **Testing posture**: Gate validation tests now cover scope prefix matching and workflow detection scenarios
+- 2025-12-25 — **LLM pipeline telemetry metadata updates** — PR: #???
+  - Updated `src/mlsdm/core/llm_pipeline.py`: cached `time.perf_counter` in pipeline stages for consistent timing reads
+  - Added `stage_durations_ms` to `PipelineResult.metadata` for pre-filter blocks, LLM failures, and successful runs
+  - Stored filter `decision` and `reason` in `PipelineStageResult.result` when filters return `FilterResult`
+  - Telemetry callback failures now log exceptions for visibility
+  - **Behavior unchanged**: pipeline decision and output content remain the same; metadata only
+  - **Evidence impact**: readiness check required due to src/ changes; no additional tests run here
 - 2025-12-25 — **Rate limiter observability and aggregation helpers** — PR: #392
   - Updated `src/mlsdm/utils/rate_limiter.py`: Added `get_all_stats()` method returning `{"client_count": int, "average_tokens": float}` for monitoring
   - Extended `cleanup_old_entries(max_age_seconds=3600.0, return_keys=False)` to optionally return `(count, [client_ids])` when `return_keys=True`
