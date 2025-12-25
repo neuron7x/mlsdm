@@ -515,6 +515,8 @@ def log_synaptic_update(
     l1_norm: float,
     l2_norm: float,
     l3_norm: float,
+    transfer12_sum: float | None = None,
+    transfer23_sum: float | None = None,
     consolidation_l1_l2: bool = False,
     consolidation_l2_l3: bool = False,
     latency_ms: float | None = None,
@@ -526,6 +528,8 @@ def log_synaptic_update(
         l1_norm: L1 layer norm after update
         l2_norm: L2 layer norm after update
         l3_norm: L3 layer norm after update
+        transfer12_sum: Sum of L1→L2 transfer values, if available
+        transfer23_sum: Sum of L2→L3 transfer values, if available
         consolidation_l1_l2: Whether L1→L2 consolidation occurred
         consolidation_l2_l3: Whether L2→L3 consolidation occurred
         latency_ms: Operation latency in milliseconds
@@ -543,6 +547,10 @@ def log_synaptic_update(
             "consolidation_l1_l2": consolidation_l1_l2,
             "consolidation_l2_l3": consolidation_l2_l3,
         }
+        if transfer12_sum is not None:
+            metrics["transfer12_sum"] = round(transfer12_sum, 6)
+        if transfer23_sum is not None:
+            metrics["transfer23_sum"] = round(transfer23_sum, 6)
         if latency_ms is not None:
             metrics["latency_ms"] = round(latency_ms, 3)
 
@@ -747,6 +755,8 @@ def record_synaptic_update(
     l2_norm: float,
     l3_norm: float,
     memory_bytes: int,
+    transfer12_sum: float | None = None,
+    transfer23_sum: float | None = None,
     consolidation_l1_l2: bool = False,
     consolidation_l2_l3: bool = False,
     latency_ms: float | None = None,
@@ -759,6 +769,8 @@ def record_synaptic_update(
         l2_norm: L2 layer norm after update
         l3_norm: L3 layer norm after update
         memory_bytes: Estimated memory usage in bytes
+        transfer12_sum: Sum of L1→L2 transfer values, if available
+        transfer23_sum: Sum of L2→L3 transfer values, if available
         consolidation_l1_l2: Whether L1→L2 consolidation occurred
         consolidation_l2_l3: Whether L2→L3 consolidation occurred
         latency_ms: Operation latency in milliseconds
@@ -782,6 +794,8 @@ def record_synaptic_update(
             l1_norm,
             l2_norm,
             l3_norm,
+            transfer12_sum,
+            transfer23_sum,
             consolidation_l1_l2,
             consolidation_l2_l3,
             latency_ms,

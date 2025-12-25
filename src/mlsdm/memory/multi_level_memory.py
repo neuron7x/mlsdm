@@ -160,17 +160,21 @@ class MultiLevelSynapticMemory:
             l1_norm = safe_norm(self.l1)
             l2_norm = safe_norm(self.l2)
             l3_norm = safe_norm(self.l3)
+            transfer12_sum = float(np.sum(transfer12))
+            transfer23_sum = float(np.sum(transfer23))
 
             # Detect consolidation by checking if transfers occurred
             # Transfer happened if L2 increased more than from decay alone
-            consolidation_l1_l2 = float(np.sum(transfer12)) > 0
-            consolidation_l2_l3 = float(np.sum(transfer23)) > 0
+            consolidation_l1_l2 = transfer12_sum > 0
+            consolidation_l2_l3 = transfer23_sum > 0
 
             record_synaptic_update(
                 l1_norm=l1_norm,
                 l2_norm=l2_norm,
                 l3_norm=l3_norm,
                 memory_bytes=self.memory_usage_bytes(),
+                transfer12_sum=transfer12_sum,
+                transfer23_sum=transfer23_sum,
                 consolidation_l1_l2=consolidation_l1_l2,
                 consolidation_l2_l3=consolidation_l2_l3,
                 latency_ms=latency_ms,
@@ -182,6 +186,10 @@ class MultiLevelSynapticMemory:
 
     def get_state(self) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         return self.state()
+
+    def get_norms(self) -> tuple[float, float, float]:
+        """Return current L1/L2/L3 norms without exposing internal arrays."""
+        return safe_norm(self.l1), safe_norm(self.l2), safe_norm(self.l3)
 
     def reset_all(self) -> None:
         self.l1.fill(0.0)
