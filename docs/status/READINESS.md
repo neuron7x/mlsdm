@@ -61,6 +61,9 @@ Blocking issues: 3
   - Extended `cleanup_old_entries(max_age_seconds=3600.0, return_keys=False)` to optionally return `(count, [client_ids])` when `return_keys=True`
   - **Behavior unchanged**: Leaky-bucket token refill and rate limiting logic remain identical; added observability-only helpers
   - **Evidence impact**: No automated tests executed in this PR; existing rate limiter behavior preserved
+- 2025-12-25 — **Coverage badge workflow hardened for cache outages** — PR: copilot/resolve-issues-effectively
+  - Updated `.github/workflows/coverage-badge.yml`: `fail-on-cache-errors: false` to prevent cache backend hiccups from failing badge publication
+  - **Evidence impact**: Readiness gate satisfied by documenting workflow change; badge generation and coverage computation unchanged
 - 2025-12-25 — **Emergency observability hooks in CognitiveController** — PR: #???
   - Updated `src/mlsdm/core/cognitive_controller.py`: centralized emergency shutdown and auto-recovery metrics recording
   - Added structured logging for emergency entry, auto-recovery outcomes, and manual reset actions
