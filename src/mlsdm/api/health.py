@@ -13,6 +13,7 @@ Health endpoints:
 
 import asyncio
 import logging
+import re
 import time
 from dataclasses import dataclass
 from threading import Lock
@@ -416,6 +417,24 @@ def _check_cpu_health() -> tuple[bool, str | None]:
         return True, f"check_degraded: {str(e)}"
 
 
+def _extract_cpu_usage(details: str) -> float | None:
+    """Extract CPU usage percentage from a details string.
+
+    Args:
+        details: Detail string that may include a "usage: X%" fragment.
+
+    Returns:
+        CPU usage percentage if present, otherwise None.
+    """
+    match = re.search(r"usage:\s*([0-9]+(?:\.[0-9]+)?)%", details)
+    if not match:
+        return None
+    try:
+        return float(match.group(1))
+    except ValueError:
+        return None
+
+
 async def _compute_readiness(response: Response) -> ReadinessStatus:
     """Internal function to compute readiness status.
 
@@ -493,10 +512,10 @@ async def _compute_readiness(response: Response) -> ReadinessStatus:
         all_ready = False
         # Extract CPU percent from details if available
         if cpu_details and "usage:" in cpu_details:
-            try:
-                pct_str = cpu_details.split("usage:")[1].strip().rstrip("%")
-                details["system_cpu_percent"] = float(pct_str)
-            except (IndexError, ValueError):
+            cpu_percent = _extract_cpu_usage(cpu_details)
+            if cpu_percent is not None:
+                details["system_cpu_percent"] = cpu_percent
+            else:
                 logger.debug("Unable to parse CPU usage percent from details: %s", cpu_details)
 
     # Set response status code
