@@ -55,14 +55,23 @@ def test_json_structure_and_counts(tmp_path: Path):
     assert counts["categories"]["observability"] == 1
     assert counts["risks"]["critical"] == 0
     assert counts["risks"]["high"] == 1
-    assert counts["risks"]["informational"] == 2
+    assert counts["risks"]["info"] == 2
     assert counts["risks"]["low"] == 1
 
     files = result["files"]
     assert isinstance(files, list) and len(files) == 4
     assert [f["path"] for f in files] == sorted([f["path"] for f in files])
     for entry in files:
-        assert set(entry.keys()) == {"path", "category", "risk", "details"}
+        assert set(entry.keys()) == {
+            "path",
+            "category",
+            "risk",
+            "metadata",
+            "semantic_diff",
+            "functions_added",
+            "functions_removed",
+            "yaml_diff",
+        }
 
 
 def test_module_name_src_and_tests():
@@ -82,7 +91,8 @@ def test_semantic_diff_processes_all_top_level_items():
         "def f2(b):\n"
         "    return b\n"
     )
-    sigs = ca.parse_python_signatures(source, "mod")
+    sigs, parse_error = ca.parse_python_signatures(source, "mod")
+    assert parse_error is False
     assert "f1" in sigs
     assert "f2" in sigs
     assert "C" in sigs
@@ -113,9 +123,26 @@ def test_analyze_paths_handles_missing_and_invalid_files(tmp_path: Path):
     )
 
     files = {entry["path"]: entry for entry in result["files"]}
-    assert files[str(missing.relative_to(tmp_path))]["details"]["semantic"]["summary"]["added"] == 0
-    assert files[str(broken.relative_to(tmp_path))]["details"]["semantic"]["summary"]["added"] == 0
-    assert files[str(text_file.relative_to(tmp_path))]["details"]["semantic"]["summary"]["added"] == 0
+    assert files[str(missing.relative_to(tmp_path))]["metadata"]["missing"] is True
+    assert files[str(broken.relative_to(tmp_path))]["metadata"]["parse_error"] is True
+    assert files[str(text_file.relative_to(tmp_path))]["semantic_diff"] is None
+
+
+def test_yaml_diff_reports_key_changes(tmp_path: Path, monkeypatch):
+    before = "a: 1\nb: 2\n"
+    after_path = tmp_path / "config.yaml"
+    after_path.write_text("a: 1\nb: 3\nc: 4\n", encoding="utf-8")
+
+    def fake_show(path: str, ref: str, root: Path) -> str | None:  # type: ignore[override]
+        return before if path == "config.yaml" else None
+
+    monkeypatch.setattr(ca, "get_file_at_ref", fake_show)
+    result = ca.analyze_paths(["config.yaml"], base_ref="origin/main", root=tmp_path)
+    entry = result["files"][0]
+    diff = entry["yaml_diff"]
+    assert diff["added_keys"] == ["c"]
+    assert diff["changed_keys"] == ["b"]
+    assert diff["removed_keys"] == []
 
 
 def test_analyze_paths_uses_base_ref_for_deleted_file(tmp_path: Path, monkeypatch):
@@ -128,7 +155,7 @@ def test_analyze_paths_uses_base_ref_for_deleted_file(tmp_path: Path, monkeypatc
     monkeypatch.setattr(ca, "get_file_at_ref", fake_show)
     result = ca.analyze_paths([missing], base_ref="origin/main", root=tmp_path)
     entry = result["files"][0]
-    semantic = entry["details"]["semantic"]
+    semantic = entry["semantic_diff"]
     assert semantic["added_functions"] == []
     assert semantic["modified_functions"] == []
     assert semantic["removed_functions"] == ["gone:gone()->None"]

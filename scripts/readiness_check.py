@@ -7,38 +7,32 @@ import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import TYPE_CHECKING, NamedTuple
-
-if TYPE_CHECKING:
-    from collections.abc import Iterable
+from typing import Iterable, List, NamedTuple, Optional
 
 ROOT = Path(__file__).resolve().parent.parent
 READINESS_PATH = ROOT / "docs" / "status" / "READINESS.md"
 MAX_AGE_DAYS = 14
 LAST_UPDATED_PATTERN = r"Last updated:\s*(\d{4}-\d{2}-\d{2})"
 DEFAULT_SCOPED_PREFIXES = ("src/", "tests/", "config/", "deploy/", ".github/workflows/")
-SCOPED_PREFIXES = (
-    tuple(
-        prefix.strip()
-        for prefix in os.environ.get("READINESS_SCOPED_PREFIXES", "").split(",")
-        if prefix.strip()
-    )
-    or DEFAULT_SCOPED_PREFIXES
-)
+SCOPED_PREFIXES = tuple(
+    prefix.strip()
+    for prefix in os.environ.get("READINESS_SCOPED_PREFIXES", "").split(",")
+    if prefix.strip()
+) or DEFAULT_SCOPED_PREFIXES
 MAX_LISTED_FILES = 10
 
 
 class GitDiffResult(NamedTuple):
-    files: list[str]
+    files: List[str]
     success: bool
-    error: str | None = None
+    error: Optional[str] = None
 
 
 class DiffOutcome(NamedTuple):
-    files: list[str]
+    files: List[str]
     base_ref: str
     success: bool
-    error: str | None = None
+    error: Optional[str] = None
 
 
 def log_error(message: str) -> None:
@@ -52,7 +46,7 @@ def ensure_readiness_file() -> bool:
     return False
 
 
-def parse_last_updated() -> datetime | None:
+def parse_last_updated() -> Optional[datetime]:
     content = READINESS_PATH.read_text(encoding="utf-8")
     match = re.search(LAST_UPDATED_PATTERN, content)
     if not match:
@@ -118,8 +112,8 @@ def ref_exists(ref: str) -> bool:
 
 def collect_changed_files() -> DiffOutcome:
     had_git_errors = False
-    last_error: str | None = None
-    refs_to_try: list[str] = []
+    last_error: Optional[str] = None
+    refs_to_try: List[str] = []
     event_name = os.environ.get("GITHUB_EVENT_NAME", "")
     base_ref_env = os.environ.get("GITHUB_BASE_REF")
     ref_name = os.environ.get("GITHUB_REF_NAME")
@@ -164,9 +158,11 @@ def collect_changed_files() -> DiffOutcome:
 
 def is_scoped(path: str) -> bool:
     normalized = path.replace("\\", "/")
-    return any(normalized.startswith(prefix) for prefix in SCOPED_PREFIXES) or Path(
-        normalized
-    ).name.startswith("Dockerfile")
+    if any(normalized.startswith(prefix) for prefix in SCOPED_PREFIXES):
+        return True
+    if Path(normalized).name.startswith("Dockerfile"):
+        return True
+    return False
 
 
 def readiness_updated(changed_files: Iterable[str]) -> bool:

@@ -10,6 +10,8 @@ import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+import yaml
+
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
@@ -40,12 +42,12 @@ RISK_MAP: dict[str, str] = {
     "functional_core": "high",
     "infrastructure": "medium",
     "observability": "low",
-    "test_coverage": "informational",
-    "documentation": "informational",
+    "test_coverage": "info",
+    "documentation": "info",
 }
 
 RISK_ORDER: dict[str, int] = {
-    "informational": 0,
+    "info": 0,
     "low": 1,
     "medium": 2,
     "high": 3,
@@ -164,13 +166,13 @@ def _class_sig(node: ast.ClassDef, module: str) -> str:
     return f"{module}:{node.name}{suffix}{_decorator_suffix(node)}"
 
 
-def parse_python_signatures(source: str, module: str) -> dict[str, str]:
+def parse_python_signatures(source: str, module: str) -> tuple[dict[str, str], bool]:
     """Extract canonical signatures for top-level functions/classes and class methods."""
     try:
         _ensure_no_bidi(source, module)
         tree = ast.parse(source)
     except (SyntaxError, ValueError):
-        return {}
+        return {}, True
 
     signatures: dict[str, str] = {}
     for node in tree.body:
@@ -182,12 +184,12 @@ def parse_python_signatures(source: str, module: str) -> dict[str, str]:
                 if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef)):
                     key = f"{node.name}.{child.name}"
                     signatures[key] = _function_sig(child, module, class_name=node.name)
-    return signatures
+    return signatures, False
 
 
 def semantic_diff(before: str | None, after: str | None, module: str) -> dict[str, object]:
-    before_sigs = parse_python_signatures(before, module) if before else {}
-    after_sigs = parse_python_signatures(after, module) if after else {}
+    before_sigs, before_err = parse_python_signatures(before, module) if before else ({}, False)
+    after_sigs, after_err = parse_python_signatures(after, module) if after else ({}, False)
     before_keys = set(before_sigs)
     after_keys = set(after_sigs)
 
@@ -202,6 +204,7 @@ def semantic_diff(before: str | None, after: str | None, module: str) -> dict[st
         "removed_functions": removed,
         "modified_functions": modified,
         "summary": {"added": len(added), "removed": len(removed), "modified": len(modified)},
+        "parse_error": before_err or after_err,
     }
 
 
@@ -214,6 +217,42 @@ def _read_file(path: Path) -> str | None:
         return content
     except OSError:
         return None
+
+
+def _yaml_key_diff(before: str | None, after: str | None) -> dict[str, object]:
+    """Compute top-level key diff for YAML content."""
+    parse_error = False
+
+    def _load(text: str | None) -> dict:
+        nonlocal parse_error
+        if text is None:
+            return {}
+        try:
+            _ensure_no_bidi(text, "yaml")
+        except ValueError:
+            parse_error = True
+            return {}
+        try:
+            data = yaml.safe_load(text)
+        except yaml.YAMLError:
+            parse_error = True
+            return {}
+        return data if isinstance(data, dict) else {}
+
+    before_obj = _load(before)
+    after_obj = _load(after)
+
+    before_keys = set(before_obj)
+    after_keys = set(after_obj)
+    added = sorted(after_keys - before_keys)
+    removed = sorted(before_keys - after_keys)
+    changed = sorted(k for k in before_keys & after_keys if before_obj.get(k) != after_obj.get(k))
+    return {
+        "added_keys": added,
+        "removed_keys": removed,
+        "changed_keys": changed,
+        "parse_error": parse_error,
+    }
 
 
 def get_file_at_ref(path: str, ref: str, root: Path) -> str | None:
@@ -251,28 +290,44 @@ def analyze_paths(paths: Sequence[str], base_ref: str, root: Path = ROOT) -> dic
         risks.append(risk)
 
         module = module_name(path) if path.endswith(".py") else ""
-        after_content = _read_file(root / path) if path.endswith(".py") else None
-        before_content = get_file_at_ref(path, base_ref, root) if path.endswith(".py") else None
-        semantic = (
-            semantic_diff(before_content, after_content, module)
-            if path.endswith(".py")
-            else {
-                "added_functions": [],
-                "removed_functions": [],
-                "modified_functions": [],
-                "summary": {"added": 0, "removed": 0, "modified": 0},
-            }
-        )
+        after_path = root / path
+        is_python = path.endswith(".py")
+        is_yaml = path.endswith((".yaml", ".yml"))
+        after_content = _read_file(after_path) if (is_python or is_yaml) else None
+        before_content = get_file_at_ref(path, base_ref, root) if (is_python or is_yaml) else None
+        metadata = {
+            "missing": after_content is None,
+            "new_file": before_content is None and after_content is not None,
+            "parse_error": False,
+        }
+
+        semantic = {
+            "added_functions": [],
+            "removed_functions": [],
+            "modified_functions": [],
+            "summary": {"added": 0, "removed": 0, "modified": 0},
+            "parse_error": False,
+        }
+
+        yaml_diff: dict[str, object] | None = None
+
+        if is_yaml:
+            yaml_diff = _yaml_key_diff(before_content, after_content)
+            metadata["parse_error"] = yaml_diff.get("parse_error", False) if yaml_diff else False
+        elif is_python:
+            semantic = semantic_diff(before_content, after_content, module)
+            metadata["parse_error"] = semantic.get("parse_error", False)  # type: ignore[assignment]
 
         files.append(
             {
                 "path": path,
                 "category": category,
                 "risk": risk,
-                "details": {
-                    "module": module,
-                    "semantic": semantic,
-                },
+                "metadata": metadata,
+                "semantic_diff": semantic if path.endswith(".py") else None,
+                "functions_added": semantic["added_functions"] if path.endswith(".py") else [],
+                "functions_removed": semantic["removed_functions"] if path.endswith(".py") else [],
+                "yaml_diff": yaml_diff,
             }
         )
 
@@ -283,7 +338,7 @@ def analyze_paths(paths: Sequence[str], base_ref: str, root: Path = ROOT) -> dic
     for risk in risks:
         risk_counts[risk] = risk_counts.get(risk, 0) + 1
 
-    primary = _select_primary_category(cat_counts)
+    primary = _select_primary_category(cat_counts, categories)
     max_risk = _max_risk(risks)
 
     return {
@@ -295,7 +350,7 @@ def analyze_paths(paths: Sequence[str], base_ref: str, root: Path = ROOT) -> dic
     }
 
 
-def _select_primary_category(counts: dict[str, int]) -> str:
+def _select_primary_category(counts: dict[str, int], observed: list[str]) -> str:
     max_count = max(counts.values()) if counts else 0
     candidates = [cat for cat, count in counts.items() if count == max_count]
     for cat in CATEGORY_PRIORITY:
@@ -306,7 +361,7 @@ def _select_primary_category(counts: dict[str, int]) -> str:
 
 def _max_risk(risks: list[str]) -> str:
     max_rank = -1
-    max_name = "informational"
+    max_name = "info"
     for name in risks:
         rank = RISK_ORDER.get(name, -1)
         if rank > max_rank:
@@ -325,7 +380,7 @@ def _parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Semantic change analyzer")
     parser.add_argument("--files", required=True, help="Path to file containing list of changed files")
     parser.add_argument("--base-ref", default="origin/main", help="Git base reference (metadata only)")
-    parser.add_argument("--output", default="-", help="Output path or '-' for stdout")
+    parser.add_argument("--output", required=True, help="Output path or '-' for stdout")
     parser.add_argument("--format", default="json", choices=["json"], help="Output format (json only)")
     args = parser.parse_args(argv)
     files_path = Path(args.files) if args.files != "-" else None
@@ -344,7 +399,9 @@ def _write_output(payload: dict[str, object], output: str) -> None:
         return
     out_path = Path(output)
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    out_path.write_text(text + "\n", encoding="utf-8")
+    tmp_path = out_path.with_suffix(out_path.suffix + ".tmp")
+    tmp_path.write_text(text + "\n", encoding="utf-8")
+    tmp_path.replace(out_path)
 
 
 def main(argv: Sequence[str] | None = None) -> int:
