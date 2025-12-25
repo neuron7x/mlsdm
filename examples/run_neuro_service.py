@@ -96,8 +96,12 @@ def main(argv: list[str] | None = None) -> int:
     print(f"  - GET  http://{host}:{port}/docs (Swagger UI)")
     print()
 
-    completed = subprocess.run(command, check=True)
-    return completed.returncode
+    try:
+        completed = subprocess.run(command, check=True)
+        return completed.returncode
+    except subprocess.CalledProcessError as exc:
+        print(f"Service exited with code {exc.returncode}", file=sys.stderr)
+        return exc.returncode
 
 
 if __name__ == "__main__":

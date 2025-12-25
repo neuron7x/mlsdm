@@ -119,7 +119,7 @@ These checks run but **DO NOT BLOCK** CI (with justification):
 - **resilience-fast (blocking when scheduled):** Runs on `main`, scheduled nightly, workflow_dispatch `run_fast_resilience`, or PRs with relevant code changes. `continue-on-error: false`.
 - **performance-slo (label-gated blocking):** Runs on `main`, scheduled nightly, workflow_dispatch `run_performance_slo`, or PRs with `perf`/`resilience` label **and** relevant code changes. `continue-on-error: false`.
 - **resilience-comprehensive (informational):** Scheduled or workflow_dispatch `run_comprehensive_resilience`, marked `continue-on-error: true`.
-- **perf-resilience-gate:** Fails if `resilience-fast` is skipped for relevant code, or if `performance-slo` is expected (main/schedule/explicit label+relevant/dispatch) but skipped. Emits a notice when both jobs are skipped because no relevant code changes were detected.
+- **perf-resilience-gate:** Fails if `resilience-fast` is expected (main/schedule/relevant PR) but skipped, or if `performance-slo` is expected (main/schedule/explicit label+relevant/dispatch) but skipped. Emits a notice when both jobs are skipped because no relevant code changes were detected.
 
 ### 1. Chaos Engineering Tests
 **Workflow:** `.github/workflows/chaos-tests.yml`

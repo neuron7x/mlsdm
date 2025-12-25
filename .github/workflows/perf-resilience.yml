@@ -301,6 +301,7 @@ jobs:
           IS_PR: ${{ github.event_name == 'pull_request' }}
           HAS_PERF_LABEL: ${{ contains(github.event.pull_request.labels.*.name, 'perf') || contains(github.event.pull_request.labels.*.name, 'resilience') }}
           RUN_DISPATCH_PERF: ${{ github.event_name == 'workflow_dispatch' && inputs.run_performance_slo }}
+          RUN_DISPATCH_FAST: ${{ github.event_name == 'workflow_dispatch' && inputs.run_fast_resilience }}
           IS_MAIN: ${{ github.ref == 'refs/heads/main' }}
           IS_SCHEDULE: ${{ github.event_name == 'schedule' }}
         run: |
@@ -311,8 +312,15 @@ jobs:
           echo "Resilience-fast result: ${RES_FAST}"
           echo "Performance-slo result: ${PERF_SLO}"
 
-          if [ "${RELEVANT}" = "true" ] && [ "${RES_FAST}" = "skipped" ]; then
-            echo "::error::Resilience-fast was skipped despite relevant code changes."
+          FAST_EXPECTED="false"
+          if [ "${IS_MAIN}" = "true" ] || [ "${IS_SCHEDULE}" = "true" ] || [ "${RUN_DISPATCH_FAST}" = "true" ]; then
+            FAST_EXPECTED="true"
+          elif [ "${IS_PR}" = "true" ] && [ "${RELEVANT}" = "true" ]; then
+            FAST_EXPECTED="true"
+          fi
+
+          if [ "${FAST_EXPECTED}" = "true" ] && [ "${RES_FAST}" = "skipped" ]; then
+            echo "::error::Resilience-fast was expected but skipped."
             exit 1
           fi
 
@@ -336,11 +344,7 @@ jobs:
           fi
 
           # If both jobs were skipped → this PR simply didn't request perf/resilience tests
-          if [ "${RES_FAST}" = "skipped" ] && [ "${PERF_SLO}" = "skipped" ]; then
-            if [ "${RELEVANT}" = "true" ]; then
-              echo "::error::Relevant changes detected but both jobs were skipped."
-              exit 1
-            fi
+          if [ "${FAST_EXPECTED}" = "false" ] && [ "${PERF_EXPECTED}" = "false" ] && [ "${RES_FAST}" = "skipped" ] && [ "${PERF_SLO}" = "skipped" ]; then
             echo "::notice::Performance/resilience test jobs were skipped because no relevant code changes were detected."
             exit 0
           fi
