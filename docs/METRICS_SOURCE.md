@@ -27,11 +27,10 @@ make evidence
 
 ## Coverage Metrics
 
-| Metric | Value | Source |
-|--------|-------|--------|
-| **CI Coverage Threshold** | 65% | [ci-neuro-cognitive-engine.yml](../.github/workflows/ci-neuro-cognitive-engine.yml#L149) |
-| **Actual Coverage** | See evidence snapshot | `artifacts/evidence/<date>/<sha>/coverage/coverage.xml` |
-| **Core Modules Coverage** | 90%+ | Critical modules (`core/`, `memory/`, `cognition/`) |
+| Metric | Value | Evidence & Derivation |
+|--------|-------|-----------------------|
+| **Actual Coverage (line-rate)** | 80.04% | `artifacts/evidence/2025-12-26/2a6b52dd6fd4/coverage/coverage.xml` (recomputed via `python scripts/evidence/validate_evidence_snapshot.py --snapshot artifacts/evidence/2025-12-26/2a6b52dd6fd4 --print-summary`) |
+| **Coverage gate floor (fail-under)** | 65% | `coverage_gate.sh` (CI mirrors this command) |
 
 ### Why 65% Threshold When Actual is Higher?
 
@@ -50,11 +49,9 @@ The CI coverage threshold (65%) is intentionally set below actual coverage for s
 
 Test counts are derived from the committed JUnit evidence:
 
-| Metric | Source |
-|--------|--------|
-| **Test Results** | `artifacts/evidence/<date>/<sha>/pytest/junit.xml` |
-
-To get exact counts, parse the JUnit XML or run `make evidence`.
+| Metric | Evidence & Derivation |
+|--------|-----------------------|
+| **Test Results** | `artifacts/evidence/2025-12-26/2a6b52dd6fd4/pytest/junit.xml` (Total Tests: 1094, failures: 1, errors: 0, skipped: 10) recomputed via `python scripts/evidence/validate_evidence_snapshot.py --snapshot artifacts/evidence/2025-12-26/2a6b52dd6fd4 --print-summary` |
 
 ---
 
@@ -62,11 +59,11 @@ To get exact counts, parse the JUnit XML or run `make evidence`.
 
 Performance metrics are captured in the evidence snapshot:
 
-| Metric | Source |
-|--------|--------|
-| **Benchmark Results** | `artifacts/evidence/<date>/<sha>/benchmarks/benchmark-metrics.json` |
-| **Raw Latency Data** | `artifacts/evidence/<date>/<sha>/benchmarks/raw_neuro_engine_latency.json` |
-| **Baseline** | `benchmarks/baseline.json` |
+| Metric | Value | Evidence |
+|--------|-------|----------|
+| **Max p95 latency (ms)** | 0.998 | `artifacts/evidence/2025-12-26/2a6b52dd6fd4/benchmarks/benchmark-metrics.json` (`metrics.max_p95_ms`) |
+| **Raw Latency Data** | Derived per scenario | `artifacts/evidence/2025-12-26/2a6b52dd6fd4/benchmarks/raw_neuro_engine_latency.json` |
+| **Benchmark Baseline** | Reference thresholds | `benchmarks/baseline.json` |
 
 To check for benchmark drift:
 

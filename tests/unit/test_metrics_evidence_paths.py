@@ -8,6 +8,7 @@ This test ensures that:
 from __future__ import annotations
 
 import re
+import sys
 from pathlib import Path
 
 
@@ -126,4 +127,17 @@ class TestMetricsEvidencePaths:
         assert not missing, (
             f"Evidence snapshot {latest_snapshot.name} is missing required files: {missing}. "
             "Run 'make evidence' to regenerate."
+        )
+
+    def test_evidence_has_no_forbidden_files(self) -> None:
+        """Evidence snapshots must not contain secrets or oversized blobs."""
+        repo_root = get_repo_root()
+        sys.path.append(str(repo_root / "scripts"))
+        from evidence import validate_evidence_snapshot as validator  # type: ignore
+
+        snapshot = validator.find_latest_snapshot(repo_root)
+        violations = validator.check_forbidden_files(snapshot, max_size_mb=25)
+        assert not violations, (
+            "Forbidden or oversized files detected in evidence: "
+            f"{violations}. Remove and regenerate evidence."
         )

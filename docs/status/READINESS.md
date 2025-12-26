@@ -57,6 +57,10 @@ Blocking issues: 3
 6. Config and calibration paths unvalidated: `pytest tests/integration/test_public_api.py -v` or equivalent config validation has not been recorded.
 
 ## Change Log
+- 2025-12-26 — **Evidence integrity enforcement + gitignore hardening** — PR: #402
+  - Changed files (5): `.gitignore`, `.github/workflows/readiness.yml`, `docs/METRICS_SOURCE.md`, `scripts/evidence/validate_evidence_snapshot.py`, `tests/unit/test_metrics_evidence_paths.py`
+  - Primary category: mixed; Max risk: medium
+  - Summary: tightened artifacts unignore scope to `artifacts/evidence/**`, added validator to recompute coverage/tests/benchmark schemas from committed evidence, wired readiness workflow to run validation, and added safeguards against forbidden evidence filetypes with updated metrics documentation grounded in the committed snapshot.
 - 2025-12-26 — **Metrics evidence sanity-check test** — PR: #401
   - Added `tests/unit/test_metrics_evidence_paths.py`: Validates `docs/METRICS_SOURCE.md` references in-repo evidence paths (not CI workflow links) and verifies evidence snapshots exist
   - **Purpose**: Prevents documentation drift by enforcing committed reproducible evidence over ephemeral CI artifacts

@@ -22,3 +22,5 @@ jobs:
           python-version: "3.11"
       - name: Run readiness check
         run: python scripts/readiness_check.py
+      - name: Validate evidence snapshot
+        run: python scripts/evidence/validate_evidence_snapshot.py --print-summary
