@@ -83,8 +83,7 @@ def _is_infra(path: str) -> bool:
 
 
 def _is_security(path: str) -> bool:
-    normalized = path.replace("\\", "/")
-    return "security/" in normalized or "auth/" in normalized or "moral_filter" in normalized or "memory/phase" in normalized
+    return ca.classify_category(path) == "security_critical"
 
 
 def _validate_workflow(path: Path) -> list[str]:
@@ -95,10 +94,14 @@ def _validate_workflow(path: Path) -> list[str]:
     except Exception:
         missing.append("Workflow YAML invalid")
         return missing
-    if "@main" in content:
-        missing.append("Actions must be pinned (no @main)")
-    if "uses:" in content and "@" not in content.split("uses:", 1)[1]:
-        missing.append("Actions must declare a pinned ref")
+    for line in content.splitlines():
+        if "uses:" not in line:
+            continue
+        uses_part = line.split("uses:", 1)[1].strip()
+        if "@main" in uses_part:
+            missing.append("Actions must be pinned (no @main)")
+        if "@" not in uses_part:
+            missing.append("Actions must declare a pinned ref")
     return missing
 
 

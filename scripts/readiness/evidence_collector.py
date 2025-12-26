@@ -19,6 +19,14 @@ SUITE_MAP = {
     "junit-e2e": "e2e",
     "junit-security": "security",
 }
+SUITE_KEYWORDS = (
+    ("unit", "unit"),
+    ("integration", "integration"),
+    ("property", "property"),
+    ("e2e", "e2e"),
+    ("endtoend", "e2e"),
+    ("security", "security"),
+)
 
 
 def _now() -> datetime:
@@ -37,16 +45,9 @@ def _infer_suite(path: Path, suite_name: str) -> str:
     if stem in SUITE_MAP:
         return SUITE_MAP[stem]
     name = suite_name.lower()
-    if "unit" in name:
-        return "unit"
-    if "integration" in name:
-        return "integration"
-    if "property" in name:
-        return "property"
-    if "e2e" in name or "endtoend" in name:
-        return "e2e"
-    if "security" in name:
-        return "security"
+    for key, value in SUITE_KEYWORDS:
+        if key in name:
+            return value
     return "unknown"
 
 
