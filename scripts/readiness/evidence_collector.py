@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -211,11 +212,12 @@ def _count_gitleaks(payload: Any) -> tuple[int, int, int] | None:
         elif sev:
             low += 1
         else:
-            high += 1  # default conservative
+            high += 1  # default conservative: treat unknown severity as high
     return high, medium, low
 
 
 def collect_evidence(root: Path = ROOT) -> dict[str, Any]:
+    """Collect local CI evidence into a deterministic JSON contract."""
     root = root.resolve()
     junit_files = sorted((root / "reports").glob("junit-*.xml"))
     coverage_paths = [root / "coverage.xml", root / "reports" / "coverage.xml"]
@@ -314,9 +316,8 @@ def collect_evidence(root: Path = ROOT) -> dict[str, Any]:
 
     canonical = json.dumps(evidence, sort_keys=True, separators=(",", ":"))
     evidence_hash = hashlib.sha256(canonical.encode("utf-8")).hexdigest()[:16]
+    # hash is computed before attaching the hash field to avoid self-reference
     evidence["evidence_hash"] = f"sha256-{evidence_hash}"
-    if not junit_measured:
-        evidence["tests"] = tests_section
     return evidence
 
 
@@ -345,12 +346,10 @@ def main(argv: list[str] | None = None) -> int:
         evidence = collect_evidence(Path(args.root))
         _write_output(evidence, args.output)
         return 0
-    except Exception as exc:  # pragma: no cover
+    except (OSError, ValueError, json.JSONDecodeError) as exc:  # pragma: no cover
         print(f"Error: {exc}", file=sys.stderr)
         return 1
 
 
 if __name__ == "__main__":
-    import sys
-
     raise SystemExit(main(sys.argv[1:]))

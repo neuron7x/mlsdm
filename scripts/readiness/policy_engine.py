@@ -78,6 +78,7 @@ def _is_infra(path: str) -> bool:
 
 
 def evaluate_policy(change_analysis: dict[str, Any], evidence: dict[str, Any]) -> dict[str, Any]:
+    """Evaluate readiness policy given change analysis and collected evidence."""
     paths = sorted({p.strip() for p in _paths_from_analysis(change_analysis) if p.strip()})
     max_risk = _convert_risk(str(change_analysis.get("max_risk", "informational")))
 
@@ -118,22 +119,22 @@ def evaluate_policy(change_analysis: dict[str, Any], evidence: dict[str, Any]) -
         max_risk = _highest_risk([max_risk, rule["risk"], "high" if missing else rule["risk"]])
 
     if core_changed:
-        missing: list[str] = []
+        core_missing: list[str] = []
         if not tests_measured:
-            missing.append("Tests evidence missing or empty")
+            core_missing.append("Tests evidence missing or empty")
         elif tests_totals.get("failed", 0) > 0:
-            missing.append("Tests have failures")
+            core_missing.append("Tests have failures")
         rule = {
             "rule_id": "CORE-001",
             "title": "Core cognitive changes require passing tests",
             "category": "functional_core",
             "risk": "high",
             "requirements": ["Tests executed", "No failing tests"],
-            "missing": missing,
+            "missing": core_missing,
         }
         matched_rules.append(rule)
         max_risk = _highest_risk([max_risk, rule["risk"]])
-        if missing and change_analysis.get("max_risk") == "critical":
+        if core_missing and change_analysis.get("max_risk") == "critical":
             blocking.append("Critical core change without passing tests")
 
     if observability_only or tests_only:
@@ -162,6 +163,7 @@ def evaluate_policy(change_analysis: dict[str, Any], evidence: dict[str, Any]) -
 
     matched_rules = sorted(matched_rules, key=lambda r: r["rule_id"])
 
+    # verdict precedence: reject > manual_review > approve_with_conditions > approve
     verdict = "approve"
     if infra_changed or core_changed:
         verdict = "approve_with_conditions"
@@ -217,7 +219,7 @@ def main(argv: list[str] | None = None) -> int:
         policy = evaluate_policy(change_analysis, evidence)
         _write_output(policy, args.output)
         return 0
-    except Exception as exc:  # pragma: no cover
+    except (OSError, ValueError, json.JSONDecodeError) as exc:  # pragma: no cover
         print(f"Error: {exc}", file=sys.stderr)
         return 1
 
