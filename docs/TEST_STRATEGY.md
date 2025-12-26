@@ -66,7 +66,7 @@ The test coverage implementation follows a staged approach:
 
 ### Current Metrics
 
-- **Line Coverage:** ~78% (exceeds 75% gate)
+- **Line Coverage:** 80.04% (derived from `artifacts/evidence/2025-12-26/2a6b52dd6fd4/coverage/coverage.xml`)
 - **Branch Coverage:** ~70% (enabled via `branch = true`)
 - **Tests:** 1900+ passing, 12 skipped
 
