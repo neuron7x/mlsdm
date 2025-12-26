@@ -57,6 +57,10 @@ Blocking issues: 3
 6. Config and calibration paths unvalidated: `pytest tests/integration/test_public_api.py -v` or equivalent config validation has not been recorded.
 
 ## Change Log
+- 2025-12-26 — **Metrics evidence sanity-check test** — PR: #401
+  - Added `tests/unit/test_metrics_evidence_paths.py`: Validates `docs/METRICS_SOURCE.md` references in-repo evidence paths (not CI workflow links) and verifies evidence snapshots exist
+  - **Purpose**: Prevents documentation drift by enforcing committed reproducible evidence over ephemeral CI artifacts
+  - **Evidence impact**: Unit test ensures METRICS_SOURCE remains grounded in repository-tracked artifacts
 - 2025-12-26 — **Readiness tooling hardening** — Base: origin/main
   - Changed files (5): `Makefile`, `scripts/readiness/change_analyzer.py`, `scripts/readiness/changelog_generator.py`, `tests/unit/test_readiness_change_analyzer.py`, `tests/unit/test_readiness_changelog_generator.py`
   - Primary category: mixed; Max risk: high
