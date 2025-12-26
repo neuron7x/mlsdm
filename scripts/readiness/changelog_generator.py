@@ -11,6 +11,8 @@ from pathlib import Path
 from typing import Callable, Sequence
 
 from scripts.readiness import change_analyzer as ca
+from scripts.readiness.evidence_collector import collect_evidence
+from scripts.readiness.policy_engine import evaluate_policy
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -55,7 +57,16 @@ def _collect_changed_files(base_ref: str, root: Path) -> list[str]:
     raise RuntimeError(last_error or f"Unable to compute git diff from {base_ref}..HEAD")
 
 
-def _build_entry(title: str, date_str: str, base_ref: str, analysis: dict[str, object], paths: Sequence[str]) -> str:
+def _build_entry(
+    title: str,
+    date_str: str,
+    base_ref: str,
+    analysis: dict[str, object],
+    paths: Sequence[str],
+    *,
+    evidence_hash: str,
+    policy_verdict: str,
+) -> str:
     counts = analysis.get("counts", {})  # type: ignore[var-annotated]
     categories = json.dumps(counts.get("categories", {}), sort_keys=True, separators=(", ", ": "))
     risks = json.dumps(counts.get("risks", {}), sort_keys=True, separators=(", ", ": "))
@@ -67,7 +78,8 @@ def _build_entry(title: str, date_str: str, base_ref: str, analysis: dict[str, o
         f"  - Changed files ({len(paths)}): {files_fmt}\n"
         f"  - Primary category: {primary_category}; Max risk: {max_risk}\n"
         f"  - Category counts: {categories}\n"
-        f"  - Risk counts: {risks}"
+        f"  - Risk counts: {risks}\n"
+        f"  - Evidence hash: {evidence_hash}; Policy verdict: {policy_verdict}"
     )
 
 
@@ -108,6 +120,8 @@ def generate_update(
     *,
     diff_provider: Callable[[str, Path], Sequence[str]] | None = None,
     analyzer: Callable[[Sequence[str], str, Path], dict[str, object]] | None = None,
+    evidence_collector: Callable[[Path], dict[str, object]] | None = None,
+    policy_evaluator: Callable[[dict[str, object], dict[str, object]], dict[str, object]] | None = None,
     now_provider: Callable[[], datetime] | None = None,
 ) -> tuple[Path, str]:
     _ensure_no_bidi(title, "title")
@@ -122,8 +136,21 @@ def generate_update(
         _ensure_no_bidi(path, "diff path")
     paths = sorted({ca.normalize_path(p) for p in provided_paths if ca.normalize_path(p)})
     analysis = (analyzer or ca.analyze_paths)(paths, base_ref=base_ref, root=root)
+    evidence = (evidence_collector or collect_evidence)(root)
+    policy = (policy_evaluator or evaluate_policy)(analysis, evidence)
 
-    entry = _build_entry(title, date_str, base_ref, analysis, paths)
+    evidence_hash = str(evidence.get("evidence_hash", "sha256-unknown"))
+    policy_verdict = str(policy.get("verdict", "unknown"))
+
+    entry = _build_entry(
+        title,
+        date_str,
+        base_ref,
+        analysis,
+        paths,
+        evidence_hash=evidence_hash,
+        policy_verdict=policy_verdict,
+    )
     content = readiness_path.read_text(encoding="utf-8")
     _ensure_no_bidi(content, "docs/status/READINESS.md")
     updated = _update_last_updated(content, date_str)

@@ -34,12 +34,17 @@ def test_generator_insertion_and_determinism(tmp_path: Path):
 
     def fixed_now():
         return datetime(2025, 1, 1, tzinfo=timezone.utc)
+
+    evidence = {"evidence_hash": "sha256-deadbeef"}
+    policy = {"verdict": "approve"}
     path, updated = cg.generate_update(
         "Test Entry",
         "origin/main",
         root=tmp_path,
         diff_provider=lambda base_ref, root: diff_paths,
         analyzer=lambda paths, base_ref, root: analysis,
+        evidence_collector=lambda root: evidence,
+        policy_evaluator=lambda analysis, evidence: policy,
         now_provider=fixed_now,
     )
 
@@ -48,13 +53,14 @@ def test_generator_insertion_and_determinism(tmp_path: Path):
         "  - Changed files (2): `src/core/app.py`, `tests/test_app.py`\n"
         "  - Primary category: mixed; Max risk: high\n"
         "  - Category counts: {\"documentation\": 0, \"functional_core\": 1, \"infrastructure\": 0, \"mixed\": 0, \"observability\": 0, \"security_critical\": 0, \"test_coverage\": 1}\n"
-        "  - Risk counts: {\"critical\": 0, \"high\": 1, \"info\": 1, \"low\": 0, \"medium\": 0}"
+        "  - Risk counts: {\"critical\": 0, \"high\": 1, \"info\": 1, \"low\": 0, \"medium\": 0}\n"
+        "  - Evidence hash: sha256-deadbeef; Policy verdict: approve"
     )
 
     lines = updated.splitlines()
     assert path == readiness_path
     assert lines[1] == "Last updated: 2025-01-01"
-    assert lines[4:9] == expected_entry.splitlines()
+    assert lines[4:10] == expected_entry.splitlines()
     assert updated.rstrip("\n").endswith("- old entry")
 
     # Running again with identical inputs is deterministic
@@ -64,6 +70,8 @@ def test_generator_insertion_and_determinism(tmp_path: Path):
         root=tmp_path,
         diff_provider=lambda base_ref, root: diff_paths,
         analyzer=lambda paths, base_ref, root: analysis,
+        evidence_collector=lambda root: evidence,
+        policy_evaluator=lambda analysis, evidence: policy,
         now_provider=fixed_now,
     )
     assert updated_again == updated
