@@ -57,6 +57,9 @@ Blocking issues: 3
 6. Config and calibration paths unvalidated: `pytest tests/integration/test_public_api.py -v` or equivalent config validation has not been recorded.
 
 ## Change Log
+- 2025-12-26 — **Metrics evidence sanity-check test** — PR: #401
+  - Evidence: NOT FOUND (no metrics evidence artifacts under `reports/` or `artifacts/` for this PR)
+  - Status: NOT VERIFIED
 - 2025-12-26 — **Evidence+Policy automation polish** — Base: HEAD
   - Changed files: 9; Categories: security_critical(2), test_coverage(3), documentation(1), infrastructure(1), functional_core(2)
   - Primary category: mixed; Max risk: critical

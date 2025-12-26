@@ -1,6 +1,6 @@
 # Metrics Source of Truth
 
-**Last Updated**: December 18, 2025
+**Last Updated**: 2025-12-26
 **Purpose**: Single source for test coverage and quality metrics to prevent documentation drift.
 
 ---
@@ -9,9 +9,9 @@
 
 | Metric | Value | Source |
 |--------|-------|--------|
-| **CI Coverage Threshold** | 65% | [ci-neuro-cognitive-engine.yml](../.github/workflows/ci-neuro-cognitive-engine.yml#L149) |
-| **Actual Coverage** | ~86% | [Latest CI run coverage.xml artifact](https://github.com/neuron7x/mlsdm/actions/workflows/ci-neuro-cognitive-engine.yml) |
-| **Core Modules Coverage** | 90%+ | Critical modules (`core/`, `memory/`, `cognition/`) |
+| **CI Coverage Threshold** | 65% | `.github/workflows/ci-neuro-cognitive-engine.yml` (coverage job command) |
+| **Actual Coverage** | NOT VERIFIED (requires `reports/coverage.xml` artifact from a passing coverage job) | `reports/coverage.xml` (produced by readiness-evidence or ci-neuro-cognitive-engine coverage job) |
+| **Core Modules Coverage** | NOT VERIFIED | `reports/coverage.xml` (when generated) |
 
 ### Why 65% Threshold When 86% Actual?
 
@@ -30,12 +30,14 @@ The CI coverage threshold (65%) is intentionally set below actual coverage (~86%
 
 | Metric | Value | Source |
 |--------|-------|--------|
-| **Total Tests** | ~3,600 | [Latest CI run](https://github.com/neuron7x/mlsdm/actions/workflows/ci-neuro-cognitive-engine.yml) |
-| **Unit Tests** | ~1,900 | `tests/unit/` |
-| **Integration Tests** | ~50 | `tests/integration/` |
-| **E2E Tests** | ~28 | `tests/e2e/` |
-| **Property Tests** | ~50 | `tests/property/` |
-| **Security Tests** | ~38 | `tests/security/` |
+| Metric | Value | Source |
+|--------|-------|--------|
+| **Total Tests** | NOT VERIFIED (requires junit artifacts) | `reports/junit-*.xml` from readiness/CI runs |
+| **Unit Tests** | NOT VERIFIED | `reports/junit-unit.xml` (when produced) |
+| **Integration Tests** | NOT VERIFIED | `reports/junit-integration.xml` (when produced) |
+| **E2E Tests** | NOT VERIFIED | `reports/junit-e2e.xml` (when produced) |
+| **Property Tests** | NOT VERIFIED | `reports/junit-property.xml` (when produced) |
+| **Security Tests** | NOT VERIFIED | `reports/junit-security.xml` (when produced) |
 
 ---
 
