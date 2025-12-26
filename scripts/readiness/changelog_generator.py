@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable, Sequence
 
-from . import change_analyzer as ca
+from scripts.readiness import change_analyzer as ca
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -19,17 +19,40 @@ def _ensure_no_bidi(text: str, label: str) -> None:
     ca._ensure_no_bidi(text, label)  # type: ignore[attr-defined]
 
 
-def _collect_changed_files(base_ref: str, root: Path) -> list[str]:
-    result = subprocess.run(
-        ["git", "-C", str(root), "diff", "--name-only", f"{base_ref}..HEAD"],
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
+def _ref_exists(ref: str, root: Path) -> bool:
+    return (
+        subprocess.run(
+            ["git", "-C", str(root), "rev-parse", "--verify", ref],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        ).returncode
+        == 0
     )
-    if result.returncode != 0:
-        raise RuntimeError(result.stderr.strip() or "Unable to compute git diff")
-    paths = [ca.normalize_path(line) for line in result.stdout.splitlines() if ca.normalize_path(line)]
-    return sorted(dict.fromkeys(paths))
+
+
+def _collect_changed_files(base_ref: str, root: Path) -> list[str]:
+    candidates = [base_ref]
+    if "HEAD^" not in candidates:
+        candidates.append("HEAD^")
+    if "HEAD" not in candidates:
+        candidates.append("HEAD")
+    last_error = ""
+
+    for ref in candidates:
+        if not _ref_exists(ref, root):
+            continue
+        result = subprocess.run(
+            ["git", "-C", str(root), "diff", "--name-only", f"{ref}..HEAD"],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+        )
+        if result.returncode == 0:
+            paths = [ca.normalize_path(line) for line in result.stdout.splitlines() if ca.normalize_path(line)]
+            return sorted(dict.fromkeys(paths))
+        last_error = result.stderr.strip() or last_error
+
+    raise RuntimeError(last_error or f"Unable to compute git diff from {base_ref}..HEAD")
 
 
 def _build_entry(title: str, date_str: str, base_ref: str, analysis: dict[str, object], paths: Sequence[str]) -> str:
