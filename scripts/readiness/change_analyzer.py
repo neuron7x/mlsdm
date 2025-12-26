@@ -322,12 +322,12 @@ def analyze_paths(paths: Sequence[str], base_ref: str, root: Path = ROOT) -> dic
             }
         )
 
-    cat_counts = {name: 0 for name in CATEGORY_PRIORITY}
+    cat_counts = dict.fromkeys(CATEGORY_PRIORITY, 0)
     for cat in categories:
         if cat not in cat_counts:
             raise ValueError(f"Unknown category: {cat}")
         cat_counts[cat] += 1
-    risk_counts = {name: 0 for name in RISK_LEVELS}
+    risk_counts = dict.fromkeys(RISK_LEVELS, 0)
     for risk in risks:
         if risk not in risk_counts:
             raise ValueError(f"Unknown risk: {risk}")

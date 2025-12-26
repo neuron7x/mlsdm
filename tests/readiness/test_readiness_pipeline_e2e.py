@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 from datetime import datetime, timezone
-from pathlib import Path
+from pathlib import Path  # noqa: TCH003
 
 from scripts.readiness import change_analyzer as ca
 from scripts.readiness.changelog_generator import generate_update

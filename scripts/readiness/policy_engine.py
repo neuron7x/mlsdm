@@ -7,11 +7,14 @@ import hashlib
 import json
 import sys
 from pathlib import Path
-from typing import Any, Iterable
+from typing import TYPE_CHECKING, Any
 
 import yaml
 
 from scripts.readiness import change_analyzer as ca
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable
 
 ROOT = Path(__file__).resolve().parents[2]
 

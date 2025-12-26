@@ -8,11 +8,15 @@ import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Callable, Sequence
+from typing import TYPE_CHECKING
 
 from scripts.readiness import change_analyzer as ca
 from scripts.readiness.evidence_collector import collect_evidence
 from scripts.readiness.policy_engine import evaluate_policy
+
+if TYPE_CHECKING:
+    from collections.abc import Callable, Sequence
+
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -115,7 +119,7 @@ def _insert_entry(content: str, entry: str) -> str:
     try:
         idx = next(i for i, line in enumerate(lines) if line.strip() == "## Change Log")
     except StopIteration:
-        raise FileNotFoundError("## Change Log section not found in readiness document")
+        raise FileNotFoundError("## Change Log section not found in readiness document") from None
 
     entry_lines = entry.splitlines()
     if entry_lines and lines[idx + 1 : idx + 1 + len(entry_lines)] == entry_lines:

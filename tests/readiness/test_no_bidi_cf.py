@@ -10,6 +10,7 @@ TARGETS = [
     Path("scripts/readiness/changelog_generator.py"),
     Path("docs/status/README.md"),
     Path("docs/status/READINESS.md"),
+    Path(".github/workflows/readiness.yml"),
 ]
 
 
