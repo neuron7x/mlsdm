@@ -3,7 +3,6 @@ from __future__ import annotations
 import fnmatch
 from pathlib import Path
 
-
 MAX_EVIDENCE_FILE_BYTES = 5 * 1024 * 1024  # 5 MB cap per requirement: keep evidence small and non-sensitive
 FORBIDDEN_PATTERNS = [
     "*.env",
