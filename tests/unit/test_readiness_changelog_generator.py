@@ -26,7 +26,7 @@ def test_generator_insertion_and_determinism(tmp_path: Path):
                 "functional_core": 1,
                 "mixed": 0,
             },
-            "risks": {"info": 1, "low": 0, "medium": 0, "high": 1, "critical": 0},
+                "risks": {"informational": 1, "low": 0, "medium": 0, "high": 1, "critical": 0},
         },
         "primary_category": "mixed",
         "max_risk": "high",
@@ -36,7 +36,7 @@ def test_generator_insertion_and_determinism(tmp_path: Path):
         return datetime(2025, 1, 1, tzinfo=timezone.utc)
 
     evidence = {"evidence_hash": "sha256-deadbeef"}
-    policy = {"verdict": "approve"}
+    policy = {"verdict": "approve", "matched_rules": [{"rule_id": "CORE-001", "missing": []}]}
     path, updated = cg.generate_update(
         "Test Entry",
         "origin/main",
@@ -50,11 +50,11 @@ def test_generator_insertion_and_determinism(tmp_path: Path):
 
     expected_entry = (
         "- 2025-01-01 — **Test Entry** — Base: origin/main\n"
-        "  - Changed files (2): `src/core/app.py`, `tests/test_app.py`\n"
+        "  - Changed files: 2; Categories: test_coverage(1), functional_core(1)\n"
         "  - Primary category: mixed; Max risk: high\n"
         "  - Category counts: {\"documentation\": 0, \"functional_core\": 1, \"infrastructure\": 0, \"mixed\": 0, \"observability\": 0, \"security_critical\": 0, \"test_coverage\": 1}\n"
-        "  - Risk counts: {\"critical\": 0, \"high\": 1, \"info\": 1, \"low\": 0, \"medium\": 0}\n"
-        "  - Evidence hash: sha256-deadbeef; Policy verdict: approve"
+        "  - Risk counts: {\"critical\": 0, \"high\": 1, \"informational\": 1, \"low\": 0, \"medium\": 0}\n"
+        "  - Evidence hash: sha256-deadbeef; Policy: approve (CORE-001: ok)"
     )
 
     lines = updated.splitlines()

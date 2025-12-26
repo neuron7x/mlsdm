@@ -66,20 +66,28 @@ def _build_entry(
     *,
     evidence_hash: str,
     policy_verdict: str,
+    policy_reason: str,
 ) -> str:
     counts = analysis.get("counts", {})  # type: ignore[var-annotated]
     categories = json.dumps(counts.get("categories", {}), sort_keys=True, separators=(", ", ": "))
     risks = json.dumps(counts.get("risks", {}), sort_keys=True, separators=(", ", ": "))
     primary_category = analysis.get("primary_category", "functional_core")
-    max_risk = analysis.get("max_risk", "info")
-    files_fmt = ", ".join(f"`{p}`" for p in paths)
+    max_risk = analysis.get("max_risk", "informational")
+    cat_counts = counts.get("categories", {}) if isinstance(counts, dict) else {}
+    cat_summary = []
+    if isinstance(cat_counts, dict):
+        for key in ca.CATEGORY_PRIORITY:
+            val = cat_counts.get(key, 0)
+            if val:
+                cat_summary.append(f"{key}({val})")
+    category_line = ", ".join(cat_summary)
     return (
         f"- {date_str} — **{title}** — Base: {base_ref}\n"
-        f"  - Changed files ({len(paths)}): {files_fmt}\n"
+        f"  - Changed files: {len(paths)}; Categories: {category_line}\n"
         f"  - Primary category: {primary_category}; Max risk: {max_risk}\n"
         f"  - Category counts: {categories}\n"
         f"  - Risk counts: {risks}\n"
-        f"  - Evidence hash: {evidence_hash}; Policy verdict: {policy_verdict}"
+        f"  - Evidence hash: {evidence_hash}; Policy: {policy_verdict} ({policy_reason})"
     )
 
 
@@ -141,6 +149,11 @@ def generate_update(
 
     evidence_hash = str(evidence.get("evidence_hash", "sha256-unknown"))
     policy_verdict = str(policy.get("verdict", "unknown"))
+    reason = " / ".join(
+        f"{r['rule_id']}: {', '.join(r.get('missing', []) or ['ok'])}"
+        for r in policy.get("matched_rules", [])
+    )
+    policy_reason = reason or "no rules"
 
     entry = _build_entry(
         title,
@@ -150,6 +163,7 @@ def generate_update(
         paths,
         evidence_hash=evidence_hash,
         policy_verdict=policy_verdict,
+        policy_reason=policy_reason,
     )
     content = readiness_path.read_text(encoding="utf-8")
     _ensure_no_bidi(content, "docs/status/READINESS.md")
@@ -170,9 +184,9 @@ def _parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--base-ref", default="origin/main", help="Git base reference (default: origin/main)")
     parser.add_argument(
         "--mode",
-        choices=("preview", "apply"),
+        choices=("preview", "apply", "dry-run"),
         default="preview",
-        help="preview: print updated document; apply: write to docs/status/READINESS.md",
+        help="preview/dry-run: print updated document; apply: write to docs/status/READINESS.md",
     )
     return parser.parse_args(argv)
 
@@ -181,7 +195,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = _parse_args(argv)
     try:
         path, updated = generate_update(args.title, args.base_ref)
-        if args.mode == "preview":
+        if args.mode in ("preview", "dry-run"):
             print(updated, end="")
             return 0
         _write_atomic(path, updated)

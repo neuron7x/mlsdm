@@ -42,3 +42,48 @@ def test_infra_security_rejects_when_findings_present():
     assert policy["verdict"] == "reject"
     assert any(rule["rule_id"] == "INFRA-001" for rule in policy["matched_rules"])
     assert policy["max_risk"] in ("high", "medium", "critical")
+
+
+def test_security_rule_requires_evidence(tmp_path, monkeypatch):
+    monkeypatch.setattr(pe, "ROOT", tmp_path)
+    change = {
+        "max_risk": "critical",
+        "files": [{"path": "src/mlsdm/security/core.py", "category": "security_critical"}],
+        "counts": {"categories": {"security_critical": 1}, "risks": {"critical": 1}},
+    }
+    evidence = {
+        "sources": {"junit": {"found": False}},
+        "tests": {"totals": {"passed": 0, "failed": 0, "skipped": 0}},
+        "security": {"tools": [], "measured": False},
+    }
+    policy = pe.evaluate_policy(change, evidence)
+    assert policy["verdict"] in ("approve_with_conditions", "reject", "manual_review")
+    assert any(rule["rule_id"] == "SEC-001" for rule in policy["matched_rules"])
+
+
+def test_infra_requires_pinned_actions(tmp_path, monkeypatch):
+    workflows_dir = tmp_path / ".github" / "workflows"
+    workflows_dir.mkdir(parents=True)
+    wf = workflows_dir / "ci.yml"
+    wf.write_text(
+        """
+name: CI
+on: push
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@main
+""",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(pe, "ROOT", tmp_path)
+    change = _base_change([wf.relative_to(tmp_path).as_posix()], max_risk="medium")
+    evidence = {
+        "sources": {"junit": {"found": True}},
+        "tests": {"totals": {"passed": 1, "failed": 0, "skipped": 0}},
+        "security": {"tools": [], "measured": False},
+    }
+    policy = pe.evaluate_policy(change, evidence)
+    rule = next(r for r in policy["matched_rules"] if r["rule_id"] == "INFRA-001")
+    assert any("Actions must be pinned" in m for m in rule["missing"])

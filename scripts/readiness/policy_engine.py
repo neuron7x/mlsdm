@@ -9,9 +9,14 @@ import sys
 from pathlib import Path
 from typing import Any, Iterable
 
+import yaml
+
+from scripts.readiness import change_analyzer as ca
+
 ROOT = Path(__file__).resolve().parents[2]
 
 RISK_ORDER = ["informational", "low", "medium", "high", "critical"]
+CATEGORY_ORDER = list(ca.CATEGORY_PRIORITY)
 
 
 def _risk_rank(name: str) -> int:
@@ -77,6 +82,26 @@ def _is_infra(path: str) -> bool:
     return normalized.startswith(".github/workflows/") or normalized == "scripts/readiness_check.py"
 
 
+def _is_security(path: str) -> bool:
+    normalized = path.replace("\\", "/")
+    return "security/" in normalized or "auth/" in normalized or "moral_filter" in normalized or "memory/phase" in normalized
+
+
+def _validate_workflow(path: Path) -> list[str]:
+    missing: list[str] = []
+    try:
+        content = path.read_text(encoding="utf-8")
+        yaml.safe_load(content)
+    except Exception:
+        missing.append("Workflow YAML invalid")
+        return missing
+    if "@main" in content:
+        missing.append("Actions must be pinned (no @main)")
+    if "uses:" in content and "@" not in content.split("uses:", 1)[1]:
+        missing.append("Actions must declare a pinned ref")
+    return missing
+
+
 def evaluate_policy(change_analysis: dict[str, Any], evidence: dict[str, Any]) -> dict[str, Any]:
     """Evaluate readiness policy given change analysis and collected evidence."""
     paths = sorted({p.strip() for p in _paths_from_analysis(change_analysis) if p.strip()})
@@ -85,6 +110,15 @@ def evaluate_policy(change_analysis: dict[str, Any], evidence: dict[str, Any]) -
     matched_rules: list[dict[str, Any]] = []
     blocking: list[str] = []
     recommendations: list[str] = []
+
+    categories = []
+    for file_entry in change_analysis.get("files", []) or []:
+        category = file_entry.get("category")
+        if category:
+            categories.append(str(category))
+        else:
+            categories.append(ca.classify_category(str(file_entry.get("path", ""))))
+    categories = sorted({c for c in categories if c})
 
     tests_totals = evidence.get("tests", {}).get("totals", {})
     tests_measured = bool(evidence.get("sources", {}).get("junit", {}).get("found")) and (
@@ -96,14 +130,18 @@ def evaluate_policy(change_analysis: dict[str, Any], evidence: dict[str, Any]) -
     security_high = sum(int(t.get("high", 0)) for t in security_tools if isinstance(t, dict))
     security_medium = sum(int(t.get("medium", 0)) for t in security_tools if isinstance(t, dict))
 
-    infra_changed = any(_is_infra(p) for p in paths)
-    core_changed = any(_is_core(p) for p in paths)
+    infra_changed = any(_is_infra(p) for p in paths) or "infrastructure" in categories
+    core_changed = "functional_core" in categories
+    security_changed = "security_critical" in categories or any(_is_security(p) for p in paths)
     observability_only = paths and all(_is_observability(p) or _is_doc(p) or _is_test(p) for p in paths)
     docs_only = paths and all(_is_doc(p) for p in paths)
     tests_only = paths and all(_is_test(p) for p in paths)
 
     if infra_changed:
         missing: list[str] = []
+        workflow_paths = [p for p in paths if _is_infra(p)]
+        for wf in workflow_paths:
+            missing.extend(_validate_workflow(ROOT / wf))
         if security_measured and (security_high > 0 or security_medium > 0):
             missing.append("Resolve security findings (high/medium)")
             blocking.append("Security findings present in evidence")
@@ -112,10 +150,12 @@ def evaluate_policy(change_analysis: dict[str, Any], evidence: dict[str, Any]) -
             "title": "Infrastructure and readiness changes require policy review",
             "category": "infrastructure",
             "risk": "medium",
-            "requirements": ["Infrastructure changes documented", "Security scans clean"],
-            "missing": missing,
+            "requirements": ["Infrastructure changes documented", "Security scans clean", "Pinned GitHub Actions"],
+            "missing": sorted(dict.fromkeys(missing)),
         }
         matched_rules.append(rule)
+        if missing:
+            recommendations.append("Address infra rule gaps before merge")
         max_risk = _highest_risk([max_risk, rule["risk"], "high" if missing else rule["risk"]])
 
     if core_changed:
@@ -136,6 +176,26 @@ def evaluate_policy(change_analysis: dict[str, Any], evidence: dict[str, Any]) -
         max_risk = _highest_risk([max_risk, rule["risk"]])
         if core_missing and change_analysis.get("max_risk") == "critical":
             blocking.append("Critical core change without passing tests")
+
+    if security_changed:
+        sec_missing: list[str] = []
+        if not security_measured:
+            sec_missing.append("Security evidence missing")
+        if security_high > 0 or security_medium > 0:
+            sec_missing.append("Security findings present")
+            blocking.append("Security findings detected")
+        rule = {
+            "rule_id": "SEC-001",
+            "title": "Security-sensitive changes require clean scans",
+            "category": "security_critical",
+            "risk": "critical",
+            "requirements": ["Security scans executed", "No high/medium findings"],
+            "missing": sec_missing,
+        }
+        matched_rules.append(rule)
+        max_risk = _highest_risk([max_risk, rule["risk"]])
+        if sec_missing and not blocking:
+            recommendations.append("Provide security scan evidence for security-sensitive changes")
 
     if observability_only or tests_only:
         rule = {
@@ -165,13 +225,15 @@ def evaluate_policy(change_analysis: dict[str, Any], evidence: dict[str, Any]) -
 
     # verdict precedence: reject > manual_review > approve_with_conditions > approve
     verdict = "approve"
-    if infra_changed or core_changed:
+    if infra_changed or core_changed or security_changed:
         verdict = "approve_with_conditions"
     if blocking:
         verdict = "reject"
-    elif change_analysis.get("max_risk") == "critical" and core_changed:
+    elif change_analysis.get("max_risk") == "critical" and (core_changed or security_changed):
         verdict = "manual_review"
     if infra_changed and security_measured and (security_high > 0 or security_medium > 0):
+        verdict = "reject"
+    if security_changed and (security_high > 0 or security_medium > 0):
         verdict = "reject"
 
     if not matched_rules:

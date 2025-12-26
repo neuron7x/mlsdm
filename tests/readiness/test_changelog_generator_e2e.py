@@ -25,7 +25,7 @@ def test_generate_entry_includes_policy_and_evidence(tmp_path: Path):
     }
 
     evidence = {"evidence_hash": "sha256-feedface"}
-    policy = {"verdict": "approve_with_conditions"}
+    policy = {"verdict": "approve_with_conditions", "matched_rules": [{"rule_id": "CORE-001", "missing": ["Tests evidence missing or empty"]}]}
 
     _, updated = cg.generate_update(
         "Readiness Update",
@@ -40,5 +40,5 @@ def test_generate_entry_includes_policy_and_evidence(tmp_path: Path):
 
     lines = updated.splitlines()
     assert lines[1] == "Last updated: 2024-02-02"
-    assert "Evidence hash: sha256-feedface; Policy verdict: approve_with_conditions" in updated
+    assert "Evidence hash: sha256-feedface; Policy: approve_with_conditions (CORE-001: Tests evidence missing or empty)" in updated
     assert updated.count("Evidence hash") == 1

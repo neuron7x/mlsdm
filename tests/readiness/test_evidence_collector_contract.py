@@ -62,3 +62,20 @@ def test_collect_evidence_contract_and_hash_stability(tmp_path, monkeypatch):
 
     assert first["evidence_hash"].startswith("sha256-")
     assert first["evidence_hash"] == second["evidence_hash"]
+
+
+def test_collect_evidence_handles_invalid_files(tmp_path, monkeypatch):
+    reports = tmp_path / "reports"
+    reports.mkdir(parents=True)
+    (reports / "junit-unit.xml").write_text("not xml", encoding="utf-8")
+    (tmp_path / "coverage.xml").write_text("broken", encoding="utf-8")
+    (reports / "bandit.json").write_text("{", encoding="utf-8")
+
+    fixed_now = datetime(2024, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
+    monkeypatch.setattr(ec, "_now", lambda: fixed_now)
+
+    evidence = ec.collect_evidence(tmp_path)
+    assert evidence["tests"]["suites"] == []
+    assert evidence["coverage"]["measured"] is False
+    assert evidence["security"]["tools"][0]["measured"] is False
+    assert evidence["performance"]["measured"] is False

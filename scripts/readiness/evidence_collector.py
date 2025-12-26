@@ -12,6 +12,13 @@ from typing import Any
 from xml.etree import ElementTree
 
 ROOT = Path(__file__).resolve().parents[2]
+SUITE_MAP = {
+    "junit-unit": "unit",
+    "junit-integration": "integration",
+    "junit-property": "property",
+    "junit-e2e": "e2e",
+    "junit-security": "security",
+}
 
 
 def _now() -> datetime:
@@ -25,6 +32,24 @@ def _as_posix(path: Path, root: Path) -> str:
         return path.resolve().as_posix()
 
 
+def _infer_suite(path: Path, suite_name: str) -> str:
+    stem = path.stem.lower()
+    if stem in SUITE_MAP:
+        return SUITE_MAP[stem]
+    name = suite_name.lower()
+    if "unit" in name:
+        return "unit"
+    if "integration" in name:
+        return "integration"
+    if "property" in name:
+        return "property"
+    if "e2e" in name or "endtoend" in name:
+        return "e2e"
+    if "security" in name:
+        return "security"
+    return "unknown"
+
+
 def _safe_parse_junit(path: Path) -> list[dict[str, Any]] | None:
     try:
         tree = ElementTree.parse(path)
@@ -35,18 +60,7 @@ def _safe_parse_junit(path: Path) -> list[dict[str, Any]] | None:
     suites = list(root.iter("testsuite")) if root.tag != "testsuite" else [root]
     parsed: list[dict[str, Any]] = []
     for suite in suites:
-        name = suite.attrib.get("name", "").lower()
-        suite_type = "unknown"
-        if "unit" in name:
-            suite_type = "unit"
-        elif "integration" in name:
-            suite_type = "integration"
-        elif "property" in name:
-            suite_type = "property"
-        elif "e2e" in name or "endtoend" in name:
-            suite_type = "e2e"
-        elif "security" in name:
-            suite_type = "security"
+        suite_type = _infer_suite(path, suite.attrib.get("name", ""))
 
         testcases = list(suite.iter("testcase"))
         tests_attr = suite.attrib.get("tests")
@@ -216,6 +230,63 @@ def _count_gitleaks(payload: Any) -> tuple[int, int, int] | None:
     return high, medium, low
 
 
+def _collect_junit(junit_files: list[Path]) -> tuple[list[dict[str, Any]], bool]:
+    entries: list[dict[str, Any]] = []
+    measured = True
+    for path in junit_files:
+        parsed = _safe_parse_junit(path)
+        if parsed is None:
+            print(f"[evidence] Failed to parse JUnit XML: {path}", file=sys.stderr)
+            return [], False
+        entries.extend(parsed)
+    return entries, measured
+
+
+def _collect_coverage(cov_paths: list[Path]) -> tuple[bool, float, float, Path | None]:
+    for path in cov_paths:
+        if path.exists():
+            parsed = _parse_coverage(path)
+            if parsed is None:
+                print(f"[evidence] Failed to parse coverage XML: {path}", file=sys.stderr)
+                return False, 0.0, 0.0, path
+            return True, parsed[0], parsed[1], path
+    return False, 0.0, 0.0, None
+
+
+def _collect_security(security_paths: dict[str, Path]) -> tuple[list[dict[str, Any]], bool]:
+    entries: list[dict[str, Any]] = []
+    measured = False
+    for tool_name, path in security_paths.items():
+        if not path.exists():
+            continue
+        payload = _load_json(path)
+        counts: tuple[int, int, int] | None = None
+        if tool_name == "bandit":
+            counts = _count_bandit(payload) if payload is not None else None
+        elif tool_name == "semgrep":
+            counts = _count_semgrep(payload) if payload is not None else None
+        elif tool_name == "gitleaks":
+            counts = _count_gitleaks(payload) if payload is not None else None
+        if counts is None:
+            print(f"[evidence] Failed to parse security JSON for {tool_name}: {path}", file=sys.stderr)
+            entries.append({"tool": tool_name, "high": 0, "medium": 0, "low": 0, "measured": False})
+            continue
+        measured = measured or True
+        high, medium, low = counts
+        entries.append({"tool": tool_name, "high": high, "medium": medium, "low": low, "measured": True})
+    return sorted(entries, key=lambda x: x["tool"]), measured
+
+
+def _collect_performance(perf_path: Path) -> bool:
+    if not perf_path.exists():
+        return False
+    payload = _load_json(perf_path)
+    if payload is None:
+        print(f"[evidence] Failed to parse performance JSON: {perf_path}", file=sys.stderr)
+        return False
+    return True
+
+
 def collect_evidence(root: Path = ROOT) -> dict[str, Any]:
     """Collect local CI evidence into a deterministic JSON contract."""
     root = root.resolve()
@@ -230,15 +301,7 @@ def collect_evidence(root: Path = ROOT) -> dict[str, Any]:
 
     timestamp = _now().isoformat()
 
-    junit_entries: list[dict[str, Any]] = []
-    junit_measured = True
-    for path in junit_files:
-        parsed = _safe_parse_junit(path)
-        if parsed is None:
-            junit_measured = False
-            junit_entries = []
-            break
-        junit_entries.extend(parsed)
+    junit_entries, junit_measured = _collect_junit(junit_files)
     suites = _aggregate_suites(junit_entries) if junit_entries else []
     totals = {
         "passed": sum(s["passed"] for s in suites),
@@ -248,50 +311,9 @@ def collect_evidence(root: Path = ROOT) -> dict[str, Any]:
     }
     tests_section = {"suites": suites, "totals": totals}
 
-    cov_measured = False
-    cov_line = 0.0
-    cov_branch = 0.0
-    cov_path_found: Path | None = None
-    for path in coverage_paths:
-        if path.exists():
-            cov_path_found = path
-            parsed = _parse_coverage(path)
-            if parsed:
-                cov_measured = True
-                cov_line, cov_branch = parsed
-            break
-
-    security_entries: list[dict[str, Any]] = []
-    security_measured = False
-    for tool_name, path in security_paths.items():
-        if not path.exists():
-            continue
-        counts: tuple[int, int, int] | None = None
-        payload = _load_json(path)
-        if tool_name == "bandit":
-            counts = _count_bandit(payload) if payload is not None else None
-        elif tool_name == "semgrep":
-            counts = _count_semgrep(payload) if payload is not None else None
-        elif tool_name == "gitleaks":
-            counts = _count_gitleaks(payload) if payload is not None else None
-        measured = counts is not None
-        security_measured = security_measured or measured
-        high, medium, low = counts if counts else (0, 0, 0)
-        security_entries.append(
-            {
-                "tool": tool_name,
-                "high": high,
-                "medium": medium,
-                "low": low,
-                "measured": measured,
-            }
-        )
-    security_entries = sorted(security_entries, key=lambda x: x["tool"])
-
-    perf_measured = False
-    if performance_path.exists():
-        payload = _load_json(performance_path)
-        perf_measured = payload is not None
+    cov_measured, cov_line, cov_branch, cov_path_found = _collect_coverage(coverage_paths)
+    security_entries, security_measured = _collect_security(security_paths)
+    perf_measured = _collect_performance(performance_path)
 
     evidence: dict[str, Any] = {
         "timestamp_utc": timestamp,

@@ -51,11 +51,11 @@ RISK_MAP: dict[str, str] = {
     "functional_core": "high",
     "infrastructure": "medium",
     "observability": "low",
-    "test_coverage": "info",
-    "documentation": "info",
+    "test_coverage": "informational",
+    "documentation": "informational",
 }
 
-RISK_LEVELS: tuple[str, ...] = ("info", "low", "medium", "high", "critical")
+RISK_LEVELS: tuple[str, ...] = ("informational", "low", "medium", "high", "critical")
 
 RISK_ORDER: dict[str, int] = {name: idx for idx, name in enumerate(RISK_LEVELS)}
 
@@ -76,7 +76,12 @@ def normalize_path(path: str) -> str:
 
 def classify_category(path: str) -> str:
     normalized = normalize_path(path).lower()
-    if any(marker in normalized for marker in SECURITY_MARKERS) or "/security/" in normalized:
+    if (
+        any(marker in normalized for marker in SECURITY_MARKERS)
+        or "/security/" in normalized
+        or "moral_filter" in normalized
+        or "memory/phase" in normalized
+    ):
         return "security_critical"
     name = Path(normalized).name
     if normalized.startswith("tests/") or name.startswith("test_"):
@@ -93,7 +98,7 @@ def classify_category(path: str) -> str:
 
 
 def risk_for_category(category: str) -> str:
-    return RISK_MAP.get(category, "info")
+    return RISK_MAP.get(category, "informational")
 
 
 def module_name(path: str) -> str:
@@ -245,7 +250,7 @@ def get_file_at_ref(path: str, ref: str, root: Path = ROOT) -> str | None:
 
 def _max_risk(risks: Sequence[str]) -> str:
     max_rank = -1
-    max_name = "info"
+    max_name = "informational"
     for name in risks:
         rank = RISK_ORDER.get(name, -1)
         if rank > max_rank:

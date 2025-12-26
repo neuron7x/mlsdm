@@ -98,7 +98,7 @@ def test_json_structure_and_counts(tmp_path: Path):
             "functional_core": 1,
             "mixed": 0,
         },
-        "risks": {"info": 2, "low": 1, "medium": 1, "high": 1, "critical": 1},
+            "risks": {"informational": 2, "low": 1, "medium": 1, "high": 1, "critical": 1},
     }
 
     expected_files = [
@@ -115,7 +115,7 @@ def test_json_structure_and_counts(tmp_path: Path):
         {
             "path": "docs/readme.md",
             "category": "documentation",
-            "risk": "info",
+            "risk": "informational",
             "metadata": {"missing": False, "new_file": False, "parse_error": False},
             "semantic_diff": None,
             "functions_added": [],
@@ -173,7 +173,7 @@ def test_json_structure_and_counts(tmp_path: Path):
         {
             "path": "tests/test_app.py",
             "category": "test_coverage",
-            "risk": "info",
+            "risk": "informational",
             "metadata": {"missing": False, "new_file": True, "parse_error": False},
             "semantic_diff": {
                 "added_functions": ["test_app:test_sample()->None"],
