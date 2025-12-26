@@ -129,7 +129,7 @@ def measure_cognitive_controller_memory() -> float:
     gc.collect()
     tracemalloc.start()
 
-    # Create controller with production settings
+    # Create controller with default settings (other params use production defaults)
     dimension = 384  # Standard embedding dimension
     controller = CognitiveController(
         dim=dimension,
