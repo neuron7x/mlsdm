@@ -235,8 +235,9 @@ def _read_file(path: Path) -> str | None:
 
 def get_file_at_ref(path: str, ref: str, root: Path = ROOT) -> str | None:
     cmd = ["git", "-C", str(root), "show", f"{ref}:{path}"]
-    result = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8")
-    if result.returncode != 0:
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", check=True)
+    except subprocess.CalledProcessError:
         return None
     try:
         _ensure_no_bidi(result.stdout, f"{ref}:{path}")

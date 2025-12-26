@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime, timezone
 from pathlib import Path
 
 from scripts.readiness import change_analyzer as ca
@@ -10,6 +11,7 @@ from scripts.readiness.policy_engine import evaluate_policy
 
 
 def test_readiness_pipeline_deterministic(tmp_path: Path):
+    fixed_now = datetime(2024, 1, 2, tzinfo=timezone.utc)
     root = tmp_path
     (root / "reports").mkdir(parents=True)
     (root / "docs" / "status").mkdir(parents=True)
@@ -22,7 +24,14 @@ def test_readiness_pipeline_deterministic(tmp_path: Path):
     paths = [str((sample_py / "app.py").relative_to(root))]
 
     analysis = ca.analyze_paths(paths, base_ref="origin/main", root=root)
-    evidence = collect_evidence(root)
+    # Freeze timestamps for determinism
+    original_now = collect_evidence.__globals__["_now"]
+    collect_evidence.__globals__["_now"] = lambda: fixed_now
+    try:
+        evidence = collect_evidence(root)
+    finally:
+        collect_evidence.__globals__["_now"] = original_now
+
     policy = evaluate_policy(analysis, evidence)
 
     path, updated = generate_update(
@@ -33,6 +42,7 @@ def test_readiness_pipeline_deterministic(tmp_path: Path):
         analyzer=lambda p, base_ref, root: analysis,
         evidence_collector=lambda root: evidence,
         policy_evaluator=lambda a, e: policy,
+        now_provider=lambda: fixed_now,
     )
     assert path == root / "docs" / "status" / "READINESS.md"
 

@@ -22,14 +22,16 @@ def _ensure_no_bidi(text: str, label: str) -> None:
 
 
 def _ref_exists(ref: str, root: Path) -> bool:
-    return (
-        subprocess.run(
+    try:
+        result = subprocess.run(
             ["git", "-C", str(root), "rev-parse", "--verify", ref],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
-        ).returncode
-        == 0
-    )
+            check=True,
+        )
+        return result.returncode == 0
+    except subprocess.CalledProcessError:
+        return False
 
 
 def _collect_changed_files(base_ref: str, root: Path) -> list[str]:
@@ -43,16 +45,18 @@ def _collect_changed_files(base_ref: str, root: Path) -> list[str]:
     for ref in candidates:
         if not _ref_exists(ref, root):
             continue
-        result = subprocess.run(
-            ["git", "-C", str(root), "diff", "--name-only", f"{ref}..HEAD"],
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-        )
-        if result.returncode == 0:
+        try:
+            result = subprocess.run(
+                ["git", "-C", str(root), "diff", "--name-only", f"{ref}..HEAD"],
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                check=True,
+            )
             paths = [ca.normalize_path(line) for line in result.stdout.splitlines() if ca.normalize_path(line)]
             return sorted(dict.fromkeys(paths))
-        last_error = result.stderr.strip() or last_error
+        except subprocess.CalledProcessError as exc:
+            last_error = (exc.stderr or "").strip() or last_error
 
     raise RuntimeError(last_error or f"Unable to compute git diff from {base_ref}..HEAD")
 
