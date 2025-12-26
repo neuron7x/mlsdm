@@ -272,7 +272,7 @@ def _collect_security(security_paths: dict[str, Path]) -> tuple[list[dict[str, A
             print(f"[evidence] Failed to parse security JSON for {tool_name}: {path}", file=sys.stderr)
             entries.append({"tool": tool_name, "high": 0, "medium": 0, "low": 0, "measured": False})
             continue
-        measured = measured or True
+        measured = True
         high, medium, low = counts
         entries.append({"tool": tool_name, "high": high, "medium": medium, "low": low, "measured": True})
     return sorted(entries, key=lambda x: x["tool"]), measured

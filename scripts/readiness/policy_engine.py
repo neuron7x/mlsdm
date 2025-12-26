@@ -99,9 +99,9 @@ def _validate_workflow(path: Path) -> list[str]:
             continue
         uses_part = line.split("uses:", 1)[1].strip()
         if "@main" in uses_part:
-            missing.append("Actions must be pinned (no @main)")
+            missing.append(f"Action {uses_part} must be pinned (no @main)")
         if "@" not in uses_part:
-            missing.append("Actions must declare a pinned ref")
+            missing.append(f"Action {uses_part} must declare a pinned ref")
     return missing
 
 
@@ -158,7 +158,7 @@ def evaluate_policy(change_analysis: dict[str, Any], evidence: dict[str, Any]) -
         }
         matched_rules.append(rule)
         if missing:
-            recommendations.append("Address infra rule gaps before merge")
+            recommendations.append("Address infrastructure gaps (pinned actions, clean security scans)")
         max_risk = _highest_risk([max_risk, rule["risk"], "high" if missing else rule["risk"]])
 
     if core_changed:

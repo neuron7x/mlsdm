@@ -86,4 +86,4 @@ jobs:
     }
     policy = pe.evaluate_policy(change, evidence)
     rule = next(r for r in policy["matched_rules"] if r["rule_id"] == "INFRA-001")
-    assert any("Actions must be pinned" in m for m in rule["missing"])
+    assert any("must be pinned" in m for m in rule["missing"])
