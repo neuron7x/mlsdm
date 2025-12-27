@@ -125,3 +125,100 @@ jobs:
           path: |
             coverage-gate.log
             coverage.xml
+
+  truth_judge:
+    runs-on: ubuntu-latest
+    needs: deps_smoke
+    timeout-minutes: 50
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Cache uv dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/uv
+            .venv
+          key: uv-${{ runner.os }}-${{ hashFiles('uv.lock') }}
+          restore-keys: |
+            uv-${{ runner.os }}-
+      - name: Install deps via uv
+        run: |
+          python -m pip install -U pip
+          pip install uv
+          uv sync --frozen --extra test --extra dev
+      - name: Compute evidence dir
+        id: evidence_dir
+        shell: bash
+        run: |
+          set -euo pipefail
+          DATE="$(date -u +%F)"
+          SHA="$(git rev-parse --short=12 HEAD)"
+          EVIDENCE_DIR="artifacts/evidence/${DATE}/${SHA}"
+          mkdir -p "${EVIDENCE_DIR}"
+          echo "evidence_dir=${EVIDENCE_DIR}" >> "$GITHUB_OUTPUT"
+          echo "EVIDENCE_DIR=${EVIDENCE_DIR}" >> "$GITHUB_ENV"
+      - name: Capture evidence snapshot
+        id: capture
+        shell: bash
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          LOG_PATH="${EVIDENCE_DIR}/capture.log"
+          set +e
+          make evidence >"${LOG_PATH}" 2>&1
+          status=$?
+          set -e
+          echo "capture_status=${status}" >> "$GITHUB_OUTPUT"
+          exit "${status}"
+      - name: Verify evidence integrity
+        id: verify
+        if: always()
+        shell: bash
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          LOG_PATH="${EVIDENCE_DIR}/verify.log"
+          set +e
+          python scripts/evidence/verify_evidence_snapshot.py --evidence-dir "$EVIDENCE_DIR" >"${LOG_PATH}" 2>&1
+          status=$?
+          set -e
+          echo "verify_status=${status}" >> "$GITHUB_OUTPUT"
+          exit "${status}"
+      - name: Check drift against baseline
+        id: drift
+        if: always()
+        shell: bash
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          LOG_PATH="${EVIDENCE_DIR}/drift.log"
+          set +e
+          python scripts/evidence/check_drift.py --baseline benchmarks/baseline.json --evidence-dir "$EVIDENCE_DIR" >"${LOG_PATH}" 2>&1
+          status=$?
+          set -e
+          echo "drift_status=${status}" >> "$GITHUB_OUTPUT"
+          exit "${status}"
+      - name: Upload evidence artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: evidence-truth-judge
+          path: ${{ steps.evidence_dir.outputs.evidence_dir }}
+      - name: Enforce truth judge result
+        if: always()
+        run: |
+          capture=${{ steps.capture.outputs.capture_status || 0 }}
+          verify=${{ steps.verify.outputs.verify_status || 0 }}
+          drift=${{ steps.drift.outputs.drift_status || 0 }}
+          fail=0
+          if [ "$capture" != "0" ]; then echo "Capture evidence failed (see ${EVIDENCE_DIR}/capture.log)"; fail=1; fi
+          if [ "$verify" != "0" ]; then echo "Verify evidence failed (see ${EVIDENCE_DIR}/verify.log)"; fail=1; fi
+          if [ "$drift" != "0" ]; then echo "Drift check failed (see ${EVIDENCE_DIR}/drift.log)"; fail=1; fi
+          if [ "$fail" -ne 0 ]; then exit 1; fi
