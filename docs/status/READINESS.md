@@ -1,5 +1,5 @@
 # System Readiness Status
-Last updated: 2025-12-26
+Last updated: 2025-12-27
 Owner: neuron7x / MLSDM maintainers
 Scope: MLSDM cognitive engine repository (src/, tests/, deploy/, workflows)
 
@@ -19,7 +19,7 @@ Blocking issues: 3
 | Cognitive rhythm & state management | PARTIAL | `tests/validation/test_wake_sleep_effectiveness.py`, `tests/validation/test_rhythm_state_machine.py` | Rhythm behavior validated in tests; not re-run here. |
 | HTTP API surface (health/inference) | IMPROVED | `tests/api/test_health.py`, `tests/e2e/test_http_inference_api.py`, `tests/e2e/conftest.py` | Health endpoint race condition fixed in PR #368; E2E fixture now handles async initialization |
 | Observability pipeline (logging/metrics/tracing) | NOT VERIFIED | `tests/observability/test_aphasia_logging.py`, `tests/observability/test_aphasia_metrics.py`, `docs/OBSERVABILITY_GUIDE.md` | Instrumentation documented; no execution evidence in this PR. |
-| CI / quality gates (coverage, property tests) | NOT VERIFIED | `.github/workflows/readiness-evidence.yml` (jobs: deps_smoke, unit, coverage_gate), `.github/workflows/property-tests.yml`, `coverage_gate.sh` | Evidence workflow (uv-based) runs on pull_request/workflow_dispatch; awaiting current run artifacts for this PR. |
+| CI / quality gates (coverage, property tests, drift enforcement) | NOT VERIFIED | `.github/workflows/readiness-evidence.yml` (jobs: deps_smoke, unit, coverage_gate, truth_judge), `.github/workflows/property-tests.yml`, `coverage_gate.sh`, `scripts/evidence/check_drift.py`, `benchmarks/baseline.json` | Truth judge added (make evidence → verify_evidence_snapshot → check_drift) but not yet executed in CI for this branch. Drift thresholds: coverage drop ≤0.5pp, tests non-decreasing (unless allowlisted), max_p95 regression ≤10%, memory increase ≤2MB. |
 | Config & calibration pipeline | NOT VERIFIED | `config/`, `docs/CONFIGURATION_GUIDE.md`, `tests/integration/test_public_api.py` | Config paths defined; validation runs absent for this commit. |
 | CLI / entrypoints | NOT VERIFIED | `src/mlsdm/entrypoints/`, `Makefile` | Entrypoints exist; no execution evidence tied to this revision. |
 | Benchmarks / performance tooling | NOT VERIFIED | `tests/perf/test_slo_api_endpoints.py`, `benchmarks/README.md` | Perf tooling present; benchmarks not executed in this PR. |
@@ -34,6 +34,8 @@ Blocking issues: 3
 ## Testing & Verification
 - Unit tests: NOT VERIFIED — Evidence: `.github/workflows/readiness-evidence.yml` (job: unit, command: `uv run python -m pytest tests/unit -q --junitxml=reports/junit-unit.xml --maxfail=1`, artifact: readiness-unit); awaiting current PR run.
 - Readiness gate unit tests: IMPROVED — Evidence: `tests/unit/test_readiness_change_analyzer.py` — Scope prefix matching and workflow detection cases expanded.
+- Drift enforcement tests: ADDED — Evidence: `tests/unit/test_check_drift.py` (coverage/test/perf/memory thresholds) and `tests/unit/test_verify_evidence_snapshot.py` (raw samples required); added with PR #404.
+- Truth judge execution: ADDED — Evidence: `.github/workflows/readiness-evidence.yml` (job: truth_judge; runs `make evidence`, `verify_evidence_snapshot.py`, `check_drift.py --baseline benchmarks/baseline.json`; uploads evidence-truth-judge artifact).
 - Integration tests: NOT VERIFIED — Evidence: `.github/workflows/readiness-evidence.yml` (job: integration — currently skipped in PR runs; command recorded in log to run on workflow_dispatch); Command when executed: `python -m pytest tests/integration -q --disable-warnings --maxfail=1`
 - End-to-end tests: NOT VERIFIED — Evidence: `tests/e2e/`; Command: `python -m pytest tests/e2e -v`
 - Property tests: NOT VERIFIED — Evidence: `.github/workflows/readiness-evidence.yml` (job: property — skipped in PR runs; workflow_dispatch command: `python -m pytest tests/property -q --maxfail=3`)
@@ -49,14 +51,24 @@ Blocking issues: 3
 - Alerting: NOT VERIFIED — Evidence: `deploy/monitoring/alertmanager-rules.yaml`; no validation run provided.
 
 ## Known Blocking Gaps
-1. Evidence jobs pending execution: `.github/workflows/readiness-evidence.yml` (deps_smoke, unit, coverage_gate) now run on pull_request/workflow_dispatch; need a passing run with artifacts for this commit.
+1. Evidence jobs pending execution: `.github/workflows/readiness-evidence.yml` (deps_smoke, unit, coverage_gate, truth_judge) require a successful PR run with artifacts to validate the new truth judge path.
 2. Coverage gate unverified: `uv run bash ./coverage_gate.sh` (readiness-evidence job: coverage_gate) not yet executed successfully in CI; need coverage.xml/log artifacts.
-3. Integration and property suites unverified: need workflow_dispatch run with `python -m pytest tests/integration -q --disable-warnings --maxfail=1` and `python -m pytest tests/property -q --maxfail=3`, with artifacts.
-4. Observability pipeline unvalidated: `python -m pytest tests/observability/ -v` not executed; need metrics/logging evidence.
-5. Deployment artifacts unvalidated: `deploy/k8s/` manifests lack smoke-test logs for this commit; need deployment verification evidence.
-6. Config and calibration paths unvalidated: `pytest tests/integration/test_public_api.py -v` or equivalent config validation has not been recorded.
+3. Baseline drift validation pending: first CI run with truth_judge must pass `check_drift.py --baseline benchmarks/baseline.json` on a fresh evidence snapshot.
+4. Integration and property suites unverified: need workflow_dispatch run with `python -m pytest tests/integration -q --disable-warnings --maxfail=1` and `python -m pytest tests/property -q --maxfail=3`, with artifacts.
+5. Observability pipeline unvalidated: `python -m pytest tests/observability/ -v` not executed; need metrics/logging evidence.
+6. Deployment artifacts unvalidated: `deploy/k8s/` manifests lack smoke-test logs for this commit; need deployment verification evidence.
+7. Config and calibration paths unvalidated: `pytest tests/integration/test_public_api.py -v` or equivalent config validation has not been recorded.
 
 ## Change Log
+- 2025-12-27 — **Auditable baseline drift policy and mandatory evidence checks** — PR: #404
+  - Added canonical baseline `benchmarks/baseline.json` with coverage_percent, unit_tests_total, failures, max_p95_ms, memory_mb, commit/date.
+  - Added `scripts/evidence/check_drift.py` enforcing drift thresholds (coverage drop ≤0.5pp, tests non-decreasing unless allowlisted, max_p95 regression ≤10%, memory increase ≤2MB).
+  - Updated `.github/workflows/readiness-evidence.yml` with `truth_judge` job (make evidence → verify snapshot → check_drift; uploads evidence artifact).
+  - Evidence capture now emits capped raw benchmark samples (max 2000 per scenario) into `benchmarks/raw_neuro_engine_latency.json`; verifier requires and validates samples.
+  - Benchmarks allow returning sample chunks; memory/coverage/test metrics captured for baseline comparisons.
+  - Added `tests/unit/test_check_drift.py`; enhanced `tests/unit/test_verify_evidence_snapshot.py` to handle raw samples and complete snapshot detection.
+  - Documentation updates: `docs/METRICS_SOURCE.md` (drift enforcement flow) and `artifacts/evidence/README.md` (capped raw samples).
+  - Purpose: elevate evidence from reproducible to auditable with CI-enforced drift limits across coverage, tests, performance, and memory.
 - 2025-12-26 — **Evidence integrity verification and artifact safety guards** — PR: #403
   - Added `tests/unit/test_evidence_guard.py`: Validates evidence snapshots avoid forbidden patterns (`*.env`, `*.pem`, `id_rsa*`, `token*`, `*.key`, `*.p12`) and enforces 5MB per-file cap.
   - Added `tests/unit/test_verify_evidence_snapshot.py`: Runs `scripts/evidence/verify_evidence_snapshot.py` against committed evidence and asserts failures when required files (e.g., manifest.json) are missing.
