@@ -16,6 +16,7 @@ REQUIRED_FILES = [
     "coverage/coverage.xml",
     "pytest/junit.xml",
     "benchmarks/benchmark-metrics.json",
+    "benchmarks/raw_neuro_engine_latency.json",
     "memory/memory_footprint.json",
 ]
 BENCHMARK_METRIC_KEYS = ("max_p95_ms", "preflight_p95_ms", "e2e_small_p95_ms")
@@ -144,6 +145,41 @@ def _validate_benchmark_metrics(path: Path) -> None:
             raise EvidenceError(f"benchmark-metrics.json metric '{metric_key}' is negative")
 
 
+def _validate_raw_samples(path: Path, sample_cap: int = 2000) -> None:
+    data = _load_json(path)
+    samples = data.get("samples")
+    if not isinstance(samples, dict):
+        raise EvidenceError("raw_neuro_engine_latency.json missing 'samples' object")
+
+    def _validate_entry(name: str, entry: Any) -> None:
+        if not isinstance(entry, dict):
+            raise EvidenceError(f"samples entry for '{name}' must be an object")
+        samples_ms = entry.get("samples_ms")
+        if not isinstance(samples_ms, list):
+            raise EvidenceError(f"samples_ms for '{name}' must be a list")
+        if len(samples_ms) > sample_cap:
+            raise EvidenceError(f"samples_ms for '{name}' exceeds cap of {sample_cap}")
+        count = entry.get("count")
+        if not isinstance(count, int):
+            raise EvidenceError(f"'count' for '{name}' must be an integer")
+        capped = entry.get("capped")
+        if not isinstance(capped, bool):
+            raise EvidenceError(f"'capped' for '{name}' must be a boolean")
+        if capped and count <= sample_cap:
+            raise EvidenceError(f"'capped' true for '{name}' but count <= cap")
+        if count < len(samples_ms):
+            raise EvidenceError(f"'count' for '{name}' is smaller than samples length")
+
+    for scenario, entry in samples.items():
+        if isinstance(entry, dict) and "samples_ms" in entry:
+            _validate_entry(scenario, entry)
+        elif isinstance(entry, dict):
+            for token_key, token_entry in entry.items():
+                _validate_entry(f"{scenario}:{token_key}", token_entry)
+        else:
+            raise EvidenceError(f"Unexpected samples entry type for '{scenario}'")
+
+
 def _validate_memory_footprint(path: Path) -> None:
     data = _load_json(path)
     for key in ("pelm_mb", "controller_mb"):
@@ -169,6 +205,7 @@ def verify_snapshot(evidence_dir: Path) -> None:
     coverage_percent = _parse_coverage_percent(evidence_dir / "coverage" / "coverage.xml")
     junit_totals = _parse_junit_totals(evidence_dir / "pytest" / "junit.xml")
     _validate_benchmark_metrics(evidence_dir / "benchmarks" / "benchmark-metrics.json")
+    _validate_raw_samples(evidence_dir / "benchmarks" / "raw_neuro_engine_latency.json")
     _validate_memory_footprint(evidence_dir / "memory" / "memory_footprint.json")
 
     print(f"✓ Evidence snapshot valid: {evidence_dir}")

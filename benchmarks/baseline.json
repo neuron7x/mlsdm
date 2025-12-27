@@ -4,6 +4,18 @@
   "updated_at": "2025-12-23T23:59:00Z",
   "updated_by": "github-actions",
   "git_commit": "baseline",
+  "commit": "97dd557ce6bd",
+  "date": "2025-12-27",
+  "metrics": {
+    "coverage_percent": 80.04,
+    "unit_tests_total": 1094,
+    "test_failures": 0,
+    "max_p95_ms": 0.998,
+    "memory_mb": {
+      "pelm": 34.09,
+      "controller": 29.49
+    }
+  },
   "thresholds": {
     "preflight_p95_ms": 20.0,
     "e2e_small_p95_ms": 100.0,
@@ -16,11 +28,11 @@
     "e2e_heavy_p95_ms": 450.0
   },
   "notes": [
-    "Baseline established from CI runs on GitHub Actions ubuntu-latest with Python 3.11",
+    "Baseline established from committed evidence snapshot 2025-12-26/2a6b52dd6fd4",
     "Uses local_stub backend for consistent, reproducible results",
     "Tolerance of 10% allows for CI environment variance and VM overhead",
-    "Update this file when intentional performance improvements are made"
+    "Update this file when intentional performance or test changes are made"
   ],
-  "last_updated": "2025-12-23",
+  "last_updated": "2025-12-27",
   "environment": "GitHub Actions ubuntu-latest"
 }

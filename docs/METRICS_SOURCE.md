@@ -1,6 +1,6 @@
 # Metrics Source of Truth
 
-**Last Updated**: December 26, 2025
+**Last Updated**: December 27, 2025
 **Purpose**: Single source for test coverage and quality metrics to prevent documentation drift.
 
 ---
@@ -14,6 +14,7 @@ Metrics are sourced from **committed evidence snapshots** in the repository for 
 | **Coverage Report** | `artifacts/evidence/<date>/<sha>/coverage/coverage.xml` |
 | **JUnit Test Results** | `artifacts/evidence/<date>/<sha>/pytest/junit.xml` |
 | **Benchmark Metrics** | `artifacts/evidence/<date>/<sha>/benchmarks/benchmark-metrics.json` |
+| **Raw Latency Samples** | `artifacts/evidence/<date>/<sha>/benchmarks/raw_neuro_engine_latency.json` (capped at 2000 samples per scenario) |
 | **Memory Footprint** | `artifacts/evidence/<date>/<sha>/memory/memory_footprint.json` |
 | **Manifest** | `artifacts/evidence/<date>/<sha>/manifest.json` |
 
@@ -27,26 +28,20 @@ make evidence
 
 ## Coverage Metrics
 
-| Metric | Value | Source |
-|--------|-------|--------|
-| **CI Coverage Threshold** | 75% | `coverage_gate.sh` + `.github/workflows/ci-neuro-cognitive-engine.yml` |
-| **Actual Coverage** | 80.04% | `artifacts/evidence/2025-12-26/2a6b52dd6fd4/coverage/coverage.xml` |
-
-### Why 75% Threshold?
-
-The CI coverage threshold (75%) is set to match the enforced gate in CI and `pyproject.toml`. It tracks the latest committed evidence and is raised only when sustained coverage exceeds the gate with comfortable headroom.
+| Metric | Source |
+|--------|--------|
+| **CI Coverage Threshold** | `coverage_gate.sh` + `.github/workflows/ci-neuro-cognitive-engine.yml` |
+| **Baseline Coverage Percent** | `benchmarks/baseline.json` (`metrics.coverage_percent`, derived from committed evidence) |
 
 ---
 
 ## Test Metrics
 
-Test counts are derived from the committed JUnit evidence:
+Test counts are derived from committed JUnit evidence and tracked in the baseline:
 
 | Metric | Source |
 |--------|--------|
-| **Test Results** | `artifacts/evidence/<date>/<sha>/pytest/junit.xml` |
-
-To get exact counts, parse the JUnit XML or run `make evidence`.
+| **Test Totals / Failures** | `benchmarks/baseline.json` (`metrics.unit_tests_total`, `metrics.test_failures`) derived from `artifacts/evidence/<date>/<sha>/pytest/junit.xml` |
 
 ---
 
@@ -57,7 +52,7 @@ Performance metrics are captured in the evidence snapshot:
 | Metric | Source |
 |--------|--------|
 | **Benchmark Results** | `artifacts/evidence/<date>/<sha>/benchmarks/benchmark-metrics.json` |
-| **Raw Latency Data** | `artifacts/evidence/<date>/<sha>/benchmarks/raw_neuro_engine_latency.json` |
+| **Raw Latency Samples (capped)** | `artifacts/evidence/<date>/<sha>/benchmarks/raw_neuro_engine_latency.json` |
 | **Baseline** | `benchmarks/baseline.json` |
 
 To check for benchmark drift:
@@ -68,17 +63,17 @@ python scripts/check_benchmark_drift.py artifacts/evidence/<date>/<sha>/benchmar
 
 ---
 
-## CI Coverage Command
+## How CI enforces drift
 
-The canonical coverage command used in CI:
+CI runs the following steps to keep evidence auditable:
 
 ```bash
-# Canonical coverage gate (also used by CI)
-pytest --cov=src/mlsdm --cov-report=xml --cov-report=term-missing \
-  --cov-fail-under=75 --ignore=tests/load -m "not slow and not benchmark" -v
+make evidence
+python scripts/evidence/verify_evidence_snapshot.py --evidence-dir <path produced above>
+python scripts/evidence/check_drift.py --baseline benchmarks/baseline.json --evidence-dir <path produced above>
 ```
 
-**Use this exact command for local verification to match CI behavior.**
+The evidence directory from `make evidence` is uploaded as a workflow artifact for audit.
 
 ---
 

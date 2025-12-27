@@ -17,7 +17,7 @@ evidence/
       junit.xml            # JUnit test results (unit + state)
     benchmarks/
       benchmark-metrics.json      # Schema expected by check_benchmark_drift.py
-      raw_neuro_engine_latency.json  # Optional: raw per-scenario percentiles
+      raw_neuro_engine_latency.json  # Capped raw samples per scenario (max 2000 each)
     memory/
       memory_footprint.json       # PELM + controller memory metrics
     env/

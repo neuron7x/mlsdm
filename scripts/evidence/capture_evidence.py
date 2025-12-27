@@ -151,6 +151,7 @@ def generate_benchmark_metrics(repo_root: Path, evidence_dir: Path) -> bool:
     Returns:
         True if generation succeeded, False otherwise.
     """
+    sample_cap = 2000
     print("\n" + "=" * 70)
     print("STEP 3: Generating benchmark metrics...")
     print("=" * 70)
@@ -174,13 +175,19 @@ def generate_benchmark_metrics(repo_root: Path, evidence_dir: Path) -> bool:
 
         # Run benchmarks (each returns dict with p50, p95, p99, min, max, mean)
         print("  Running pre-flight latency benchmark...")
-        preflight_stats = benchmark_pre_flight_latency()
+        preflight_stats, preflight_samples = benchmark_pre_flight_latency(
+            return_samples=True, sample_cap=sample_cap
+        )
 
         print("  Running small load benchmark...")
-        small_load_stats = benchmark_end_to_end_latency_small_load()
+        small_load_stats, small_load_samples = benchmark_end_to_end_latency_small_load(
+            return_samples=True, sample_cap=sample_cap
+        )
 
         print("  Running heavy load benchmark...")
-        heavy_load_results = benchmark_end_to_end_latency_heavy_load()
+        heavy_load_results, heavy_load_samples = benchmark_end_to_end_latency_heavy_load(
+            return_samples=True, sample_cap=sample_cap
+        )
 
         # Find max P95 across all heavy load scenarios
         max_p95 = 0.0
@@ -216,14 +223,19 @@ def generate_benchmark_metrics(repo_root: Path, evidence_dir: Path) -> bool:
 
         # Save raw latency data too
         raw_path = benchmarks_dir / "raw_neuro_engine_latency.json"
+        raw_payload = {
+            "timestamp": timestamp,
+            "commit": git_sha,
+            "sample_cap": sample_cap,
+            "metrics": metrics_json["metrics"],
+            "samples": {
+                "preflight": preflight_samples,
+                "small_load": small_load_samples,
+                "heavy_load": heavy_load_samples,
+            },
+        }
         with open(raw_path, "w") as f:
-            json.dump({
-                "timestamp": timestamp,
-                "commit": git_sha,
-                "preflight": preflight_stats,
-                "small_load": small_load_stats,
-                "heavy_load": heavy_load_results,
-            }, f, indent=2)
+            json.dump(raw_payload, f, indent=2)
         print("✓ Generated raw_neuro_engine_latency.json")
 
         if slo_compliant:

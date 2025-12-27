@@ -36,6 +36,9 @@ def stub_embedding(text: str) -> np.ndarray:
     return np.random.RandomState(seed).randn(384).astype(np.float32)
 
 
+SAMPLE_CAP = 2000
+
+
 def compute_percentiles(values: list[float]) -> dict[str, float]:
     """Compute percentile statistics.
 
@@ -93,7 +96,9 @@ def create_engine(enable_metrics: bool = False) -> NeuroCognitiveEngine:
     )
 
 
-def benchmark_pre_flight_latency() -> dict[str, float]:
+def benchmark_pre_flight_latency(
+    return_samples: bool = False, sample_cap: int = SAMPLE_CAP
+) -> dict[str, float] | tuple[dict[str, float], dict[str, float | list[float] | bool]]:
     """Benchmark pre-flight check latency.
 
     Measures only the moral precheck step, which should be very fast.
@@ -128,10 +133,19 @@ def benchmark_pre_flight_latency() -> dict[str, float]:
             if "moral_precheck" in result["timing"]:
                 latencies.append(result["timing"]["moral_precheck"])
 
-    return compute_percentiles(latencies)
+    stats = compute_percentiles(latencies)
+    if return_samples:
+        return stats, {
+            "count": len(latencies),
+            "capped": len(latencies) > sample_cap,
+            "samples_ms": latencies[:sample_cap],
+        }
+    return stats
 
 
-def benchmark_end_to_end_latency_small_load() -> dict[str, float]:
+def benchmark_end_to_end_latency_small_load(
+    return_samples: bool = False, sample_cap: int = SAMPLE_CAP
+) -> dict[str, float] | tuple[dict[str, float], dict[str, float | list[float] | bool]]:
     """Benchmark end-to-end latency with small load.
 
     Tests basic generation with moderate token counts.
@@ -159,10 +173,19 @@ def benchmark_end_to_end_latency_small_load() -> dict[str, float]:
             elapsed_ms = (time.perf_counter() - start) * 1000.0
             latencies.append(elapsed_ms)
 
-    return compute_percentiles(latencies)
+    stats = compute_percentiles(latencies)
+    if return_samples:
+        return stats, {
+            "count": len(latencies),
+            "capped": len(latencies) > sample_cap,
+            "samples_ms": latencies[:sample_cap],
+        }
+    return stats
 
 
-def benchmark_end_to_end_latency_heavy_load() -> dict[str, dict[str, float]]:
+def benchmark_end_to_end_latency_heavy_load(
+    return_samples: bool = False, sample_cap: int = SAMPLE_CAP
+) -> dict[str, dict[str, float]] | tuple[dict[str, dict[str, float]], dict[str, dict[str, float | list[float] | bool]]]:
     """Benchmark end-to-end latency with heavy load.
 
     Tests with varying max_tokens values to see scaling behavior.
@@ -182,7 +205,8 @@ def benchmark_end_to_end_latency_heavy_load() -> dict[str, dict[str, float]]:
 
     # Test different token counts
     token_counts = [100, 250, 500, 1000]
-    results = {}
+    results: dict[str, dict[str, float]] = {}
+    sample_info: dict[str, dict[str, float | list[float] | bool]] = {}
 
     for max_tokens in token_counts:
         latencies: list[float] = []
@@ -197,7 +221,14 @@ def benchmark_end_to_end_latency_heavy_load() -> dict[str, dict[str, float]]:
                 latencies.append(elapsed_ms)
 
         results[f"tokens_{max_tokens}"] = compute_percentiles(latencies)
+        sample_info[f"tokens_{max_tokens}"] = {
+            "count": len(latencies),
+            "capped": len(latencies) > sample_cap,
+            "samples_ms": latencies[:sample_cap],
+        }
 
+    if return_samples:
+        return results, sample_info
     return results
 
 
