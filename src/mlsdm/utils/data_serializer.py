@@ -24,7 +24,7 @@ def _deserialize_npz_value(value: np.ndarray) -> Any:
 def _ensure_parent_dir(path: Path) -> Path:
     """Create parent directories for the target path if they do not exist."""
     parent = path.parent
-    if parent != path and not parent.exists():
+    if not parent.exists():
         parent.mkdir(parents=True, exist_ok=True)
     return parent
 
@@ -32,11 +32,8 @@ def _ensure_parent_dir(path: Path) -> Path:
 def _atomic_write(path: Path, suffix: str, writer: Callable[[str], None]) -> None:
     """Write data to a temporary file and atomically replace the target."""
     parent = _ensure_parent_dir(path)
-    temp_file = tempfile.NamedTemporaryFile(
-        suffix=suffix, dir=parent, delete=False
-    )
-    temp_name = temp_file.name
-    temp_file.close()
+    fd, temp_name = tempfile.mkstemp(suffix=suffix, dir=parent)
+    os.close(fd)
     try:
         writer(temp_name)
         os.replace(temp_name, str(path))
