@@ -29,15 +29,18 @@ def _ensure_parent_dir(path: Path) -> Path:
     return parent
 
 
-def _atomic_write(path: Path, suffix: str, writer: Callable[[str], None]) -> None:
+def _atomic_write(path: Path, suffix: str, writer: Callable[[int, str], None]) -> None:
     """Write data to a temporary file and atomically replace the target."""
     parent = _ensure_parent_dir(path)
     fd, temp_name = tempfile.mkstemp(suffix=suffix, dir=parent)
-    os.close(fd)
     try:
-        writer(temp_name)
+        writer(fd, temp_name)
         os.replace(temp_name, str(path))
     finally:
+        try:
+            os.close(fd)
+        except OSError:
+            pass
         if os.path.exists(temp_name):
             os.unlink(temp_name)
 
@@ -47,8 +50,8 @@ def _save_data(data: dict[str, Any], filepath: str) -> None:
     path = Path(filepath)
     ext = path.suffix.lower()
     if ext == ".json":
-        def _write_json(temp_name: str) -> None:
-            with open(temp_name, "w", encoding="utf-8") as f:
+        def _write_json(fd: int, temp_name: str) -> None:
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=2)
 
         _atomic_write(path, ".json", _write_json)
@@ -65,8 +68,9 @@ def _save_data(data: dict[str, Any], filepath: str) -> None:
         # Use cast to work around numpy's imprecise savez signature
         save_fn = cast("Any", np.savez)
 
-        def _write_npz(temp_name: str) -> None:
-            save_fn(temp_name, **processed)
+        def _write_npz(fd: int, temp_name: str) -> None:
+            with os.fdopen(fd, "wb") as f:
+                save_fn(f, **processed)
 
         _atomic_write(path, ".npz", _write_npz)
     else:
