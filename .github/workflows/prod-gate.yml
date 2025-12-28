@@ -25,6 +25,35 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  validate-inputs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      version: ${{ steps.validate_version.outputs.version }}
+      skip_approval: ${{ steps.validate_version.outputs.skip_approval }}
+    permissions:
+      contents: read
+    steps:
+      - name: Validate workflow inputs
+        id: validate_version
+        run: |
+          version="${{ github.event.inputs.version || github.ref_name }}"
+          if printf '%s' "$version" | grep -Eq '\.\.'; then
+            echo "Invalid version input (contains consecutive dots): $version"
+            exit 1
+          fi
+          if ! printf '%s' "$version" | grep -Eq '^[A-Za-z0-9][A-Za-z0-9.-]{0,63}$'; then
+            echo "Invalid version input: $version"
+            exit 1
+          fi
+          skip="${{ github.event.inputs.skip_approval || 'false' }}"
+          case "$skip" in
+            true|false) ;;
+            *) echo "Invalid skip_approval input: $skip"; exit 1 ;;
+          esac
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "skip_approval=$skip" >> "$GITHUB_OUTPUT"
+
   # Pre-flight checks - all must pass before approval
   preflight:
     name: Pre-flight Checks
@@ -218,6 +247,7 @@ jobs:
     name: Documentation Validation
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    needs: [validate-inputs]
 
     steps:
       - name: Checkout code
@@ -244,7 +274,7 @@ jobs:
 
       - name: Check changelog has version entry
         env:
-          VERSION: ${{ github.event.inputs.version || github.ref_name }}
+          VERSION: ${{ needs.validate-inputs.outputs.version }}
         run: |
           if grep -q "## \[${VERSION}\]" CHANGELOG.md 2>/dev/null || grep -q "## ${VERSION}" CHANGELOG.md 2>/dev/null; then
             echo "✓ CHANGELOG.md has entry for version $VERSION"
@@ -257,14 +287,14 @@ jobs:
     name: Manual Approval
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    needs: [preflight, property-tests, slo-validation, security-scan, docs-validation]
-    if: ${{ github.event.inputs.skip_approval != 'true' }}
+    needs: [validate-inputs, preflight, property-tests, slo-validation, security-scan, docs-validation]
+    if: ${{ needs.validate-inputs.outputs.skip_approval != 'true' }}
     environment: production
 
     steps:
       - name: Approval received
         env:
-          VERSION: ${{ github.event.inputs.version || github.ref_name }}
+          VERSION: ${{ needs.validate-inputs.outputs.version }}
         run: |
           echo "✓ Production deployment approved"
           echo "Version: $VERSION"

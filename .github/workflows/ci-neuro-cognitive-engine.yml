@@ -33,10 +33,34 @@ concurrency:
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
+  validate-dispatch-inputs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Validate workflow_dispatch booleans
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            validate_bool() {
+              val="$1"; name="$2"
+              val="${val:-false}"
+              case "$val" in
+                true|false) ;;
+                *) echo "Invalid boolean for $name: $val"; exit 1 ;;
+              esac
+            }
+            validate_bool "${{ github.event.inputs.run_safety_eval || 'false' }}" "run_safety_eval"
+            validate_bool "${{ github.event.inputs.run_benchmarks || 'false' }}" "run_benchmarks"
+          else
+            echo "No workflow_dispatch inputs to validate for event: ${{ github.event_name }}"
+          fi
+
   lint:
     name: Lint and Type Check
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    needs: [validate-dispatch-inputs]
 
     steps:
       - name: Checkout code
@@ -86,6 +110,7 @@ jobs:
     name: Security Vulnerability Scan
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    needs: [validate-dispatch-inputs]
 
     steps:
       - name: Checkout code
@@ -132,6 +157,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    needs: [validate-dispatch-inputs]
     env:
       DISABLE_RATE_LIMIT: "1"
       LLM_BACKEND: "local_stub"
@@ -192,6 +218,7 @@ jobs:
     name: Code Coverage Gate
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    needs: [validate-dispatch-inputs]
     env:
       DISABLE_RATE_LIMIT: "1"
       LLM_BACKEND: "local_stub"
@@ -260,6 +287,7 @@ jobs:
     name: End-to-End Tests
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    needs: [validate-dispatch-inputs]
     env:
       DISABLE_RATE_LIMIT: "1"
       LLM_BACKEND: "local_stub"
@@ -305,6 +333,7 @@ jobs:
     name: Effectiveness Validation
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    needs: [validate-dispatch-inputs]
     env:
       DISABLE_RATE_LIMIT: "1"
       LLM_BACKEND: "local_stub"
@@ -358,6 +387,7 @@ jobs:
     name: Performance Benchmarks (SLO Gate)
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    needs: [validate-dispatch-inputs]
     if: github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'run-benchmarks') || (github.event_name == 'workflow_dispatch' && inputs.run_benchmarks)
     # HEAVY PATH CONFIGURATION:
     # - For pull_request: continue-on-error=true (informational, not blocking)
@@ -536,6 +566,7 @@ jobs:
     name: Cognitive Safety Evaluation
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    needs: [validate-dispatch-inputs]
     if: github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'run-safety-eval') || (github.event_name == 'workflow_dispatch' && inputs.run_safety_eval)
     # INFORMATIONAL: Sapolsky evaluation suite is research/exploratory
     # This validates cognitive safety but is not a hard gate for CI
