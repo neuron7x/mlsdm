@@ -1,5 +1,8 @@
 import json
 import os
+import tempfile
+from collections.abc import Callable
+from pathlib import Path
 from typing import Any, cast
 
 import numpy as np
@@ -19,12 +22,46 @@ def _deserialize_npz_value(value: np.ndarray) -> Any:
     return value.tolist()
 
 
+def _ensure_parent_dir(path: Path) -> Path:
+    """Create parent directories for the target path if they do not exist."""
+    parent = path.parent
+    if not parent.exists():
+        parent.mkdir(parents=True, exist_ok=True)
+    return parent
+
+
+def _atomic_write(path: Path, suffix: str, writer: Callable[[int, str], bool]) -> None:
+    """Write data to a temporary file and atomically replace the target."""
+    parent = _ensure_parent_dir(path)
+    fd, temp_name = tempfile.mkstemp(suffix=suffix, dir=parent)
+    fd_closed = False
+    try:
+        fd_closed = writer(fd, temp_name)
+        if not fd_closed:
+            os.close(fd)
+            fd_closed = True
+        os.replace(temp_name, str(path))
+    finally:
+        if not fd_closed:
+            try:
+                os.close(fd)
+            except OSError:
+                pass
+        if os.path.exists(temp_name):
+            os.unlink(temp_name)
+
+
 @retry(stop=stop_after_attempt(3))
 def _save_data(data: dict[str, Any], filepath: str) -> None:
-    ext = os.path.splitext(filepath)[1].lower()
+    path = Path(filepath)
+    ext = path.suffix.lower()
     if ext == ".json":
-        with open(filepath, "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=2)
+        def _write_json(fd: int, temp_name: str) -> bool:
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
+                json.dump(data, f, indent=2)
+            return True
+
+        _atomic_write(path, ".json", _write_json)
     elif ext == ".npz":
         processed = {}
         for key, value in data.items():
@@ -37,7 +74,13 @@ def _save_data(data: dict[str, Any], filepath: str) -> None:
                 processed[key] = np.asarray(value)
         # Use cast to work around numpy's imprecise savez signature
         save_fn = cast("Any", np.savez)
-        save_fn(filepath, **processed)
+
+        def _write_npz(fd: int, temp_name: str) -> bool:
+            os.close(fd)
+            save_fn(temp_name, **processed)
+            return True
+
+        _atomic_write(path, ".npz", _write_npz)
     else:
         raise ValueError(f"Unsupported format: {ext}")
 
