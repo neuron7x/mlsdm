@@ -63,6 +63,13 @@ Blocking issues: 3
   - **Purpose**: Prevent accidental secret/large-file commits in evidence and ensure evidence snapshots remain complete and verifiable.
   - **Evidence impact**: Guard tests enforce evidence safety policy; verifier tests validate snapshot completeness.
   - **Testing posture**: Unit tests cover forbidden pattern detection, size limits, and snapshot integrity verification.
+- 2025-12-28 — **Cognitive controller sleep phase optimization** — PR: #407
+  - Updated `src/mlsdm/core/cognitive_controller.py`: Moved sleep phase check before memory and moral filter checks for early rejection; reduced unnecessary computation during sleep cycles
+  - Updated `tests/unit/test_cognitive_controller.py`: Added `test_sleep_phase_advances_rhythm` to verify rhythm progression during sleep rejections
+  - **Purpose**: Optimize event processing by short-circuiting sleep phase events before expensive memory/moral checks; ensure rhythm advances correctly during sleep
+  - **Behavior unchanged**: Sleep rejection logic preserved; rhythm stepping now explicit in both wake and sleep paths
+  - **Evidence impact**: Unit test coverage added for sleep-wake cycle transitions; readiness check required due to src/ changes
+  - **Testing posture**: Sleep phase behavior validated with multi-step rhythm cycle test
 - 2025-12-26 — **Metrics evidence sanity-check test** — PR: #401
   - Added `tests/unit/test_metrics_evidence_paths.py`: Validates `docs/METRICS_SOURCE.md` references in-repo evidence paths (not CI workflow links) and verifies evidence snapshots exist
   - **Purpose**: Prevents documentation drift by enforcing committed reproducible evidence over ephemeral CI artifacts
