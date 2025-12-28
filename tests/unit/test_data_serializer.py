@@ -73,6 +73,16 @@ class TestDataSerializerJSON:
             if os.path.exists(filepath):
                 os.unlink(filepath)
 
+    def test_save_json_creates_parent_dirs(self, tmp_path):
+        """Saving should create missing parent directories for JSON."""
+        filepath = tmp_path / "nested" / "state" / "snapshot.json"
+        data = {"status": "ok"}
+
+        DataSerializer.save(data, str(filepath))
+
+        assert filepath.exists()
+        assert json.loads(filepath.read_text()) == data
+
 
 class TestDataSerializerNPZ:
     """Test NPZ (NumPy) serialization."""
@@ -130,6 +140,17 @@ class TestDataSerializerNPZ:
         finally:
             if os.path.exists(filepath):
                 os.unlink(filepath)
+
+    def test_save_npz_creates_parent_dirs(self, tmp_path):
+        """Saving NPZ should create missing parent directories."""
+        filepath = tmp_path / "nested" / "state" / "snapshot.npz"
+        data = {"array": np.array([1, 2, 3])}
+
+        DataSerializer.save(data, str(filepath))
+        loaded = DataSerializer.load(str(filepath))
+
+        assert filepath.exists()
+        assert loaded["array"] == [1, 2, 3]
 
 
 class TestDataSerializerErrors:

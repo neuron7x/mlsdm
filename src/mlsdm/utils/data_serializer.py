@@ -1,5 +1,7 @@
 import json
 import os
+import tempfile
+from pathlib import Path
 from typing import Any, cast
 
 import numpy as np
@@ -19,12 +21,31 @@ def _deserialize_npz_value(value: np.ndarray) -> Any:
     return value.tolist()
 
 
+def _ensure_parent_dir(path: Path) -> None:
+    """Create parent directories for the target path if they do not exist."""
+    parent = path.parent
+    if parent and not parent.exists():
+        parent.mkdir(parents=True, exist_ok=True)
+
+
 @retry(stop=stop_after_attempt(3))
 def _save_data(data: dict[str, Any], filepath: str) -> None:
-    ext = os.path.splitext(filepath)[1].lower()
+    path = Path(filepath)
+    _ensure_parent_dir(path)
+    ext = path.suffix.lower()
     if ext == ".json":
-        with open(filepath, "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=2)
+        temp_path: str | None = None
+        try:
+            with tempfile.NamedTemporaryFile(
+                "w", encoding="utf-8", suffix=".json", dir=path.parent, delete=False
+            ) as tmp:
+                json.dump(data, tmp, indent=2)
+                temp_path = tmp.name
+            os.replace(temp_path, path)
+            temp_path = None
+        finally:
+            if temp_path and os.path.exists(temp_path):
+                os.unlink(temp_path)
     elif ext == ".npz":
         processed = {}
         for key, value in data.items():
@@ -37,7 +58,16 @@ def _save_data(data: dict[str, Any], filepath: str) -> None:
                 processed[key] = np.asarray(value)
         # Use cast to work around numpy's imprecise savez signature
         save_fn = cast("Any", np.savez)
-        save_fn(filepath, **processed)
+        temp_path = tempfile.NamedTemporaryFile(
+            suffix=".npz", dir=path.parent, delete=False
+        )
+        temp_path.close()
+        try:
+            save_fn(temp_path.name, **processed)
+            os.replace(temp_path.name, path)
+        finally:
+            if os.path.exists(temp_path.name):
+                os.unlink(temp_path.name)
     else:
         raise ValueError(f"Unsupported format: {ext}")
 
