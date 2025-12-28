@@ -163,7 +163,12 @@ def _get_env_bool(key: str, default: bool) -> bool:
     val = os.environ.get(key)
     if val is None:
         return default
-    return val.lower() in ("1", "true", "yes", "on")
+    normalized = val.lower()
+    if normalized in ("1", "true", "yes", "on"):
+        return True
+    if normalized in ("0", "false", "no", "off"):
+        return False
+    return default
 
 
 def _get_mode_defaults(mode: RuntimeMode) -> dict[str, Any]:
