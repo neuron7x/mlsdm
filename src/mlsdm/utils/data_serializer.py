@@ -2,7 +2,7 @@ import json
 import os
 import tempfile
 from pathlib import Path
-from typing import Any, cast
+from typing import Any, Callable, cast
 
 import numpy as np
 from tenacity import retry, stop_after_attempt
@@ -28,24 +28,32 @@ def _ensure_parent_dir(path: Path) -> None:
         parent.mkdir(parents=True, exist_ok=True)
 
 
+def _atomic_write(path: Path, suffix: str, writer: Callable[[str], None]) -> None:
+    """Write data to a temporary file and atomically replace the target."""
+    temp_file = tempfile.NamedTemporaryFile(
+        suffix=suffix, dir=path.parent, delete=False
+    )
+    temp_name = temp_file.name
+    temp_file.close()
+    try:
+        writer(temp_name)
+        os.replace(temp_name, str(path))
+    finally:
+        if os.path.exists(temp_name):
+            os.unlink(temp_name)
+
+
 @retry(stop=stop_after_attempt(3))
 def _save_data(data: dict[str, Any], filepath: str) -> None:
     path = Path(filepath)
     _ensure_parent_dir(path)
     ext = path.suffix.lower()
     if ext == ".json":
-        temp_path: str | None = None
-        try:
-            with tempfile.NamedTemporaryFile(
-                "w", encoding="utf-8", suffix=".json", dir=path.parent, delete=False
-            ) as tmp:
-                json.dump(data, tmp, indent=2)
-                temp_path = tmp.name
-            os.replace(temp_path, str(path))
-            temp_path = None
-        finally:
-            if temp_path and os.path.exists(temp_path):
-                os.unlink(temp_path)
+        def _write_json(temp_name: str) -> None:
+            with open(temp_name, "w", encoding="utf-8") as f:
+                json.dump(data, f, indent=2)
+
+        _atomic_write(path, ".json", _write_json)
     elif ext == ".npz":
         processed = {}
         for key, value in data.items():
@@ -58,18 +66,11 @@ def _save_data(data: dict[str, Any], filepath: str) -> None:
                 processed[key] = np.asarray(value)
         # Use cast to work around numpy's imprecise savez signature
         save_fn = cast("Any", np.savez)
-        temp_path: str | None = None
-        try:
-            with tempfile.NamedTemporaryFile(
-                suffix=".npz", dir=path.parent, delete=False
-            ) as tmp:
-                temp_path = tmp.name
-                save_fn(tmp, **processed)
-            os.replace(temp_path, str(path))
-            temp_path = None
-        finally:
-            if temp_path and os.path.exists(temp_path):
-                os.unlink(temp_path)
+
+        def _write_npz(temp_name: str) -> None:
+            save_fn(temp_name, **processed)
+
+        _atomic_write(path, ".npz", _write_npz)
     else:
         raise ValueError(f"Unsupported format: {ext}")
 
