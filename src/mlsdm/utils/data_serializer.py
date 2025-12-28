@@ -1,8 +1,9 @@
 import json
 import os
 import tempfile
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable, cast
+from typing import Any, cast
 
 import numpy as np
 from tenacity import retry, stop_after_attempt
