@@ -1,5 +1,5 @@
 # System Readiness Status
-Last updated: 2025-12-26
+Last updated: 2025-12-28
 Owner: neuron7x / MLSDM maintainers
 Scope: MLSDM cognitive engine repository (src/, tests/, deploy/, workflows)
 
@@ -57,6 +57,10 @@ Blocking issues: 3
 6. Config and calibration paths unvalidated: `pytest tests/integration/test_public_api.py -v` or equivalent config validation has not been recorded.
 
 ## Change Log
+- 2025-12-28 — **Atomic data serializer writes with directory auto-creation** — PR: #409
+  - Updated `src/mlsdm/utils/data_serializer.py`: atomic writes via `mkstemp` + `os.replace` for JSON/NPZ, parent directories created automatically, explicit FD ownership to prevent partial artifacts.
+  - Updated `tests/unit/test_data_serializer.py`: added coverage for nested directory saves to guard the new persistence behavior.
+  - **Purpose**: Remove data persistence gaps and ensure safe artifact storage for checkpoints/state snapshots.
 - 2025-12-26 — **Evidence integrity verification and artifact safety guards** — PR: #403
   - Added `tests/unit/test_evidence_guard.py`: Validates evidence snapshots avoid forbidden patterns (`*.env`, `*.pem`, `id_rsa*`, `token*`, `*.key`, `*.p12`) and enforces 5MB per-file cap.
   - Added `tests/unit/test_verify_evidence_snapshot.py`: Runs `scripts/evidence/verify_evidence_snapshot.py` against committed evidence and asserts failures when required files (e.g., manifest.json) are missing.
