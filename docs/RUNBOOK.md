@@ -1,8 +1,9 @@
 # MLSDM Production Runbook
 
-**Status**: See [status/READINESS.md](status/READINESS.md) (not yet verified)
-**Last Updated**: December 2025
-**Maintainer**: neuron7x
+**Status**: See [status/READINESS.md](status/READINESS.md)  
+**Last Updated**: 2025-12-28  
+**Maintainer**: neuron7x  
+**Version**: MLE 2024
 
 ## Table of Contents
 
@@ -12,9 +13,10 @@
 4. [Monitoring & Alerts](#monitoring--alerts)
 5. [Common Issues](#common-issues)
 6. [Troubleshooting](#troubleshooting)
-7. [Incident Response](#incident-response)
-8. [Maintenance](#maintenance)
-9. [Disaster Recovery](#disaster-recovery)
+7. [CI Failure Troubleshooting](#ci-failure-troubleshooting)
+8. [Incident Response](#incident-response)
+9. [Maintenance](#maintenance)
+10. [Disaster Recovery](#disaster-recovery)
 
 ---
 
@@ -484,6 +486,211 @@ print('Configuration valid')
 kubectl apply -f config/production-ready.yaml
 kubectl rollout restart deployment/mlsdm-api -n mlsdm-production
 ```
+
+---
+
+## CI Failure Troubleshooting
+
+This section provides playbooks for common CI failures. See [EVALUATION.md](EVALUATION.md) for test suite details.
+
+### Readiness Gate Failure
+
+**Error**: `docs/status/READINESS.md` not updated after code/test/config/workflow changes
+
+**Resolution**:
+
+```bash
+# Preview change log entry
+make readiness-preview TITLE="Your change description"
+
+# Apply change log entry
+make readiness-apply TITLE="Your change description"
+
+# Commit the update
+git add docs/status/READINESS.md
+git commit -m "docs: update READINESS.md for <change>"
+```
+
+**What triggers this**:
+- Changes to files under: `src/`, `tests/`, `config/`, `deploy/`, `.github/workflows/`
+- Changes to `Dockerfile*` files
+
+**Scope prefixes** (configurable via `READINESS_SCOPED_PREFIXES` env var):
+- Default: `src/`, `tests/`, `config/`, `deploy/`, `.github/workflows/`
+
+### Coverage Gate Failure
+
+**Error**: Coverage below 75% threshold
+
+**Resolution**:
+
+```bash
+# Run coverage locally
+make coverage-gate
+
+# View detailed coverage report
+make cov
+# Open htmlcov/index.html in browser
+
+# Find uncovered lines
+pytest --cov=src --cov-report=term-missing
+
+# Add tests for uncovered code
+# Re-run coverage gate
+make coverage-gate
+```
+
+**What's excluded** (see `pyproject.toml`):
+- Entrypoints: `src/mlsdm/entrypoints/*`
+- Service layer: `src/mlsdm/service/*`
+- Experimental: `src/mlsdm/memory/experimental/*`
+
+### Evidence Snapshot Issues
+
+**Error**: Evidence snapshot missing or invalid
+
+**Resolution**:
+
+```bash
+# Generate evidence snapshot
+make evidence
+
+# Verify snapshot integrity
+make verify-metrics
+
+# Check for forbidden patterns (secrets, large files)
+pytest tests/unit/test_evidence_guard.py -v
+
+# Validate snapshot structure
+pytest tests/unit/test_verify_evidence_snapshot.py -v
+```
+
+**Common issues**:
+- Missing `manifest.json`: Re-run `make evidence`
+- Forbidden patterns detected (`.env`, `.pem`, `token*`): Remove secrets before committing
+- File size > 5MB: Compress or exclude large artifacts
+
+### Semgrep Findings
+
+**Error**: Security findings from semgrep scan
+
+**Resolution**:
+
+```bash
+# Run semgrep locally
+semgrep --config=auto src/
+
+# Review findings in .github/workflows/sast-scan.yml
+
+# Options:
+# 1. Fix the vulnerability (preferred)
+# 2. Add suppression comment with justification:
+#    # nosemgrep: rule-id - Reason: false positive because...
+```
+
+**Policy**:
+- **Fix > Suppress**: Always try to fix the issue first
+- **Justify suppressions**: Document why a finding is a false positive
+- **No blanket suppressions**: Each suppression must have a reason
+
+### Lint Failures
+
+**Error**: Ruff linter errors
+
+**Resolution**:
+
+```bash
+# Run linter locally
+make lint
+
+# Auto-fix issues
+ruff check src tests --fix
+
+# Check again
+make lint
+```
+
+**Common issues**:
+- `E501`: Line too long (handled by formatter, ignore if necessary)
+- `F401`: Unused imports (remove or use)
+- `I001`: Import sorting (auto-fixed by ruff)
+
+### Type Check Failures
+
+**Error**: mypy type errors
+
+**Resolution**:
+
+```bash
+# Run type checker locally
+make type
+
+# Common fixes:
+# - Add type annotations
+# - Use `# type: ignore[error-code]` with justification
+# - Update mypy overrides in pyproject.toml for specific modules
+```
+
+**Relaxed checking** (see `pyproject.toml`):
+- Tests: `mlsdm.tests.*`
+- NeuroLang extension: `mlsdm.extensions.neuro_lang_extension`
+- Experimental: `mlsdm.memory.experimental.*`
+
+### Generate Evidence and Attach to PR
+
+**Goal**: Provide reproducible evidence for PR review
+
+**Steps**:
+
+```bash
+# 1. Generate evidence snapshot
+make evidence
+
+# 2. Verify snapshot
+make verify-metrics
+
+# 3. Evidence is saved to:
+#    artifacts/evidence/<date>/<sha>/
+
+# 4. In PR description, reference the evidence path:
+#    "Evidence snapshot: artifacts/evidence/2025-12-28/abc1234/"
+
+# 5. Reviewers can verify:
+#    python scripts/evidence/verify_evidence_snapshot.py \
+#      --evidence-dir artifacts/evidence/2025-12-28/abc1234/
+```
+
+**What's included in evidence**:
+- Coverage report: `coverage/coverage.xml`
+- Test results: `pytest/junit.xml`
+- Benchmarks: `benchmarks/benchmark-metrics.json`
+- Memory footprint: `memory/memory_footprint.json`
+- Manifest: `manifest.json` (metadata + file inventory)
+
+### Property Test Failures
+
+**Error**: Hypothesis-based property tests fail
+
+**Resolution**:
+
+```bash
+# Run property tests locally
+pytest tests/property -v
+
+# Run with more examples (slower but more thorough)
+pytest tests/property -v --hypothesis-profile=thorough
+
+# Debug specific failure:
+# 1. Hypothesis prints the failing example
+# 2. Add @example(...) decorator with failing case
+# 3. Fix the code to handle the edge case
+# 4. Re-run tests
+```
+
+**Property test categories**:
+- Memory properties: `tests/property/test_multilevel_synaptic_memory_properties.py`
+- Moral filter properties: `tests/property/test_moral_filter_properties.py`
+- Rhythm properties: `tests/property/test_rhythm_properties.py`
 
 ---
 

@@ -1,9 +1,10 @@
 # Contributing Guide
 
-**Document Version:** 1.0.0
-**Project Version:** 1.0.0
-**Last Updated:** November 2025
-**Minimum Coverage:** 65% (CI gate threshold)
+**Document Version:** 1.1.0  
+**Project Version:** 1.2.0  
+**Last Updated:** 2025-12-28  
+**Coverage Threshold:** 75% (CI gate)  
+**MLE Standards:** 2024
 
 Thank you for your interest in contributing to MLSDM Governed Cognitive Memory! This document provides comprehensive guidelines and instructions for contributors.
 
@@ -387,6 +388,7 @@ When adding new features, update:
 - **USAGE_GUIDE.md**: Add usage examples
 - **ARCHITECTURE_SPEC.md**: Document architectural changes
 - **IMPLEMENTATION_SUMMARY.md**: Update implementation status
+- **docs/status/READINESS.md**: Always update when changing src/, tests/, config/, deploy/, or workflows
 
 ### Example Documentation
 
@@ -394,6 +396,141 @@ See existing files for style guidelines:
 - [README.md](README.md) - Feature overview
 - [USAGE_GUIDE.md](USAGE_GUIDE.md) - Detailed usage
 - [examples/](examples/) - Working code examples
+
+---
+
+## MLE 2024 Workflow (Truth-First)
+
+This project follows **MLE 2024 production hygiene standards**:
+
+### Core Principles
+
+1. **Truth-first**: All statements grounded in repository files or evidence snapshots
+2. **Reproducible**: All commands are executable and verified
+3. **Evidence-based**: Metrics sourced from `artifacts/evidence/` snapshots, not CI URLs
+4. **No guessing**: Unknown items marked as "NOT VERIFIED" with verification steps
+
+### Branching Strategy
+
+- **Main branch**: Production-ready code only
+- **Feature branches**: `feature/descriptive-name`
+- **Bugfix branches**: `fix/issue-description`
+- **Docs branches**: `docs/descriptive-name`
+
+### PR Size Policy
+
+**Small PRs are strongly preferred**:
+- ✅ **Ideal**: 1-3 files changed, < 200 lines
+- ⚠️ **Acceptable**: 3-10 files changed, < 500 lines
+- ❌ **Too large**: > 10 files or > 500 lines (split into multiple PRs)
+
+**Exception**: Generated files, migrations, and dependency updates may be larger.
+
+### Verification Block Required
+
+**Before submitting a PR, run this verification block**:
+
+```bash
+# 1. Readiness check (required if code/tests/config/workflows changed)
+python scripts/readiness_check.py
+
+# 2. Fast unit tests
+make test-fast
+
+# 3. Coverage gate (75% threshold)
+make coverage-gate
+
+# 4. Linting
+make lint
+
+# 5. Type checking
+make type
+
+# 6. Evidence metrics check
+pytest tests/unit/test_metrics_evidence_paths.py -q
+```
+
+**Include verification results in PR description**.
+
+### Updating READINESS.md
+
+**When touching scope prefixes** (`src/`, `tests/`, `config/`, `deploy/`, `.github/workflows/`, `Dockerfile*`):
+
+```bash
+# Preview change log entry
+make readiness-preview TITLE="Brief description of your changes"
+
+# Review the preview output
+
+# Apply change log entry
+make readiness-apply TITLE="Brief description of your changes"
+
+# Commit the update
+git add docs/status/READINESS.md
+git commit -m "docs: update READINESS.md for <feature/fix>"
+```
+
+**What to include in the TITLE**:
+- Brief, factual description of what changed
+- Reference PR number if available
+- Focus on what was modified, not why (details go in change log)
+
+**Example TITLE values**:
+- "Add rate limiter observability helpers"
+- "Fix moral filter threshold calculation edge case"
+- "Update LLM pipeline telemetry metadata"
+
+### Updating METRICS_SOURCE.md
+
+**Policy**: Reference **in-repo evidence snapshots only**, not CI workflow URLs.
+
+**Forbidden**: Links like `https://github.com/.../actions/runs/...`
+
+**Required**: Paths like `artifacts/evidence/2025-12-28/abc1234/coverage/coverage.xml`
+
+**How to update**:
+
+```bash
+# 1. Generate evidence snapshot
+make evidence
+
+# 2. Note the path (e.g., artifacts/evidence/2025-12-28/abc1234/)
+
+# 3. Update METRICS_SOURCE.md with new snapshot path
+
+# 4. Verify the test passes
+pytest tests/unit/test_metrics_evidence_paths.py -q
+```
+
+### Code Style (Ruff/Mypy/Pytest)
+
+**Run locally before pushing**:
+
+```bash
+# Linting (ruff)
+make lint
+# Auto-fix: ruff check src tests --fix
+
+# Type checking (mypy)
+make type
+
+# Tests (pytest)
+make test-fast  # Fast unit tests
+make test       # Full test suite
+```
+
+**Configuration**:
+- Ruff: `pyproject.toml` → `[tool.ruff]`
+- Mypy: `pyproject.toml` → `[tool.mypy]`
+- Pytest: `pytest.ini` + `pyproject.toml` → `[tool.pytest.ini_options]`
+
+**Style highlights**:
+- Line length: 100 characters
+- Type hints: Required for all public functions
+- Docstrings: Google style, required for public APIs
+- Import order: stdlib → third-party → local (auto-sorted by ruff)
+
+---
 
 ## Pull Request Process
 

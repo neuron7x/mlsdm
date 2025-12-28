@@ -1,44 +1,189 @@
 # Getting Started with MLSDM
 
-**Quick guide to get up and running with MLSDM in under 5 minutes.**
+**15-minute onboarding guide to get MLSDM running and verified.**
+
+**Last Updated**: 2025-12-28  
+**Version**: 1.2.0
+
+---
 
 ## Prerequisites
 
-- Python 3.10 or higher
-- pip (Python package manager)
+### Required
 
-## Quick Installation
+- **Python 3.10 or higher** (Python 3.11/3.12 recommended)
+- **uv** (fast Python package manager) - preferred for development
+  - Install: `pip install uv` or `curl -LsSf https://astral.sh/uv/install.sh | sh`
+- **Git** for version control
 
-### Option 1: Minimal Installation (Recommended for First-Time Users)
+### OS Notes
 
-Install just the core dependencies without optional features:
+- **Linux/macOS**: Fully supported, recommended for production
+- **Windows**: Supported via WSL2 (Windows Subsystem for Linux)
+  - Native Windows: Works but not optimized for production
+
+### Hardware
+
+- **RAM**: Minimum 2GB available, 4GB+ recommended
+- **CPU**: Any modern multi-core CPU
+- **Disk**: ~500MB for dependencies + evidence snapshots
+
+---
+
+## Installation
+
+### Step 1: Clone the Repository
 
 ```bash
-# Clone the repository
 git clone https://github.com/neuron7x/mlsdm.git
 cd mlsdm
-
-# Install minimal core dependencies (excludes OpenTelemetry tracing)
-pip install numpy sentence-transformers fastapi uvicorn pyyaml pydantic prometheus-client tenacity requests psutil
 ```
 
-### Option 2: Full Installation (Includes All Features)
+### Step 2: Install Dependencies (Canonical)
 
-Install with all optional dependencies including OpenTelemetry distributed tracing:
+**Using uv (recommended for development)**:
 
 ```bash
-# Clone the repository
-git clone https://github.com/neuron7x/mlsdm.git
-cd mlsdm
+# Install all dependencies from uv.lock
+make sync
+# or directly: uv sync
+```
 
-# Install all dependencies
-pip install -r requirements.txt
+**Using pip (alternative)**:
 
-# Optional: Install for development with testing tools
+```bash
+# Install core dependencies only
+pip install -e .
+
+# OR install with all development tools
 pip install -e ".[dev]"
 ```
 
-## Your First MLSDM Wrapper
+**Verify installation**:
+
+```bash
+python -c "import mlsdm; print(mlsdm.__version__)"
+# Expected output: 1.2.0 or similar
+```
+
+---
+
+## Quick Verification
+
+Run these commands to verify your installation:
+
+### 1. Readiness Check
+
+```bash
+python scripts/readiness_check.py
+```
+
+**Expected output**: `✓ Readiness check passed` (or instructions on what to update)
+
+### 2. Unit Tests (Fast)
+
+```bash
+make test-fast
+# or directly: pytest tests/unit tests/state -m "not slow and not comprehensive" -q --tb=short
+```
+
+**Expected output**: All tests pass in <30 seconds
+
+### 3. Evidence Snapshot (Optional)
+
+Generate a complete evidence snapshot to verify full setup:
+
+```bash
+make evidence
+```
+
+This creates `artifacts/evidence/<date>/<sha>/` with:
+- Coverage report
+- Test results
+- Benchmark metrics
+- Memory footprint
+
+**Verify the snapshot**:
+
+```bash
+make verify-metrics
+# or directly: python scripts/evidence/verify_evidence_snapshot.py --evidence-dir <path>
+```
+
+---
+
+## Canonical Run Entrypoints
+
+MLSDM provides multiple entrypoints for different use cases:
+
+### 1. Development Server (Hot Reload)
+
+```bash
+make run-dev
+# or directly: python -m mlsdm.entrypoints.dev
+```
+
+**Use for**: Local development with debug logging and hot reload
+**Port**: 8000 (default)
+**Workers**: 1 (single-threaded for debugging)
+
+### 2. Production Server (Multi-Worker)
+
+```bash
+make run-cloud-local
+# or directly: python -m mlsdm.entrypoints.cloud
+```
+
+**Use for**: Local production-like testing with multiple workers
+**Port**: 8000 (default)
+**Workers**: Multiple (CPU-based)
+
+### 3. Agent/API Server (LLM Integration)
+
+```bash
+make run-agent
+# or directly: python -m mlsdm.entrypoints.agent
+```
+
+**Use for**: Agent workflows and LLM integration endpoints
+**Port**: 8000 (default)
+
+### 4. Health Check Utility
+
+```bash
+make health-check
+# or directly: python -m mlsdm.entrypoints.health
+```
+
+**Use for**: Quick health verification (exits with status code)
+
+### 5. CLI Tool
+
+```bash
+mlsdm --help
+# or: python -m mlsdm.cli --help
+```
+
+**Use for**: Command-line operations (if installed with `pip install -e .`)
+
+### Docker Container (Neuro Engine Service)
+
+```bash
+# Build
+make docker-build-neuro-engine
+
+# Run
+make docker-run-neuro-engine
+
+# Smoke test
+make docker-smoke-neuro-engine
+```
+
+**See**: [Dockerfile.neuro-engine-service](../Dockerfile.neuro-engine-service)
+
+---
+
+## Your First MLSDM Wrapper (Python Code)
 
 Create a file called `my_first_wrapper.py`:
 
@@ -254,93 +399,105 @@ curl -X POST http://localhost:8000/generate \
   -d '{"prompt": "Hello world", "moral_value": 0.8}'
 ```
 
+## Additional Development Commands
+
+### Testing & Quality
+
+```bash
+# Run all tests
+make test
+
+# Run fast unit tests only (< 30 seconds)
+make test-fast
+
+# Run with coverage report
+make cov
+
+# Run coverage gate (CI threshold: 75%)
+make coverage-gate
+
+# Run linter
+make lint
+
+# Run type checker
+make type
+```
+
+### Performance & Benchmarks
+
+```bash
+# Run performance benchmarks
+make bench
+
+# Check benchmark drift against baseline
+make bench-drift
+```
+
+### Evaluation Suites
+
+```bash
+# Moral filter evaluation
+make eval-moral_filter
+
+# Observability tests
+make test-memory-obs
+```
+
+### Package Building
+
+```bash
+# Build wheel and sdist
+make build-package
+
+# Test package installation
+make test-package
+```
+
+---
+
 ## Next Steps
 
-- **Full Documentation**: See [README.md](README.md) for complete features
-- **Architecture**: Read [ARCHITECTURE_SPEC.md](ARCHITECTURE_SPEC.md) to understand the system design
-- **Configuration**: Check [CONFIGURATION_GUIDE.md](CONFIGURATION_GUIDE.md) for all options
-- **API Reference**: See [API_REFERENCE.md](API_REFERENCE.md) for detailed API documentation
-- **Examples**: Explore the [examples/](examples/) directory for more use cases
+Now that you have MLSDM running:
 
-## Troubleshooting
+1. **Understand the Architecture**: Read [ARCHITECTURE.md](ARCHITECTURE.md) for system design
+2. **Configure the System**: See [CONFIGURATION_GUIDE.md](CONFIGURATION_GUIDE.md) for configuration options
+3. **Explore the API**: Check [API_REFERENCE.md](API_REFERENCE.md) for HTTP endpoints
+4. **Review Evaluation Criteria**: See [EVALUATION.md](EVALUATION.md) for quality measures
+5. **Contribute**: Read [CONTRIBUTING.md](../CONTRIBUTING.md) for development workflow
+
+---
+
+## Common Issues & Solutions
 
 ### Import Error: No module named 'opentelemetry'
 
-**Solution**: OpenTelemetry is optional. Either install it with:
-```bash
-pip install opentelemetry-api opentelemetry-sdk
-```
-Or just ignore it - MLSDM will work without tracing.
+**Solution**: OpenTelemetry is optional. Either install it with `pip install ".[observability]"` or ignore it - MLSDM will work without tracing.
 
 ### Import Error: No module named 'sentence_transformers'
 
-**Solution**: Install sentence-transformers:
-```bash
-pip install sentence-transformers
-```
+**Solution**: Install sentence-transformers: `pip install sentence-transformers`
 
 ### Rate Limit Errors in Development
 
-**Solution**: Disable rate limiting:
+**Solution**: Disable rate limiting: `export DISABLE_RATE_LIMIT=1`
+
+### Readiness Check Fails
+
+**Solution**: If you modified code/tests/config/workflows, update `docs/status/READINESS.md`:
 ```bash
-export DISABLE_RATE_LIMIT=1
+make readiness-preview TITLE="Your change description"
+make readiness-apply TITLE="Your change description"
 ```
-
-## Verifying Key Metrics
-
-Want to verify the documented effectiveness metrics? Here's how:
-
-### Memory Footprint (29.37 MB claim)
-
-```bash
-# Install numpy if not already installed
-pip install numpy
-
-# Run memory benchmark
-python benchmarks/measure_memory_footprint.py
-
-# Expected output: ~29.37 MB (within 10% margin)
-# Configuration: 20,000 vectors × 384 dimensions
-```
-
-### Effectiveness Metrics
-
-```bash
-# Install full dependencies
-pip install -e .
-
-# Moral filter effectiveness (93.3% toxic rejection)
-pytest tests/validation/test_moral_filter_effectiveness.py -v -s
-
-# Wake/sleep effectiveness (89.5% resource savings)
-pytest tests/validation/test_wake_sleep_effectiveness.py -v -s
-
-# Aphasia detection (100% TPR, 80% TNR on 100-sample corpus)
-pytest tests/eval/test_aphasia_eval_suite.py -v
-```
-
-### Full Test Suite
-
-```bash
-# Run all tests (requires full install)
-pytest tests/ --ignore=tests/load -v
-
-# Run with coverage measurement
-./coverage_gate.sh
-
-# Expected: ~86% overall coverage, 3,600+ tests passing
-```
-
-See [CLAIMS_TRACEABILITY.md](CLAIMS_TRACEABILITY.md) for complete metric documentation.
 
 ---
 
 ## Getting Help
 
+- **Documentation Index**: [docs/README.md](README.md)
 - **Issues**: [GitHub Issues](https://github.com/neuron7x/mlsdm/issues)
-- **Documentation**: [docs/index.md](index.md)
-- **Contributing**: [CONTRIBUTING.md](CONTRIBUTING.md)
+- **Contributing Guide**: [../CONTRIBUTING.md](../CONTRIBUTING.md)
+- **Runbook**: [RUNBOOK.md](RUNBOOK.md) for troubleshooting
 
 ---
 
-**Welcome to MLSDM! 🧠**
+**Navigation**: [← Back to Documentation Index](README.md)
