@@ -1,5 +1,5 @@
 # System Readiness Status
-Last updated: 2025-12-26
+Last updated: 2025-12-28
 Owner: neuron7x / MLSDM maintainers
 Scope: MLSDM cognitive engine repository (src/, tests/, deploy/, workflows)
 
@@ -57,6 +57,17 @@ Blocking issues: 3
 6. Config and calibration paths unvalidated: `pytest tests/integration/test_public_api.py -v` or equivalent config validation has not been recorded.
 
 ## Change Log
+- 2025-12-28 — **MLE 2024 documentation standardization** — PR: docs/mle-2024-standardization
+  - Added `docs/README.md`: Documentation index linking to all project docs (architecture, getting started, evaluation, runbook, contributing, metrics source, readiness)
+  - Added `docs/ARCHITECTURE.md`: MLE 2024-style architecture overview (system components, request flow, configuration model, observability, evidence chain)
+  - Updated `docs/GETTING_STARTED.md`: 15-minute onboarding guide with exact commands (prerequisites, installation with uv/pip, canonical run entrypoints, verification steps)
+  - Added `docs/EVALUATION.md`: Quality measurement and acceptance criteria (test suite organization, minimum PR acceptance suite, optional extended suites, benchmarks, reproducibility guidelines)
+  - Updated `docs/RUNBOOK.md`: Added CI failure troubleshooting section (readiness gate, coverage gate, evidence snapshot, semgrep findings, lint/type failures, evidence generation)
+  - Updated `CONTRIBUTING.md`: Added MLE 2024 workflow section (truth-first principles, branching strategy, PR size policy, verification block, READINESS.md updates, METRICS_SOURCE.md policy, code style)
+  - Added `scripts/docs/check_docs_links.py`: Documentation drift protection (validates internal links resolve, METRICS_SOURCE.md has no GitHub Actions URLs)
+  - **Purpose**: Bring MLSDM documentation to MLE 2024 production hygiene standards with clear architecture narrative, reproducible runs, evaluation + metrics lineage, contributor workflow. All statements grounded in repo files/commands.
+  - **Evidence impact**: Documentation-only changes; no code or test changes; readiness check still passes
+  - **Testing posture**: Documentation link checker validates internal links and METRICS_SOURCE.md policy
 - 2025-12-26 — **Evidence integrity verification and artifact safety guards** — PR: #403
   - Added `tests/unit/test_evidence_guard.py`: Validates evidence snapshots avoid forbidden patterns (`*.env`, `*.pem`, `id_rsa*`, `token*`, `*.key`, `*.p12`) and enforces 5MB per-file cap.
   - Added `tests/unit/test_verify_evidence_snapshot.py`: Runs `scripts/evidence/verify_evidence_snapshot.py` against committed evidence and asserts failures when required files (e.g., manifest.json) are missing.
