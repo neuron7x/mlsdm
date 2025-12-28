@@ -33,14 +33,15 @@ def _atomic_write(path: Path, suffix: str, writer: Callable[[int, str], bool]) -
     """Write data to a temporary file and atomically replace the target."""
     parent = _ensure_parent_dir(path)
     fd, temp_name = tempfile.mkstemp(suffix=suffix, dir=parent)
-    closed = False
+    fd_closed = False
     try:
-        closed = writer(fd, temp_name)
-        if not closed:
+        fd_closed = writer(fd, temp_name)
+        if not fd_closed:
             os.close(fd)
+            fd_closed = True
         os.replace(temp_name, str(path))
     finally:
-        if not closed:
+        if not fd_closed:
             try:
                 os.close(fd)
             except OSError:
