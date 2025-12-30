@@ -380,7 +380,7 @@ def check_bibtex(repo_root: Path) -> tuple[list[str], set[str]]:
                 errors.append(
                     f"Duplicate DOI across entries: {doi} used by '{doi_to_key[doi_key]}' and '{key}'"
                 )
-            doi_to_key.setdefault(doi_key, key)
+            doi_to_key[doi_key] = key
 
         # Validate URL if present
         url = fields.get("url", "")
@@ -402,7 +402,7 @@ def check_bibtex(repo_root: Path) -> tuple[list[str], set[str]]:
                     "Duplicate work detected by normalized (title, year, first author): "
                     f"'{existing}' and '{key}'"
                 )
-            normalized_work_to_key.setdefault(norm_tuple, key)
+            normalized_work_to_key[norm_tuple] = key
 
     print(f"Validated {len(entries)} BibTeX entries")
     return errors, bib_keys
