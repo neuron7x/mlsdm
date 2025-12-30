@@ -68,7 +68,11 @@ def parse_literature_map(map_path: Path) -> tuple[list[dict], list[str]]:
         if line.startswith("## "):
             if current:
                 sections.append(current)
-            current = {"title": line[3:].strip(), "paths": None, "citations": None}
+            current = {
+                "title": line[len("## ") :].strip(),
+                "paths": None,
+                "citations": None,
+            }
             continue
 
         if current is None:
@@ -102,13 +106,18 @@ def _path_exists(repo_root: Path, path_spec: str) -> bool:
 
 def validate_literature_map(repo_root: Path, map_path: Path | None = None) -> list[str]:
     """Validate the literature map; return list of error messages."""
+    repo_root = repo_root.resolve()
     map_file = map_path or (repo_root / "docs" / "bibliography" / "LITERATURE_MAP.md")
     sections, parse_errors = parse_literature_map(map_file)
     errors: list[str] = parse_errors.copy()
 
+    if not repo_root.exists():
+        errors.append(f"Repository root not found: {repo_root}")
+        return errors
+
     try:
         bib_keys = load_bib_keys(repo_root)
-    except Exception as exc:  # pragma: no cover - defensive; raised in tests explicitly
+    except (FileNotFoundError, ValueError) as exc:
         errors.append(str(exc))
         return errors
 
