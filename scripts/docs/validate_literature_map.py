@@ -13,6 +13,7 @@ Checks:
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import re
 import sys
 from pathlib import Path
@@ -38,19 +39,34 @@ def load_bib_keys(repo_root: Path) -> set[str]:
     if not bib_path.exists():
         raise FileNotFoundError(f"REFERENCES.bib not found at {bib_path}")
 
-    # Reuse the validated BibTeX parser
-    sys.path.append(str(repo_root))
     try:
-        from scripts.validate_bibliography import parse_bibtex_entries
-    finally:
-        if str(repo_root) in sys.path:
-            sys.path.remove(str(repo_root))
+        from scripts.validate_bibliography import parse_bibtex_entries  # type: ignore
+    except ModuleNotFoundError:
+        module_path = _resolve_validate_bibliography_path(repo_root)
+        spec = importlib.util.spec_from_file_location("validate_bibliography", module_path)
+        if spec is None or spec.loader is None:
+            raise ImportError(f"Unable to load parser from {module_path}")
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        parse_bibtex_entries = getattr(module, "parse_bibtex_entries")
 
     content = bib_path.read_text(encoding="utf-8")
     entries, parse_errors = parse_bibtex_entries(content)
     if parse_errors:
         raise ValueError(f"REFERENCES.bib parse errors: {parse_errors}")
     return {entry["key"] for entry in entries}
+
+
+def _resolve_validate_bibliography_path(repo_root: Path) -> Path:
+    """Locate validate_bibliography.py relative to provided root or script location."""
+    candidates = [
+        repo_root / "scripts" / "validate_bibliography.py",
+        find_repo_root(Path(__file__).resolve()) / "scripts" / "validate_bibliography.py",
+    ]
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+    raise FileNotFoundError("validate_bibliography.py not found in candidate paths")
 
 
 def parse_literature_map(map_path: Path) -> tuple[list[dict], list[str]]:
@@ -69,7 +85,7 @@ def parse_literature_map(map_path: Path) -> tuple[list[dict], list[str]]:
             if current:
                 sections.append(current)
             current = {
-                "title": line[len("## ") :].strip(),
+                "title": line[3:].strip(),
                 "paths": None,
                 "citations": None,
             }
@@ -100,7 +116,7 @@ def _path_exists(repo_root: Path, path_spec: str) -> bool:
     """Check existence of a path or glob pattern relative to repo root."""
     if "*" in path_spec or "?" in path_spec or "[" in path_spec:
         matches = list(repo_root.glob(path_spec))
-        return any(match.exists() for match in matches)
+        return bool(matches)
     return (repo_root / path_spec).exists()
 
 

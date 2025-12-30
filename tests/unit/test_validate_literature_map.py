@@ -16,7 +16,7 @@ def write_references(tmp_path: Path, keys: list[str]) -> None:
   title={{Title {key}}},
   author={{Author}},
   year={{2024}},
-  url={{https://example.com/{key}}}
+  url={{https://test.invalid/{key}}}
 }}"""
         )
     (bib_dir / "REFERENCES.bib").write_text("\n\n".join(entries), encoding="utf-8")
@@ -30,7 +30,7 @@ def write_map(tmp_path: Path, content: str) -> Path:
 
 
 def test_valid_map_passes(tmp_path: Path) -> None:
-    tmp_path.joinpath("pyproject.toml").write_text("", encoding="utf-8")
+    (tmp_path / "pyproject.toml").write_text("", encoding="utf-8")
     keys = ["alpha", "beta", "gamma", "delta"]
     write_references(tmp_path, keys)
 
