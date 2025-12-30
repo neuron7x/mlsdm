@@ -28,7 +28,7 @@ This guide enables engineers to:
 
 1. **Bootstrap** the development environment in <10 minutes
 2. **Understand** the codebase structure without guessing
-3. **Modify** existing components safely
+3. **Modify** existing components safely, honoring memory and retrieval patterns derived from synaptic and RAG literature [@benna2016_synaptic; @lewis2020_rag]
 4. **Extend** the system with new features following established patterns
 5. **Debug** issues efficiently using built-in observability
 

@@ -21,7 +21,7 @@
 
 ## Overview
 
-MLSDM (Multi-Level Synaptic Dynamic Memory) Governed Cognitive Memory is a neurobiologically-grounded cognitive architecture that provides universal LLM wrapping with moral governance, phase-based memory, cognitive rhythm enforcement, and language pathology detection via the Aphasia-Broca model.
+MLSDM (Multi-Level Synaptic Dynamic Memory) Governed Cognitive Memory is a neurobiologically-grounded cognitive architecture that provides universal LLM wrapping with moral governance, phase-based memory, cognitive rhythm enforcement, and language pathology detection via the Aphasia-Broca model [@benna2016_synaptic; @fusi2005_cascade; @gabriel2020_alignment].
 
 ### Architecture Goals
 
@@ -35,7 +35,7 @@ MLSDM (Multi-Level Synaptic Dynamic Memory) Governed Cognitive Memory is a neuro
 
 - **Memory Bound**: Fixed 29.37 MB footprint with hard capacity limits
 - **Thread-Safe**: Lock-free concurrent access for high-throughput workloads
-- **Adaptive**: Dynamic moral threshold adjustment based on observed patterns
+- **Adaptive**: Dynamic moral threshold adjustment based on observed patterns [@gabriel2020_alignment]
 - **Phase-Aware**: Different retrieval strategies for wake vs. sleep phases
 - **Observable**: Comprehensive metrics and state introspection
 
@@ -45,7 +45,7 @@ MLSDM (Multi-Level Synaptic Dynamic Memory) Governed Cognitive Memory is a neuro
 
 ### Full System Architecture
 
-MLSDM is a multi-layered system spanning from low-level cognitive primitives to HTTP services, client SDKs, and operational infrastructure. Readiness is tracked in [status/READINESS.md](status/READINESS.md); all layers are currently implemented and operational.
+MLSDM is a multi-layered system spanning from low-level cognitive primitives to HTTP services, client SDKs, and operational infrastructure [@davies2018_loihi; @touvron2023_llama]; readiness is tracked in [status/READINESS.md](status/READINESS.md) and all layers are currently implemented and operational.
 
 ```
 ┌───────────────────────────────────────────────────────────────────┐

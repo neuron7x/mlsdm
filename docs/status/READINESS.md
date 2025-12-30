@@ -61,6 +61,9 @@ Blocking issues: 3
   - Added `docs/bibliography/metadata/identifiers.json` and regenerated `VERIFICATION.md` as the committed offline cache of canonical identifiers.
   - Hardened `scripts/validate_bibliography.py` to enforce one-source BibTeX, deduplication, frozen metadata checks, and APA key coverage; added unit tests for duplicate DOI and missing identifier detection.
   - Ensured APA7 entries carry key markers and updated documentation/readiness references.
+- 2025-12-30 — **Literature Traceability v1: doc citation standard + CI validator** — PR: #???
+  - Added `docs/bibliography/CITATION_STYLE.md`, offline doc citation validator (`scripts/docs/validate_doc_citations.py`), and unit tests.
+  - Wired citation validation into `citation-integrity.yml` and retrofitted foundation docs with canonical bibliography citations.
 - 2025-12-28 — **Atomic data serializer writes with directory auto-creation** — PR: #409
   - Updated `src/mlsdm/utils/data_serializer.py`: atomic writes via `mkstemp` + `os.replace` for JSON/NPZ, parent directories created automatically, explicit FD ownership to prevent partial artifacts.
   - Updated `tests/unit/test_data_serializer.py`: added coverage for nested directory saves to guard the new persistence behavior.
