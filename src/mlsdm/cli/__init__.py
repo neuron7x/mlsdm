@@ -183,6 +183,10 @@ def cmd_serve(args: argparse.Namespace) -> int:
     # Apply legacy environment variable compatibility layer
     apply_env_compat()
 
+    # Set runtime mode if specified
+    if hasattr(args, "mode") and args.mode:
+        os.environ["MLSDM_RUNTIME_MODE"] = args.mode
+
     # Set canonical environment variables from args
     if args.config:
         os.environ["CONFIG_PATH"] = args.config
@@ -200,6 +204,9 @@ def cmd_serve(args: argparse.Namespace) -> int:
     print("MLSDM HTTP API Server")
     print("=" * 60)
     print(f"Starting server on {args.host}:{args.port}")
+    mode = os.environ.get("MLSDM_RUNTIME_MODE", "default")
+    if mode != "default":
+        print(f"Mode: {mode}")
     print(f"Backend: {os.environ.get('LLM_BACKEND', 'local_stub')}")
     print(f"Config: {os.environ.get('CONFIG_PATH', 'config/default_config.yaml')}")
     print()
@@ -532,6 +539,12 @@ def main() -> int:
         "--disable-rate-limit",
         action="store_true",
         help="Disable rate limiting (for testing)",
+    )
+    serve_parser.add_argument(
+        "--mode",
+        type=str,
+        choices=["dev", "local-prod", "cloud-prod", "agent-api"],
+        help="Runtime mode (dev, local-prod, cloud-prod, agent-api)",
     )
 
     # Check command
