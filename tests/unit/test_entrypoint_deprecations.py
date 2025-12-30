@@ -1,9 +1,8 @@
 """Tests for entrypoint deprecation warnings."""
 
 import os
-import sys
 import warnings
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -143,41 +142,38 @@ class TestEntrypointDeprecations:
 
     def test_entrypoints_set_correct_runtime_mode(self):
         """Test each entrypoint sets the correct MLSDM_RUNTIME_MODE."""
-        with patch("mlsdm.entrypoints.serve.serve"):
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore", DeprecationWarning)
+        with patch("mlsdm.entrypoints.serve.serve"), warnings.catch_warnings():
+            warnings.simplefilter("ignore", DeprecationWarning)
 
-                from mlsdm.entrypoints.dev_entry import main as dev_main
+            from mlsdm.entrypoints.dev_entry import main as dev_main
 
-                with patch("mlsdm.entrypoints.health.health_check") as mock_health:
-                    mock_health.return_value = {"status": "healthy", "checks": {}}
-                    dev_main()
+            with patch("mlsdm.entrypoints.health.health_check") as mock_health:
+                mock_health.return_value = {"status": "healthy", "checks": {}}
+                dev_main()
 
-                assert os.environ.get("MLSDM_RUNTIME_MODE") == "dev"
+            assert os.environ.get("MLSDM_RUNTIME_MODE") == "dev"
 
-        with patch("mlsdm.entrypoints.serve.serve"):
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore", DeprecationWarning)
+        with patch("mlsdm.entrypoints.serve.serve"), warnings.catch_warnings():
+            warnings.simplefilter("ignore", DeprecationWarning)
 
-                from mlsdm.entrypoints.cloud_entry import main as cloud_main
+            from mlsdm.entrypoints.cloud_entry import main as cloud_main
 
-                with patch("mlsdm.entrypoints.health.health_check") as mock_health:
-                    mock_health.return_value = {"status": "healthy", "checks": {}}
-                    cloud_main()
+            with patch("mlsdm.entrypoints.health.health_check") as mock_health:
+                mock_health.return_value = {"status": "healthy", "checks": {}}
+                cloud_main()
 
-                assert os.environ.get("MLSDM_RUNTIME_MODE") == "cloud-prod"
+            assert os.environ.get("MLSDM_RUNTIME_MODE") == "cloud-prod"
 
-        with patch("mlsdm.entrypoints.serve.serve"):
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore", DeprecationWarning)
+        with patch("mlsdm.entrypoints.serve.serve"), warnings.catch_warnings():
+            warnings.simplefilter("ignore", DeprecationWarning)
 
-                from mlsdm.entrypoints.agent_entry import main as agent_main
+            from mlsdm.entrypoints.agent_entry import main as agent_main
 
-                with patch("mlsdm.entrypoints.health.health_check") as mock_health:
-                    mock_health.return_value = {"status": "healthy", "checks": {}}
-                    agent_main()
+            with patch("mlsdm.entrypoints.health.health_check") as mock_health:
+                mock_health.return_value = {"status": "healthy", "checks": {}}
+                agent_main()
 
-                assert os.environ.get("MLSDM_RUNTIME_MODE") == "agent-api"
+            assert os.environ.get("MLSDM_RUNTIME_MODE") == "agent-api"
 
 
 if __name__ == "__main__":

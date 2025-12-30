@@ -22,11 +22,40 @@ Complete guide to configuring MLSDM Governed Cognitive Memory for different depl
 
 MLSDM supports multiple configuration methods with the following precedence (highest to lowest):
 
-1. **Environment variables** (prefixed with `MLSDM_`)
+1. **Environment variables** (canonical `MLSDM_*` and legacy compatibility)
 2. **Configuration file** (YAML or INI format)
-3. **Default values** (defined in schema)
+3. **Mode-specific defaults** (based on runtime mode)
+4. **Base defaults** (defined in schema)
 
 All configurations are validated against a strict schema to prevent runtime errors.
+
+### Environment Variable Compatibility
+
+MLSDM uses a canonical `MLSDM_*` namespace for environment variables. Legacy environment variables are automatically mapped for backward compatibility:
+
+| Legacy Variable | Canonical Variable | Mapping |
+|:---------------|:-------------------|:--------|
+| `DISABLE_RATE_LIMIT=1` | `MLSDM_RATE_LIMIT_ENABLED=0` | Inverted (disable → enabled=false) |
+| `CONFIG_PATH` | `CONFIG_PATH` | Direct (already canonical) |
+| `LLM_BACKEND` | `LLM_BACKEND` | Direct (already canonical) |
+
+**Important:** Canonical variables take precedence over legacy variables. If both are set, the canonical variable is used.
+
+### Runtime Modes
+
+Runtime modes provide pre-configured defaults for different deployment scenarios:
+
+- **dev**: Development mode (hot reload, debug logging, rate limiting disabled)
+- **local-prod**: Local production mode (multiple workers, rate limiting enabled)
+- **cloud-prod**: Cloud production mode (secure mode, tracing, structured logging)
+- **agent-api**: Agent/API mode (optimized for LLM integration)
+
+Set the mode via:
+```bash
+export MLSDM_RUNTIME_MODE=dev
+# or
+mlsdm serve --mode dev
+```
 
 ## Configuration Files
 
