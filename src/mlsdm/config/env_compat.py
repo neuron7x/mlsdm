@@ -49,6 +49,7 @@ def apply_env_compat() -> None:
     # Map DISABLE_RATE_LIMIT to canonical rate limit enabled
     # Legacy: DISABLE_RATE_LIMIT=1 → means rate limiting is disabled
     # Canonical: MLSDM_RATE_LIMIT_ENABLED=0 → means rate limiting is disabled
+    # Note: Boolean parsing logic matches runtime.py's _get_env_bool() function
     if "DISABLE_RATE_LIMIT" in os.environ and "MLSDM_RATE_LIMIT_ENABLED" not in os.environ:
         disable_rate_limit = os.environ.get("DISABLE_RATE_LIMIT", "0")
         # If DISABLE_RATE_LIMIT is truthy, set MLSDM_RATE_LIMIT_ENABLED to 0
@@ -83,8 +84,10 @@ def warn_if_legacy_vars_used() -> list[str]:
                 stacklevel=2,
             )
 
-    # Note: CONFIG_PATH and LLM_BACKEND are actually still canonical
-    # They're read directly by runtime.py, so they don't need warnings
+    # Note: CONFIG_PATH and LLM_BACKEND are canonical and used directly by runtime.py,
+    # so they don't need warnings or mapping. They're part of the stable, documented API.
+    # Only DISABLE_RATE_LIMIT needs a warning because it's being phased out in favor of
+    # the more explicit MLSDM_RATE_LIMIT_ENABLED (with clearer semantics: enabled vs disabled).
 
     return legacy_vars
 
