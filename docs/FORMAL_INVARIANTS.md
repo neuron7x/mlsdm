@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document defines the **formal invariants** for the MLSDM Governed Cognitive Memory system. These invariants serve as mathematical and logical contracts that must hold throughout system execution. They are verified through property-based testing using Hypothesis.
+This document defines the **formal invariants** for the MLSDM Governed Cognitive Memory system. These invariants serve as mathematical and logical contracts that must hold throughout system execution, reflecting safety and control expectations from ISO/IEC 42001 and related governance frameworks [@iso2023_42001; @ieee2020_7010]. They are verified through property-based testing using Hypothesis.
 
 ---
 
@@ -10,7 +10,7 @@ This document defines the **formal invariants** for the MLSDM Governed Cognitive
 
 ### 1.1 Safety Invariants (what must NEVER happen)
 
-**INV-LLM-S1: Memory Bounds**
+**INV-LLM-S1: Memory Bounds** [@davies2018_loihi]
 - **Statement**: Total memory usage MUST NOT exceed 1.4 GB under any circumstances
 - **Formal**: `memory_usage() ≤ 1.4 * 10^9 bytes`
 - **Rationale**: Prevents unbounded memory growth and enables edge deployment

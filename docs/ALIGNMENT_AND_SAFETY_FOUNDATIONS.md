@@ -20,7 +20,7 @@
 
 ## 1. Overview
 
-MLSDM addresses AI safety through a multi-layered approach that combines:
+MLSDM addresses AI safety through a multi-layered approach that combines [@ji2023_survey; @gabriel2020_alignment]:
 1. **Architectural constraints** (bounded memory, formal invariants)
 2. **Behavioral governance** (moral filtering, language quality control)
 3. **Observability and testing** (property-based verification, chaos engineering)
@@ -35,7 +35,7 @@ This document establishes the AI safety and alignment foundations for each compo
 ### 2.1 Hallucinations and Factual Errors
 
 **Problem:**
-LLMs generate plausible but factually incorrect or nonsensical outputs [Ji et al., 2023]:
+LLMs generate plausible but factually incorrect or nonsensical outputs [@ji2023_survey]:
 - Fabricated citations and sources
 - Logically inconsistent statements
 - Confident assertions about unknown topics
@@ -56,7 +56,7 @@ LLMs generate plausible but factually incorrect or nonsensical outputs [Ji et al
 ### 2.2 Toxicity and Harmful Content
 
 **Problem:**
-LLMs can generate toxic, offensive, or harmful content [Ji et al., 2023]:
+LLMs can generate toxic, offensive, or harmful content [@ji2023_survey]:
 - Hate speech and discriminatory language
 - Instructions for illegal activities
 - Self-harm or violence promotion
@@ -76,7 +76,7 @@ LLMs can generate toxic, offensive, or harmful content [Ji et al., 2023]:
 ### 2.3 Value Drift and Inconsistency
 
 **Problem:**
-LLM behavior can shift over extended interactions [Gabriel, 2020]:
+LLM behavior can shift over extended interactions [@gabriel2020_alignment]:
 - Gradual adoption of user biases
 - Inconsistent application of ethical principles
 - Context-dependent moral reasoning
@@ -96,7 +96,7 @@ LLM behavior can shift over extended interactions [Gabriel, 2020]:
 ### 2.4 Jailbreaking and Prompt Injection
 
 **Problem:**
-Adversarial users can bypass safety constraints [Ji et al., 2023]:
+Adversarial users can bypass safety constraints [@ji2023_survey]:
 - Prompt engineering to elicit forbidden outputs
 - Persona-based circumvention ("Act as an evil AI...")
 - Indirect instruction injection via context

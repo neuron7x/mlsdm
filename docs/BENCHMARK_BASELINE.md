@@ -4,7 +4,7 @@ This document explains how to manage performance benchmark baselines for MLSDM.
 
 ## Overview
 
-MLSDM tracks performance metrics using benchmarks and compares them against established baselines to detect performance regressions. This ensures that code changes don't introduce unintended performance degradation.
+MLSDM tracks performance metrics using benchmarks and compares them against established baselines to detect performance regressions, aligning with risk-managed performance governance expectations [@nist2023_rmf].
 
 ## Baseline File
 

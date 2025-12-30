@@ -49,3 +49,7 @@ jobs:
       - name: Validate bibliography
         run: |
           python scripts/validate_bibliography.py
+
+      - name: Validate documentation citations
+        run: |
+          python scripts/docs/validate_doc_citations.py
