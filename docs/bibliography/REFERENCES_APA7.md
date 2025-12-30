@@ -1,6 +1,6 @@
 # MLSDM Bibliography (APA 7)
 
-**Last updated:** 2025-12-19  
+**Last updated:** 2025-12-30  
 **Standard:** APA 7
 
 Each entry includes a BibTeX key comment for cross-reference with `REFERENCES.bib`.
@@ -137,3 +137,14 @@ Fedorenko, E., Ryskin, R., & Gibson, E. (2023). Agrammatic output in non-fluent,
 
 <!-- key: asha_aphasia -->
 American Speech-Language-Hearing Association. (n.d.). Aphasia (Practice Portal). https://www.asha.org/practice-portal/clinical-topics/aphasia/
+
+## I. Cognitive architectures and data governance
+
+<!-- key: laird1987_soar -->
+Laird, J. E., Newell, A., & Rosenbloom, P. S. (1987). Soar: An architecture for general intelligence. *Artificial Intelligence, 33*(1), 1-64. https://doi.org/10.1016/0004-3702(87)90050-6
+
+<!-- key: kotseruba2020_cogarchsurvey -->
+Kotseruba, I., & Tsotsos, J. K. (2020). 40 years of cognitive architectures: Core cognitive abilities and practical applications. *Artificial Intelligence Review, 53*(1), 17-94. https://doi.org/10.1007/s10462-018-9646-y
+
+<!-- key: gebru2021_datasheets -->
+Gebru, T., Morgenstern, J., Vecchione, B., Vaughan, J. W., Wallach, H., Daumé III, H., & Crawford, K. (2021). Datasheets for datasets. *Communications of the ACM, 64*(12), 86-92. https://doi.org/10.1145/3458723

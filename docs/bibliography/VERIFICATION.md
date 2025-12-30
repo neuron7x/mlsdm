@@ -47,9 +47,12 @@ This table provides the audit trail for every reference in the bibliography. Eac
 | brady2016_aphasia | aphasia/clinical | peer_reviewed | 10.1002/14651858.CD000425.pub4 | https://doi.org/10.1002/14651858.CD000425.pub4 | Crossref | 2025-12-19 | Cochrane review: aphasia therapy |
 | fedorenko2023_agrammatic | aphasia/clinical | peer_reviewed | 10.1080/02687038.2022.2143233 | https://doi.org/10.1080/02687038.2022.2143233 | Crossref | 2025-12-19 | Agrammatic output in Broca's aphasia |
 | asha_aphasia | aphasia/clinical | standard | https://www.asha.org/practice-portal/clinical-topics/aphasia/ | https://www.asha.org/practice-portal/clinical-topics/aphasia/ | Official org page | 2025-12-19 | ASHA aphasia practice portal |
+| laird1987_soar | cognitive-architectures | peer_reviewed | 10.1016/0004-3702(87)90050-6 | https://doi.org/10.1016/0004-3702(87)90050-6 | Crossref | 2025-12-30 | Soar cognitive architecture |
+| kotseruba2020_cogarchsurvey | cognitive-architectures | peer_reviewed | 10.1007/s10462-018-9646-y | https://doi.org/10.1007/s10462-018-9646-y | Crossref | 2025-12-30 | Survey of cognitive architectures |
+| gebru2021_datasheets | data-governance | peer_reviewed | 10.1145/3458723 | https://doi.org/10.1145/3458723 | Crossref | 2025-12-30 | Datasheets for dataset governance |
 
 **Legend:**
-- **category**: neuroscience-memory | LLM-memory/RAG | alignment/governance | safety/standards | aphasia/clinical
+- **category**: neuroscience-memory | LLM-memory/RAG | alignment/governance | safety/standards | aphasia/clinical | cognitive-architectures | data-governance
 - **evidence_type**: peer_reviewed (journal/conference) | preprint (arXiv) | standard (official body)
 - **verification_method**: Crossref (DOI lookup) | arXiv (preprint server) | Official org page | PubMed | Publisher page
 
