@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 
 SCRIPT = Path(__file__).resolve().parents[2] / "scripts" / "eval" / "generate_iteration_metrics.py"
+MAX_JSONL_BYTES = 100_000
 
 
 def _repo_root() -> Path:
@@ -63,7 +64,7 @@ def test_jsonl_schema_and_bounds(tmp_path: Path) -> None:
     records = _load_lines(out)
 
     assert len(records) == steps
-    assert out.stat().st_size < 100_000  # bounded artifact size
+    assert out.stat().st_size < MAX_JSONL_BYTES  # bounded artifact size
 
     required_keys = {
         "timestamp",

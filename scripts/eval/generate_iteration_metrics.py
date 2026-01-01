@@ -28,6 +28,10 @@ from mlsdm.core.iteration_loop import (
     ObservationBundle,
 )
 
+ACTION_SCALE = 0.5
+RISK_SCALE = 0.65
+DRIFT_SCALE = 0.05
+
 
 def _risk_schedule(steps: int) -> list[float]:
     schedule: list[float] = []
@@ -78,7 +82,7 @@ class ToyIterationEnvironment(EnvironmentAdapter):
         base_wave = 0.12 * math.sin(self.index * 0.35)
         drift = 0.18 * math.cos(self.index * 0.15)
         noise = self.rng.uniform(-self.noise_scale, self.noise_scale)
-        outcome = action * 0.5 + risk * 0.65 + base_wave + drift * 0.05 + noise
+        outcome = action * ACTION_SCALE + risk * RISK_SCALE + base_wave + drift * DRIFT_SCALE + noise
         self.index += 1
         return ObservationBundle(observed_outcome=[outcome], reward=None, terminal=False)
 
