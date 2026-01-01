@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 import json
-import pathlib  # noqa: TC003 - used at runtime for Path operations
+from collections.abc import Sequence  # noqa: TC003 - needed at runtime for type guard in _to_vector
 from dataclasses import dataclass, field, replace
 from enum import Enum
 from typing import TYPE_CHECKING, Any, Protocol
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    import pathlib
 
 
 class Regime(str, Enum):
@@ -317,6 +317,8 @@ class IterationMetricsEmitter:
 
     def emit(self, ctx: IterationContext, trace: dict[str, Any]) -> None:
         if not self._should_emit():
+            return
+        if self.output_path is None:
             return
         if not self._prepared:
             self.output_path.parent.mkdir(parents=True, exist_ok=True)
