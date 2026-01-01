@@ -10,7 +10,6 @@ Tests the tracing functionality including:
 from __future__ import annotations
 
 import asyncio
-from unittest.mock import patch
 
 import pytest
 
@@ -73,22 +72,22 @@ class TestTracingConfig:
 
     def test_config_isolation_regression(self) -> None:
         """Regression test: ensure config reads don't leak between instances.
-        
+
         This test verifies that creating multiple TracingConfig instances
         with different settings doesn't cause state pollution.
         """
         # First config with explicit disabled
         config1 = TracingConfig(enabled=False, _env={})
         assert config1.enabled is False
-        
+
         # Second config should get defaults (enabled=True)
         config2 = TracingConfig(_env={})
         assert config2.enabled is True
-        
+
         # Third config with env override
         config3 = TracingConfig(_env={"OTEL_SDK_DISABLED": "true"})
         assert config3.enabled is False
-        
+
         # Fourth config should still get defaults
         config4 = TracingConfig(_env={})
         assert config4.enabled is True

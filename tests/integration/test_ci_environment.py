@@ -7,10 +7,12 @@ in CI environments and handles environment variable isolation properly.
 from __future__ import annotations
 
 import os
-
-import pytest
+from typing import TYPE_CHECKING
 
 from mlsdm.observability.tracing import TracerManager, TracingConfig
+
+if TYPE_CHECKING:
+    import pytest
 
 
 class TestCIEnvironmentBehavior:
@@ -54,7 +56,7 @@ class TestCIEnvironmentBehavior:
         config2 = TracingConfig(enabled=True, exporter_type="console", _env={})
         manager2 = TracerManager.get_instance(config2)
         assert manager2._config.enabled is True
-        
+
         # Verify they are different instances
         assert manager1 is not manager2
 

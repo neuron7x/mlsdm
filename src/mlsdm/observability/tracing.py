@@ -229,7 +229,7 @@ class TracingConfig:
         _env: dict[str, str] | None = None,
     ) -> None:
         """Initialize tracing configuration from environment or parameters.
-        
+
         Args:
             service_name: Service name for tracing
             enabled: Enable/disable tracing
@@ -244,7 +244,7 @@ class TracingConfig:
         """
         # Use injected env or fall back to os.environ
         env = _env if _env is not None else os.environ
-        
+
         self.service_name: str = service_name or env.get("OTEL_SERVICE_NAME", "mlsdm") or "mlsdm"
 
         # Check for MLSDM-specific enable flag first, then fall back to OTEL standard
