@@ -125,3 +125,18 @@ jobs:
           path: |
             coverage-gate.log
             coverage.xml
+      - name: Capture evidence snapshot
+        run: python scripts/evidence/capture_evidence.py
+      - name: Locate latest evidence snapshot
+        id: evidence_path
+        run: |
+          LATEST=$(ls -1d artifacts/evidence/*/* | sort | tail -n 1)
+          echo "path=${LATEST}" >> "$GITHUB_OUTPUT"
+      - name: Verify evidence snapshot
+        run: python scripts/evidence/verify_evidence_snapshot.py --evidence-dir "${{ steps.evidence_path.outputs.path }}"
+      - name: Upload evidence snapshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: readiness-evidence-snapshot
+          path: ${{ steps.evidence_path.outputs.path }}
