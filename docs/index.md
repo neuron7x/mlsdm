@@ -18,6 +18,7 @@ Complete documentation guide for MLSDM Governed Cognitive Memory v1.2.0. Readine
 - 🤝 **Contributing**: See [CONTRIBUTING.md](../CONTRIBUTING.md)
 - 🛡️ **Audit & Readiness**: See [AUDIT_REGISTER.md](AUDIT_REGISTER.md)
 - ✅ **Testing**: See [TESTING_STRATEGY.md](TESTING_STRATEGY.md)
+- 🧠 **Neuro-AI Contracts**: See [neuro_ai/CONTRACTS.md](neuro_ai/CONTRACTS.md) and [neuro_ai/HYBRID_RATIONALE.md](neuro_ai/HYBRID_RATIONALE.md)
 
 ---
 
