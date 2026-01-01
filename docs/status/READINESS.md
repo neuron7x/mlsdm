@@ -1,5 +1,5 @@
 # System Readiness Status
-Last updated: 2026-01-01 (Evidence/Audit v1)
+Last updated: 2026-01-01 (Neuro-AI Contract Layer v1)
 Owner: neuron7x / MLSDM maintainers
 Scope: MLSDM cognitive engine repository (src/, tests/, deploy/, workflows)
 
@@ -17,6 +17,7 @@ Blocking issues: 3
 | Embedding cache / retrieval | PARTIAL | `tests/unit/test_embedding_cache.py` | Cache behavior tested; no dated execution for this commit. |
 | Moral filter & safety invariants | PARTIAL | `tests/validation/test_moral_filter_effectiveness.py`, `tests/property/test_moral_filter_properties.py` | Safety metrics tested; CI evidence missing for this branch. |
 | Cognitive rhythm & state management | PARTIAL | `tests/validation/test_wake_sleep_effectiveness.py`, `tests/validation/test_rhythm_state_machine.py` | Rhythm behavior validated in tests; not re-run here. |
+| Neuro-AI adapters (prediction-error, regime control) | PARTIAL | `src/mlsdm/neuro_ai/adapters.py`, `tests/neuro_ai/test_neuro_ai_contract_layer.py`, `docs/neuro_ai/CONTRACTS.md` | 6 contract tests pass; adapters opt-in (default preserves legacy behavior); no integration/property tests yet. |
 | HTTP API surface (health/inference) | IMPROVED | `tests/api/test_health.py`, `tests/e2e/test_http_inference_api.py`, `tests/e2e/conftest.py`, `src/mlsdm/api/app.py` | Health endpoint race condition fixed in PR #368; E2E fixture now handles async initialization; rate limiting simplified to use DISABLE_RATE_LIMIT (PR #417) |
 | Observability pipeline (logging/metrics/tracing) | IMPROVED | `tests/observability/test_aphasia_logging.py`, `tests/observability/test_aphasia_metrics.py`, `tests/unit/test_tracing.py`, `tests/integration/test_ci_environment.py`, `src/mlsdm/observability/tracing.py`, `docs/OBSERVABILITY_GUIDE.md` | Instrumentation documented; TracingConfig test isolation fixed via dependency injection (PR #417); 24 tracing unit tests + 5 CI integration tests passing |
 | CI / quality gates (coverage, property tests) | NOT VERIFIED | `.github/workflows/readiness-evidence.yml` (jobs: deps_smoke, unit, coverage_gate), `.github/workflows/property-tests.yml`, `coverage_gate.sh` | Evidence workflow (uv-based) runs on pull_request/workflow_dispatch; awaiting current run artifacts for this PR. |
@@ -34,6 +35,7 @@ Blocking issues: 3
 ## Testing & Verification
 - Unit tests: NOT VERIFIED — Evidence: `.github/workflows/readiness-evidence.yml` (job: unit, command: `uv run python -m pytest tests/unit -q --junitxml=reports/junit-unit.xml --maxfail=1`, artifact: readiness-unit); awaiting current PR run.
 - Readiness gate unit tests: IMPROVED — Evidence: `tests/unit/test_readiness_change_analyzer.py` — Scope prefix matching and workflow detection cases expanded.
+- Neuro-AI contract tests: IMPROVED — Evidence: `tests/neuro_ai/test_neuro_ai_contract_layer.py` — 6 deterministic tests for golden compatibility, Δ-learning, regime hysteresis, risk modulation, oscillation bounds.
 - Integration tests: NOT VERIFIED — Evidence: `.github/workflows/readiness-evidence.yml` (job: integration — currently skipped in PR runs; command recorded in log to run on workflow_dispatch); Command when executed: `python -m pytest tests/integration -q --disable-warnings --maxfail=1`
 - End-to-end tests: NOT VERIFIED — Evidence: `tests/e2e/`; Command: `python -m pytest tests/e2e -v`
 - Property tests: NOT VERIFIED — Evidence: `.github/workflows/readiness-evidence.yml` (job: property — skipped in PR runs; workflow_dispatch command: `python -m pytest tests/property -q --maxfail=3`)
@@ -55,8 +57,17 @@ Blocking issues: 3
 4. Observability pipeline unvalidated: `python -m pytest tests/observability/ -v` not executed; need metrics/logging evidence.
 5. Deployment artifacts unvalidated: `deploy/k8s/` manifests lack smoke-test logs for this commit; need deployment verification evidence.
 6. Config and calibration paths unvalidated: `pytest tests/integration/test_public_api.py -v` or equivalent config validation has not been recorded.
+7. Neuro-AI adapters not integrated: `SynapticMemoryAdapter`, `PredictionErrorAdapter`, `RegimeController` implemented but not wired into `NeuroCognitiveEngine` or live system paths; need integration tests + real-world usage evidence.
 
 ## Change Log
+- 2026-01-01 — **Neuro-AI contract layer with prediction-error adapters and documented regimes** — PR: #420
+  - Added `src/mlsdm/neuro_ai/{__init__.py,adapters.py,contracts.py}` with `PredictionErrorAdapter`, `RegimeController`, `SynapticMemoryAdapter`.
+  - Added `tests/neuro_ai/test_neuro_ai_contract_layer.py` with 6 deterministic tests: golden compatibility, Δ-learning residual reduction, regime hysteresis flip cap, risk-modulated inhibition, bounded oscillation metrics.
+  - Added `docs/neuro_ai/CONTRACTS.md` (functional contracts: synaptic memory, PELM, rhythm, synergy) and `docs/neuro_ai/HYBRID_RATIONALE.md` (biomimetic grounding + engineering abstractions).
+  - Updated `docs/index.md` with links to Neuro-AI contracts documentation.
+  - **Behavior impact**: Default behavior unchanged (adapters disabled by default); opt-in prediction-error-driven adaptation, regime switching, and bounded update rules.
+  - **Testing posture**: 6 contract tests added; adapters preserve legacy behavior when disabled (golden compatibility test); deterministic CI-friendly assertions for hysteresis, oscillation bounds.
+  - **Evidence impact**: Neuro-AI layer formalized with measurable contracts; no breaking changes; adapters testable in isolation.
 - 2026-01-02 — **Evidence subsystem hardened (contract v1, deterministic pack/verify)** — PR: #418
   - Evidence contract versioned (`schema_version=evidence-v1`) with manifest invariants (relative paths, size cap, secret scan, sha256 index).
   - Capture tooling split into build vs pack; CI packs existing outputs once and marks partial on failures while still uploading.
