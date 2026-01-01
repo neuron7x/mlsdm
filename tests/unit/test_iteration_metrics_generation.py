@@ -121,7 +121,9 @@ def test_capture_evidence_packs_iteration_metrics(tmp_path: Path) -> None:
     )
 
     evidence_root = _repo_root() / "artifacts" / "evidence"
-    snapshot = sorted(evidence_root.glob("*/*"))[-1]
+    snapshots = sorted(evidence_root.glob("*/*"))
+    assert snapshots, "capture_evidence did not produce a snapshot"
+    snapshot = snapshots[-1]
     packed = snapshot / "iteration" / "iteration-metrics.jsonl"
     manifest = json.loads((snapshot / "manifest.json").read_text(encoding="utf-8"))
 

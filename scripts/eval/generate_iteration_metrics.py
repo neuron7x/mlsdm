@@ -57,7 +57,11 @@ class ToyIterationEnvironment(EnvironmentAdapter):
         noise_scale: float = 0.02,
     ) -> None:
         self.actions = list(actions)
+        if not self.actions:
+            raise ValueError("actions must not be empty")
         self.risk_schedule = list(risk_schedule)
+        if not self.risk_schedule:
+            raise ValueError("risk_schedule must not be empty")
         self.noise_scale = noise_scale
         self.rng = random.Random(seed)
         self.index = 0
@@ -89,6 +93,8 @@ def _parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = _parse_args()
+    if args.steps <= 0:
+        raise ValueError("--steps must be positive")
     out_path: Path = args.out
     out_path.parent.mkdir(parents=True, exist_ok=True)
     if out_path.exists():

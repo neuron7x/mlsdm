@@ -150,6 +150,10 @@ def capture_coverage(
         logs_dir = evidence_dir / "logs"
         logs_dir.mkdir(parents=True, exist_ok=True)
         dest_log = logs_dir / "coverage_gate.log"
+        if coverage_log.resolve() == dest_log.resolve():
+            produced.append(dest_log)
+            outputs["coverage_log"] = str(dest_log.relative_to(evidence_dir))
+            return
         shutil.copy(coverage_log, dest_log)
         produced.append(dest_log)
         outputs["coverage_log"] = str(dest_log.relative_to(evidence_dir))
@@ -373,7 +377,7 @@ def main() -> int:
     short_sha = sha_full[:12] if sha_full != "unknown" else "unknown"
     base_dir = root / "artifacts" / "evidence" / date_str
     base_dir.mkdir(parents=True, exist_ok=True)
-    temp_dir = Path(tempfile.mkdtemp(prefix="evidence-", dir=base_dir))
+    temp_dir = Path(tempfile.mkdtemp(prefix="evidence-"))
     evidence_dir = temp_dir
 
     commands: list[str] = []
@@ -403,6 +407,7 @@ def main() -> int:
             print(f"ERROR writing manifest: {exc}", file=sys.stderr)
 
     final_dir = base_dir / short_sha
+    base_dir.mkdir(parents=True, exist_ok=True)
     if final_dir.exists():
         shutil.rmtree(final_dir)
     shutil.move(str(temp_dir), final_dir)
