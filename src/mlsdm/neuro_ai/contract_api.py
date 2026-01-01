@@ -56,11 +56,10 @@ class NeuroModuleAdapter:
     def _invoke(self, signals: NeuroSignalPack) -> NeuroAIStepMetrics | Any:
         event = signals.observation
         predicted = signals.prediction
-        observed = signals.observation
         risk = signals.risk
 
         try:
-            return self.module.update(event, predicted=predicted, observed=observed, risk=risk)
+            return self.module.update(event, predicted=predicted, observed=event, risk=risk)
         except TypeError:
             return self.module.update(event)
 
@@ -71,20 +70,26 @@ class NeuroModuleAdapter:
         output_state: Any = None
 
         restore_flags = None
-        if not self.enable and hasattr(self.module, "enable_adaptation"):
+        has_adapt = hasattr(self.module, "enable_adaptation")
+        has_regime = hasattr(self.module, "enable_regime_switching")
+        if not self.enable and (has_adapt or has_regime):
             restore_flags = (
-                getattr(self.module, "enable_adaptation", None),
-                getattr(self.module, "enable_regime_switching", None),
+                getattr(self.module, "enable_adaptation", None) if has_adapt else None,
+                getattr(self.module, "enable_regime_switching", None) if has_regime else None,
             )
-            setattr(self.module, "enable_adaptation", False)
-            setattr(self.module, "enable_regime_switching", False)
+            if has_adapt:
+                self.module.enable_adaptation = False
+            if has_regime:
+                self.module.enable_regime_switching = False
 
         try:
             result = self._invoke(signals)
         finally:
             if restore_flags is not None:
-                setattr(self.module, "enable_adaptation", restore_flags[0])
-                setattr(self.module, "enable_regime_switching", restore_flags[1])
+                if has_adapt:
+                    self.module.enable_adaptation = restore_flags[0]
+                if has_regime:
+                    self.module.enable_regime_switching = restore_flags[1]
 
         if isinstance(result, NeuroAIStepMetrics):
             regime = result.regime
