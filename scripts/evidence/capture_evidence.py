@@ -79,6 +79,8 @@ def source_ref() -> str:
 
 def _prefer_uv(command: List[str]) -> List[str]:
     """Prefix command with `uv run` if available to mirror CI."""
+    if os.getenv("DISABLE_UV_RUN"):
+        return command
     if shutil.which("uv"):
         return ["uv", "run", *command]
     return command
