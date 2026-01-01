@@ -18,14 +18,31 @@ from .adapters import (
     RegimeState,
     SynapticMemoryAdapter,
 )
+from .config import NeuroHybridFlags
+from .contract_api import (
+    NeuroContractMetadata,
+    NeuroModuleAdapter,
+    NeuroOutputPack,
+    NeuroSignalPack,
+)
 from .contracts import NEURO_CONTRACTS, ContractSpec
+from .prediction_error import BoundedUpdateResult, PredictorEMA, compute_delta, update_bounded
 
 __all__ = [
     "ContractSpec",
     "NEURO_CONTRACTS",
+    "NeuroContractMetadata",
+    "NeuroHybridFlags",
+    "NeuroModuleAdapter",
+    "NeuroOutputPack",
+    "NeuroSignalPack",
     "NeuroAIStepMetrics",
     "PredictionErrorAdapter",
     "PredictionErrorMetrics",
+    "PredictorEMA",
+    "BoundedUpdateResult",
+    "compute_delta",
+    "update_bounded",
     "RegimeController",
     "RegimeDecision",
     "RegimeState",

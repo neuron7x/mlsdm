@@ -159,6 +159,27 @@ class OntologyMatcherConfig(BaseModel):
         return self
 
 
+class NeuroHybridConfig(BaseModel):
+    """Feature flags for hybrid neuro-adaptive dynamics."""
+
+    enable_hybrid: bool = Field(
+        default=False,
+        description="Global flag to enable hybrid neuro-AI dynamics (default off for compatibility).",
+    )
+    enable_learning: bool = Field(
+        default=False,
+        description="Enable prediction-error learning adapters (telemetry-only if False).",
+    )
+    enable_regime: bool = Field(
+        default=False,
+        description="Enable threat-driven regime switching (NORMAL/CAUTION/DEFENSIVE).",
+    )
+    module_overrides: dict[str, bool] = Field(
+        default_factory=dict,
+        description="Optional per-module overrides (module name -> enable flag).",
+    )
+
+
 class CognitiveRhythmConfig(BaseModel):
     """Cognitive rhythm configuration for wake/sleep cycles.
 
@@ -429,6 +450,10 @@ class SystemConfig(BaseModel):
     )
     neurolang: NeuroLangConfig = Field(
         default_factory=NeuroLangConfig, description="NeuroLang performance mode configuration."
+    )
+    neuro_hybrid: NeuroHybridConfig = Field(
+        default_factory=NeuroHybridConfig,
+        description="Hybrid neuro-AI feature flags (prediction-error and regime control).",
     )
     pelm: PELMConfig = Field(
         default_factory=PELMConfig,

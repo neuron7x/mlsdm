@@ -52,6 +52,11 @@ export MLSDM_DIMENSION="${MLSDM_DIMENSION:-384}"
 # Memory capacity (number of vectors)
 export MLSDM_CAPACITY="${MLSDM_CAPACITY:-20000}"
 
+# Neuro hybrid feature flags (default OFF for compatibility)
+export MLSDM_NEURO_HYBRID_ENABLE="${MLSDM_NEURO_HYBRID_ENABLE:-0}"
+export MLSDM_NEURO_LEARNING_ENABLE="${MLSDM_NEURO_LEARNING_ENABLE:-0}"
+export MLSDM_NEURO_REGIME_ENABLE="${MLSDM_NEURO_REGIME_ENABLE:-0}"
+
 # ==============================================================================
 # COGNITIVE RHYTHM CONFIGURATION
 # ==============================================================================
