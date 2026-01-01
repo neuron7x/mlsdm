@@ -92,7 +92,9 @@ def capture_coverage(evidence_dir: Path, commands: list[str], produced: list[Pat
     produced.append(log_path)
 
     if result.returncode != 0:
-        raise CaptureError("coverage gate failed; see logs/coverage_gate.log")
+        raise CaptureError(
+            f"coverage gate failed; see {log_path.relative_to(evidence_dir)}"
+        )
 
 
 def capture_pytest_junit(
@@ -129,7 +131,7 @@ def capture_pytest_junit(
     produced.append(log_path)
 
     if result.returncode != 0:
-        raise CaptureError("unit tests failed; see logs/unit_tests.log")
+        raise CaptureError(f"unit tests failed; see {log_path.relative_to(evidence_dir)}")
 
 
 def write_manifest(
