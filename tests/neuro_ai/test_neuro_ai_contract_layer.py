@@ -22,7 +22,7 @@ def test_adapter_default_matches_baseline() -> None:
 
     baseline_state = baseline.state()
     adapted_state = adapter.get_state()
-    for baseline_trace, adapted_trace in zip(baseline_state, adapted_state, strict=False):
+    for baseline_trace, adapted_trace in zip(baseline_state, adapted_state, strict=True):
         np.testing.assert_allclose(baseline_trace, adapted_trace)
     assert metrics.prediction_error is None
     assert metrics.regime is None
@@ -66,7 +66,8 @@ def test_regime_controller_hysteresis_limits_flip_flop() -> None:
         previous = decision.state
 
     assert defensive_seen
-    assert flips <= 4  # hysteresis + cooldown should suppress chatter
+    # For this jittery risk sequence with cooldown=1, chatter should stay below 4 flips.
+    assert flips <= 4
 
 
 def test_regime_increases_inhibition_and_reduces_exploration() -> None:
@@ -116,4 +117,5 @@ def test_neuro_ai_metrics_remain_bounded_under_sequence() -> None:
         oscillations.append(metrics.oscillation_score)
         assert metrics.oscillation_score >= 0.0
 
+    # Deterministic sequence keeps std-dev of norms well below 5, indicating stable traces.
     assert max(oscillations) < 5.0

@@ -50,6 +50,38 @@ def _clamp(value: float, low: float, high: float) -> float:
     return max(low, min(high, value))
 
 
+@dataclass(frozen=True)
+class RegimeTuning:
+    """
+    Tuning parameters for regime dynamics and update scaling.
+
+    Values are bounded to preserve legacy behavior: NORMAL tracks the previous
+    dynamics, CAUTION increases inhibition and slightly shortens τ, DEFENSIVE
+    applies the strongest inhibition with aggressive τ shortening.
+    """
+
+    min_update_scale: float = 0.2
+    max_update_scale: float = 2.0
+    normal_exploration_base: float = 0.25
+    normal_inhibition_slope: float = 0.1
+    normal_tau_scale: float = 1.0
+    caution_inhibition_base: float = 1.15
+    caution_inhibition_slope: float = 0.35
+    caution_exploration_base: float = 0.22
+    caution_exploration_min: float = 0.12
+    caution_tau_min: float = 0.75
+    caution_tau_slope: float = 0.25
+    defensive_inhibition_base: float = 1.35
+    defensive_inhibition_slope: float = 0.45
+    defensive_exploration_base: float = 0.18
+    defensive_exploration_min: float = 0.08
+    defensive_tau_min: float = 0.6
+    defensive_tau_slope: float = 0.4
+
+
+_TUNING = RegimeTuning()
+
+
 class PredictionErrorAdapter:
     """
     Bounded prediction-error learner.
@@ -67,7 +99,7 @@ class PredictionErrorAdapter:
         max_bias: float = 0.75,
         ema_alpha: float = 0.2,
     ) -> None:
-        if learning_rate <= 0 or learning_rate > 1:
+        if not 0 < learning_rate <= 1:
             raise ValueError("learning_rate must be in (0, 1].")
         if clip_value <= 0:
             raise ValueError("clip_value must be positive.")
@@ -84,6 +116,11 @@ class PredictionErrorAdapter:
         self.ema_delta = 0.0
 
     def _to_scalar(self, value: float | np.ndarray) -> float:
+        """Convert predictions/observations to a scalar using mean aggregation.
+
+        Mean is used instead of max/sum to dampen outlier noise and keep the
+        prediction-error signal stable across vector-valued inputs.
+        """
         if isinstance(value, np.ndarray):
             return float(np.mean(value))
         return float(value)
@@ -91,7 +128,7 @@ class PredictionErrorAdapter:
     def update(self, predicted: float | np.ndarray, observed: float | np.ndarray) -> PredictionErrorMetrics:
         pred = self._to_scalar(predicted)
         obs = self._to_scalar(observed)
-        delta = float(np.clip(obs - pred, -self.clip_value, self.clip_value))
+        delta = _clamp(obs - pred, -self.clip_value, self.clip_value)
         self.ema_delta = (1 - self.ema_alpha) * self.ema_delta + self.ema_alpha * delta
         self.bias = _clamp(self.bias + self.learning_rate * delta, -self.max_bias, self.max_bias)
         adjusted_prediction = pred + self.bias
@@ -122,7 +159,9 @@ class RegimeController:
         enable: bool = True,
     ) -> None:
         if not 0 <= caution_threshold < defensive_threshold <= 1:
-            raise ValueError("Thresholds must satisfy 0 <= caution < defensive <= 1.")
+            raise ValueError(
+                "caution_threshold must be >=0 and < defensive_threshold, which must be <=1."
+            )
         if hysteresis < 0:
             raise ValueError("hysteresis must be non-negative.")
         if cooldown < 0:
@@ -172,17 +211,23 @@ class RegimeController:
         risk_clamped = _clamp(risk, 0.0, 1.0)
 
         if state == RegimeState.NORMAL:
-            inhibition_gain = 1.0 + 0.1 * risk_clamped
-            exploration_rate = 0.25 - 0.05 * risk_clamped
-            tau_scale = 1.0
+            inhibition_gain = 1.0 + _TUNING.normal_inhibition_slope * risk_clamped
+            exploration_rate = _TUNING.normal_exploration_base - 0.05 * risk_clamped
+            tau_scale = _TUNING.normal_tau_scale
         elif state == RegimeState.CAUTION:
-            inhibition_gain = 1.15 + 0.35 * risk_clamped
-            exploration_rate = max(0.12, 0.22 - 0.12 * risk_clamped)
-            tau_scale = max(0.75, 1.0 - 0.25 * risk_clamped)
+            inhibition_gain = _TUNING.caution_inhibition_base + _TUNING.caution_inhibition_slope * risk_clamped
+            exploration_rate = max(
+                _TUNING.caution_exploration_min,
+                _TUNING.caution_exploration_base - 0.12 * risk_clamped,
+            )
+            tau_scale = max(_TUNING.caution_tau_min, 1.0 - _TUNING.caution_tau_slope * risk_clamped)
         else:
-            inhibition_gain = 1.35 + 0.45 * risk_clamped
-            exploration_rate = max(0.08, 0.18 - 0.15 * risk_clamped)
-            tau_scale = max(0.6, 1.0 - 0.4 * risk_clamped)
+            inhibition_gain = _TUNING.defensive_inhibition_base + _TUNING.defensive_inhibition_slope * risk_clamped
+            exploration_rate = max(
+                _TUNING.defensive_exploration_min,
+                _TUNING.defensive_exploration_base - 0.15 * risk_clamped,
+            )
+            tau_scale = max(_TUNING.defensive_tau_min, 1.0 - _TUNING.defensive_tau_slope * risk_clamped)
 
         return RegimeDecision(
             state=state,
@@ -228,13 +273,18 @@ class SynapticMemoryAdapter:
     ) -> np.ndarray:
         scaled = event.astype(np.float32, copy=True)
         if pe_metrics is not None:
-            scale = _clamp(1.0 + pe_metrics.bias, 0.2, 2.0)
+            scale = _clamp(
+                1.0 + pe_metrics.bias,
+                _TUNING.min_update_scale,
+                _TUNING.max_update_scale,
+            )
             scaled *= scale
         if regime is not None:
             scaled /= regime.inhibition_gain
         return scaled
 
     def _oscillation_score(self, traces: Iterable[np.ndarray]) -> float:
+        """Compute oscillation proxy as the std-dev of L1/L2/L3 norms."""
         norms = [safe_norm(trace) for trace in traces]
         return float(np.std(norms))
 
@@ -247,11 +297,6 @@ class SynapticMemoryAdapter:
         risk: float | None = None,
         correlation_id: str | None = None,
     ) -> NeuroAIStepMetrics:
-        if not isinstance(event, np.ndarray):
-            raise TypeError("event must be a NumPy array.")
-        if event.ndim != 1 or event.shape[0] != self.memory.dim:
-            raise ValueError(f"event must be shape ({self.memory.dim},)")
-
         pe_metrics: PredictionErrorMetrics | None = None
         if self.enable_adaptation and predicted is not None and observed is not None:
             pe_metrics = self.predictor.update(predicted, observed)
