@@ -10,10 +10,7 @@ import sys
 from pathlib import Path
 from typing import Any, Iterable, Tuple
 
-try:
-    import defusedxml.ElementTree as ET
-except ModuleNotFoundError:  # pragma: no cover - fallback for minimal environments
-    import xml.etree.ElementTree as ET  # type: ignore
+from defusedxml import ElementTree as ET
 
 SCHEMA_VERSION = "evidence-v1"
 REQUIRED_FILES = (
@@ -88,22 +85,9 @@ def _validate_manifest(path: Path) -> dict[str, Any]:
     return data
 
 
-def _secure_parser() -> ET.XMLParser:
-    parser = ET.XMLParser()
-    try:
-        parser.parser.UseForeignDTD(False)  # type: ignore[attr-defined]
-    except AttributeError:
-        pass
-    try:
-        parser.entity.clear()  # type: ignore[attr-defined]
-    except AttributeError:
-        pass
-    return parser
-
-
 def _parse_coverage_percent(path: Path) -> float:
     try:
-        root = ET.parse(path, parser=_secure_parser()).getroot()
+        root = ET.parse(path).getroot()
     except ET.ParseError as exc:
         raise EvidenceError(f"coverage.xml is not valid XML: {exc}") from exc
 
@@ -135,7 +119,7 @@ def _aggregate_tests(element: ET.Element) -> Tuple[int, int, int, int]:
 
 def _parse_junit(path: Path) -> Tuple[int, int, int, int]:
     try:
-        root = ET.parse(path, parser=_secure_parser()).getroot()
+        root = ET.parse(path).getroot()
     except ET.ParseError as exc:
         raise EvidenceError(f"junit.xml is not valid XML: {exc}") from exc
 
