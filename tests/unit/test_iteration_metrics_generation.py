@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 
 SCRIPT = Path(__file__).resolve().parents[2] / "scripts" / "eval" / "generate_iteration_metrics.py"
-MAX_JSONL_BYTES = 100_000
+MAX_JSONL_BYTES = 100_000  # ensures deterministic artifact stays well under evidence size guardrails
 
 
 def _repo_root() -> Path:

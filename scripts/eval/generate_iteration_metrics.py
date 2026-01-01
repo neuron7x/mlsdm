@@ -145,7 +145,7 @@ def main() -> int:
             sort_keys=True,
         )
     )
-    print(f"summary: steps={args.steps}, mean_abs_prediction_error={mean_abs_error:.6f}, max_risk={max_risk:.3f}")
+    print(f"summary: steps={args.steps}, mean_abs_prediction_error={mean_abs_error:.6f}, max_risk={max_risk:.6f}")
     print(f"regime_histogram: {regimes}")
     return 0
 

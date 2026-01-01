@@ -181,6 +181,13 @@ def capture_pytest_junit(
     )
 
 
+def _record_output(
+    evidence_dir: Path, produced: list[Path], outputs: MutableMapping[str, str], key: str, dest_path: Path
+) -> None:
+    produced.append(dest_path)
+    outputs[key] = str(dest_path.relative_to(evidence_dir))
+
+
 def _copy_optional(
     evidence_dir: Path,
     produced: list[Path],
@@ -193,9 +200,9 @@ def _copy_optional(
         return
     dest_path = evidence_dir / dest_rel
     dest_path.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy(source_path, dest_path)
-    produced.append(dest_path)
-    outputs[key] = str(dest_path.relative_to(evidence_dir))
+    if source_path.resolve() != dest_path.resolve():
+        shutil.copy(source_path, dest_path)
+    _record_output(evidence_dir, produced, outputs, key, dest_path)
 
 
 def _copy_log_file(
@@ -212,8 +219,7 @@ def _copy_log_file(
     dest_path.parent.mkdir(parents=True, exist_ok=True)
     if source_path.resolve() != dest_path.resolve():
         shutil.copy(source_path, dest_path)
-    produced.append(dest_path)
-    outputs[key] = str(dest_path.relative_to(evidence_dir))
+    _record_output(evidence_dir, produced, outputs, key, dest_path)
 
 
 def capture_env(evidence_dir: Path, produced: list[Path], outputs: MutableMapping[str, str]) -> None:
