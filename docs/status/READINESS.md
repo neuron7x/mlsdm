@@ -60,6 +60,12 @@ Blocking issues: 3
 7. Neuro-AI adapters not integrated: `SynapticMemoryAdapter`, `PredictionErrorAdapter`, `RegimeController` implemented but not wired into `NeuroCognitiveEngine` or live system paths; need integration tests + real-world usage evidence.
 
 ## Change Log
+- 2026-01-01 — **Iteration loop + evidence optional metrics (prediction-error, safe, audited)** — PR: #423
+  - Added `src/mlsdm/core/iteration_loop.py`: default-off Δ-driven loop with regimes (NORMAL/CAUTION/DEFENSIVE), risk-scaled learning rate/inhibition/tau, bounded updates, safety gate, and optional JSONL metrics emitter.
+  - Added tests `tests/unit/test_iteration_loop.py` (disabled mode, Δ reduction, threat/regime dynamics, safety gating) and `tests/unit/test_iteration_metrics_emitter.py` (JSONL emission contract).
+  - Hardened evidence tooling: `tests/unit/test_evidence_cli_contract.py` (Makefile/CLI defaults), `tests/unit/test_evidence_optional_outputs.py` (optional benchmarks/latency/memory/iteration metrics), capture/verify optional outputs, uname env fingerprint.
+  - Evidence contract now packs optional metrics when present; verifier enforces required + optional outputs with index, path safety, and size/secret limits; docs updated with optional evidence paths.
+  - Behavior impact: default runtime unchanged (loop off, emitter off); evidence optional metrics are opt-in and small; existing evidence commands remain valid.
 - 2026-01-01 — **Neuro-AI hybrid contracts v2: config, adapters, prediction-error engine** — PR: #421
   - Added `src/mlsdm/neuro_ai/{__init__.py,config.py,contract_api.py,prediction_error.py}` with `NeuroHybridConfig`, `NeuroHybridFlags`, `NeuroSignalPack`, `NeuroOutputPack`, `NeuroContractMetadata`, `compute_delta`, `update_bounded`, `PredictorEMA`.
   - Added `src/mlsdm/neuro_ai/adapters.py` with `NeuroModuleAdapter`, `SynapticMemoryAdapter`, `PredictionErrorAdapter`, `RegimeController`.

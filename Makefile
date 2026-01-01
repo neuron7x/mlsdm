@@ -70,7 +70,7 @@ coverage-gate:
 	@echo "✓ coverage.xml generated successfully"
 
 verify-metrics:
-	@LATEST_SNAPSHOT=$$(ls -1d artifacts/evidence/*/* 2>/dev/null | sort | tail -n 1); \
+	@LATEST_SNAPSHOT=$$(ls -1d artifacts/evidence/*/* 2>/dev/null | LC_ALL=C sort | tail -n 1); \
 	if [ -z "$$LATEST_SNAPSHOT" ]; then \
 		echo "No evidence snapshot found under artifacts/evidence"; \
 		exit 1; \
@@ -195,4 +195,6 @@ eval-moral_filter:
 # Evidence Snapshot
 evidence:
 	@echo "Capturing evidence snapshot..."
-	uv run python scripts/evidence/capture_evidence.py
+	uv run python scripts/evidence/capture_evidence.py --mode build
+	@echo "Verifying captured evidence snapshot..."
+	$(MAKE) verify-metrics
