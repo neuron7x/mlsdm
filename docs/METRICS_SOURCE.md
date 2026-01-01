@@ -19,6 +19,9 @@ Metrics are sourced from **committed evidence snapshots** in the repository for 
 Regenerate and validate locally:
 
 ```bash
+make evidence            # captures and verifies the latest snapshot
+make verify-metrics      # validate the latest snapshot without recapturing
+# Raw commands (if needed):
 python scripts/evidence/capture_evidence.py --mode build
 python scripts/evidence/verify_evidence_snapshot.py --evidence-dir artifacts/evidence/<date>/<sha>/
 ls artifacts/evidence/*/*

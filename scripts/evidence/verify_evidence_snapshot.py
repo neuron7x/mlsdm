@@ -250,6 +250,10 @@ def verify_snapshot(evidence_dir: Path) -> None:
     print(f"  Schema: {manifest['schema_version']} (status.partial={manifest['status']['partial']})")
     print(f"  Coverage: {coverage_percent:.2f}%")
     print(f"  Tests: {tests} (failures={failures}, errors={errors}, skipped={skipped})")
+    print(
+        f"✓ Summary: coverage={coverage_percent:.2f}%, tests={tests}, "
+        f"failures={failures}, errors={errors}, skipped={skipped}"
+    )
 
 
 def parse_args() -> argparse.Namespace:

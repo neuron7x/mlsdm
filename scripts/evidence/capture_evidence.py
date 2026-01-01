@@ -219,10 +219,13 @@ def write_manifest(
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Capture evidence snapshot")
+    parser = argparse.ArgumentParser(
+        description="Capture evidence snapshot",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
     parser.add_argument(
         "--mode",
-        required=True,
+        default="build",
         choices=["build", "pack"],
         help="build: run commands locally if outputs missing; pack: never rerun tests",
     )
