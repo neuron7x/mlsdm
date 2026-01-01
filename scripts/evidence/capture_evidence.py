@@ -106,7 +106,7 @@ def _uv_lock_sha256() -> str:
 def _hash_file(path: Path) -> str:
     h = hashlib.sha256()
     with path.open("rb") as f:
-        for chunk in iter(lambda: f.read(8192), b""):
+        for chunk in iter(lambda: f.read(65536), b""):
             h.update(chunk)
     return h.hexdigest()
 
@@ -346,13 +346,16 @@ def main() -> int:
         capture_coverage(evidence_dir, produced, outputs, inputs["coverage_xml"], inputs.get("coverage_log"))
         capture_pytest_junit(evidence_dir, produced, outputs, inputs["junit_xml"], inputs.get("unit_log"))
         capture_env(evidence_dir, produced, outputs)
-    except Exception as exc:  # noqa: BLE001
+    except (CaptureError, OSError, ValueError) as exc:
         failures.append(str(exc))
+        print(f"ERROR: {exc}", file=sys.stderr)
+    except Exception as exc:  # noqa: BLE001
+        failures.append(f"unexpected error: {exc}")
         print(f"ERROR: {exc}", file=sys.stderr)
     finally:
         try:
             write_manifest(evidence_dir, sha_full, short_sha, commands, outputs, failures)
-        except Exception as exc:  # noqa: BLE001
+        except (OSError, ValueError) as exc:
             print(f"ERROR writing manifest: {exc}", file=sys.stderr)
 
     final_dir = base_dir / short_sha

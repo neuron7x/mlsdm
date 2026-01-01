@@ -28,7 +28,7 @@ def _write_manifest(evidence_dir: Path, failures: list[str] | None = None, schem
         "schema_version": schema,
         "git_sha": "abcdef1234567890",
         "short_sha": "abcdef123456",
-        "created_utc": "2026-01-01T00:00:00Z",
+        "created_utc": "2025-01-01T00:00:00Z",
         "source_ref": "refs/heads/test",
         "commands": ["pytest --cov"],
         "outputs": {
@@ -57,7 +57,7 @@ def _write_manifest(evidence_dir: Path, failures: list[str] | None = None, schem
 
 
 def _build_snapshot(tmp_path: Path, *, schema: str = SCHEMA_VERSION, failures: list[str] | None = None) -> Path:
-    evidence_dir = tmp_path / "artifacts" / "evidence" / "2026-01-01" / "abcdef123456"
+    evidence_dir = tmp_path / "artifacts" / "evidence" / "2025-01-01" / "abcdef123456"
     (evidence_dir / "coverage").mkdir(parents=True, exist_ok=True)
     (evidence_dir / "pytest").mkdir(parents=True, exist_ok=True)
     (evidence_dir / "logs").mkdir(parents=True, exist_ok=True)
