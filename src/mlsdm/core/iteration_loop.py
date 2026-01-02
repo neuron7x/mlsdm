@@ -2,7 +2,10 @@ from __future__ import annotations
 
 import json
 from collections import deque
-from collections.abc import Iterable, Sequence  # noqa: TC003 - needed at runtime for type guard in _to_vector
+from collections.abc import (  # noqa: TC003 - needed at runtime for type guard in _to_vector
+    Iterable,
+    Sequence,
+)
 from dataclasses import dataclass, field, replace
 from enum import Enum
 from typing import TYPE_CHECKING, Any, Protocol
