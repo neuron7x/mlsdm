@@ -332,7 +332,7 @@ class IterationLoop:
                 "tau_scale": 1.0,
             }
 
-        if state.kill_switch_active or state.frozen:
+        if state.kill_switch_active or state.frozen or state.cooldown_remaining > 0:
             delta_sign = _sign(delta_mean)
             regime = Regime.DEFENSIVE
             delta_signs = deque(state.delta_signs, maxlen=GUARD_WINDOW)
@@ -352,10 +352,7 @@ class IterationLoop:
             if envelope_breach:
                 cooldown_remaining = COOLDOWN_STEPS
             else:
-                if state.kill_switch_active:
-                    base_cooldown = state.cooldown_remaining
-                else:
-                    base_cooldown = max(state.cooldown_remaining, COOLDOWN_STEPS) if state.frozen else 0
+                base_cooldown = state.cooldown_remaining
                 cooldown_remaining = max(0, base_cooldown - 1)
             if cooldown_remaining > 0 or envelope_breach or not guard_stable:
                 steps = state.steps + 1
