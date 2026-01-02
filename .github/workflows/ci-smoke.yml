@@ -31,15 +31,37 @@ jobs:
         with:
           python-version: '3.11'
           cache: 'pip'
-          cache-dependency-path: |
-            requirements.txt
-            pyproject.toml
+
+      - name: Cache uv dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/uv
+            .venv
+          key: uv-${{ runner.os }}-${{ hashFiles('uv.lock') }}
+          restore-keys: |
+            uv-${{ runner.os }}-
+
+      - name: Install uv
+        run: |
+          python -m pip install --upgrade pip uv
+
+      - name: Dependency drift check
+        run: |
+          uv export --locked --no-hashes --format requirements-txt --extra test --extra dev --output-file /tmp/req_from_uv.txt
+          diff -u requirements.txt /tmp/req_from_uv.txt
 
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install -e ".[test]"
+          uv sync --frozen --extra test --extra dev
+
+      - name: Validate defusedxml availability
+        run: |
+          uv run python - <<'PY'
+          import importlib
+          importlib.import_module("defusedxml.ElementTree")
+          print("defusedxml import ok")
+          PY
 
       - name: Run smoke tests (fast unit tests only)
         run: |
@@ -47,7 +69,7 @@ jobs:
           # Run all unit tests except slow ones for fast feedback
           # The 'slow' marker is already defined and used in the codebase
           # This gives us fast feedback on basic functionality
-          pytest tests/unit/ -v -m "not slow" --tb=short -q --maxfail=5 --junitxml=artifacts/junit-smoke.xml
+          uv run pytest tests/unit/ -v -m "not slow" --tb=short -q --maxfail=5 --junitxml=artifacts/junit-smoke.xml
         timeout-minutes: 3
 
       - name: Upload smoke junit report
@@ -60,7 +82,7 @@ jobs:
 
       - name: Run critical module imports
         run: |
-          python -c "
+          uv run python -c "
           print('Testing critical imports...')
           from mlsdm.core.cognitive_controller import CognitiveController
           from mlsdm.engine.neuro_cognitive_engine import NeuroCognitiveEngine
@@ -73,7 +95,7 @@ jobs:
 
       - name: Validate configuration files
         run: |
-          python -c "
+          uv run python -c "
           import yaml
           import os
 
@@ -104,18 +126,24 @@ jobs:
         with:
           python-version: '3.11'
           cache: 'pip'
-          cache-dependency-path: |
-            requirements.txt
-            pyproject.toml
+
+      - name: Cache uv dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/uv
+            .venv
+          key: uv-${{ runner.os }}-${{ hashFiles('uv.lock') }}
+          restore-keys: |
+            uv-${{ runner.os }}-
 
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install -e ".[test]"
+          python -m pip install --upgrade pip uv
+          uv sync --frozen --extra test --extra dev
 
       - name: Run coverage gate
-        run: ./coverage_gate.sh
+        run: uv run ./coverage_gate.sh
         env:
           COVERAGE_MIN: 75  # Staged target: 65% -> 75% -> 85% -> 90%
 
@@ -141,24 +169,30 @@ jobs:
         with:
           python-version: '3.11'
           cache: 'pip'
-          cache-dependency-path: |
-            requirements.txt
-            pyproject.toml
+
+      - name: Cache uv dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/uv
+            .venv
+          key: uv-${{ runner.os }}-${{ hashFiles('uv.lock') }}
+          restore-keys: |
+            uv-${{ runner.os }}-
 
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install -e ".[test]"
+          python -m pip install --upgrade pip uv
+          uv sync --frozen --extra test --extra dev
 
       - name: Run ablation baseline smoke test
         run: |
-          python scripts/eval/run_ablation.py --mode baseline --seed 42
+          uv run python scripts/eval/run_ablation.py --mode baseline --seed 42
         timeout-minutes: 1
 
       - name: Run ablation tests
         run: |
-          pytest tests/eval/test_ablation_runner.py -v --tb=short -q
+          uv run pytest tests/eval/test_ablation_runner.py -v --tb=short -q
         timeout-minutes: 2
 
       - name: Upload ablation report
@@ -203,6 +237,16 @@ jobs:
     if: ${{ always() }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    env:
+      FI_JUNIT_ARTIFACT: smoke-junit
+      FI_JUNIT_PATH: artifacts/junit-smoke.xml
+      FI_COV_ARTIFACT: coverage-report
+      FI_COV_PATH: artifacts/coverage.xml
+      FI_ABLATION_ARTIFACT: ablation-report
+      FI_ABLATION_PATH: artifacts/ablation/*.json
+      FI_CHANGED_FILES_PATH: changed_files.txt
+      FI_SUMMARY_MD: failure_summary.md
+      FI_SUMMARY_JSON: failure_summary.json
 
     steps:
       - name: Checkout code
@@ -215,10 +259,20 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Cache uv dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/uv
+            .venv
+          key: uv-${{ runner.os }}-${{ hashFiles('uv.lock') }}
+          restore-keys: |
+            uv-${{ runner.os }}-
+
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          python -m pip install --upgrade pip uv
+          uv sync --frozen
 
       - name: Determine changed files
         run: |
@@ -229,47 +283,80 @@ jobs:
             BASE_REF="${{ github.ref_name }}"
           fi
           echo "BASE_REF=$BASE_REF" >> "$GITHUB_ENV"
-          git diff --name-only origin/"$BASE_REF"...HEAD > changed_files.txt || true
-          if [ ! -s changed_files.txt ]; then
-            git diff --name-only HEAD~1...HEAD > changed_files.txt || true
+          git diff --name-only origin/"$BASE_REF"...HEAD > "$FI_CHANGED_FILES_PATH" || true
+          if [ ! -s "$FI_CHANGED_FILES_PATH" ]; then
+            git diff --name-only HEAD~1...HEAD > "$FI_CHANGED_FILES_PATH" || true
           fi
 
       - name: Download smoke junit
         uses: actions/download-artifact@v6
         with:
-          name: smoke-junit
+          name: ${{ env.FI_JUNIT_ARTIFACT }}
           path: artifacts
         continue-on-error: true
 
       - name: Download coverage report
         uses: actions/download-artifact@v6
         with:
-          name: coverage-report
+          name: ${{ env.FI_COV_ARTIFACT }}
           path: artifacts
         continue-on-error: true
 
       - name: Download ablation report
         uses: actions/download-artifact@v6
         with:
-          name: ablation-report
+          name: ${{ env.FI_ABLATION_ARTIFACT }}
           path: artifacts
         continue-on-error: true
+
+      - name: Validate expected artifacts
+        if: always()
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          expected = [
+              ("artifact_missing", os.environ["FI_JUNIT_ARTIFACT"], os.environ["FI_JUNIT_PATH"]),
+              ("artifact_missing", os.environ["FI_COV_ARTIFACT"], os.environ["FI_COV_PATH"]),
+              ("input_missing", "changed_files", os.environ["FI_CHANGED_FILES_PATH"]),
+          ]
+          missing = []
+          for code, artifact, path in expected:
+              if not Path(path).exists():
+                  missing.append({"code": code, "artifact": artifact, "path": path})
+
+          if not missing:
+              raise SystemExit(0)
+
+          summary = {
+              "status": "degraded",
+              "signal": "Failure intelligence inputs missing",
+              "errors": missing,
+              "input_integrity": missing,
+          }
+          Path(os.environ["FI_SUMMARY_JSON"]).write_text(json.dumps(summary, indent=2), encoding="utf-8")
+          md_lines = ["## Failure Intelligence", "", "Inputs missing for failure intelligence:"]
+          md_lines.extend([f"- {item['code']}: {item['artifact']} ({item['path'] or 'missing'})" for item in missing])
+          Path(os.environ["FI_SUMMARY_MD"]).write_text("\n".join(md_lines), encoding="utf-8")
+          PY
 
       - name: Generate failure intelligence summary
         if: always()
         run: |
-          python scripts/ci/failure_intelligence.py \
-            --junit artifacts/junit-smoke.xml \
-            --coverage artifacts/coverage.xml \
-            --changed-files changed_files.txt \
-            --out failure_summary.md \
-            --json failure_summary.json
+          uv run python scripts/ci/failure_intelligence.py \
+            --junit "$FI_JUNIT_PATH" \
+            --coverage "$FI_COV_PATH" \
+            --changed-files "$FI_CHANGED_FILES_PATH" \
+            --out "$FI_SUMMARY_MD" \
+            --json "$FI_SUMMARY_JSON"
 
       - name: Publish job summary
         if: always()
         run: |
-          if [[ -f failure_summary.md ]]; then
-            cat failure_summary.md >> "$GITHUB_STEP_SUMMARY"
+          if [[ -f "$FI_SUMMARY_MD" ]]; then
+            cat "$FI_SUMMARY_MD" >> "$GITHUB_STEP_SUMMARY"
           else
             echo "Failure Intelligence produced no summary file." >> "$GITHUB_STEP_SUMMARY"
           fi
@@ -280,7 +367,7 @@ jobs:
         with:
           name: failure-intelligence
           path: |
-            failure_summary.md
-            failure_summary.json
-            changed_files.txt
+            ${{ env.FI_SUMMARY_MD }}
+            ${{ env.FI_SUMMARY_JSON }}
+            ${{ env.FI_CHANGED_FILES_PATH }}
           retention-days: 7

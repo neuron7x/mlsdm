@@ -46,11 +46,14 @@ Traceback line 2</failure>
     )
 
     assert summary["signal"] == "Failures detected"
+    assert summary["status"] == "ok"
     assert summary["classification"]["category"] == "deterministic test"
     assert summary["coverage_percent"] == 85.0
     assert summary["top_failures"][0]["id"] == "pkg.test_sample::test_one"
     assert "Traceback line 1" in summary["top_failures"][0]["trace"]
     assert summary["impacted_modules"]
+    assert summary["errors"] == []
+    assert summary["input_integrity"] == []
 
 
 def test_redaction_and_markdown(tmp_path: Path):
@@ -59,12 +62,15 @@ def test_redaction_and_markdown(tmp_path: Path):
     assert "REDACTED" in redacted
     data = {
         "signal": "No failures detected",
+        "status": "ok",
         "top_failures": [],
         "classification": {"category": "pass", "reason": "ok"},
         "coverage_percent": None,
         "impacted_modules": [],
         "repro_commands": ["make test-fast"],
         "evidence": [],
+        "errors": [],
+        "input_integrity": [],
     }
     md = build_markdown(data)
     assert "Failure Intelligence" in md
@@ -91,9 +97,16 @@ def test_handles_missing_inputs(tmp_path: Path):
     md_path.write_text(md, encoding="utf-8")
     json_path.write_text(json.dumps(summary), encoding="utf-8")
     assert summary["signal"] == "No failures detected"
+    assert summary["status"] == "degraded"
+    assert summary["input_integrity"] == [
+        {"code": "artifact_missing", "artifact": "coverage", "path": "missing.xml"},
+        {"code": "artifact_missing", "artifact": "junit", "path": "nonexistent.xml"},
+        {"code": "input_missing", "artifact": "changed_files", "path": ""},
+    ]
     assert md_path.read_text(encoding="utf-8")
     loaded = json.loads(json_path.read_text(encoding="utf-8"))
     assert loaded["signal"] == "No failures detected"
+    assert loaded["errors"] == loaded["input_integrity"]
 
 
 def test_rejects_malicious_xml(tmp_path: Path):

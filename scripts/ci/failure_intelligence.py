@@ -45,8 +45,8 @@ def _truncate_text(raw: str, max_lines: int, max_bytes: int) -> str:
 
 
 def _discover_file(explicit: Optional[str], patterns: Sequence[str]) -> Optional[str]:
-    if explicit and os.path.isfile(explicit):
-        return explicit
+    if explicit is not None:
+        return explicit if os.path.isfile(explicit) else explicit
     for pattern in patterns:
         for path in sorted(glob.glob(pattern, recursive=True)):
             if os.path.isfile(path):
@@ -255,11 +255,22 @@ def write_outputs(markdown: str, json_obj: Dict[str, Any], out_path: str, json_p
     os.replace(tmp_json_path, json_file)
 
 
+def _format_error(err: Any) -> str:
+    if isinstance(err, dict):
+        code = err.get("code", "error")
+        artifact = err.get("artifact") or err.get("input") or "unknown"
+        path = err.get("path") or "missing"
+        detail = err.get("detail")
+        suffix = f" - {detail}" if detail else ""
+        return f"{code}: {artifact} ({path}){suffix}"
+    return str(err)
+
+
 def build_markdown(summary: Dict) -> str:
     lines = []
     lines.append("## Failure Intelligence")
     lines.append("")
-    lines.append(f"**Signal:** {summary.get('signal')}")
+    lines.append(f"**Status:** {summary.get('status', 'unknown')} | **Signal:** {summary.get('signal')}")
     lines.append("")
     lines.append("### Top Failures")
     if summary["top_failures"]:
@@ -283,6 +294,13 @@ def build_markdown(summary: Dict) -> str:
     coverage = summary.get("coverage_percent")
     lines.append(f"- Line coverage: {coverage if coverage is not None else 'Unavailable'}")
     lines.append("")
+    lines.append("### Input Integrity")
+    if summary.get("input_integrity"):
+        for err in summary["input_integrity"]:
+            lines.append(f"- {_format_error(err)}")
+    else:
+        lines.append("- All expected inputs present.")
+    lines.append("")
     lines.append("### Impacted Modules")
     if summary.get("impacted_modules"):
         for module in summary["impacted_modules"]:
@@ -301,8 +319,29 @@ def build_markdown(summary: Dict) -> str:
         lines.append("")
         lines.append("### Errors")
         for err in summary["errors"]:
-            lines.append(f"- {err}")
+            lines.append(f"- {_format_error(err)}")
     return "\n".join(lines)
+
+
+def _missing_inputs(
+    junit_path: Optional[str],
+    coverage_path: Optional[str],
+    changed_files_path: Optional[str],
+    log_glob: Optional[str],
+) -> List[Dict[str, str]]:
+    missing: List[Dict[str, str]] = []
+    if not junit_path or not os.path.isfile(junit_path):
+        missing.append({"code": "artifact_missing", "artifact": "junit", "path": junit_path or ""})
+    if not coverage_path or not os.path.isfile(coverage_path):
+        missing.append({"code": "artifact_missing", "artifact": "coverage", "path": coverage_path or ""})
+    if not changed_files_path or not os.path.isfile(changed_files_path):
+        missing.append({"code": "input_missing", "artifact": "changed_files", "path": changed_files_path or ""})
+    if log_glob:
+        first_log = next((p for p in glob.iglob(log_glob, recursive=True) if Path(p).is_file()), None)
+        if first_log is None:
+            missing.append({"code": "input_missing", "artifact": "logs", "path": log_glob})
+    missing_sorted = sorted(missing, key=lambda item: (item.get("code", ""), item.get("artifact", "")))
+    return missing_sorted
 
 
 def generate_summary(
@@ -313,21 +352,26 @@ def generate_summary(
     max_lines: int,
     max_bytes: int,
 ) -> Dict:
+    missing_inputs = _missing_inputs(junit_path, coverage_path, changed_files_path, log_glob)
     failures = parse_junit(junit_path, max_lines, max_bytes)
     coverage_percent = parse_coverage(coverage_path)
     changed_files = _read_changed_files(changed_files_path)
     logs = _collect_logs(log_glob, max_lines, max_bytes)
     classification = classify_failure(failures, logs)
     modules = impacted_modules(failures, changed_files)
+    status = "degraded" if missing_inputs else "ok"
+    errors: List[Any] = list(missing_inputs)
     summary = {
         "signal": "Failures detected" if failures else "No failures detected",
+        "status": status,
         "top_failures": failures,
         "coverage_percent": coverage_percent,
         "classification": classification,
         "impacted_modules": modules,
         "repro_commands": available_repro_commands(),
         "evidence": [p for p in (junit_path, coverage_path, changed_files_path) if p],
-        "errors": [],
+        "errors": errors,
+        "input_integrity": missing_inputs,
     }
     return summary
 
@@ -346,7 +390,9 @@ def main() -> None:
 
     # Always create initial stub outputs
     try:
-        write_outputs("## Failure Intelligence\n\nStarting...", {"status": "started"}, args.out, args.json_out)
+        write_outputs(
+            "## Failure Intelligence\n\nStarting...", {"status": "started", "signal": "pending"}, args.out, args.json_out
+        )
     except Exception:
         pass
 
@@ -354,13 +400,15 @@ def main() -> None:
         if not HAS_DEFUSEDXML:
             summary = {
                 "signal": "Failure intelligence unavailable",
+                "status": "degraded",
                 "top_failures": [],
                 "coverage_percent": None,
                 "classification": {"category": "pass", "reason": "defusedxml missing; parsing skipped"},
                 "impacted_modules": [],
                 "repro_commands": available_repro_commands(),
                 "evidence": [],
-                "errors": ["defusedxml_missing", DEFUSEDXML_ERR],
+                "errors": [{"code": "defusedxml_missing", "artifact": "defusedxml", "path": "", "detail": DEFUSEDXML_ERR}],
+                "input_integrity": [],
             }
         else:
             junit_path = _discover_file(
@@ -392,13 +440,15 @@ def main() -> None:
         error_text = _truncate_text(repr(exc), args.max_lines, args.max_bytes)
         fallback_summary = {
             "signal": "Failure intelligence error",
+            "status": "degraded",
             "top_failures": [],
             "coverage_percent": None,
             "classification": {"category": "deterministic test", "reason": "internal error"},
             "impacted_modules": [],
             "repro_commands": available_repro_commands(),
             "evidence": [],
-            "errors": [error_text],
+            "errors": [{"code": "internal_error", "artifact": "failure_intelligence", "path": "", "detail": error_text}],
+            "input_integrity": [],
         }
         redacted_summary = _redact_structure(fallback_summary)
         markdown = build_markdown(redacted_summary)

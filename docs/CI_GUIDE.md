@@ -13,6 +13,7 @@ MLSDM uses GitHub Actions for continuous integration and deployment. The CI pipe
 - **Lock File:** `uv.lock` pins all dependencies to specific versions
 - **Update Lock:** Run `uv lock` after changing `pyproject.toml` dependencies
 - **Install from Lock:** Use `uv sync` for reproducible installs matching CI
+- **Export requirements:** `requirements.txt` is generated from `uv.lock` via `uv export --locked --no-hashes --format requirements-txt --extra test --extra dev`; CI fails if it drifts
 - **GitHub Actions:** All workflows use pinned versions (@v4, @v5, etc.)
 
 **To reproduce CI environment locally:**
@@ -184,6 +185,14 @@ make cov
 - CI Smoke runs publish a **Failure Intelligence** section in the GitHub Actions job summary.
 - The artifact `failure-intelligence` contains `failure_summary.md`, `failure_summary.json`, and `changed_files.txt` for reproducible debugging.
 - Reproduce failures locally using the suggested commands in the summary (commonly `make test-fast`, `make lint`, `make type`).
+
+### Artifact Contract (Failure Intelligence)
+
+- **Expected artifacts:**
+  - `FI_JUNIT_ARTIFACT=smoke-junit` → `FI_JUNIT_PATH=artifacts/junit-smoke.xml`
+  - `FI_COV_ARTIFACT=coverage-report` → `FI_COV_PATH=artifacts/coverage.xml`
+  - `FI_CHANGED_FILES_PATH=changed_files.txt`
+- **Behavior when missing:** The failure-intelligence job never fails, but it writes `failure_summary.md`/`failure_summary.json` with `status=degraded`, an `Input Integrity` section, and structured `artifact_missing`/`input_missing` errors so missing or renamed artifacts cannot be silent.
 
 **When to modify:**
 - Changing production requirements
