@@ -215,6 +215,11 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
       - name: Determine changed files
         run: |
           if [ "${{ github.event_name }}" = "pull_request" ]; then
@@ -262,7 +267,12 @@ jobs:
 
       - name: Publish job summary
         if: always()
-        run: cat failure_summary.md >> "$GITHUB_STEP_SUMMARY"
+        run: |
+          if [[ -f failure_summary.md ]]; then
+            cat failure_summary.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Failure Intelligence produced no summary file." >> "$GITHUB_STEP_SUMMARY"
+          fi
 
       - name: Upload failure intelligence artifact
         if: always()

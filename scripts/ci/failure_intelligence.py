@@ -9,12 +9,24 @@ import glob
 import json
 import os
 import re
+import sys
+import tempfile
 import textwrap
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence
 
-from defusedxml.ElementTree import ParseError, parse
-from defusedxml.common import DefusedXmlException
+try:
+    from defusedxml.ElementTree import ParseError, parse
+    from defusedxml.common import DefusedXmlException
+
+    HAS_DEFUSEDXML = True
+    DEFUSEDXML_ERR = None
+except (ImportError, ModuleNotFoundError) as exc:  # pragma: no cover - exercised via unit test monkeypatch
+    HAS_DEFUSEDXML = False
+    DEFUSEDXML_ERR = repr(exc)
+    parse = None  # type: ignore
+    ParseError = Exception  # type: ignore
+    DefusedXmlException = Exception  # type: ignore
 
 
 DEFAULT_MAX_LINES = 300
@@ -43,7 +55,7 @@ def _discover_file(explicit: Optional[str], patterns: Sequence[str]) -> Optional
 
 
 def parse_junit(path: Optional[str], max_lines: int, max_bytes: int) -> List[Dict[str, str]]:
-    if not path or not os.path.isfile(path):
+    if not HAS_DEFUSEDXML or not path or not os.path.isfile(path):
         return []
     try:
         tree = parse(path)
@@ -76,7 +88,7 @@ def parse_junit(path: Optional[str], max_lines: int, max_bytes: int) -> List[Dic
 
 
 def parse_coverage(path: Optional[str]) -> Optional[float]:
-    if not path or not os.path.isfile(path):
+    if not HAS_DEFUSEDXML or not path or not os.path.isfile(path):
         return None
     try:
         tree = parse(path)
@@ -221,6 +233,28 @@ def _redact_structure(value: Any) -> Any:
     return value
 
 
+def write_outputs(markdown: str, json_obj: Dict[str, Any], out_path: str, json_path: str) -> None:
+    out_file = Path(out_path)
+    json_file = Path(json_path)
+    out_file.parent.mkdir(parents=True, exist_ok=True)
+    json_file.parent.mkdir(parents=True, exist_ok=True)
+
+    with tempfile.NamedTemporaryFile("w", delete=False, encoding="utf-8") as tmp_md:
+        tmp_md.write(markdown)
+        tmp_md.flush()
+        os.fsync(tmp_md.fileno())
+        tmp_md_path = tmp_md.name
+
+    with tempfile.NamedTemporaryFile("w", delete=False, encoding="utf-8") as tmp_json:
+        json.dump(json_obj, tmp_json, indent=2)
+        tmp_json.flush()
+        os.fsync(tmp_json.fileno())
+        tmp_json_path = tmp_json.name
+
+    os.replace(tmp_md_path, out_file)
+    os.replace(tmp_json_path, json_file)
+
+
 def build_markdown(summary: Dict) -> str:
     lines = []
     lines.append("## Failure Intelligence")
@@ -263,6 +297,11 @@ def build_markdown(summary: Dict) -> str:
     lines.append("### Evidence")
     for pointer in summary.get("evidence", []):
         lines.append(f"- {pointer}")
+    if summary.get("errors"):
+        lines.append("")
+        lines.append("### Errors")
+        for err in summary["errors"]:
+            lines.append(f"- {err}")
     return "\n".join(lines)
 
 
@@ -288,6 +327,7 @@ def generate_summary(
         "impacted_modules": modules,
         "repro_commands": available_repro_commands(),
         "evidence": [p for p in (junit_path, coverage_path, changed_files_path) if p],
+        "errors": [],
     }
     return summary
 
@@ -304,33 +344,71 @@ def main() -> None:
     parser.add_argument("--max-bytes", type=int, default=DEFAULT_MAX_BYTES)
     args = parser.parse_args()
 
-    junit_path = _discover_file(
-        args.junit,
-        patterns=[
-            "junit.xml",
-            "test-results.xml",
-            "artifacts/junit*.xml",
-            "reports/junit*.xml",
-            "**/junit*.xml",
-        ],
-    )
-    coverage_path = _discover_file(args.coverage, patterns=["coverage.xml", "reports/coverage.xml", "**/coverage.xml"])
+    # Always create initial stub outputs
+    try:
+        write_outputs("## Failure Intelligence\n\nStarting...", {"status": "started"}, args.out, args.json_out)
+    except Exception:
+        pass
 
-    summary = generate_summary(
-        junit_path=junit_path,
-        coverage_path=coverage_path,
-        changed_files_path=args.changed_files,
-        log_glob=args.logs,
-        max_lines=args.max_lines,
-        max_bytes=args.max_bytes,
-    )
-    redacted_summary = _redact_structure(summary)
+    try:
+        if not HAS_DEFUSEDXML:
+            summary = {
+                "signal": "Failure intelligence unavailable",
+                "top_failures": [],
+                "coverage_percent": None,
+                "classification": {"category": "pass", "reason": "defusedxml missing; parsing skipped"},
+                "impacted_modules": [],
+                "repro_commands": available_repro_commands(),
+                "evidence": [],
+                "errors": ["defusedxml_missing", DEFUSEDXML_ERR],
+            }
+        else:
+            junit_path = _discover_file(
+                args.junit,
+                patterns=[
+                    "junit.xml",
+                    "test-results.xml",
+                    "artifacts/junit*.xml",
+                    "reports/junit*.xml",
+                    "**/junit*.xml",
+                ],
+            )
+            coverage_path = _discover_file(
+                args.coverage, patterns=["coverage.xml", "reports/coverage.xml", "**/coverage.xml"]
+            )
 
-    markdown = build_markdown(redacted_summary)
-    with open(args.out, "w", encoding="utf-8") as handle:
-        handle.write(markdown)
-    with open(args.json_out, "w", encoding="utf-8") as handle:
-        json.dump(redacted_summary, handle, indent=2)
+            summary = generate_summary(
+                junit_path=junit_path,
+                coverage_path=coverage_path,
+                changed_files_path=args.changed_files,
+                log_glob=args.logs,
+                max_lines=args.max_lines,
+                max_bytes=args.max_bytes,
+            )
+        redacted_summary = _redact_structure(summary)
+        markdown = build_markdown(redacted_summary)
+        write_outputs(markdown, redacted_summary, args.out, args.json_out)
+    except Exception as exc:  # pragma: no cover - exercised via integration path
+        error_text = _truncate_text(repr(exc), args.max_lines, args.max_bytes)
+        fallback_summary = {
+            "signal": "Failure intelligence error",
+            "top_failures": [],
+            "coverage_percent": None,
+            "classification": {"category": "deterministic test", "reason": "internal error"},
+            "impacted_modules": [],
+            "repro_commands": available_repro_commands(),
+            "evidence": [],
+            "errors": [error_text],
+        }
+        redacted_summary = _redact_structure(fallback_summary)
+        markdown = build_markdown(redacted_summary)
+        try:
+            write_outputs(markdown, redacted_summary, args.out, args.json_out)
+        except Exception:
+            # Last resort: attempt minimal writes
+            Path(args.out).write_text(markdown, encoding="utf-8")
+            Path(args.json_out).write_text(json.dumps(redacted_summary), encoding="utf-8")
+    # Never propagate exceptions
 
 
 if __name__ == "__main__":
