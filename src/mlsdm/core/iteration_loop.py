@@ -253,6 +253,20 @@ class IterationLoop:
         state: IterationState,
         pe: PredictionError,
     ) -> tuple[IterationState, dict[str, float | int | bool | None]]:
+        if not self.enabled:
+            guard_metrics = {
+                "instability_events_count": state.instability_events_count,
+                "max_abs_delta": state.max_abs_delta,
+                "time_to_kill_switch": state.time_to_kill_switch,
+                "recovered": state.recovered,
+                "kill_switch_active": state.kill_switch_active,
+                "learning_enabled": state.learning_enabled,
+                "cooldown_remaining": state.stability_cooldown,
+                "sign_flip_rate": 0.0,
+                "regime_flip_rate": 0.0,
+            }
+            return state, guard_metrics
+
         delta_signal = sum(pe.delta) / len(pe.delta) if pe.delta else 0.0
         delta_history = (state.delta_history + [delta_signal])[-self.STABILITY_WINDOW :]
         sign_flip_rate = _compute_sign_flip_rate(delta_history)
@@ -351,6 +365,60 @@ class IterationLoop:
         proposal, prediction = self.propose_action(state, ctx)
         observation = self.execute_action(env, proposal, ctx)
         pe = self.compute_prediction_error(prediction, observation, ctx)
+        if not self.enabled:
+            new_state, update_result, dynamics = self.apply_updates(state, pe, ctx)
+            guard_metrics = {
+                "instability_events_count": state.instability_events_count,
+                "max_abs_delta": state.max_abs_delta,
+                "time_to_kill_switch": state.time_to_kill_switch,
+                "recovered": state.recovered,
+                "kill_switch_active": state.kill_switch_active,
+                "learning_enabled": state.learning_enabled,
+                "cooldown_remaining": state.stability_cooldown,
+                "sign_flip_rate": 0.0,
+                "regime_flip_rate": 0.0,
+            }
+            safety = self.evaluate_safety(new_state, pe, ctx)
+            trace = {
+                "action": {
+                    "id": proposal.action_id,
+                    "payload": proposal.action_payload,
+                    "scores": proposal.scores,
+                    "confidence": proposal.confidence,
+                },
+                "prediction": prediction.predicted_outcome,
+                "observation": observation.observed_outcome,
+                "prediction_error": {
+                    "delta": pe.delta,
+                    "abs_delta": pe.abs_delta,
+                    "clipped_delta": pe.clipped_delta,
+                },
+                "regime": new_state.regime.value,
+                "dynamics": {
+                    "learning_rate": new_state.learning_rate,
+                    "effective_learning_rate": new_state.last_effective_lr,
+                    "inhibition_gain": new_state.inhibition_gain,
+                    "tau": new_state.tau,
+                    **dynamics,
+                },
+                "update": {
+                    "parameter_deltas": update_result.parameter_deltas,
+                    "bounded": update_result.bounded,
+                    "applied": update_result.applied,
+                },
+                "safety": {
+                    "allow_next": safety.allow_next,
+                    "reason": safety.reason,
+                    "stability_metrics": safety.stability_metrics,
+                    "risk_metrics": safety.risk_metrics,
+                    "regime": safety.regime.value,
+                },
+                "stability_guard": guard_metrics,
+            }
+            if self.metrics_emitter and self.metrics_emitter._should_emit():
+                self.metrics_emitter.emit(ctx, trace)
+            return new_state, trace, safety
+
         guard_state, guard_metrics = self._update_stability_guard(state, pe)
 
         if guard_state.kill_switch_active:
@@ -359,7 +427,8 @@ class IterationLoop:
                 regime=Regime.DEFENSIVE,
                 last_effective_lr=0.0,
             )
-            update_result = UpdateResult(parameter_deltas={}, bounded=True, applied=False)
+            bounded = any(abs(d) > self.delta_max for d in pe.delta)
+            update_result = UpdateResult(parameter_deltas={}, bounded=bounded, applied=False)
             dynamics = {"effective_lr": 0.0, "inhibition_scale": 1.0, "tau_scale": 1.0}
         else:
             new_state, update_result, dynamics = self.apply_updates(guard_state, pe, ctx)
