@@ -101,8 +101,8 @@ class IterationState:
     last_delta: float = 0.0
     steps: int = 0
     frozen: bool = False
-    recent_delta_signs: deque[int] = field(default_factory=lambda: deque(maxlen=GUARD_WINDOW))
-    recent_regime_flips: deque[int] = field(default_factory=lambda: deque(maxlen=GUARD_WINDOW))
+    delta_signs: deque[int] = field(default_factory=lambda: deque(maxlen=GUARD_WINDOW))
+    regime_flips_window: deque[int] = field(default_factory=lambda: deque(maxlen=GUARD_WINDOW))
     recent_abs_deltas: deque[float] = field(default_factory=lambda: deque(maxlen=GUARD_WINDOW))
     max_abs_delta: float = 0.0
     last_envelope_metrics: dict[str, float] = field(default_factory=dict)
@@ -264,15 +264,15 @@ class IterationLoop:
             *,
             regime: Regime,
             steps: int,
-            recent_delta_signs: deque[int],
-            recent_regime_flips: deque[int],
+            delta_signs: deque[int],
+            regime_flips_window: deque[int],
             windowed_abs_delta_max: float,
         ) -> tuple[dict[str, float], float, float, bool]:
             max_delta = max((abs(d) for d in pe.delta), default=0.0)
             clipped_max_delta = max((abs(d) for d in pe.clipped_delta), default=0.0)
             convergence_time = float(steps) if abs(delta_mean) <= self.delta_max * self.convergence_tol else -1.0
-            sign_flip_rate = _sign_flip_rate(recent_delta_signs)
-            regime_flip_rate = sum(recent_regime_flips) / max(1, len(recent_regime_flips))
+            sign_flip_rate = _sign_flip_rate(delta_signs)
+            regime_flip_rate = sum(regime_flips_window) / max(1, len(regime_flips_window))
             envelope_metrics = {
                 "max_delta": max_delta,
                 "oscillation_index": sign_flip_rate,
@@ -288,8 +288,8 @@ class IterationLoop:
                 "guard_max_regime_flip_rate": MAX_REGIME_FLIP_RATE,
             }
             delta_breach = clipped_max_delta > MAX_ABS_DELTA
-            regime_flip_breach = len(recent_regime_flips) > 1 and regime_flip_rate > MAX_REGIME_FLIP_RATE
-            oscillation_breach = len(recent_delta_signs) > 1 and sign_flip_rate > MAX_SIGN_FLIP_RATE
+            regime_flip_breach = len(regime_flips_window) > 1 and regime_flip_rate > MAX_REGIME_FLIP_RATE
+            oscillation_breach = len(delta_signs) > 1 and sign_flip_rate > MAX_SIGN_FLIP_RATE
             envelope_breach = delta_breach or regime_flip_breach or oscillation_breach
             return envelope_metrics, sign_flip_rate, regime_flip_rate, envelope_breach
 
@@ -302,8 +302,8 @@ class IterationLoop:
 
         if not self.enabled:
             recent_abs_deltas, max_abs_delta = _update_guard_window(state, abs_max)
-            sign_flip_rate = _sign_flip_rate(state.recent_delta_signs)
-            regime_flip_rate = sum(state.recent_regime_flips) / max(1, len(state.recent_regime_flips))
+            sign_flip_rate = _sign_flip_rate(state.delta_signs)
+            regime_flip_rate = sum(state.regime_flips_window) / max(1, len(state.regime_flips_window))
             frozen_state = replace(
                 state,
                 regime=Regime.DEFENSIVE if state.frozen else state.regime,
@@ -335,17 +335,17 @@ class IterationLoop:
         if state.kill_switch_active or state.frozen:
             delta_sign = _sign(delta_mean)
             regime = Regime.DEFENSIVE
-            recent_delta_signs = deque(state.recent_delta_signs, maxlen=GUARD_WINDOW)
-            recent_regime_flips = deque(state.recent_regime_flips, maxlen=GUARD_WINDOW)
+            delta_signs = deque(state.delta_signs, maxlen=GUARD_WINDOW)
+            regime_flips_window = deque(state.regime_flips_window, maxlen=GUARD_WINDOW)
             recent_abs_deltas, max_abs_delta = _update_guard_window(state, abs_max)
             regime_flip = regime != state.regime
-            recent_delta_signs.append(delta_sign)
-            recent_regime_flips.append(1 if regime_flip else 0)
+            delta_signs.append(delta_sign)
+            regime_flips_window.append(1 if regime_flip else 0)
             envelope_metrics, _, _, envelope_breach = _calculate_envelope(
                 regime=regime,
                 steps=state.steps + 1,
-                recent_delta_signs=recent_delta_signs,
-                recent_regime_flips=recent_regime_flips,
+                delta_signs=delta_signs,
+                regime_flips_window=regime_flips_window,
                 windowed_abs_delta_max=max_abs_delta,
             )
             guard_stable = _guard_metrics_stable(envelope_metrics)
@@ -366,8 +366,8 @@ class IterationLoop:
                     last_effective_lr=0.0,
                     last_delta=delta_mean,
                     steps=steps,
-                    recent_delta_signs=recent_delta_signs,
-                    recent_regime_flips=recent_regime_flips,
+                    delta_signs=delta_signs,
+                    regime_flips_window=regime_flips_window,
                     recent_abs_deltas=recent_abs_deltas,
                     max_abs_delta=max_abs_delta,
                     last_envelope_metrics=envelope_metrics,
@@ -423,16 +423,16 @@ class IterationLoop:
         # Detect oscillations via sign changes between consecutive delta means.
         delta_sign = _sign(delta_mean)
         steps = state.steps + 1
-        recent_delta_signs = deque(state.recent_delta_signs, maxlen=GUARD_WINDOW)
-        recent_regime_flips = deque(state.recent_regime_flips, maxlen=GUARD_WINDOW)
+        delta_signs = deque(state.delta_signs, maxlen=GUARD_WINDOW)
+        regime_flips_window = deque(state.regime_flips_window, maxlen=GUARD_WINDOW)
         recent_abs_deltas, max_abs_delta = _update_guard_window(state, abs_max)
-        recent_delta_signs.append(delta_sign)
-        recent_regime_flips.append(1 if regime_flip else 0)
+        delta_signs.append(delta_sign)
+        regime_flips_window.append(1 if regime_flip else 0)
         envelope_metrics, sign_flip_rate, regime_flip_rate, envelope_breach = _calculate_envelope(
             regime=regime,
             steps=steps,
-            recent_delta_signs=recent_delta_signs,
-            recent_regime_flips=recent_regime_flips,
+            delta_signs=delta_signs,
+            regime_flips_window=regime_flips_window,
             windowed_abs_delta_max=max_abs_delta,
         )
 
@@ -448,8 +448,8 @@ class IterationLoop:
             cooldown_steps=cooldown,
             steps=steps,
             frozen=envelope_breach,
-            recent_delta_signs=recent_delta_signs,
-            recent_regime_flips=recent_regime_flips,
+            delta_signs=delta_signs,
+            regime_flips_window=regime_flips_window,
             recent_abs_deltas=recent_abs_deltas,
             max_abs_delta=max_abs_delta,
             last_envelope_metrics=envelope_metrics,
@@ -470,8 +470,8 @@ class IterationLoop:
                 last_effective_lr=0.0,
                 last_delta=delta_mean,
                 steps=steps,
-                recent_delta_signs=recent_delta_signs,
-                recent_regime_flips=recent_regime_flips,
+                delta_signs=delta_signs,
+                regime_flips_window=regime_flips_window,
                 recent_abs_deltas=recent_abs_deltas,
                 max_abs_delta=max_abs_delta,
                 last_envelope_metrics=envelope_metrics,
