@@ -96,13 +96,19 @@ jobs:
         if: always()
         run: |
           set -euo pipefail
-          cat > /tmp/evidence-inputs.json <<'EOF'
-          {
-            "coverage_xml": "coverage.xml",
-            "coverage_log": "coverage-gate.log",
-            "junit_xml": "reports/junit.xml"
-          }
-          EOF
+          # Generate inputs JSON with null handling for missing files
+          python3 << 'PYTHON'
+import json
+from pathlib import Path
+
+inputs = {
+    "coverage_xml": "coverage.xml" if Path("coverage.xml").exists() else None,
+    "coverage_log": "coverage-gate.log" if Path("coverage-gate.log").exists() else None,
+    "junit_xml": "reports/junit.xml",
+}
+Path("/tmp/evidence-inputs.json").write_text(json.dumps(inputs))
+PYTHON
+
           PARTIAL_ARGS=()
           if [ "${{ steps.coverage.outputs.exit_code }}" != "0" ]; then
             PARTIAL_ARGS+=(--partial-reason "coverage gate failed (exit ${{ steps.coverage.outputs.exit_code }})")
