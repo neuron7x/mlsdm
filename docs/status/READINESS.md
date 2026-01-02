@@ -1,5 +1,5 @@
 # System Readiness Status
-Last updated: 2026-01-01 (Neuro-AI Contract Layer v2)
+Last updated: 2026-01-02 (Stability Guard for Iteration Loop)
 Owner: neuron7x / MLSDM maintainers
 Scope: MLSDM cognitive engine repository (src/, tests/, deploy/, workflows)
 
@@ -60,6 +60,10 @@ Blocking issues: 3
 7. Neuro-AI adapters not integrated: `SynapticMemoryAdapter`, `PredictionErrorAdapter`, `RegimeController` implemented but not wired into `NeuroCognitiveEngine` or live system paths; need integration tests + real-world usage evidence.
 
 ## Change Log
+- 2026-01-02 — **Stability guard kill-switch for iteration loop** — PR: (this)
+  - Added hard stability guard to prediction-error loop: bounded Δ, sign-flip and regime-flip rate checks, kill-switch with cooldown, and inference-only defensive mode.
+  - Recorded guard metrics (`instability_events_count`, `max_abs_delta`, `time_to_kill_switch`, `recovered`) in traces for auditability.
+  - Tests: `tests/unit/test_iteration_loop.py` covers deterministic kill-switch trigger, noise stability, and default-off behavior.
 - 2026-01-01 — **Deterministic iteration metrics evidence path wired** — PR: (this)
   - Added `scripts/eval/generate_iteration_metrics.py` + `make iteration-metrics`; `make evidence` now packages `iteration/iteration-metrics.jsonl` deterministically for audit trails.
   - Validation: `make iteration-metrics`, `make evidence`, `python scripts/evidence/verify_evidence_snapshot.py --evidence-dir artifacts/evidence/<date>/<sha>`
