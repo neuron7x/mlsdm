@@ -26,9 +26,6 @@ jobs:
   load-tests:
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    env:
-      LOAD_USERS: ${{ inputs.users || '20' }}
-      LOAD_DURATION: ${{ inputs.duration || '30' }}
 
     steps:
       - name: Checkout repository
@@ -61,7 +58,19 @@ jobs:
           pip install -e ".[dev]"
 
       - name: Run standalone load test
+        env:
+          LOAD_USERS: ${{ inputs.users || '20' }}
+          LOAD_DURATION: ${{ inputs.duration || '30' }}
         run: |
+          set -euo pipefail
+          if ! [[ "$LOAD_USERS" =~ ^[0-9]+$ ]]; then
+            echo "Invalid users value: $LOAD_USERS" >&2
+            exit 1
+          fi
+          if ! [[ "$LOAD_DURATION" =~ ^[0-9]+$ ]]; then
+            echo "Invalid duration value: $LOAD_DURATION" >&2
+            exit 1
+          fi
           echo "Running load test with users=$LOAD_USERS duration=$LOAD_DURATION"
           python tests/load/standalone_server_load_test.py \
             --users "$LOAD_USERS" \
