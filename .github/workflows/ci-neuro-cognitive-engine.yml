@@ -642,7 +642,25 @@ jobs:
 
       - name: Diff OpenAPI spec against baseline
         run: |
-          npx openapi-diff docs/openapi-baseline.json reports/openapi.generated.json --fail-on-incompatible
+          if [ ! -f docs/openapi-baseline.json ]; then
+            echo "❌ OpenAPI baseline docs/openapi-baseline.json not found."
+            echo "Generate it with: python scripts/export_openapi.py --output docs/openapi-baseline.json"
+            exit 1
+          fi
+
+          npx openapi-diff docs/openapi-baseline.json reports/openapi.generated.json | tee openapi-diff-output.txt
+          DIFF_EXIT_CODE=${PIPESTATUS[0]}
+
+          if [ $DIFF_EXIT_CODE -ne 0 ]; then
+            echo "## ❌ Breaking OpenAPI changes detected" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+            cat openapi-diff-output.txt >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+            exit $DIFF_EXIT_CODE
+          fi
+
+          echo "## ✅ OpenAPI contract is compatible" >> $GITHUB_STEP_SUMMARY
 
       - name: Upload OpenAPI spec artifact
         if: always()
