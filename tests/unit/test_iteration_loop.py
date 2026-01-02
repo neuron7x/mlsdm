@@ -301,7 +301,6 @@ def test_kill_switch_recovery_after_cooldown() -> None:
     state.kill_switch_active = True
     state.cooldown_remaining = 2
 
-    env = ToyEnvironment(target=0.5)
     ctx = _ctx(0)
 
     pe = PredictionError(delta=[0.1], abs_delta=0.1, clipped_delta=[0.1])
