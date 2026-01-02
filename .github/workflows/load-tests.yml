@@ -64,16 +64,20 @@ jobs:
           LOAD_DURATION: ${{ inputs.duration }}
         run: |
           set -euo pipefail
-          : "${LOAD_USERS:=20}"
-          : "${LOAD_DURATION:=30}"
-          if ! [[ "$LOAD_USERS" =~ ^[0-9]+$ ]] || [ "$LOAD_USERS" -le 0 ]; then
-            echo "Invalid users value: $LOAD_USERS" >&2
-            exit 1
-          fi
-          if ! [[ "$LOAD_DURATION" =~ ^[0-9]+$ ]] || [ "$LOAD_DURATION" -le 0 ]; then
-            echo "Invalid duration value: $LOAD_DURATION" >&2
-            exit 1
-          fi
+          : "${LOAD_USERS:=20}" "${LOAD_DURATION:=30}"
+
+          validate_positive_int() {
+            local value="$1"
+            local label="$2"
+
+            if ! [[ "$value" =~ ^[0-9]+$ ]] || [ "$value" -le 0 ]; then
+              echo "Invalid $label value: $value" >&2
+              exit 1
+            fi
+          }
+
+          validate_positive_int "$LOAD_USERS" "users"
+          validate_positive_int "$LOAD_DURATION" "duration"
           echo "Running load test with users=$LOAD_USERS duration=$LOAD_DURATION"
           python tests/load/standalone_server_load_test.py \
             --users "$LOAD_USERS" \
