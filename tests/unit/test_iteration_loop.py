@@ -367,8 +367,8 @@ def test_guard_metrics_do_not_change_inference_trace() -> None:
     loop = IterationLoop(enabled=False)
     env = ToyEnvironment(outcomes=[0.4])
     state = IterationState(parameter=0.25, learning_rate=0.2)
-    state.recent_delta_signs = deque([1, -1, 1], maxlen=iteration_loop.GUARD_WINDOW)
-    state.recent_regime_flips = deque([1, 0, 1], maxlen=iteration_loop.GUARD_WINDOW)
+    state.delta_signs = deque([1, -1, 1], maxlen=iteration_loop.GUARD_WINDOW)
+    state.regime_flips_window = deque([1, 0, 1], maxlen=iteration_loop.GUARD_WINDOW)
     state.recent_abs_deltas = deque([0.1, 0.2, 0.3], maxlen=iteration_loop.GUARD_WINDOW)
     state.max_abs_delta = 0.3
 
@@ -402,8 +402,8 @@ def test_kill_switch_recovery_after_cooldown() -> None:
     state = new_state
     state.cooldown_remaining = 0
     state.regime = Regime.DEFENSIVE
-    state.recent_regime_flips = deque(maxlen=iteration_loop.GUARD_WINDOW)
-    state.recent_delta_signs = deque(maxlen=iteration_loop.GUARD_WINDOW)
+    state.regime_flips_window = deque(maxlen=iteration_loop.GUARD_WINDOW)
+    state.delta_signs = deque(maxlen=iteration_loop.GUARD_WINDOW)
     new_state, result, _ = loop.apply_updates(state, pe, ctx)
 
     assert new_state.kill_switch_active is False
@@ -419,8 +419,8 @@ def test_kill_switch_recovery_requires_stable_guard_metrics() -> None:
     state.frozen = True
     state.kill_switch_active = True
     state.cooldown_remaining = 0
-    state.recent_delta_signs = deque([1, -1, 1, -1], maxlen=iteration_loop.GUARD_WINDOW)
-    state.recent_regime_flips = deque(maxlen=iteration_loop.GUARD_WINDOW)
+    state.delta_signs = deque([1, -1, 1, -1], maxlen=iteration_loop.GUARD_WINDOW)
+    state.regime_flips_window = deque(maxlen=iteration_loop.GUARD_WINDOW)
 
     ctx = _ctx(0)
     pe = PredictionError(delta=[0.1], abs_delta=0.1, clipped_delta=[0.1])
@@ -438,8 +438,8 @@ def test_kill_switch_resets_cooldown_on_repeated_breach() -> None:
     state.frozen = True
     state.kill_switch_active = True
     state.cooldown_remaining = 1
-    state.recent_regime_flips = deque(maxlen=iteration_loop.GUARD_WINDOW)
-    state.recent_delta_signs = deque(maxlen=iteration_loop.GUARD_WINDOW)
+    state.regime_flips_window = deque(maxlen=iteration_loop.GUARD_WINDOW)
+    state.delta_signs = deque(maxlen=iteration_loop.GUARD_WINDOW)
 
     ctx = _ctx(0)
     breach_delta = iteration_loop.MAX_ABS_DELTA + 1.0
