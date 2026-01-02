@@ -105,6 +105,8 @@ class IterationState:
     frozen: bool = False
     recent_delta_signs: deque[int] = field(default_factory=lambda: deque(maxlen=GUARD_WINDOW))
     recent_regime_flips: deque[int] = field(default_factory=lambda: deque(maxlen=GUARD_WINDOW))
+    recent_abs_deltas: deque[float] = field(default_factory=lambda: deque(maxlen=GUARD_WINDOW))
+    max_abs_delta: float = 0.0
     last_envelope_metrics: dict[str, float] = field(default_factory=dict)
 
 
@@ -247,11 +249,19 @@ class IterationLoop:
         ctx: IterationContext,
     ) -> tuple[IterationState, UpdateResult, dict[str, float]]:
         delta_mean = sum(pe.clipped_delta) / len(pe.clipped_delta) if pe.clipped_delta else 0.0
+        abs_max = max((abs(d) for d in pe.delta), default=0.0)
 
         def _apply_kill_switch_fields(target: IterationState, **updates: Any) -> IterationState:
             for key, value in updates.items():
                 setattr(target, key, value)
             return target
+
+        def _update_guard_window(target: IterationState, abs_delta_max: float) -> tuple[deque[float], float]:
+            recent_abs_deltas = deque(target.recent_abs_deltas, maxlen=GUARD_WINDOW)
+            recent_abs_deltas.append(abs_delta_max)
+            window_max = max(recent_abs_deltas) if recent_abs_deltas else abs_delta_max
+            max_abs_delta = max(target.max_abs_delta, window_max)
+            return recent_abs_deltas, max_abs_delta
 
         def _calculate_envelope(
             *,
@@ -283,6 +293,7 @@ class IterationLoop:
             return envelope_metrics, sign_flip_rate, regime_flip_rate, envelope_breach
 
         if not self.enabled:
+            recent_abs_deltas, max_abs_delta = _update_guard_window(state, abs_max)
             sign_flip_rate = _sign_flip_rate(state.recent_delta_signs)
             regime_flip_rate = sum(state.recent_regime_flips) / max(1, len(state.recent_regime_flips))
             frozen_state = replace(
@@ -290,8 +301,10 @@ class IterationLoop:
                 regime=Regime.DEFENSIVE if state.frozen else state.regime,
                 last_effective_lr=0.0,
                 frozen=state.frozen,
+                recent_abs_deltas=recent_abs_deltas,
+                max_abs_delta=max_abs_delta,
                 last_envelope_metrics={
-                    "max_delta": max((abs(d) for d in pe.delta), default=0.0),
+                    "max_delta": abs_max,
                     "oscillation_index": sign_flip_rate,
                     "regime_flip_rate": regime_flip_rate,
                     "convergence_time": float(state.steps) if abs(state.last_delta) <= self.delta_max else -1.0,
@@ -313,6 +326,7 @@ class IterationLoop:
             regime = Regime.DEFENSIVE
             recent_delta_signs = deque(state.recent_delta_signs, maxlen=GUARD_WINDOW)
             recent_regime_flips = deque(state.recent_regime_flips, maxlen=GUARD_WINDOW)
+            recent_abs_deltas, max_abs_delta = _update_guard_window(state, abs_max)
             regime_flip = regime != state.regime
             recent_delta_signs.append(delta_sign)
             recent_regime_flips.append(1 if regime_flip else 0)
@@ -335,6 +349,7 @@ class IterationLoop:
                 steps = state.steps + 1
                 regime_flips = state.regime_flips + (1 if regime_flip else 0)
                 sign_flips = state.sign_flips + (1 if sign_flip else 0)
+                time_to_kill_switch = state.time_to_kill_switch if state.time_to_kill_switch is not None else steps
                 frozen_state = replace(
                     state,
                     regime=Regime.DEFENSIVE,
@@ -345,6 +360,8 @@ class IterationLoop:
                     sign_flips=sign_flips,
                     recent_delta_signs=recent_delta_signs,
                     recent_regime_flips=recent_regime_flips,
+                    recent_abs_deltas=recent_abs_deltas,
+                    max_abs_delta=max_abs_delta,
                     last_envelope_metrics=envelope_metrics,
                 )
                 frozen_state = _apply_kill_switch_fields(
@@ -355,7 +372,7 @@ class IterationLoop:
                     + (1 if state.frozen and not state.kill_switch_active else 0),
                     recovered=False,
                     frozen=True,
-                    time_to_kill_switch=0,
+                    time_to_kill_switch=time_to_kill_switch,
                 )
                 return frozen_state, UpdateResult(parameter_deltas={}, bounded=True, applied=False), {
                     "effective_lr": 0.0,
@@ -365,6 +382,9 @@ class IterationLoop:
                 }
             state = replace(
                 state,
+                recent_abs_deltas=recent_abs_deltas,
+                max_abs_delta=max_abs_delta,
+                last_envelope_metrics=envelope_metrics,
             )
             state = _apply_kill_switch_fields(
                 state,
@@ -372,7 +392,6 @@ class IterationLoop:
                 cooldown_remaining=cooldown_remaining,
                 recovered=True,
                 frozen=False,
-                time_to_kill_switch=None,
             )
 
         regime, lr_scale, inhibition_scale, tau_scale, cooldown = self.regime_controller.update(state, ctx)
@@ -401,6 +420,7 @@ class IterationLoop:
         sign_flips = state.sign_flips + (1 if sign_flip else 0)
         recent_delta_signs = deque(state.recent_delta_signs, maxlen=GUARD_WINDOW)
         recent_regime_flips = deque(state.recent_regime_flips, maxlen=GUARD_WINDOW)
+        recent_abs_deltas, max_abs_delta = _update_guard_window(state, abs_max)
         recent_delta_signs.append(delta_sign)
         recent_regime_flips.append(1 if regime_flip else 0)
         envelope_metrics, sign_flip_rate, regime_flip_rate, envelope_breach = _calculate_envelope(
@@ -426,6 +446,8 @@ class IterationLoop:
             frozen=envelope_breach,
             recent_delta_signs=recent_delta_signs,
             recent_regime_flips=recent_regime_flips,
+            recent_abs_deltas=recent_abs_deltas,
+            max_abs_delta=max_abs_delta,
             last_envelope_metrics=envelope_metrics,
         )
         new_state = _apply_kill_switch_fields(
@@ -437,6 +459,7 @@ class IterationLoop:
             recovered=state.recovered,
         )
         if envelope_breach:
+            time_to_kill_switch = state.time_to_kill_switch if state.time_to_kill_switch is not None else steps
             new_state = replace(
                 state,
                 regime=Regime.DEFENSIVE,
@@ -447,6 +470,8 @@ class IterationLoop:
                 sign_flips=sign_flips,
                 recent_delta_signs=recent_delta_signs,
                 recent_regime_flips=recent_regime_flips,
+                recent_abs_deltas=recent_abs_deltas,
+                max_abs_delta=max_abs_delta,
                 last_envelope_metrics=envelope_metrics,
             )
             new_state = _apply_kill_switch_fields(
@@ -454,7 +479,7 @@ class IterationLoop:
                 kill_switch_active=True,
                 cooldown_remaining=COOLDOWN_STEPS,
                 instability_events_count=state.instability_events_count + 1,
-                time_to_kill_switch=0,
+                time_to_kill_switch=time_to_kill_switch,
                 recovered=False,
                 frozen=True,
             )
@@ -518,6 +543,13 @@ class IterationLoop:
         new_state, update_result, dynamics = self.apply_updates(state, pe, ctx)
         safety = self.evaluate_safety(new_state, pe, ctx)
 
+        stability_guard = {
+            "instability_events_count": new_state.instability_events_count,
+            "max_abs_delta": new_state.max_abs_delta,
+            "time_to_kill_switch": new_state.time_to_kill_switch,
+            "recovered": new_state.recovered,
+        }
+
         trace = {
             "action": {
                 "id": proposal.action_id,
@@ -551,6 +583,7 @@ class IterationLoop:
                 "stability_metrics": safety.stability_metrics,
                 "risk_metrics": safety.risk_metrics,
                 "regime": safety.regime.value,
+                "stability_guard": stability_guard,
             },
         }
         if self.metrics_emitter and self.metrics_emitter._should_emit():
@@ -583,6 +616,7 @@ class IterationMetricsEmitter:
             "action": trace.get("action", {}),
             "dynamics": trace.get("dynamics", {}),
             "safety": trace.get("safety", {}),
+            "stability_guard": trace.get("safety", {}).get("stability_guard", {}),
         }
         with self.output_path.open("a", encoding="utf-8") as f:
             f.write(json.dumps(record, ensure_ascii=False) + "\n")
