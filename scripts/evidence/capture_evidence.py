@@ -22,7 +22,8 @@ from pathlib import Path
 from typing import Iterable, List, Mapping, MutableMapping
 
 SCHEMA_VERSION = "evidence-v1"
-REQUIRED_OUTPUT_KEYS = ("coverage_xml", "junit_xml")
+REQUIRED_OUTPUT_KEYS = ("junit_xml",)
+OPTIONAL_OUTPUT_KEYS = ("coverage_xml",)
 OPTIONAL_INPUT_KEYS = {
     "benchmark_metrics": "benchmark-metrics.json",
     "raw_latency": "raw_neuro_engine_latency.json",
@@ -135,13 +136,16 @@ def capture_coverage(
     evidence_dir: Path,
     produced: list[Path],
     outputs: MutableMapping[str, str],
-    coverage_path: Path,
+    coverage_path: Path | None,
     coverage_log: Path | None,
+    failures: list[str],
 ) -> None:
+    """Capture coverage XML and log if available."""
+    if coverage_path is None or not coverage_path.exists():
+        failures.append("coverage.xml missing - partial snapshot")
+        return  # Skip gracefully
     dest_dir = evidence_dir / "coverage"
     dest_dir.mkdir(parents=True, exist_ok=True)
-    if not coverage_path.exists():
-        raise CaptureError("coverage.xml not found at expected path")
     dest_cov = dest_dir / "coverage.xml"
     shutil.copy(coverage_path, dest_cov)
     produced.append(dest_cov)
@@ -193,10 +197,10 @@ def _copy_optional(
     produced: list[Path],
     outputs: MutableMapping[str, str],
     key: str,
-    source_path: Path,
+    source_path: Path | None,
     dest_rel: Path,
 ) -> None:
-    if not source_path.exists():
+    if source_path is None or not source_path.exists():
         return
     dest_path = evidence_dir / dest_rel
     dest_path.parent.mkdir(parents=True, exist_ok=True)
@@ -308,30 +312,43 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def _load_inputs(inputs_path: Path | None) -> dict[str, Path]:
+def _load_inputs(inputs_path: Path | None) -> dict[str, Path | None]:
     data = dict(DEFAULT_INPUTS)
     if inputs_path:
         loaded = json.loads(inputs_path.read_text(encoding="utf-8"))
         if not isinstance(loaded, dict):
             raise CaptureError("--inputs JSON must be an object")
         for key, value in loaded.items():
-            if not isinstance(value, str):
-                raise CaptureError(f"--inputs value for {key} must be a string")
-            data[key] = value
-    resolved: dict[str, Path] = {}
+            if value is None:
+                data[key] = None  # Allow explicit None values
+            elif not isinstance(value, str):
+                raise CaptureError(f"--inputs value for {key} must be a string or null")
+            else:
+                data[key] = value
+    resolved: dict[str, Path | None] = {}
     for key, value in data.items():
-        resolved[key] = (repo_root() / value).resolve() if not os.path.isabs(value) else Path(value).resolve()
+        if value is None:
+            resolved[key] = None
+        else:
+            resolved[key] = (repo_root() / value).resolve() if not os.path.isabs(value) else Path(value).resolve()
     return resolved
 
 
-def _ensure_outputs_present(inputs: Mapping[str, Path]) -> None:
-    missing = []
+def _ensure_outputs_present(inputs: Mapping[str, Path | None], failures: list[str]) -> None:
+    """Validate required outputs present; warn on optional missing."""
+    missing_required = []
     for key in REQUIRED_OUTPUT_KEYS:
         path = inputs.get(key)
-        if path is None or not Path(path).exists():
-            missing.append(key)
-    if missing:
-        raise CaptureError(f"Required inputs missing: {', '.join(missing)}")
+        if path is None or not path.exists():
+            missing_required.append(key)
+    if missing_required:
+        raise CaptureError(f"Required inputs missing: {', '.join(missing_required)}")
+    
+    # Warn on optional missing
+    for key in OPTIONAL_OUTPUT_KEYS:
+        path = inputs.get(key)
+        if path is None or not path.exists():
+            failures.append(f"optional input missing: {key}")
 
 
 def _maybe_run_commands(
@@ -339,18 +356,18 @@ def _maybe_run_commands(
     commands: list[str],
     produced: list[Path],
     outputs: MutableMapping[str, str],
-    inputs: MutableMapping[str, Path],
+    inputs: MutableMapping[str, Path | None],
     evidence_dir: Path,
     failures: list[str],
 ) -> None:
     if mode == "pack":
         return
 
-    coverage_path = inputs["coverage_xml"]
-    junit_path = inputs["junit_xml"]
+    coverage_path = inputs.get("coverage_xml")
+    junit_path = inputs.get("junit_xml")
 
     # Avoid re-running expensive commands if outputs already exist
-    if coverage_path.exists() and junit_path.exists():
+    if coverage_path and coverage_path.exists() and junit_path and junit_path.exists():
         return
 
     coverage_log = evidence_dir / "logs" / "coverage_gate.log"
@@ -409,12 +426,12 @@ def main() -> int:
     try:
         inputs = _load_inputs(args.inputs)
         _maybe_run_commands(args.mode, commands, produced, outputs, inputs, evidence_dir, failures)
-        _ensure_outputs_present(inputs)
-        capture_coverage(evidence_dir, produced, outputs, inputs["coverage_xml"], inputs.get("coverage_log"))
+        _ensure_outputs_present(inputs, failures)
+        capture_coverage(evidence_dir, produced, outputs, inputs.get("coverage_xml"), inputs.get("coverage_log"), failures)
         capture_pytest_junit(evidence_dir, produced, outputs, inputs["junit_xml"], inputs.get("unit_log"))
         capture_env(evidence_dir, produced, outputs)
         for key, dest in OPTIONAL_DESTS.items():
-            _copy_optional(evidence_dir, produced, outputs, key, inputs[key], dest)
+            _copy_optional(evidence_dir, produced, outputs, key, inputs.get(key), dest)
     except (CaptureError, OSError, ValueError) as exc:
         failures.append(str(exc))
         print(f"ERROR: {exc}", file=sys.stderr)
