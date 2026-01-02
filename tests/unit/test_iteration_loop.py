@@ -399,19 +399,24 @@ def test_guard_metrics_capture_kill_switch_and_recovery_state() -> None:
 
     kill_switch_trace: dict[str, Any] | None = None
     recovery_trace: dict[str, Any] | None = None
+    previous_kill_switch_active = False
     for i in range(len(outcomes)):
         state, trace, _ = loop.step(state, env, _ctx(i))
         if state.kill_switch_active and kill_switch_trace is None:
             kill_switch_trace = trace
-        if kill_switch_trace and not state.kill_switch_active:
+            previous_kill_switch_active = True
+        if previous_kill_switch_active and not state.kill_switch_active:
             recovery_trace = trace
             break
+        previous_kill_switch_active = state.kill_switch_active
 
     assert kill_switch_trace is not None
     assert kill_switch_trace["safety"]["stability_guard"]["time_to_kill_switch"] is not None
     assert kill_switch_trace["safety"]["stability_guard"]["max_abs_delta"] > 0.0
     assert recovery_trace is not None
     assert recovery_trace["safety"]["stability_guard"]["recovered"] is True
+    assert recovery_trace["safety"]["stability_guard"]["recovery_detected"] is True
+    assert recovery_trace["update"]["applied"] is True
 
 
 def test_default_off_regression_no_update_neutral_metrics() -> None:

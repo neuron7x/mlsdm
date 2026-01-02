@@ -300,6 +300,19 @@ class IterationLoop:
                 and metrics.get("windowed_regime_flip_rate", 0.0) <= MAX_REGIME_FLIP_RATE
             )
 
+        def _check_recovery_conditions(
+            cooldown_remaining: int,
+            guard_stable: bool,
+            envelope_breach: bool,
+        ) -> tuple[bool, bool]:
+            if cooldown_remaining > 0:
+                return False, True
+            if envelope_breach:
+                return False, True
+            if not guard_stable:
+                return False, True
+            return True, False
+
         if not self.enabled:
             recent_abs_deltas, max_abs_delta = _update_guard_window(state, abs_max)
             sign_flip_rate = _sign_flip_rate(state.delta_signs)
@@ -354,7 +367,12 @@ class IterationLoop:
             else:
                 base_cooldown = state.cooldown_remaining
                 cooldown_remaining = max(0, base_cooldown - 1)
-            if cooldown_remaining > 0 or envelope_breach or not guard_stable:
+            can_recover, should_remain_frozen = _check_recovery_conditions(
+                cooldown_remaining=cooldown_remaining,
+                guard_stable=guard_stable,
+                envelope_breach=envelope_breach,
+            )
+            if should_remain_frozen:
                 steps = state.steps + 1
                 time_to_kill_switch = state.time_to_kill_switch if state.time_to_kill_switch is not None else steps
                 frozen_state = replace(
@@ -374,7 +392,7 @@ class IterationLoop:
                     cooldown_remaining=cooldown_remaining,
                     kill_switch_active=True,
                     instability_events_count=state.instability_events_count
-                    + (1 if state.frozen and not state.kill_switch_active else 0),
+                    + (1 if not state.kill_switch_active else 0),
                     recovered=False,
                     frozen=True,
                     time_to_kill_switch=time_to_kill_switch,
@@ -385,19 +403,29 @@ class IterationLoop:
                     "tau_scale": 1.0,
                     **envelope_metrics,
                 }
-            state = replace(
-                state,
-                recent_abs_deltas=recent_abs_deltas,
-                max_abs_delta=max_abs_delta,
-                last_envelope_metrics=envelope_metrics,
-            )
-            state = _apply_kill_switch_fields(
-                state,
-                kill_switch_active=False,
-                cooldown_remaining=cooldown_remaining,
-                recovered=True,
-                frozen=False,
-            )
+            if can_recover:
+                state = replace(
+                    state,
+                    recent_abs_deltas=recent_abs_deltas,
+                    max_abs_delta=max_abs_delta,
+                    last_envelope_metrics=envelope_metrics,
+                )
+                state = _apply_kill_switch_fields(
+                    state,
+                    kill_switch_active=False,
+                    cooldown_remaining=0,
+                    recovered=True,
+                    frozen=False,
+                )
+
+        if state.recovered:
+            assert not state.kill_switch_active, "recovered=True implies kill_switch_active=False"
+            assert not state.frozen, "recovered=True implies frozen=False"
+            assert state.cooldown_remaining == 0, "recovered=True implies cooldown_remaining=0"
+
+        if state.kill_switch_active:
+            assert state.frozen, "kill_switch_active=True implies frozen=True"
+            assert state.regime == Regime.DEFENSIVE, "kill_switch_active=True implies DEFENSIVE regime"
 
         regime, lr_scale, inhibition_scale, tau_scale, cooldown = self.regime_controller.update(state, ctx)
         risk_adjusted_lr = state.learning_rate * lr_scale * (1 - ctx.risk * self.risk_scale)
@@ -549,12 +577,14 @@ class IterationLoop:
         new_state, update_result, dynamics = self.apply_updates(state, pe, ctx)
         safety = self.evaluate_safety(new_state, pe, ctx)
 
+        recovery_detected = state.kill_switch_active and not new_state.kill_switch_active and new_state.recovered
         stability_guard = {
             "instability_events_count": new_state.instability_events_count,
             "max_abs_delta": new_state.max_abs_delta,
             "windowed_max_abs_delta": new_state.max_abs_delta,
             "time_to_kill_switch": new_state.time_to_kill_switch,
             "recovered": new_state.recovered,
+            "recovery_detected": recovery_detected,
             "windowed_sign_flip_rate": new_state.last_envelope_metrics.get("windowed_sign_flip_rate", 0.0),
             "windowed_regime_flip_rate": new_state.last_envelope_metrics.get("windowed_regime_flip_rate", 0.0),
         }
