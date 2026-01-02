@@ -425,6 +425,14 @@ class IterationLoop:
             recent_regime_flips=recent_regime_flips,
             last_envelope_metrics=envelope_metrics,
         )
+        new_state = _apply_kill_switch_fields(
+            new_state,
+            kill_switch_active=state.kill_switch_active,
+            cooldown_remaining=state.cooldown_remaining,
+            instability_events_count=state.instability_events_count,
+            time_to_kill_switch=state.time_to_kill_switch,
+            recovered=state.recovered,
+        )
         if envelope_breach:
             new_state = replace(
                 state,
