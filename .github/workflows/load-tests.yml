@@ -59,10 +59,12 @@ jobs:
 
       - name: Run standalone load test
         env:
-          LOAD_USERS: ${{ inputs.users || '20' }}
-          LOAD_DURATION: ${{ inputs.duration || '30' }}
+          LOAD_USERS: ${{ inputs.users }}
+          LOAD_DURATION: ${{ inputs.duration }}
         run: |
           set -euo pipefail
+          : "${LOAD_USERS:=20}"
+          : "${LOAD_DURATION:=30}"
           if ! [[ "$LOAD_USERS" =~ ^[0-9]+$ ]]; then
             echo "Invalid users value: $LOAD_USERS" >&2
             exit 1
