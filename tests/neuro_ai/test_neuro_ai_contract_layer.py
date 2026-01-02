@@ -2,7 +2,12 @@ import numpy as np
 
 from mlsdm.memory.multi_level_memory import MultiLevelSynapticMemory
 from mlsdm.neuro_ai import FUNCTIONAL_COVERAGE_MATRIX, NEURO_CONTRACTS
-from mlsdm.neuro_ai.adapters import PredictionErrorAdapter, RegimeController, RegimeState, SynapticMemoryAdapter
+from mlsdm.neuro_ai.adapters import (
+    PredictionErrorAdapter,
+    RegimeController,
+    RegimeState,
+    SynapticMemoryAdapter,
+)
 
 
 def test_adapter_default_matches_baseline() -> None:

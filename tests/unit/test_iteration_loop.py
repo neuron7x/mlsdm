@@ -199,7 +199,11 @@ def test_long_sequence_converges_or_halts_safely() -> None:
         max_oscillation_index=0.7,
         convergence_tol=0.3,
     )
-    env = ToyEnvironment(outcomes=[0.8 + ((-1) ** i) * 0.05 for i in range(20)])
+    outcomes = []
+    for i in range(20):
+        oscillation = 0.05 * ((-1) ** i)
+        outcomes.append(0.8 + oscillation)
+    env = ToyEnvironment(outcomes=outcomes)
     state = IterationState(parameter=0.0, learning_rate=0.2)
 
     final_safety: SafetyDecision | None = None

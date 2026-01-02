@@ -10,11 +10,10 @@ documentation in docs/neuro_ai/CONTRACTS.md.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
-    from typing import Literal
 
 
 @dataclass(frozen=True)
@@ -145,7 +144,7 @@ class FunctionalCoverageRecord:
     module: str
     bio_system: str
     function: str
-    category: "Literal['biological', 'engineering_abstraction']"
+    category: Literal["biological", "engineering_abstraction"]
     function_tags: Sequence[str]
     tests: Sequence[str]
     contract: str | None = None

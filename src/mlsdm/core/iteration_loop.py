@@ -243,6 +243,7 @@ class IterationLoop:
         bounded_tau = min(self.tau_max, smoothed_tau)
 
         regime_flip = regime != state.regime
+        # Detect oscillations via sign changes between consecutive delta means.
         sign_flip = state.last_delta != 0.0 and delta_mean != 0.0 and (delta_mean * state.last_delta) < 0
         steps = state.steps + 1
         regime_flips = state.regime_flips + (1 if regime_flip else 0)
@@ -257,11 +258,10 @@ class IterationLoop:
             "regime_flip_rate": regime_flip_rate,
             "convergence_time": convergence_time,
         }
-        envelope_breach = (
-            max_delta > self.delta_max * self.safety_multiplier
-            or regime_flip_rate > self.max_regime_flip_rate
-            or oscillation_index > self.max_oscillation_index
-        )
+        delta_breach = max_delta > self.delta_max * self.safety_multiplier
+        regime_flip_breach = regime_flip_rate > self.max_regime_flip_rate
+        oscillation_breach = oscillation_index > self.max_oscillation_index
+        envelope_breach = delta_breach or regime_flip_breach or oscillation_breach
 
         new_state = replace(
             state,
