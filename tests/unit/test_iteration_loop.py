@@ -294,6 +294,30 @@ def test_kill_switch_activation_on_envelope_breach() -> None:
     assert kill_switch_triggered
 
 
+def test_kill_switch_unstable_pattern_marks_defensive_and_counts_instability() -> None:
+    loop = IterationLoop(
+        enabled=True,
+        delta_max=0.4,
+        max_regime_flip_rate=0.3,
+        max_oscillation_index=0.3,
+    )
+    env = ToyEnvironment(outcomes=[2.0, -2.0, 2.0, -2.0, 2.0, -2.0])
+    state = IterationState(parameter=0.0, learning_rate=0.3)
+    baseline_events = state.instability_events_count
+
+    kill_switch_trace: dict[str, Any] | None = None
+    for i in range(10):
+        state, trace, _ = loop.step(state, env, _ctx(i))
+        if state.kill_switch_active:
+            kill_switch_trace = trace
+            break
+
+    assert kill_switch_trace is not None
+    assert kill_switch_trace["update"]["applied"] is False
+    assert state.regime == Regime.DEFENSIVE
+    assert state.instability_events_count == baseline_events + 1
+
+
 def test_deterministic_instability_triggers_kill_switch() -> None:
     loop = IterationLoop(enabled=True, delta_max=1.0)
     env = ToyEnvironment(outcomes=[3.0, -3.0, 3.0, -3.0])
@@ -340,6 +364,54 @@ def test_cooldown_recovery_reenables_learning() -> None:
 
     assert kill_switch_seen is True
     assert recovered_seen is True
+
+
+def test_cooldown_holds_learning_off_until_recovery() -> None:
+    loop = IterationLoop(enabled=True, delta_max=1.0)
+    outcomes = [3.0, -3.0, 3.0, -3.0] + [0.05] * 8
+    env = ToyEnvironment(outcomes=outcomes)
+    state = IterationState(parameter=0.0, learning_rate=0.05)
+
+    kill_switch_active = False
+    recovered_seen = False
+    for i in range(len(outcomes)):
+        state, trace, _ = loop.step(state, env, _ctx(i))
+        if state.kill_switch_active:
+            kill_switch_active = True
+            assert trace["update"]["applied"] is False
+        if kill_switch_active and not state.kill_switch_active:
+            recovered_seen = True
+            assert trace["update"]["applied"] is True
+            assert state.recovered is True
+            break
+        if kill_switch_active:
+            assert trace["update"]["applied"] is False
+
+    assert kill_switch_active is True
+    assert recovered_seen is True
+
+
+def test_guard_metrics_capture_kill_switch_and_recovery_state() -> None:
+    loop = IterationLoop(enabled=True, delta_max=1.0)
+    outcomes = [3.0, -3.0, 3.0, -3.0] + [0.05] * 8
+    env = ToyEnvironment(outcomes=outcomes)
+    state = IterationState(parameter=0.0, learning_rate=0.05)
+
+    kill_switch_trace: dict[str, Any] | None = None
+    recovery_trace: dict[str, Any] | None = None
+    for i in range(len(outcomes)):
+        state, trace, _ = loop.step(state, env, _ctx(i))
+        if state.kill_switch_active and kill_switch_trace is None:
+            kill_switch_trace = trace
+        if kill_switch_trace and not state.kill_switch_active:
+            recovery_trace = trace
+            break
+
+    assert kill_switch_trace is not None
+    assert kill_switch_trace["safety"]["stability_guard"]["time_to_kill_switch"] is not None
+    assert kill_switch_trace["safety"]["stability_guard"]["max_abs_delta"] > 0.0
+    assert recovery_trace is not None
+    assert recovery_trace["safety"]["stability_guard"]["recovered"] is True
 
 
 def test_default_off_regression_no_update_neutral_metrics() -> None:
