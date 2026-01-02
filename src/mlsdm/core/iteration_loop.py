@@ -83,6 +83,16 @@ class IterationState:
     tau: float = 1.0
     cooldown_steps: int = 0
     last_delta: float = 0.0
+    learning_enabled: bool = True
+    kill_switch_active: bool = False
+    stability_cooldown: int = 0
+    instability_events_count: int = 0
+    max_abs_delta: float = 0.0
+    time_to_kill_switch: int | None = None
+    recovered: bool = False
+    step_index: int = 0
+    delta_history: list[float] = field(default_factory=list)
+    regime_history: list[Regime] = field(default_factory=list)
 
 
 class EnvironmentAdapter(Protocol):
@@ -132,6 +142,12 @@ class RegimeController:
 
 
 class IterationLoop:
+    STABILITY_WINDOW = 6
+    ABS_DELTA_LIMIT = 2.0
+    SIGN_FLIP_RATE_LIMIT = 0.6
+    REGIME_FLIP_RATE_LIMIT = 0.5
+    STABILITY_COOLDOWN_STEPS = 3
+
     def __init__(
         self,
         *,
@@ -194,7 +210,7 @@ class IterationLoop:
         pe: PredictionError,
         ctx: IterationContext,
     ) -> tuple[IterationState, UpdateResult, dict[str, float]]:
-        if not self.enabled:
+        if not self.enabled or not state.learning_enabled:
             return state, UpdateResult(parameter_deltas={}, bounded=False, applied=False), {"effective_lr": 0.0}
 
         regime, lr_scale, inhibition_scale, tau_scale, cooldown = self.regime_controller.update(state, ctx)
@@ -232,6 +248,75 @@ class IterationLoop:
             "tau_scale": tau_scale,
         }
 
+    def _update_stability_guard(
+        self,
+        state: IterationState,
+        pe: PredictionError,
+    ) -> tuple[IterationState, dict[str, float | int | bool | None]]:
+        delta_signal = sum(pe.delta) / len(pe.delta) if pe.delta else 0.0
+        delta_history = (state.delta_history + [delta_signal])[-self.STABILITY_WINDOW :]
+        sign_flip_rate = _compute_sign_flip_rate(delta_history)
+
+        regime_history = state.regime_history or [state.regime]
+        regime_flip_rate = _compute_regime_flip_rate(regime_history)
+
+        max_abs_delta = max(state.max_abs_delta, pe.abs_delta)
+        unstable = (
+            pe.abs_delta > self.ABS_DELTA_LIMIT
+            or sign_flip_rate > self.SIGN_FLIP_RATE_LIMIT
+            or regime_flip_rate > self.REGIME_FLIP_RATE_LIMIT
+        )
+
+        step_index = state.step_index + 1
+        kill_switch_active = state.kill_switch_active
+        learning_enabled = state.learning_enabled
+        cooldown = state.stability_cooldown
+        instability_events_count = state.instability_events_count
+        time_to_kill_switch = state.time_to_kill_switch
+        recovered = state.recovered
+
+        if unstable:
+            if not kill_switch_active:
+                instability_events_count += 1
+                if time_to_kill_switch is None:
+                    time_to_kill_switch = step_index
+            kill_switch_active = True
+            learning_enabled = False
+            cooldown = self.STABILITY_COOLDOWN_STEPS
+            recovered = False
+        elif kill_switch_active:
+            if cooldown > 0:
+                cooldown -= 1
+            else:
+                kill_switch_active = False
+                learning_enabled = True
+                recovered = True
+
+        updated_state = replace(
+            state,
+            delta_history=delta_history,
+            max_abs_delta=max_abs_delta,
+            kill_switch_active=kill_switch_active,
+            learning_enabled=learning_enabled,
+            stability_cooldown=cooldown,
+            instability_events_count=instability_events_count,
+            time_to_kill_switch=time_to_kill_switch,
+            recovered=recovered,
+            step_index=step_index,
+        )
+        guard_metrics = {
+            "instability_events_count": instability_events_count,
+            "max_abs_delta": max_abs_delta,
+            "time_to_kill_switch": time_to_kill_switch,
+            "recovered": recovered,
+            "kill_switch_active": kill_switch_active,
+            "learning_enabled": learning_enabled,
+            "cooldown_remaining": cooldown,
+            "sign_flip_rate": sign_flip_rate,
+            "regime_flip_rate": regime_flip_rate,
+        }
+        return updated_state, guard_metrics
+
     def evaluate_safety(self, state: IterationState, pe: PredictionError, ctx: IterationContext) -> SafetyDecision:
         abs_max = max((abs(d) for d in pe.delta), default=0.0)
         allow = abs_max <= self.delta_max * self.safety_multiplier
@@ -266,7 +351,21 @@ class IterationLoop:
         proposal, prediction = self.propose_action(state, ctx)
         observation = self.execute_action(env, proposal, ctx)
         pe = self.compute_prediction_error(prediction, observation, ctx)
-        new_state, update_result, dynamics = self.apply_updates(state, pe, ctx)
+        guard_state, guard_metrics = self._update_stability_guard(state, pe)
+
+        if guard_state.kill_switch_active:
+            new_state = replace(
+                guard_state,
+                regime=Regime.DEFENSIVE,
+                last_effective_lr=0.0,
+            )
+            update_result = UpdateResult(parameter_deltas={}, bounded=True, applied=False)
+            dynamics = {"effective_lr": 0.0, "inhibition_scale": 1.0, "tau_scale": 1.0}
+        else:
+            new_state, update_result, dynamics = self.apply_updates(guard_state, pe, ctx)
+
+        new_regime_history = (new_state.regime_history + [new_state.regime])[-self.STABILITY_WINDOW :]
+        new_state = replace(new_state, regime_history=new_regime_history)
         safety = self.evaluate_safety(new_state, pe, ctx)
 
         trace = {
@@ -303,6 +402,7 @@ class IterationLoop:
                 "risk_metrics": safety.risk_metrics,
                 "regime": safety.regime.value,
             },
+            "stability_guard": guard_metrics,
         }
         if self.metrics_emitter and self.metrics_emitter._should_emit():
             self.metrics_emitter.emit(ctx, trace)
@@ -340,3 +440,31 @@ class IterationMetricsEmitter:
 
     def _should_emit(self) -> bool:
         return self.enabled and self.output_path is not None
+
+
+def _compute_sign_flip_rate(values: list[float]) -> float:
+    if len(values) < 2:
+        return 0.0
+    signs = [_sign(value) for value in values]
+    flips = 0
+    for prev, current in zip(signs, signs[1:]):
+        if prev == 0 or current == 0:
+            continue
+        if prev != current:
+            flips += 1
+    return flips / max(1, len(signs) - 1)
+
+
+def _compute_regime_flip_rate(values: list[Regime]) -> float:
+    if len(values) < 2:
+        return 0.0
+    flips = sum(1 for prev, current in zip(values, values[1:]) if prev != current)
+    return flips / max(1, len(values) - 1)
+
+
+def _sign(value: float) -> int:
+    if value > 0:
+        return 1
+    if value < 0:
+        return -1
+    return 0

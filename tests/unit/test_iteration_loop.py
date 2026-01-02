@@ -67,6 +67,9 @@ def test_disabled_loop_does_not_apply_updates() -> None:
     assert new_state.parameter == pytest.approx(state.parameter)
     assert trace["update"]["applied"] is False
     assert safety.allow_next is True
+    guard = trace["stability_guard"]
+    assert guard["kill_switch_active"] is False
+    assert guard["instability_events_count"] == 0
 
 
 def test_delta_learning_reduces_error() -> None:
@@ -134,6 +137,38 @@ def test_safety_gate_blocks_runaway_deltas() -> None:
     assert safety.allow_next is False
     assert trace["update"]["bounded"] is True
     assert abs(new_state.parameter) <= 1.0
+
+
+def test_stability_guard_triggers_kill_switch() -> None:
+    loop = IterationLoop(enabled=True)
+    env = ToyEnvironment(target=0.0, outcomes=[5.0, 5.0])
+    state = IterationState(parameter=0.0, learning_rate=0.2)
+
+    new_state, trace, _ = loop.step(state, env, _ctx(0))
+
+    guard = trace["stability_guard"]
+    assert guard["kill_switch_active"] is True
+    assert guard["instability_events_count"] == 1
+    assert guard["time_to_kill_switch"] == 1
+    assert guard["learning_enabled"] is False
+    assert trace["update"]["applied"] is False
+    assert new_state.regime == Regime.DEFENSIVE
+    assert new_state.parameter == pytest.approx(0.0)
+
+
+def test_stability_guard_noise_stays_stable() -> None:
+    loop = IterationLoop(enabled=True)
+    env = ToyEnvironment(target=0.0, outcomes=[0.25, 0.28, 0.22, 0.27, 0.23, 0.24])
+    state = IterationState(parameter=0.0, learning_rate=0.2)
+
+    for i in range(6):
+        state, trace, _ = loop.step(state, env, _ctx(i))
+        guard = trace["stability_guard"]
+        assert guard["kill_switch_active"] is False
+        assert trace["update"]["applied"] is True
+
+    assert guard["instability_events_count"] == 0
+    assert guard["recovered"] is False
 
 
 def test_compute_prediction_error_mismatch_raises() -> None:
