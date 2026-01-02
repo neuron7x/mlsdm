@@ -68,7 +68,12 @@ def test_disabled_loop_does_not_apply_updates() -> None:
     new_state, trace, safety = loop.step(state, env, _ctx(0))
 
     assert new_state.parameter == pytest.approx(state.parameter)
+    assert trace["prediction"] == [state.parameter]
+    assert trace["observation"] == [env.target]
     assert trace["update"]["applied"] is False
+    assert trace["update"]["parameter_deltas"] == {}
+    assert trace["safety"]["stability_guard"]["windowed_sign_flip_rate"] == 0.0
+    assert trace["safety"]["stability_guard"]["windowed_regime_flip_rate"] == 0.0
     assert safety.allow_next is True
 
 
