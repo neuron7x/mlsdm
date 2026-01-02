@@ -613,11 +613,6 @@ jobs:
             requirements.txt
             pyproject.toml
 
-      - name: Set up Node.js 20
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
       - name: Restore Python cache
         uses: actions/cache@v4
         with:
@@ -648,19 +643,10 @@ jobs:
             exit 1
           fi
 
-          npx openapi-diff docs/openapi-baseline.json reports/openapi.generated.json | tee openapi-diff-output.txt
-          DIFF_EXIT_CODE=${PIPESTATUS[0]}
-
-          if [ $DIFF_EXIT_CODE -ne 0 ]; then
-            echo "## ❌ Breaking OpenAPI changes detected" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-            cat openapi-diff-output.txt >> $GITHUB_STEP_SUMMARY
-            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-            exit $DIFF_EXIT_CODE
-          fi
-
-          echo "## ✅ OpenAPI contract is compatible" >> $GITHUB_STEP_SUMMARY
+          python scripts/openapi_contract_check.py \
+            --baseline docs/openapi-baseline.json \
+            --candidate reports/openapi.generated.json \
+            --summary-file "$GITHUB_STEP_SUMMARY"
 
       - name: Upload OpenAPI spec artifact
         if: always()
