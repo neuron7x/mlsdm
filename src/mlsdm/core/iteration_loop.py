@@ -396,8 +396,6 @@ class IterationLoop:
         steps = state.steps + 1
         regime_flips = state.regime_flips + (1 if regime_flip else 0)
         sign_flips = state.sign_flips + (1 if sign_flip else 0)
-        max_delta = max((abs(d) for d in pe.delta), default=0.0)
-        convergence_time = float(steps) if abs(delta_mean) <= self.delta_max * self.convergence_tol else -1.0
         recent_delta_signs = deque(state.recent_delta_signs, maxlen=GUARD_WINDOW)
         recent_regime_flips = deque(state.recent_regime_flips, maxlen=GUARD_WINDOW)
         recent_delta_signs.append(delta_sign)
