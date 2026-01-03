@@ -2,17 +2,15 @@ import logging
 import time
 from collections.abc import Callable
 from threading import Lock
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 import numpy as np
 import psutil
 
-from ..cognition.moral_filter_v2 import MoralFilterV2
-from ..memory.multi_level_memory import MultiLevelSynapticMemory
-from ..memory.phase_entangled_lattice_memory import MemoryRetrieval, PhaseEntangledLatticeMemory
+from ..memory.phase_entangled_lattice_memory import MemoryRetrieval
 from ..observability.metrics import get_metrics_exporter
 from ..observability.tracing import get_tracer_manager
-from ..rhythm.cognitive_rhythm import CognitiveRhythm
+from .governance_kernel import GovernanceKernel, PelmRO
 
 if TYPE_CHECKING:
     from mlsdm.config import SynapticMemoryCalibration
@@ -91,13 +89,10 @@ class CognitiveController:
                 shutdown. When True, controller will attempt recovery after
                 auto_recovery_cooldown_seconds have passed. Defaults to True.
             auto_recovery_cooldown_seconds: Time in seconds to wait before attempting
-                automatic recovery after emergency shutdown. Defaults to 60.0.
+             automatic recovery after emergency shutdown. Defaults to 60.0.
         """
         self.dim = dim
         self._lock = Lock()
-        self.moral = MoralFilterV2(initial_threshold=0.50)
-        self.pelm = PhaseEntangledLatticeMemory(dimension=dim, capacity=20_000)
-        self.rhythm = CognitiveRhythm(wake_duration=8, sleep_duration=3)
 
         # Resolve synaptic memory configuration:
         # Priority: synaptic_config > yaml_config > SYNAPTIC_MEMORY_DEFAULTS
@@ -108,7 +103,15 @@ class CognitiveController:
         if resolved_config is None:
             resolved_config = _SYNAPTIC_MEMORY_DEFAULTS
 
-        self.synaptic = MultiLevelSynapticMemory(dimension=dim, config=resolved_config)
+        self._kernel = GovernanceKernel(
+            dim=dim,
+            capacity=20_000,
+            wake_duration=8,
+            sleep_duration=3,
+            initial_moral_threshold=0.50,
+            synaptic_config=resolved_config,
+        )
+        self._bind_kernel_views()
         self.step_counter = 0
         # Optimization: Cache for phase values to avoid repeated computation
         self._phase_cache: dict[str, float] = {"wake": 0.1, "sleep": 0.9}
@@ -141,8 +144,29 @@ class CognitiveController:
             else _CC_AUTO_RECOVERY_COOLDOWN_SECONDS
         )
 
+    def _bind_kernel_views(self) -> None:
+        """Expose read-only proxies from the governance kernel."""
+        self.moral = self._kernel.moral_ro
+        self.synaptic = self._kernel.synaptic_ro
+        self.pelm = self._kernel.pelm_ro
+        self.rhythm = self._kernel.rhythm_ro
+
+    def rhythm_step(self) -> None:
+        """Advance rhythm via governance kernel."""
+        self._kernel.rhythm_step()
+
+    def moral_adapt(self, accepted: bool) -> None:
+        """Adapt moral filter via governance kernel."""
+        self._kernel.moral_adapt(accepted)
+
+    def memory_commit(
+        self, vector: np.ndarray, phase: float, *, provenance: Any | None = None
+    ) -> None:
+        """Commit memory via governance kernel."""
+        self._kernel.memory_commit(vector, phase, provenance=provenance)
+
     @property
-    def qilm(self) -> PhaseEntangledLatticeMemory:
+    def qilm(self) -> PelmRO:
         """Backward compatibility alias for pelm (deprecated, use self.pelm instead).
 
         This property will be removed in v2.0.0. Migrate to using self.pelm directly.
@@ -289,7 +313,7 @@ class CognitiveController:
                     },
                 ) as moral_span:
                     accepted = self.moral.evaluate(moral_value)
-                    self.moral.adapt(accepted)
+                    self._kernel.moral_adapt(accepted)
                     moral_span.set_attribute("mlsdm.moral.accepted", accepted)
 
                     if not accepted:
@@ -313,15 +337,14 @@ class CognitiveController:
                         "mlsdm.phase": self.rhythm.phase,
                     },
                 ) as memory_span:
-                    self.synaptic.update(vector)
                     # Optimization: use cached phase value
                     phase_val = self._phase_cache[self.rhythm.phase]
-                    self.pelm.entangle(vector.tolist(), phase=phase_val)
+                    self.memory_commit(vector, phase_val)
                     memory_span.set_attribute(
                         "mlsdm.pelm_used", self.pelm.get_state_stats()["used"]
                     )
 
-                self.rhythm.step()
+                self.rhythm_step()
 
                 # Check global memory bound (CORE-04) after memory-modifying operations
                 current_memory_bytes = self.memory_usage_bytes()
@@ -379,11 +402,14 @@ class CognitiveController:
             ) as span:
                 # Optimize: use cached phase value
                 phase_val = self._phase_cache[self.rhythm.phase]
-                results = self.pelm.retrieve(
-                    query_vector.tolist(),
-                    current_phase=phase_val,
-                    phase_tolerance=0.15,
-                    top_k=top_k,
+                results = cast(
+                    "list[MemoryRetrieval]",
+                    self.pelm.retrieve(
+                        query_vector.tolist(),
+                        current_phase=phase_val,
+                        phase_tolerance=0.15,
+                        top_k=top_k,
+                    ),
                 )
                 span.set_attribute("mlsdm.results_count", len(results))
                 return results

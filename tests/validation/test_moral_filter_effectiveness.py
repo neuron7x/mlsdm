@@ -23,13 +23,12 @@ class NoFilterController(CognitiveController):
             # NO moral filtering - process everything during wake
             # Still respect wake/sleep rhythm for fair comparison
             if not self.rhythm.is_wake():
-                self.rhythm.step()  # Advance rhythm even during sleep
+                self.rhythm_step()  # Advance rhythm even during sleep
                 return self._build_state(rejected=True, note="sleep phase")
 
-            self.synaptic.update(vector)
             phase_val = 0.1 if self.rhythm.phase == "wake" else 0.9
-            self.qilm.entangle(vector.tolist(), phase=phase_val)
-            self.rhythm.step()
+            self.memory_commit(vector, phase_val)
+            self.rhythm_step()
 
             return self._build_state(rejected=False, note="processed")
 

@@ -432,7 +432,7 @@ class TestE2EMemoryPhaseRhythm:
 
         # Manually advance to sleep phase by stepping rhythm
         while controller.rhythm.is_wake():
-            controller.rhythm.step()
+            controller.rhythm_step()
 
         # Process event in sleep phase
         state = controller.process_event(vec, moral_value=0.9)
@@ -464,7 +464,7 @@ class TestE2EMemoryPhaseRhythm:
 
         # Advance to sleep phase (default wake_duration=8)
         for _ in range(8):
-            controller.rhythm.step()
+            controller.rhythm_step()
 
         assert controller.rhythm.is_sleep() is True
 

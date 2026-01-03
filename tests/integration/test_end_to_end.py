@@ -23,7 +23,7 @@ def test_basic_flow():
 
     # Test 3: Sleep phase - step enough times to enter sleep phase
     for _ in range(7):
-        controller.rhythm.step()
+        controller.rhythm_step()
     assert controller.rhythm.is_wake() is False, "Should be in sleep phase"
     state = controller.process_event(vec, moral_value=0.9)
     assert "sleep" in state["note"]
