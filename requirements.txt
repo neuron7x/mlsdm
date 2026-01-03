@@ -1,3 +1,7 @@
+# GENERATED FILE - DO NOT EDIT MANUALLY
+# This file is auto-generated from pyproject.toml dependencies.
+# Regenerate with: python scripts/ci/export_requirements.py
+#
 # MLSDM Full Installation Requirements
 #
 # This file includes ALL dependencies including optional ones.
@@ -5,17 +9,18 @@
 # For embeddings support: pip install -e ".[embeddings]"
 # For full dev install: pip install -r requirements.txt
 #
-# Core Dependencies (sync with pyproject.toml [project.dependencies])
-numpy>=2.0.0
-fastapi>=0.115.0
-uvicorn>=0.32.0
-pyyaml>=6.0.2
-pydantic>=2.10.0
-prometheus-client>=0.21.0
-tenacity>=9.0.0
-requests>=2.32.3
-psutil>=6.1.0
+
+# Core Dependencies (from pyproject.toml [project.dependencies])
 defusedxml>=0.7.1
+fastapi>=0.115.0
+numpy>=2.0.0
+prometheus-client>=0.21.0
+psutil>=6.1.0
+pydantic>=2.10.0
+pyyaml>=6.0.2
+requests>=2.32.3
+tenacity>=9.0.0
+uvicorn>=0.32.0
 
 # Optional Embeddings (from pyproject.toml [project.optional-dependencies].embeddings)
 # Install with: pip install ".[embeddings]" when semantic embeddings are needed
@@ -28,15 +33,15 @@ opentelemetry-sdk>=1.31.0
 pyjwt>=2.10.0
 
 # Dev dependencies (from pyproject.toml [project.optional-dependencies].dev)
-pytest>=8.3.0
+deptry>=0.24.0
+httpx>=0.28.0
+hypothesis>=6.122.0
+locust>=2.32.0
+mypy>=1.15.0
 pytest-asyncio>=0.24.0
 pytest-cov>=6.0.0
-hypothesis>=6.122.0
+pytest>=8.3.0
 ruff>=0.9.0
-mypy>=1.15.0
-deptry>=0.24.0
-locust>=2.32.0
-httpx>=0.28.0
 types-PyYAML>=6.0.12
 types-requests>=2.32.0
 

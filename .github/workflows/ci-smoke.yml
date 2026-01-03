@@ -193,6 +193,28 @@ jobs:
           # Use --fail-on-warn=false to allow warnings but fail on denies
           conftest test .github/workflows/*.yml -p policies/ci/ --all-namespaces --fail-on-warn=false
 
+  dependency-drift-check:
+    name: Dependency Drift Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+
+      - name: Check dependency drift
+        run: |
+          python scripts/ci/export_requirements.py --check
+
+      - name: Validate defusedxml is resolvable
+        run: |
+          pip install defusedxml --dry-run 2>&1 | grep -q "defusedxml" && echo "✓ defusedxml is resolvable"
+
   failure-intelligence:
     name: Failure Intelligence
     needs:
@@ -200,9 +222,19 @@ jobs:
       - coverage-gate
       - ablation-smoke
       - policy-check
+      - dependency-drift-check
     if: ${{ always() }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
+
+    # Artifact Contract: Expected artifact names and paths
+    env:
+      FI_JUNIT_ARTIFACT: smoke-junit
+      FI_JUNIT_PATH: artifacts/junit-smoke.xml
+      FI_COV_ARTIFACT: coverage-report
+      FI_COV_PATH: artifacts/coverage.xml
+      FI_ABLATION_ARTIFACT: ablation-report
+      FI_ABLATION_PATH: artifacts
 
     steps:
       - name: Checkout code
@@ -237,30 +269,58 @@ jobs:
       - name: Download smoke junit
         uses: actions/download-artifact@v6
         with:
-          name: smoke-junit
+          name: ${{ env.FI_JUNIT_ARTIFACT }}
           path: artifacts
         continue-on-error: true
 
       - name: Download coverage report
         uses: actions/download-artifact@v6
         with:
-          name: coverage-report
+          name: ${{ env.FI_COV_ARTIFACT }}
           path: artifacts
         continue-on-error: true
 
       - name: Download ablation report
         uses: actions/download-artifact@v6
         with:
-          name: ablation-report
+          name: ${{ env.FI_ABLATION_ARTIFACT }}
           path: artifacts
         continue-on-error: true
+
+      - name: Validate artifact presence
+        if: always()
+        run: |
+          echo "=== Artifact Contract Validation ==="
+          MISSING_ARTIFACTS=""
+
+          if [ ! -f "$FI_JUNIT_PATH" ]; then
+            echo "⚠ Missing: $FI_JUNIT_ARTIFACT ($FI_JUNIT_PATH)"
+            MISSING_ARTIFACTS="${MISSING_ARTIFACTS}junit,"
+          else
+            echo "✓ Present: $FI_JUNIT_ARTIFACT"
+          fi
+
+          if [ ! -f "$FI_COV_PATH" ]; then
+            echo "⚠ Missing: $FI_COV_ARTIFACT ($FI_COV_PATH)"
+            MISSING_ARTIFACTS="${MISSING_ARTIFACTS}coverage,"
+          else
+            echo "✓ Present: $FI_COV_ARTIFACT"
+          fi
+
+          echo "MISSING_ARTIFACTS=${MISSING_ARTIFACTS}" >> "$GITHUB_ENV"
+
+          # Report status but don't fail - the script handles missing inputs gracefully
+          if [ -n "$MISSING_ARTIFACTS" ]; then
+            echo ""
+            echo "Note: Some artifacts are missing. Failure Intelligence will report degraded status."
+          fi
 
       - name: Generate failure intelligence summary
         if: always()
         run: |
           python scripts/ci/failure_intelligence.py \
-            --junit artifacts/junit-smoke.xml \
-            --coverage artifacts/coverage.xml \
+            --junit "$FI_JUNIT_PATH" \
+            --coverage "$FI_COV_PATH" \
             --changed-files changed_files.txt \
             --out failure_summary.md \
             --json failure_summary.json

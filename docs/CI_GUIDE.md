@@ -22,6 +22,20 @@ uv sync
 # Now you have the exact same dependencies as CI
 ```
 
+### Dependency Drift Prevention
+
+The `requirements.txt` file is **GENERATED** from `pyproject.toml` and should not be edited manually. A CI check enforces this:
+
+```bash
+# Check for drift (fails if out of sync)
+python scripts/ci/export_requirements.py --check
+
+# Regenerate requirements.txt from pyproject.toml
+python scripts/ci/export_requirements.py
+```
+
+The `dependency-drift-check` job in `ci-smoke.yml` runs this check on every PR/push to ensure no drift between `pyproject.toml` and `requirements.txt`.
+
 ## ⚠️ Security Gates
 
 **CRITICAL:** MLSDM implements strict security gating. Security checks are **BLOCKING** and will prevent merges/releases if they fail.
@@ -184,6 +198,28 @@ make cov
 - CI Smoke runs publish a **Failure Intelligence** section in the GitHub Actions job summary.
 - The artifact `failure-intelligence` contains `failure_summary.md`, `failure_summary.json`, and `changed_files.txt` for reproducible debugging.
 - Reproduce failures locally using the suggested commands in the summary (commonly `make test-fast`, `make lint`, `make type`).
+
+### Artifact Contract
+
+The Failure Intelligence job expects specific artifacts from upstream jobs. These are defined as environment variables in `ci-smoke.yml`:
+
+| Artifact Name | Expected Path | Source Job |
+|---------------|---------------|------------|
+| `smoke-junit` | `artifacts/junit-smoke.xml` | smoke |
+| `coverage-report` | `artifacts/coverage.xml` | coverage-gate |
+| `ablation-report` | `artifacts/` | ablation-smoke |
+
+**When artifacts are missing:**
+
+The script handles missing artifacts gracefully:
+- Sets `status: "degraded"` in the JSON output
+- Records structured errors in `input_errors` array with format:
+  ```json
+  {"code": "input_missing", "artifact": "junit", "expected_path": "artifacts/junit-smoke.xml"}
+  ```
+- Includes an "Input Integrity" section in the markdown summary listing all missing inputs
+- Job still succeeds (never-fail behavior) to avoid blocking the workflow
+- Missing artifacts are surfaced clearly in both markdown and JSON outputs
 
 **When to modify:**
 - Changing production requirements
