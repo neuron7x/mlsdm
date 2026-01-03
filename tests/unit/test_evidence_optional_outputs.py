@@ -19,6 +19,8 @@ def _run_capture(evidence_dir: Path, inputs: dict[str, str]) -> Path:
     inputs_path = evidence_dir / "inputs.json"
     inputs_path.parent.mkdir(parents=True, exist_ok=True)
     inputs_path.write_text(json.dumps(inputs), encoding="utf-8")
+    evidence_root = _repo_root() / "artifacts" / "evidence"
+    before = {p.resolve() for p in evidence_root.glob("*/*")}
     subprocess.check_call(
         [
             sys.executable,
@@ -30,9 +32,13 @@ def _run_capture(evidence_dir: Path, inputs: dict[str, str]) -> Path:
         ],
         cwd=_repo_root(),
     )
-    evidence_root = _repo_root() / "artifacts" / "evidence"
-    latest = sorted(evidence_root.glob("*/*"))
-    return latest[-1]
+    after = {p.resolve() for p in evidence_root.glob("*/*")}
+    new_snapshots = after - before
+    if new_snapshots:
+        return max(new_snapshots, key=lambda p: p.stat().st_mtime)
+    if after:
+        return max(after, key=lambda p: p.stat().st_mtime)
+    raise AssertionError("No evidence snapshot produced")
 
 
 def _run_verify(snapshot: Path) -> subprocess.CompletedProcess[str]:
