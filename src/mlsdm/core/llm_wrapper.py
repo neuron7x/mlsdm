@@ -30,18 +30,15 @@ from tenacity import (
     wait_exponential,
 )
 
-from ..cognition.moral_filter_v2 import MoralFilterV2
-from ..memory.multi_level_memory import MultiLevelSynapticMemory
-from ..memory.phase_entangled_lattice_memory import PhaseEntangledLatticeMemory
 from ..memory.provenance import MemoryProvenance, MemorySource
 from ..observability.tracing import get_tracer_manager
-from ..rhythm.cognitive_rhythm import CognitiveRhythm
 from ..speech.governance import (  # noqa: TC001 - used at runtime in function signatures
     SpeechGovernanceResult,
     SpeechGovernor,
 )
 from ..utils.embedding_cache import EmbeddingCache, EmbeddingCacheConfig
 from .cognitive_state import CognitiveState
+from .governance_kernel import GovernanceKernel
 
 if TYPE_CHECKING:
     from mlsdm.config import (
@@ -314,11 +311,22 @@ class LLMWrapper:
         """Initialize core components: LLM, embedding, moral filter, memory, rhythm."""
         self.llm_generate = llm_generate_fn
         self.embed = embedding_fn
-        self.moral = MoralFilterV2(initial_threshold=initial_moral_threshold)
-        self.pelm = PhaseEntangledLatticeMemory(dimension=dim, capacity=capacity)
-        self.rhythm = CognitiveRhythm(wake_duration=wake_duration, sleep_duration=sleep_duration)
-        self.synaptic = MultiLevelSynapticMemory(dimension=dim)
+        self._kernel = GovernanceKernel(
+            dim=dim,
+            capacity=capacity,
+            wake_duration=wake_duration,
+            sleep_duration=sleep_duration,
+            initial_moral_threshold=initial_moral_threshold,
+        )
+        self._bind_kernel_views()
         self._speech_governor = speech_governor
+
+    def _bind_kernel_views(self) -> None:
+        """Bind read-only views from the governance kernel."""
+        self.moral = self._kernel.moral_ro
+        self.synaptic = self._kernel.synaptic_ro
+        self.pelm = self._kernel.pelm_ro
+        self.rhythm = self._kernel.rhythm_ro
 
     def _init_reliability(self) -> None:
         """Initialize reliability components (circuit breaker, stateless mode flag)."""
@@ -422,30 +430,26 @@ class LLMWrapper:
         If PELM fails repeatedly, switches to stateless mode.
         Returns empty/default values in stateless mode to allow processing to continue.
         """
-        # Sentinel value for failed entangle operations
-        ENTANGLE_FAILED = -1
-
         if self.stateless_mode:
             # In stateless mode, return empty results
             if operation == "retrieve":
                 return []
-            elif operation == "entangle":
-                return ENTANGLE_FAILED
             return None
 
         try:
             if operation == "retrieve":
                 return self.pelm.retrieve(*args, **kwargs)
-            elif operation == "entangle":
-                return self.pelm.entangle(*args, **kwargs)
             else:
                 raise ValueError(f"Unknown PELM operation: {operation}")
         except (MemoryError, RuntimeError) as e:
-            self.pelm_failure_count += 1
-            if self.pelm_failure_count >= self.DEFAULT_PELM_FAILURE_THRESHOLD:
-                # Switch to stateless mode after repeated failures
-                self.stateless_mode = True
+            self._record_pelm_failure()
             raise e
+
+    def _record_pelm_failure(self) -> None:
+        """Track PELM failures and enable stateless mode when threshold exceeded."""
+        self.pelm_failure_count += 1
+        if self.pelm_failure_count >= self.DEFAULT_PELM_FAILURE_THRESHOLD:
+            self.stateless_mode = True
 
     def generate(
         self,
@@ -567,7 +571,7 @@ class LLMWrapper:
     def _check_moral_and_phase(self, moral_value: float) -> dict[str, Any] | None:
         """Check moral acceptability and cognitive phase. Returns rejection response or None."""
         accepted = self.moral.evaluate(moral_value)
-        self.moral.adapt(accepted)
+        self._kernel.moral_adapt(accepted)
 
         if not accepted:
             self.rejected_count += 1
@@ -685,8 +689,6 @@ class LLMWrapper:
         """
         if not self.stateless_mode:
             try:
-                self.synaptic.update(prompt_vector)
-
                 # Estimate confidence for LLM-generated response
                 confidence = self._estimate_confidence(response_text)
 
@@ -698,19 +700,17 @@ class LLMWrapper:
                     llm_model=getattr(self, "model_name", None),
                 )
 
-                # Store with provenance
-                self._safe_pelm_operation(
-                    "entangle", prompt_vector.tolist(), phase=phase_val, provenance=provenance
-                )
+                self._kernel.memory_commit(prompt_vector, phase_val, provenance=provenance)
                 self.consolidation_buffer.append(prompt_vector)
             except Exception as mem_err:
+                self._record_pelm_failure()
                 _logger.debug("Memory update failed (graceful degradation): %s", mem_err)
 
         self.accepted_count += 1
 
     def _advance_rhythm_and_consolidate(self) -> None:
         """Advance cognitive rhythm and perform consolidation if entering sleep."""
-        self.rhythm.step()
+        self._kernel.rhythm_step()
 
         if (
             self.rhythm.is_sleep()
@@ -730,7 +730,7 @@ class LLMWrapper:
         governed_metadata: dict[str, Any] | None,
     ) -> dict[str, Any]:
         """Build the successful response dictionary."""
-        result = {
+        result: dict[str, Any] = {
             "response": response_text,
             "accepted": True,
             "phase": self.rhythm.phase,
@@ -767,9 +767,13 @@ class LLMWrapper:
 
         for vector in self.consolidation_buffer:
             # Re-entangle with sleep phase for long-term storage
-            self.pelm.entangle(
-                vector.tolist(), phase=self.SLEEP_PHASE, provenance=consolidation_provenance
-            )
+            try:
+                self._kernel.memory_commit(
+                    vector, self.SLEEP_PHASE, provenance=consolidation_provenance
+                )
+            except Exception:
+                self._record_pelm_failure()
+                raise
 
         # Clear buffer
         self.consolidation_buffer.clear()
@@ -990,16 +994,21 @@ class LLMWrapper:
     def reset(self) -> None:
         """Reset the wrapper to initial state (for testing)."""
         with self._lock:
+            current_capacity = self.pelm.capacity
+            wake_duration = self.rhythm.wake_duration
+            sleep_duration = self.rhythm.sleep_duration
             self.step_counter = 0
             self.rejected_count = 0
             self.accepted_count = 0
             self.consolidation_buffer.clear()
-            self.moral = MoralFilterV2(initial_threshold=0.50)
-            self.pelm = PhaseEntangledLatticeMemory(dimension=self.dim, capacity=self.pelm.capacity)
-            self.rhythm = CognitiveRhythm(
-                wake_duration=self.rhythm.wake_duration, sleep_duration=self.rhythm.sleep_duration
+            self._kernel.reset(
+                dim=self.dim,
+                capacity=current_capacity,
+                wake_duration=wake_duration,
+                sleep_duration=sleep_duration,
+                initial_moral_threshold=0.50,
             )
-            self.synaptic.reset_all()
+            self._bind_kernel_views()
 
             # Reset reliability components
             self.embedding_circuit_breaker.reset()

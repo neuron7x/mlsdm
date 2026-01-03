@@ -59,14 +59,13 @@ class NoRhythmController(CognitiveController):
         with self._lock:
             self.step_counter += 1
             accepted = self.moral.evaluate(moral_value)
-            self.moral.adapt(accepted)
+            self.moral_adapt(accepted)
 
             if not accepted:
                 return self._build_state(rejected=True, note="morally rejected")
 
             # ALWAYS process (no rhythm check)
-            self.synaptic.update(vector)
-            self.qilm.entangle(vector.tolist(), phase=0.5)  # Fixed phase
+            self.memory_commit(vector, 0.5)  # Fixed phase
 
             return self._build_state(rejected=False, note="processed")
 

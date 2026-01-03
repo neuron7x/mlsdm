@@ -76,7 +76,7 @@ class TestE2ECoreHappyPath:
 
         # Step enough times to enter sleep phase (default wake_duration=8)
         for _ in range(8):
-            controller.rhythm.step()
+            controller.rhythm_step()
 
         assert controller.rhythm.is_wake() is False, "Should be in sleep phase"
 
@@ -101,13 +101,13 @@ class TestE2ECoreHappyPath:
 
         # Transition to sleep (step wake_duration times)
         for _ in range(8):
-            controller.rhythm.step()
+            controller.rhythm_step()
         assert controller.rhythm.is_wake() is False
         assert controller.rhythm.is_sleep() is True
 
         # Transition back to wake (step sleep_duration times)
         for _ in range(3):
-            controller.rhythm.step()
+            controller.rhythm_step()
         assert controller.rhythm.is_wake() is True
         assert controller.rhythm.is_sleep() is False
 
