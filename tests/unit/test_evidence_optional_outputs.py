@@ -15,6 +15,10 @@ def _repo_root() -> Path:
     return current
 
 
+def _latest_snapshot(paths: set[Path]) -> Path:
+    return max(paths, key=lambda p: p.stat().st_mtime)
+
+
 def _run_capture(evidence_dir: Path, inputs: dict[str, str]) -> Path:
     inputs_path = evidence_dir / "inputs.json"
     inputs_path.parent.mkdir(parents=True, exist_ok=True)
@@ -34,14 +38,10 @@ def _run_capture(evidence_dir: Path, inputs: dict[str, str]) -> Path:
     )
     after = {p.resolve() for p in evidence_root.glob("*/*")} if evidence_root.exists() else set()
     new_snapshots = after - before
-
-    def latest(paths: set[Path]) -> Path:
-        return max(paths, key=lambda p: p.stat().st_mtime)
-
     if new_snapshots:
-        return latest(new_snapshots)
+        return _latest_snapshot(new_snapshots)
     if after:
-        return latest(after)
+        return _latest_snapshot(after)
     raise AssertionError("No evidence snapshot produced")
 
 
