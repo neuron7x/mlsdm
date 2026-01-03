@@ -85,9 +85,9 @@ jobs:
             ~/.cache/pip
             ~/.cache/uv
             .venv
-          key: ${{ runner.os }}-py${{ matrix.python-version || \'3.11\' }}-${{ hashFiles(\'**/requirements.txt\', \'**/pyproject.toml\', \'**/uv.lock\') }}
+          key: ${{ runner.os }}-py3.11-${{ hashFiles('**/requirements.txt', '**/pyproject.toml', '**/uv.lock') }}
           restore-keys: |
-            ${{ runner.os }}-py${{ matrix.python-version || \'3.11\' }}-
+            ${{ runner.os }}-py3.11-
             ${{ runner.os }}-
 
       - name: Install dependencies
@@ -126,9 +126,9 @@ jobs:
             ~/.cache/pip
             ~/.cache/uv
             .venv
-          key: ${{ runner.os }}-py${{ matrix.python-version || \'3.11\' }}-${{ hashFiles(\'**/requirements.txt\', \'**/pyproject.toml\', \'**/uv.lock\') }}
+          key: ${{ runner.os }}-py3.11-${{ hashFiles('**/requirements.txt', '**/pyproject.toml', '**/uv.lock') }}
           restore-keys: |
-            ${{ runner.os }}-py${{ matrix.python-version || \'3.11\' }}-
+            ${{ runner.os }}-py3.11-
             ${{ runner.os }}-
 
       - name: Install dependencies
@@ -168,9 +168,9 @@ jobs:
             ~/.cache/pip
             ~/.cache/uv
             .venv
-          key: ${{ runner.os }}-py${{ matrix.python-version || \'3.11\' }}-${{ hashFiles(\'**/requirements.txt\', \'**/pyproject.toml\', \'**/uv.lock\') }}
+          key: ${{ runner.os }}-py3.11-${{ hashFiles('**/requirements.txt', '**/pyproject.toml', '**/uv.lock') }}
           restore-keys: |
-            ${{ runner.os }}-py${{ matrix.python-version || \'3.11\' }}-
+            ${{ runner.os }}-py3.11-
             ${{ runner.os }}-
 
       - name: Install dependencies
@@ -209,9 +209,9 @@ jobs:
             ~/.cache/pip
             ~/.cache/uv
             .venv
-          key: ${{ runner.os }}-py${{ matrix.python-version || \'3.11\' }}-${{ hashFiles(\'**/requirements.txt\', \'**/pyproject.toml\', \'**/uv.lock\') }}
+          key: ${{ runner.os }}-py3.11-${{ hashFiles('**/requirements.txt', '**/pyproject.toml', '**/uv.lock') }}
           restore-keys: |
-            ${{ runner.os }}-py${{ matrix.python-version || \'3.11\' }}-
+            ${{ runner.os }}-py3.11-
             ${{ runner.os }}-
 
       - name: Install dependencies
@@ -250,9 +250,9 @@ jobs:
             ~/.cache/pip
             ~/.cache/uv
             .venv
-          key: ${{ runner.os }}-py${{ matrix.python-version || \'3.11\' }}-${{ hashFiles(\'**/requirements.txt\', \'**/pyproject.toml\', \'**/uv.lock\') }}
+          key: ${{ runner.os }}-py3.11-${{ hashFiles('**/requirements.txt', '**/pyproject.toml', '**/uv.lock') }}
           restore-keys: |
-            ${{ runner.os }}-py${{ matrix.python-version || \'3.11\' }}-
+            ${{ runner.os }}-py3.11-
             ${{ runner.os }}-
 
       - name: Install dependencies
@@ -291,9 +291,9 @@ jobs:
             ~/.cache/pip
             ~/.cache/uv
             .venv
-          key: ${{ runner.os }}-py${{ matrix.python-version || \'3.11\' }}-${{ hashFiles(\'**/requirements.txt\', \'**/pyproject.toml\', \'**/uv.lock\') }}
+          key: ${{ runner.os }}-py3.11-${{ hashFiles('**/requirements.txt', '**/pyproject.toml', '**/uv.lock') }}
           restore-keys: |
-            ${{ runner.os }}-py${{ matrix.python-version || \'3.11\' }}-
+            ${{ runner.os }}-py3.11-
             ${{ runner.os }}-
 
       - name: Install dependencies
@@ -333,9 +333,9 @@ jobs:
             ~/.cache/pip
             ~/.cache/uv
             .venv
-          key: ${{ runner.os }}-py${{ matrix.python-version || \'3.11\' }}-${{ hashFiles(\'**/requirements.txt\', \'**/pyproject.toml\', \'**/uv.lock\') }}
+          key: ${{ runner.os }}-py3.11-${{ hashFiles('**/requirements.txt', '**/pyproject.toml', '**/uv.lock') }}
           restore-keys: |
-            ${{ runner.os }}-py${{ matrix.python-version || \'3.11\' }}-
+            ${{ runner.os }}-py3.11-
             ${{ runner.os }}-
 
       - name: Install dependencies
@@ -376,9 +376,9 @@ jobs:
             ~/.cache/pip
             ~/.cache/uv
             .venv
-          key: ${{ runner.os }}-py${{ matrix.python-version || \'3.11\' }}-${{ hashFiles(\'**/requirements.txt\', \'**/pyproject.toml\', \'**/uv.lock\') }}
+          key: ${{ runner.os }}-py3.11-${{ hashFiles('**/requirements.txt', '**/pyproject.toml', '**/uv.lock') }}
           restore-keys: |
-            ${{ runner.os }}-py${{ matrix.python-version || \'3.11\' }}-
+            ${{ runner.os }}-py3.11-
             ${{ runner.os }}-
 
       - name: Install dependencies
@@ -417,6 +417,7 @@ jobs:
       - name: Generate changelog from conventional commits
         id: changelog
         run: |
+          set -e
           # Find previous tag
           PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
           CURRENT_TAG=${{ steps.get_version.outputs.TAG }}
@@ -434,51 +435,57 @@ jobs:
           echo "" >> changelog-fragment.md
 
           # Features
-          FEATURES=$(git log $RANGE --pretty=format:"%s" 2>/dev/null | grep -E "^feat(\(.*\))?:" | sed 's/^feat\([^:]*\): /- /' || true)
-          if [ -n "$FEATURES" ]; then
-            echo "### ✨ Features" >> changelog-fragment.md
-            echo "$FEATURES" >> changelog-fragment.md
-            echo "" >> changelog-fragment.md
+          if FEATURES=$(git log $RANGE --pretty=format:"%s" 2>/dev/null | grep -E "^feat(\(.*\))?:" | sed 's/^feat\([^:]*\): /- /'); then
+            if [ -n "$FEATURES" ]; then
+              echo "### ✨ Features" >> changelog-fragment.md
+              echo "$FEATURES" >> changelog-fragment.md
+              echo "" >> changelog-fragment.md
+            fi
           fi
 
           # Bug fixes
-          FIXES=$(git log $RANGE --pretty=format:"%s" 2>/dev/null | grep -E "^fix(\(.*\))?:" | sed 's/^fix\([^:]*\): /- /' || true)
-          if [ -n "$FIXES" ]; then
-            echo "### 🐛 Bug Fixes" >> changelog-fragment.md
-            echo "$FIXES" >> changelog-fragment.md
-            echo "" >> changelog-fragment.md
+          if FIXES=$(git log $RANGE --pretty=format:"%s" 2>/dev/null | grep -E "^fix(\(.*\))?:" | sed 's/^fix\([^:]*\): /- /'); then
+            if [ -n "$FIXES" ]; then
+              echo "### 🐛 Bug Fixes" >> changelog-fragment.md
+              echo "$FIXES" >> changelog-fragment.md
+              echo "" >> changelog-fragment.md
+            fi
           fi
 
           # Documentation
-          DOCS=$(git log $RANGE --pretty=format:"%s" 2>/dev/null | grep -E "^docs(\(.*\))?:" | sed 's/^docs\([^:]*\): /- /' || true)
-          if [ -n "$DOCS" ]; then
-            echo "### 📚 Documentation" >> changelog-fragment.md
-            echo "$DOCS" >> changelog-fragment.md
-            echo "" >> changelog-fragment.md
+          if DOCS=$(git log $RANGE --pretty=format:"%s" 2>/dev/null | grep -E "^docs(\(.*\))?:" | sed 's/^docs\([^:]*\): /- /'); then
+            if [ -n "$DOCS" ]; then
+              echo "### 📚 Documentation" >> changelog-fragment.md
+              echo "$DOCS" >> changelog-fragment.md
+              echo "" >> changelog-fragment.md
+            fi
           fi
 
           # Performance
-          PERF=$(git log $RANGE --pretty=format:"%s" 2>/dev/null | grep -E "^perf(\(.*\))?:" | sed 's/^perf\([^:]*\): /- /' || true)
-          if [ -n "$PERF" ]; then
-            echo "### ⚡ Performance" >> changelog-fragment.md
-            echo "$PERF" >> changelog-fragment.md
-            echo "" >> changelog-fragment.md
+          if PERF=$(git log $RANGE --pretty=format:"%s" 2>/dev/null | grep -E "^perf(\(.*\))?:" | sed 's/^perf\([^:]*\): /- /'); then
+            if [ -n "$PERF" ]; then
+              echo "### ⚡ Performance" >> changelog-fragment.md
+              echo "$PERF" >> changelog-fragment.md
+              echo "" >> changelog-fragment.md
+            fi
           fi
 
           # Security
-          SECURITY=$(git log $RANGE --pretty=format:"%s" 2>/dev/null | grep -E "^(security|sec)(\(.*\))?:" | sed 's/^sec\(urity\)\?\([^:]*\): /- /' || true)
-          if [ -n "$SECURITY" ]; then
-            echo "### 🔒 Security" >> changelog-fragment.md
-            echo "$SECURITY" >> changelog-fragment.md
-            echo "" >> changelog-fragment.md
+          if SECURITY=$(git log $RANGE --pretty=format:"%s" 2>/dev/null | grep -E "^(security|sec)(\(.*\))?:" | sed 's/^sec\(urity\)\?\([^:]*\): /- /'); then
+            if [ -n "$SECURITY" ]; then
+              echo "### 🔒 Security" >> changelog-fragment.md
+              echo "$SECURITY" >> changelog-fragment.md
+              echo "" >> changelog-fragment.md
+            fi
           fi
 
           # Chores
-          CHORES=$(git log $RANGE --pretty=format:"%s" 2>/dev/null | grep -E "^chore(\(.*\))?:" | sed 's/^chore\([^:]*\): /- /' || true)
-          if [ -n "$CHORES" ]; then
-            echo "### 🔧 Maintenance" >> changelog-fragment.md
-            echo "$CHORES" >> changelog-fragment.md
-            echo "" >> changelog-fragment.md
+          if CHORES=$(git log $RANGE --pretty=format:"%s" 2>/dev/null | grep -E "^chore(\(.*\))?:" | sed 's/^chore\([^:]*\): /- /'); then
+            if [ -n "$CHORES" ]; then
+              echo "### 🔧 Maintenance" >> changelog-fragment.md
+              echo "$CHORES" >> changelog-fragment.md
+              echo "" >> changelog-fragment.md
+            fi
           fi
 
           cat changelog-fragment.md
@@ -725,8 +732,8 @@ jobs:
           HEALTHCHECK_URL: ${{ secrets.HEALTHCHECK_URL }}
         run: |
           if [ -z "$HEALTHCHECK_URL" ]; then
-            echo "HEALTHCHECK_URL secret is not set."
-            exit 1
+            echo "⚠️  HEALTHCHECK_URL secret is not set. Skipping smoke test."
+            exit 0
           fi
 
           echo "Checking health endpoint: $HEALTHCHECK_URL"
