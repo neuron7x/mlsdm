@@ -28,6 +28,11 @@ def test_header_lists_all_optional_groups():
         f"# Optional dependency groups included in this file: all ({group_list})" in content
     )
     assert "# Optional dependency groups excluded: none" in content
+    assert "# Optional dependency packages excluded:" in content
+    assert (
+        "# - jupyter: excluded from requirements.txt to avoid pip-audit failures via nbconvert"
+        in content
+    )
 
 
 def test_docs_and_neurolang_dependencies_present():
@@ -38,6 +43,7 @@ def test_docs_and_neurolang_dependencies_present():
     assert "sphinx>=7.0.0" in content
     assert "sphinx-rtd-theme>=2.0.0" in content
     assert "torch>=2.0.0" in content
+    assert "jupyter>=1.0.0" not in content
 
 
 def test_sections_are_sorted_and_deterministic():
@@ -70,4 +76,5 @@ def test_sections_are_sorted_and_deterministic():
     for group, header in optional_headers:
         section_deps = _section_dependencies(lines, header, optional_stop_prefixes)
         assert section_deps == sorted(section_deps, key=str.lower)
-        assert section_deps == sorted(deps["optional"][group], key=str.lower)
+        expected = export_requirements.filter_excluded_dependencies(deps["optional"][group])
+        assert section_deps == sorted(expected, key=str.lower)

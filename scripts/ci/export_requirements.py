@@ -11,6 +11,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import re
 import sys
 import tomllib
 from pathlib import Path
@@ -20,6 +21,9 @@ from typing import Any, Iterable
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 PYPROJECT_PATH = PROJECT_ROOT / "pyproject.toml"
 REQUIREMENTS_PATH = PROJECT_ROOT / "requirements.txt"
+EXCLUDED_PACKAGES: dict[str, str] = {
+    "jupyter": "excluded from requirements.txt to avoid pip-audit failures via nbconvert",
+}
 
 
 def load_pyproject(path: Path) -> dict[str, Any]:
@@ -47,6 +51,25 @@ def _title_case_group(group: str) -> str:
     return group.replace("-", " ").title()
 
 
+def _dependency_name(dep: str) -> str:
+    return re.split(r"[<>=!~;\\[]", dep, maxsplit=1)[0].strip().lower()
+
+
+def filter_excluded_dependencies(deps: Iterable[str]) -> list[str]:
+    return [dep for dep in deps if _dependency_name(dep) not in EXCLUDED_PACKAGES]
+
+
+def _format_excluded_packages(excluded_packages: dict[str, str]) -> list[str]:
+    if not excluded_packages:
+        return ["# Optional dependency packages excluded: none"]
+    excluded_lines = [
+        "# Optional dependency packages excluded:",
+    ]
+    for name in sorted(excluded_packages):
+        excluded_lines.append(f"# - {name}: {excluded_packages[name]}")
+    return excluded_lines
+
+
 def generate_requirements(deps: dict[str, Any]) -> str:
     """Generate requirements.txt content from parsed dependencies."""
     optional_groups = sorted(deps["optional"].keys())
@@ -58,7 +81,8 @@ def generate_requirements(deps: dict[str, Any]) -> str:
 #
 # MLSDM Full Installation Requirements
 #
-# This file includes all dependencies including optional ones.
+# This file includes all dependencies including optional ones,
+# except excluded packages listed below.
 # Optional dependency groups discovered in pyproject.toml: {group_list}
 # Optional dependency groups included in this file: all ({group_list})
 # Optional dependency groups excluded: none
@@ -68,8 +92,9 @@ def generate_requirements(deps: dict[str, Any]) -> str:
 # For full dev install: pip install -r requirements.txt
 #
 """.format(group_list=group_list)
-
     lines = [header]
+    lines.extend(_format_excluded_packages(EXCLUDED_PACKAGES))
+    lines.append("")
 
     lines.append("# Core Dependencies (from pyproject.toml [project.dependencies])")
     for dep in sorted(deps["core"], key=str.lower):
@@ -82,7 +107,7 @@ def generate_requirements(deps: dict[str, Any]) -> str:
             f"# Optional {title} (from pyproject.toml [project.optional-dependencies].{group})"
         )
         lines.append(f"# Install with: pip install \".[{group}]\"")
-        for dep in sorted(deps["optional"][group], key=str.lower):
+        for dep in sorted(filter_excluded_dependencies(deps["optional"][group]), key=str.lower):
             lines.append(dep)
         lines.append("")
 
