@@ -18,17 +18,17 @@ def test_header_lists_all_optional_groups():
     deps = export_requirements.parse_pyproject_deps(pyproject)
     content = export_requirements.generate_requirements(deps)
 
-    optional_groups = sorted(deps["optional"].keys())
+    optional_groups = export_requirements._order_optional_groups(deps["optional"].keys())
     group_list = ", ".join(optional_groups)
 
     assert (
-        f"# Optional dependency groups discovered in pyproject.toml: {group_list}" in content
+        f"# Optional dependency groups discovered in pyproject.toml (ordered): {group_list}"
+        in content
     )
     assert (
         f"# Optional dependency groups included in this file: all ({group_list})" in content
     )
-    assert "# Optional dependency groups excluded: none" in content
-    assert "# Optional dependency packages excluded:" in content
+    assert "# Excluded packages (not exported):" in content
     assert (
         "# - jupyter: excluded from requirements.txt to avoid pip-audit failures via nbconvert"
         in content
@@ -56,7 +56,7 @@ def test_sections_are_sorted_and_deterministic():
     content = export_requirements.generate_requirements(deps)
     lines = content.splitlines()
 
-    optional_groups = sorted(deps["optional"].keys())
+    optional_groups = export_requirements._order_optional_groups(deps["optional"].keys())
     optional_headers = [
         (
             group,
@@ -77,11 +77,21 @@ def test_sections_are_sorted_and_deterministic():
     assert core_deps == sorted(deps["core"], key=str.lower)
 
     optional_stop_prefixes = ["# Optional ", "# Security:"]
+    seen = set(map(export_requirements._normalize_requirement, core_deps))
     for group, header in optional_headers:
         section_deps = _section_dependencies(lines, header, optional_stop_prefixes)
         assert section_deps == sorted(section_deps, key=str.lower)
-        expected = export_requirements.filter_excluded_dependencies(deps["optional"][group])
-        assert section_deps == sorted(expected, key=str.lower)
+        expected = []
+        for dep in sorted(
+            export_requirements.filter_excluded_dependencies(deps["optional"][group]),
+            key=str.lower,
+        ):
+            normalized = export_requirements._normalize_requirement(dep)
+            if normalized in seen:
+                continue
+            seen.add(normalized)
+            expected.append(dep)
+        assert section_deps == expected
 
 
 def test_excluded_dependency_name_variants_are_normalized():

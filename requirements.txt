@@ -4,19 +4,20 @@
 #
 # MLSDM Full Installation Requirements
 #
-# This file includes all dependencies including optional ones,
-# except excluded packages listed below.
-# Optional dependency groups discovered in pyproject.toml: dev, docs, embeddings, neurolang, observability, test, visualization
-# Optional dependency groups included in this file: all (dev, docs, embeddings, neurolang, observability, test, visualization)
-# Optional dependency groups excluded: none
+# This file includes core dependencies and all optional dependency groups
+# discovered in pyproject.toml (deduplicated across groups).
+# Optional dependency groups discovered in pyproject.toml (ordered): test, dev, docs, observability, embeddings, neurolang, visualization
+# Optional dependency groups included in this file: all (test, dev, docs, observability, embeddings, neurolang, visualization)
 #
 # For minimal installation: pip install -e .
 # For embeddings support: pip install -e ".[embeddings]"
 # For full dev install: pip install -r requirements.txt
+# Security floor pins for indirect dependencies are included at the end.
 #
 
-# Optional dependency packages excluded:
+# Excluded packages (not exported):
 # - jupyter: excluded from requirements.txt to avoid pip-audit failures via nbconvert
+# - jupyter-core: excluded from requirements.txt to avoid pip-audit failures via nbconvert
 
 # Core Dependencies (from pyproject.toml [project.dependencies])
 defusedxml>=0.7.1
@@ -30,16 +31,19 @@ requests>=2.32.3
 tenacity>=9.0.0
 uvicorn>=0.32.0
 
-# Optional Dev (from pyproject.toml [project.optional-dependencies].dev)
-# Install with: pip install ".[dev]"
-deptry>=0.24.0
+# Optional Test (from pyproject.toml [project.optional-dependencies].test)
+# Install with: pip install ".[test]"
 httpx>=0.28.0
 hypothesis>=6.122.0
-locust>=2.32.0
-mypy>=1.15.0
 pytest-asyncio>=0.24.0
 pytest-cov>=6.0.0
 pytest>=8.3.0
+
+# Optional Dev (from pyproject.toml [project.optional-dependencies].dev)
+# Install with: pip install ".[dev]"
+deptry>=0.24.0
+locust>=2.32.0
+mypy>=1.15.0
 ruff>=0.9.0
 sentence-transformers>=3.0.0
 tomli>=2.0.0; python_version < '3.11'
@@ -51,27 +55,18 @@ types-requests>=2.32.0
 sphinx-rtd-theme>=2.0.0
 sphinx>=7.0.0
 
-# Optional Embeddings (from pyproject.toml [project.optional-dependencies].embeddings)
-# Install with: pip install ".[embeddings]"
-sentence-transformers>=3.0.0
-
-# Optional Neurolang (from pyproject.toml [project.optional-dependencies].neurolang)
-# Install with: pip install ".[neurolang]"
-torch>=2.0.0
-
 # Optional Observability (from pyproject.toml [project.optional-dependencies].observability)
 # Install with: pip install ".[observability]"
 opentelemetry-api>=1.31.0
 opentelemetry-sdk>=1.31.0
 pyjwt>=2.10.0
 
-# Optional Test (from pyproject.toml [project.optional-dependencies].test)
-# Install with: pip install ".[test]"
-httpx>=0.28.0
-hypothesis>=6.122.0
-pytest-asyncio>=0.24.0
-pytest-cov>=6.0.0
-pytest>=8.3.0
+# Optional Embeddings (from pyproject.toml [project.optional-dependencies].embeddings)
+# Install with: pip install ".[embeddings]"
+
+# Optional Neurolang (from pyproject.toml [project.optional-dependencies].neurolang)
+# Install with: pip install ".[neurolang]"
+torch>=2.0.0
 
 # Optional Visualization (from pyproject.toml [project.optional-dependencies].visualization)
 # Install with: pip install ".[visualization]"

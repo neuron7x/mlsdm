@@ -13,6 +13,7 @@ from __future__ import annotations
 import argparse
 import re
 import sys
+from itertools import zip_longest
 
 # Python 3.11+ has tomllib in stdlib, earlier versions need tomli backport
 if sys.version_info >= (3, 11):
@@ -33,6 +34,15 @@ from typing import Any, Iterable
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 PYPROJECT_PATH = PROJECT_ROOT / "pyproject.toml"
 REQUIREMENTS_PATH = PROJECT_ROOT / "requirements.txt"
+PREFERRED_OPTIONAL_GROUP_ORDER = [
+    "test",
+    "dev",
+    "docs",
+    "observability",
+    "embeddings",
+    "neurolang",
+    "visualization",
+]
 def _normalize_package_name(name: str) -> str:
     normalized = name.strip().lower()
     normalized = re.sub(r"[_.]+", "-", normalized)
@@ -90,18 +100,36 @@ def filter_excluded_dependencies(deps: Iterable[str]) -> list[str]:
 
 def _format_excluded_packages(excluded_packages: dict[str, str]) -> list[str]:
     if not excluded_packages:
-        return ["# Optional dependency packages excluded: none"]
-    excluded_lines = [
-        "# Optional dependency packages excluded:",
-    ]
+        return ["# Excluded packages (not exported): none"]
+    excluded_lines = ["# Excluded packages (not exported):"]
     for name in sorted(excluded_packages):
         excluded_lines.append(f"# - {name}: {excluded_packages[name]}")
     return excluded_lines
 
 
+def _order_optional_groups(optional_groups: Iterable[str]) -> list[str]:
+    remaining = list(optional_groups)
+    ordered = [group for group in PREFERRED_OPTIONAL_GROUP_ORDER if group in remaining]
+    for group in ordered:
+        remaining.remove(group)
+    ordered.extend(sorted(remaining))
+    return ordered
+
+
+def _normalize_requirement(dep: str) -> str:
+    return dep.strip().lower()
+
+
+def _ensure_trailing_newline(content: str) -> str:
+    normalized = content.replace("\r\n", "\n")
+    if not normalized.endswith("\n"):
+        normalized += "\n"
+    return normalized
+
+
 def generate_requirements(deps: dict[str, Any]) -> str:
     """Generate requirements.txt content from parsed dependencies."""
-    optional_groups = sorted(deps["optional"].keys())
+    optional_groups = _order_optional_groups(deps["optional"].keys())
     group_list = _format_group_list(optional_groups)
     header = """\
 # GENERATED FILE - DO NOT EDIT MANUALLY
@@ -110,15 +138,15 @@ def generate_requirements(deps: dict[str, Any]) -> str:
 #
 # MLSDM Full Installation Requirements
 #
-# This file includes all dependencies including optional ones,
-# except excluded packages listed below.
-# Optional dependency groups discovered in pyproject.toml: {group_list}
+# This file includes core dependencies and all optional dependency groups
+# discovered in pyproject.toml (deduplicated across groups).
+# Optional dependency groups discovered in pyproject.toml (ordered): {group_list}
 # Optional dependency groups included in this file: all ({group_list})
-# Optional dependency groups excluded: none
 #
 # For minimal installation: pip install -e .
 # For embeddings support: pip install -e ".[embeddings]"
 # For full dev install: pip install -r requirements.txt
+# Security floor pins for indirect dependencies are included at the end.
 #
 """.format(group_list=group_list)
     lines = [header]
@@ -126,7 +154,12 @@ def generate_requirements(deps: dict[str, Any]) -> str:
     lines.append("")
 
     lines.append("# Core Dependencies (from pyproject.toml [project.dependencies])")
+    seen: set[str] = set()
     for dep in sorted(deps["core"], key=str.lower):
+        normalized_dep = _normalize_requirement(dep)
+        if normalized_dep in seen:
+            continue
+        seen.add(normalized_dep)
         lines.append(dep)
     lines.append("")
 
@@ -137,33 +170,30 @@ def generate_requirements(deps: dict[str, Any]) -> str:
         )
         lines.append(f"# Install with: pip install \".[{group}]\"")
         for dep in sorted(filter_excluded_dependencies(deps["optional"][group]), key=str.lower):
+            normalized_dep = _normalize_requirement(dep)
+            if normalized_dep in seen:
+                continue
+            seen.add(normalized_dep)
             lines.append(dep)
         lines.append("")
 
     lines.append("# Security: Pin minimum versions for indirect dependencies with known vulnerabilities")
-    lines.append("certifi>=2025.11.12")
-    lines.append("cryptography>=46.0.3")
-    lines.append("jinja2>=3.1.6")
-    lines.append("urllib3>=2.6.2")
-    lines.append("setuptools>=80.9.0")
-    lines.append("idna>=3.11")
+    for dep in [
+        "certifi>=2025.11.12",
+        "cryptography>=46.0.3",
+        "jinja2>=3.1.6",
+        "urllib3>=2.6.2",
+        "setuptools>=80.9.0",
+        "idna>=3.11",
+    ]:
+        normalized_dep = _normalize_requirement(dep)
+        if normalized_dep in seen:
+            continue
+        seen.add(normalized_dep)
+        lines.append(dep)
     lines.append("")
 
-    return "\n".join(lines)
-
-
-def normalize_requirements(content: str) -> list[str]:
-    """Normalize requirements content for comparison.
-
-    Ignores comments, empty lines, and normalizes whitespace.
-    Returns sorted list of non-empty, non-comment lines.
-    """
-    lines = []
-    for line in content.split("\n"):
-        line = line.strip()
-        if line and not line.startswith("#"):
-            lines.append(line)
-    return sorted(lines, key=str.lower)
+    return _ensure_trailing_newline("\n".join(lines))
 
 
 def main() -> int:
@@ -189,32 +219,24 @@ def main() -> int:
             return 1
 
         current = REQUIREMENTS_PATH.read_text(encoding="utf-8")
-        current_deps = normalize_requirements(current)
-        generated_deps = normalize_requirements(generated)
+        current_normalized = _ensure_trailing_newline(current)
+        generated_normalized = _ensure_trailing_newline(generated)
 
-        if current_deps != generated_deps:
+        if current_normalized != generated_normalized:
             print("ERROR: Dependency drift detected!", file=sys.stderr)
             print("", file=sys.stderr)
             print("requirements.txt is out of sync with pyproject.toml", file=sys.stderr)
             print("Run: python scripts/ci/export_requirements.py", file=sys.stderr)
             print("", file=sys.stderr)
 
-            current_set = set(current_deps)
-            generated_set = set(generated_deps)
-
-            missing = generated_set - current_set
-            extra = current_set - generated_set
-
-            if missing:
-                print("Missing in requirements.txt:", file=sys.stderr)
-                for dep in sorted(missing):
-                    print(f"  + {dep}", file=sys.stderr)
-
-            if extra:
-                print("Extra in requirements.txt:", file=sys.stderr)
-                for dep in sorted(extra):
-                    print(f"  - {dep}", file=sys.stderr)
-
+            current_lines = current_normalized.splitlines()
+            generated_lines = generated_normalized.splitlines()
+            for idx, (cur, gen) in enumerate(zip_longest(current_lines, generated_lines, fillvalue="")):
+                if cur != gen:
+                    print(f"First difference at line {idx + 1}:", file=sys.stderr)
+                    print(f"  expected: {gen or '<missing>'}", file=sys.stderr)
+                    print(f"  found:    {cur or '<missing>'}", file=sys.stderr)
+                    break
             return 1
 
         print("✓ requirements.txt is in sync with pyproject.toml")
