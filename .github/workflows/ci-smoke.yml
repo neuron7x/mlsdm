@@ -213,7 +213,9 @@ jobs:
 
       - name: Validate defusedxml is resolvable
         run: |
-          pip install defusedxml --dry-run 2>&1 | grep -q "defusedxml" && echo "✓ defusedxml is resolvable"
+          set -e
+          pip install defusedxml --dry-run
+          echo "✓ defusedxml is resolvable"
 
   failure-intelligence:
     name: Failure Intelligence

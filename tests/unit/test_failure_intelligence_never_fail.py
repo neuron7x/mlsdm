@@ -106,10 +106,10 @@ def test_multiple_missing_artifacts_produces_sorted_errors(tmp_path: Path):
     # Status should be degraded
     assert summary.get("status") == "degraded"
 
-    # input_errors should contain both errors, sorted by artifact name
+    # input_errors should contain both errors, sorted alphabetically by artifact name
     input_errors = summary.get("input_errors", [])
     assert len(input_errors) == 2
-    # Sorted by artifact: changed_files < coverage < junit
+    # Sorted by artifact: coverage < junit (alphabetical)
     assert input_errors[0]["artifact"] == "coverage"
     assert input_errors[1]["artifact"] == "junit"
 
