@@ -45,13 +45,14 @@ def test_contract_header_matches_content():
         f"# Optional dependency groups included in this file: all ({group_list})" in content
     )
     assert "# Excluded packages (not exported):" in content
-    excluded_name = export_requirements._normalize_package_name("jupyter_core")
-    assert (
-        f"# - {excluded_name}: excluded from requirements.txt to avoid pip-audit failures via nbconvert"
-        in content
-    )
+    for name, reason in export_requirements.EXCLUDED_PACKAGES.items():
+        assert f"# - {name}: {reason}" in content
+
     non_comment_lines = [line for line in content.splitlines() if line and not line.startswith("#")]
-    assert all("jupyter" not in line.lower() for line in non_comment_lines)
+    excluded = set(export_requirements.EXCLUDED_PACKAGES.keys())
+    for line in non_comment_lines:
+        normalized = export_requirements._normalize_dependency_name(line)
+        assert normalized not in excluded
     assert "sentence-transformers>=3.0.0" in content
     assert content.count("sentence-transformers>=3.0.0") == 1
 
