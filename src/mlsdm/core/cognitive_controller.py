@@ -10,7 +10,7 @@ import psutil
 from ..memory.phase_entangled_lattice_memory import MemoryRetrieval
 from ..observability.metrics import get_metrics_exporter
 from ..observability.tracing import get_tracer_manager
-from .governance_kernel import GovernanceKernel
+from .governance_kernel import GovernanceKernel, PelmRO
 
 if TYPE_CHECKING:
     from mlsdm.config import SynapticMemoryCalibration
@@ -166,7 +166,7 @@ class CognitiveController:
         self._kernel.memory_commit(vector, phase, provenance=provenance)
 
     @property
-    def qilm(self) -> Any:
+    def qilm(self) -> PelmRO:
         """Backward compatibility alias for pelm (deprecated, use self.pelm instead).
 
         This property will be removed in v2.0.0. Migrate to using self.pelm directly.

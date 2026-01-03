@@ -51,6 +51,9 @@ class SynapticRO:
     def state(self) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         return self._synaptic.state()
 
+    def get_state(self) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+        return self._synaptic.state()
+
     @property
     def lambda_l1(self) -> float:
         return self._synaptic.lambda_l1
