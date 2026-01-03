@@ -89,6 +89,7 @@ def test_excluded_dependency_name_variants_are_normalized():
         "Jupyter>=1.0.0",
         "jupyter_core>=5.0.0",
         "jupyter.core>=5.0.0",
+        "Jupyter-Core>=5.0.0",
         "numpy>=1.26.0",
     ]
 
