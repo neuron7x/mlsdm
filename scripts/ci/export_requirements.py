@@ -54,12 +54,12 @@ EXCLUDED_PACKAGES: dict[str, dict[str, str]] = _normalize_excluded_packages(
         "jupyter": {
             "reason": "excluded from requirements.txt to avoid pip-audit failures via nbconvert",
             "cve": "CVE-2025-53000",
-            "remove_when": "remove once nbconvert>=7.16.0",
+            "remove_when": "remove when nbconvert>=7.16.0",
         },
         "jupyter_core": {
             "reason": "excluded from requirements.txt to avoid pip-audit failures via nbconvert",
             "cve": "CVE-2025-53000",
-            "remove_when": "remove once nbconvert>=7.16.0",
+            "remove_when": "remove when nbconvert>=7.16.0",
         },
     }
 )
@@ -107,10 +107,9 @@ def _format_excluded_packages(excluded_packages: dict[str, dict[str, str]]) -> l
     ]
     for name in sorted(excluded_packages):
         metadata = excluded_packages[name]
-        reason = metadata["reason"]
         cve = metadata["cve"]
         remove_when = metadata["remove_when"]
-        excluded_lines.append(f"# - {name}: {reason} ({cve}; {remove_when})")
+        excluded_lines.append(f"# - {name}: {cve}; {remove_when}")
     return excluded_lines
 
 

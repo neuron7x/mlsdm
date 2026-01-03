@@ -29,16 +29,8 @@ def test_header_lists_all_optional_groups():
     )
     assert "# Optional dependency groups excluded: none" in content
     assert "# Optional dependency packages excluded:" in content
-    assert (
-        "# - jupyter: excluded from requirements.txt to avoid pip-audit failures via nbconvert"
-        " (CVE-2025-53000; remove once nbconvert>=7.16.0)"
-        in content
-    )
-    assert (
-        "# - jupyter-core: excluded from requirements.txt to avoid pip-audit failures via nbconvert"
-        " (CVE-2025-53000; remove once nbconvert>=7.16.0)"
-        in content
-    )
+    assert "# - jupyter: CVE-2025-53000; remove when nbconvert>=7.16.0" in content
+    assert "# - jupyter-core: CVE-2025-53000; remove when nbconvert>=7.16.0" in content
 
 
 def test_docs_and_neurolang_dependencies_present():
