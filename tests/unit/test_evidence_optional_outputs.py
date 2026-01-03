@@ -34,7 +34,10 @@ def _run_capture(evidence_dir: Path, inputs: dict[str, str]) -> Path:
     )
     after = {p.resolve() for p in evidence_root.glob("*/*")} if evidence_root.exists() else set()
     new_snapshots = after - before
-    latest = (lambda paths: max(paths, key=lambda p: p.stat().st_mtime))
+
+    def latest(paths: set[Path]) -> Path:
+        return max(paths, key=lambda p: p.stat().st_mtime)
+
     if new_snapshots:
         return latest(new_snapshots)
     if after:
