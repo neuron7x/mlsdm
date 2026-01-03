@@ -181,6 +181,11 @@ def normalize_requirements(content: str) -> list[str]:
     return sorted(lines, key=str.lower)
 
 
+def normalize_full_content(content: str) -> str:
+    """Normalize full requirements content for strict comparison."""
+    return content.replace("\r\n", "\n").rstrip()
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Export requirements.txt from pyproject.toml")
     parser.add_argument(
@@ -230,6 +235,16 @@ def main() -> int:
                 for dep in sorted(extra):
                     print(f"  - {dep}", file=sys.stderr)
 
+            return 1
+
+        current_full = normalize_full_content(current)
+        generated_full = normalize_full_content(generated)
+        if current_full != generated_full:
+            print("ERROR: requirements.txt header/section drift detected!", file=sys.stderr)
+            print("", file=sys.stderr)
+            print("requirements.txt is out of sync with pyproject.toml", file=sys.stderr)
+            print("Run: python scripts/ci/export_requirements.py", file=sys.stderr)
+            print("", file=sys.stderr)
             return 1
 
         print("✓ requirements.txt is in sync with pyproject.toml")

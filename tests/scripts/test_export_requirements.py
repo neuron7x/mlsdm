@@ -1,3 +1,5 @@
+import sys
+
 from scripts.ci import export_requirements
 
 
@@ -95,3 +97,26 @@ def test_excluded_dependency_name_variants_are_normalized():
     ]
 
     assert export_requirements.filter_excluded_dependencies(deps) == ["numpy>=1.26.0"]
+
+
+def test_check_detects_header_drift(tmp_path, monkeypatch, capsys):
+    pyproject = export_requirements.load_pyproject(export_requirements.PYPROJECT_PATH)
+    deps = export_requirements.parse_pyproject_deps(pyproject)
+    content = export_requirements.generate_requirements(deps)
+    mutated = content.replace(
+        "# MLSDM Full Installation Requirements",
+        "# MLSDM Full Installation Requirements (modified)",
+        1,
+    )
+
+    requirements_path = tmp_path / "requirements.txt"
+    requirements_path.write_text(mutated, encoding="utf-8")
+
+    monkeypatch.setattr(export_requirements, "REQUIREMENTS_PATH", requirements_path)
+    monkeypatch.setattr(sys, "argv", ["export_requirements.py", "--check"])
+
+    exit_code = export_requirements.main()
+
+    assert exit_code == 1
+    stderr = capsys.readouterr().err
+    assert "header/section drift detected" in stderr
