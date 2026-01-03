@@ -108,16 +108,19 @@ def _format_excluded_packages(excluded_packages: dict[str, str]) -> list[str]:
 
 
 def _order_optional_groups(optional_groups: Iterable[str]) -> list[str]:
-    remaining = list(optional_groups)
+    remaining = set(optional_groups)
     ordered = [group for group in PREFERRED_OPTIONAL_GROUP_ORDER if group in remaining]
-    for group in ordered:
-        remaining.remove(group)
+    remaining.difference_update(ordered)
     ordered.extend(sorted(remaining))
     return ordered
 
 
 def _normalize_requirement(dep: str) -> str:
-    return dep.strip().lower()
+    dep = dep.strip()
+    name_part = re.split(r"[<>=!~;\\[]", dep, maxsplit=1)[0]
+    normalized_name = _normalize_package_name(name_part)
+    remainder = dep[len(name_part) :].strip().lower()
+    return f"{normalized_name}{remainder}"
 
 
 def _ensure_trailing_newline(content: str) -> str:
