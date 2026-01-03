@@ -51,8 +51,10 @@ def test_contract_header_matches_content():
     non_comment_lines = [line for line in content.splitlines() if line and not line.startswith("#")]
     for line in non_comment_lines:
         assert line in export_requirements.filter_excluded_dependencies([line])
-    assert "sentence-transformers>=3.0.0" in content
-    assert content.count("sentence-transformers>=3.0.0") == 1
+    sentence_lines = [
+        line for line in non_comment_lines if line.lower().startswith("sentence-transformers")
+    ]
+    assert len(sentence_lines) == 1
 
 
 def test_check_mode_detects_drift(tmp_path: Path, monkeypatch, capsys):

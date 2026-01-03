@@ -92,6 +92,7 @@ def _title_case_group(group: str) -> str:
 
 
 def _normalize_dependency_name(dep: str) -> str:
+    # Split on common specifier separators; backslashes are not expected in requirement declarations.
     name = re.split(r"[<>=!~;\[]", dep, maxsplit=1)[0].strip()
     return _normalize_package_name(name)
 
@@ -121,7 +122,7 @@ def _normalize_requirement(dep: str) -> str:
     dep = dep.strip()
     name_part = re.split(r"[<>=!~;\[]", dep, maxsplit=1)[0]
     normalized_name = _normalize_package_name(name_part)
-    remainder = dep[len(name_part) :].strip().lower()
+    remainder = dep[len(name_part):].strip().lower()
     return f"{normalized_name}{remainder}"
 
 
