@@ -49,10 +49,8 @@ def test_contract_header_matches_content():
         assert f"# - {name}: {reason}" in content
 
     non_comment_lines = [line for line in content.splitlines() if line and not line.startswith("#")]
-    excluded = set(export_requirements.EXCLUDED_PACKAGES.keys())
     for line in non_comment_lines:
-        normalized = export_requirements._normalize_dependency_name(line)
-        assert normalized not in excluded
+        assert line in export_requirements.filter_excluded_dependencies([line])
     assert "sentence-transformers>=3.0.0" in content
     assert content.count("sentence-transformers>=3.0.0") == 1
 
