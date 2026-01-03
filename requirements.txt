@@ -16,7 +16,8 @@
 #
 
 # Optional dependency packages excluded:
-# - jupyter: excluded from requirements.txt to avoid pip-audit failures via nbconvert
+# - jupyter: excluded from requirements.txt to avoid pip-audit failures via nbconvert (CVE-2025-53000; remove once nbconvert>=7.16.0)
+# - jupyter-core: excluded from requirements.txt to avoid pip-audit failures via nbconvert (CVE-2025-53000; remove once nbconvert>=7.16.0)
 
 # Core Dependencies (from pyproject.toml [project.dependencies])
 defusedxml>=0.7.1
@@ -84,3 +85,11 @@ jinja2>=3.1.6
 urllib3>=2.6.2
 setuptools>=80.9.0
 idna>=3.11
+
+# Duplicate Dependencies (across sections)
+# - httpx: dev, test
+# - hypothesis: dev, test
+# - pytest: dev, test
+# - pytest-asyncio: dev, test
+# - pytest-cov: dev, test
+# - sentence-transformers: dev, embeddings

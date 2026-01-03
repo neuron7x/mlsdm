@@ -95,3 +95,28 @@ def test_excluded_dependency_name_variants_are_normalized():
     ]
 
     assert export_requirements.filter_excluded_dependencies(deps) == ["numpy>=1.26.0"]
+
+
+def test_duplicate_summary_is_deterministic():
+    deps = {
+        "core": ["numpy>=1.26.0", "pandas>=2.2.0"],
+        "optional": {
+            "docs": ["pandas>=2.2.0", "sphinx>=7.0.0"],
+            "embeddings": ["numpy>=1.26.0", "torch>=2.0.0"],
+        },
+    }
+
+    content = export_requirements.generate_requirements(deps)
+    lines = content.splitlines()
+    header = "# Duplicate Dependencies (across sections)"
+    start_index = lines.index(header) + 1
+    summary_lines = []
+    for line in lines[start_index:]:
+        if not line:
+            break
+        summary_lines.append(line)
+
+    assert summary_lines == [
+        "# - numpy: core, embeddings",
+        "# - pandas: core, docs",
+    ]

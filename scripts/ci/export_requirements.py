@@ -99,6 +99,15 @@ def filter_excluded_dependencies(deps: Iterable[str]) -> list[str]:
     return [dep for dep in deps if _normalize_dependency_name(dep) not in EXCLUDED_PACKAGES]
 
 
+def _track_dependency_section(
+    section: str, dep: str, section_map: dict[str, list[str]]
+) -> None:
+    name = _normalize_dependency_name(dep)
+    sections = section_map.setdefault(name, [])
+    if section not in sections:
+        sections.append(section)
+
+
 def _format_excluded_packages(excluded_packages: dict[str, dict[str, str]]) -> list[str]:
     if not excluded_packages:
         return ["# Optional dependency packages excluded: none"]
@@ -140,8 +149,11 @@ def generate_requirements(deps: dict[str, Any]) -> str:
     lines.extend(_format_excluded_packages(EXCLUDED_PACKAGES))
     lines.append("")
 
+    section_map: dict[str, list[str]] = {}
+
     lines.append("# Core Dependencies (from pyproject.toml [project.dependencies])")
     for dep in sorted(deps["core"], key=str.lower):
+        _track_dependency_section("core", dep, section_map)
         lines.append(dep)
     lines.append("")
 
@@ -152,16 +164,31 @@ def generate_requirements(deps: dict[str, Any]) -> str:
         )
         lines.append(f"# Install with: pip install \".[{group}]\"")
         for dep in sorted(filter_excluded_dependencies(deps["optional"][group]), key=str.lower):
+            _track_dependency_section(group, dep, section_map)
             lines.append(dep)
         lines.append("")
 
     lines.append("# Security: Pin minimum versions for indirect dependencies with known vulnerabilities")
-    lines.append("certifi>=2025.11.12")
-    lines.append("cryptography>=46.0.3")
-    lines.append("jinja2>=3.1.6")
-    lines.append("urllib3>=2.6.2")
-    lines.append("setuptools>=80.9.0")
-    lines.append("idna>=3.11")
+    for dep in [
+        "certifi>=2025.11.12",
+        "cryptography>=46.0.3",
+        "jinja2>=3.1.6",
+        "urllib3>=2.6.2",
+        "setuptools>=80.9.0",
+        "idna>=3.11",
+    ]:
+        _track_dependency_section("security", dep, section_map)
+        lines.append(dep)
+    lines.append("")
+
+    duplicates = {name: sections for name, sections in section_map.items() if len(sections) > 1}
+    lines.append("# Duplicate Dependencies (across sections)")
+    if duplicates:
+        for name in sorted(duplicates):
+            sections = ", ".join(duplicates[name])
+            lines.append(f"# - {name}: {sections}")
+    else:
+        lines.append("# - none")
     lines.append("")
 
     return "\n".join(lines)
