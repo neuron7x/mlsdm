@@ -7,6 +7,9 @@ for deterministic, reproducible testing across the test suite.
 
 from __future__ import annotations
 
+import builtins
+import contextlib
+import importlib
 import importlib.util
 import os
 import threading
@@ -161,6 +164,42 @@ def isolate_environment() -> Any:
     # Restore original environment
     os.environ.clear()
     os.environ.update(original_env)
+
+
+# ============================================================
+# Import Blocking Helpers
+# ============================================================
+
+
+@pytest.fixture
+def block_imports(monkeypatch: pytest.MonkeyPatch) -> contextlib.AbstractContextManager[None]:
+    """Deterministically block imports for specified top-level module names."""
+
+    @contextlib.contextmanager
+    def _block(names: set[str]):
+        blocked = {name.split(".")[0] for name in names}
+        real_import_module = importlib.import_module
+        real_dunder_import = builtins.__import__
+
+        def _blocked_import_module(name: str, *args: Any, **kwargs: Any):
+            if name.split(".")[0] in blocked:
+                raise ImportError(f"Blocked import for {name}")
+            return real_import_module(name, *args, **kwargs)
+
+        def _blocked_dunder_import(name: str, *args: Any, **kwargs: Any):
+            if name.split(".")[0] in blocked:
+                raise ImportError(f"Blocked import for {name}")
+            return real_dunder_import(name, *args, **kwargs)
+
+        monkeypatch.setattr(importlib, "import_module", _blocked_import_module)
+        monkeypatch.setattr(builtins, "__import__", _blocked_dunder_import)
+        try:
+            yield
+        finally:
+            monkeypatch.setattr(importlib, "import_module", real_import_module)
+            monkeypatch.setattr(builtins, "__import__", real_dunder_import)
+
+    return _block
 
 
 # ============================================================

@@ -9,7 +9,6 @@ Tests cover:
 - Edge cases and error handling
 """
 
-import builtins
 import sys
 from types import SimpleNamespace
 
@@ -21,18 +20,6 @@ from mlsdm.adapters.llm_provider import (
     LLMTimeoutError,
     LocalStubProvider,
 )
-
-
-def _force_import_failure(monkeypatch, package: str) -> None:
-    """Force ImportError for the given package."""
-    real_import = builtins.__import__
-
-    def _raising_import(name, *args, **kwargs):
-        if name.split(".")[0] == package:
-            raise ImportError(f"Forced import failure for {package}")
-        return real_import(name, *args, **kwargs)
-
-    monkeypatch.setattr(builtins, "__import__", _raising_import)
 
 
 def _install_module_stub(monkeypatch, name: str, client_attr: str) -> None:
@@ -230,17 +217,16 @@ class TestOpenAIProviderInit:
         with pytest.raises(ValueError, match="OpenAI API key is required"):
             OpenAIProvider()
 
-    def test_raises_import_error_without_openai(self, monkeypatch):
+    def test_raises_import_error_without_openai(self, monkeypatch, block_imports):
         """Should raise ImportError when openai package is not installed."""
 
-        # Mock openai import to fail
         monkeypatch.setenv("OPENAI_API_KEY", "test-key")
-        _force_import_failure(monkeypatch, "openai")
 
-        from mlsdm.adapters.llm_provider import OpenAIProvider
+        with block_imports({"openai"}):
+            from mlsdm.adapters.llm_provider import OpenAIProvider
 
-        with pytest.raises(ImportError, match="openai package is required"):
-            OpenAIProvider(api_key="test-key")
+            with pytest.raises(ImportError, match="openai package is required"):
+                OpenAIProvider(api_key="test-key")
 
     def test_accepts_api_key_parameter(self, monkeypatch):
         """Should accept API key via parameter."""
