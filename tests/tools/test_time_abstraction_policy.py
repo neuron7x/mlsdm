@@ -1,12 +1,15 @@
 from __future__ import annotations
 
+import re
+import tokenize
+from io import StringIO
 from pathlib import Path
 
 
 def _has_injection_indicator(text: str) -> bool:
     lowered = text.lower()
     return ("now:" in lowered or "clock:" in lowered) and (
-        "self._now" in text or "self._clock" in text
+        "self._now" in lowered or "self._clock" in lowered
     )
 
 
@@ -14,7 +17,8 @@ def _is_allowed_time_time(line: str) -> bool:
     lowered = line.lower()
     return (
         "else time.time(" in line
-        or "or time.time" in line
+        or bool(re.search(r"\bor\s+time\.time\b", line))
+        or "or time.time(" in line
         or ("time.time" in line and "default" in lowered)
     )
 
@@ -22,7 +26,8 @@ def _is_allowed_time_time(line: str) -> bool:
 def _is_allowed_perf_counter(line: str) -> bool:
     lowered = line.lower()
     return (
-        "or time.perf_counter" in line
+        bool(re.search(r"\bor\s+time\.perf_counter\b", line))
+        or "or time.perf_counter(" in line
         or "else time.perf_counter" in line
         or ("time.perf_counter" in line and "default" in lowered)
     )
@@ -30,21 +35,21 @@ def _is_allowed_perf_counter(line: str) -> bool:
 
 def _find_disallowed_calls(path: Path, text: str, repo_root: Path) -> list[str]:
     offenders: list[str] = []
-    in_docstring = False
+    skip_lines: set[int] = set()
+
+    for token in tokenize.generate_tokens(StringIO(text).readline):
+        if token.type in {tokenize.STRING, tokenize.COMMENT}:
+            skip_lines.update(range(token.start[0], token.end[0] + 1))
 
     for lineno, line in enumerate(text.splitlines(), start=1):
+        if lineno in skip_lines:
+            continue
+
         stripped = line.strip()
-        triple_count = line.count('"""') + line.count("'''")
-        is_docstring_line = in_docstring or triple_count > 0
-
-        if not is_docstring_line and not stripped.startswith("#"):
-            if "time.time(" in line and not _is_allowed_time_time(line):
-                offenders.append(f"{path.relative_to(repo_root)}:{lineno} -> {stripped}")
-            if "time.perf_counter(" in line and not _is_allowed_perf_counter(line):
-                offenders.append(f"{path.relative_to(repo_root)}:{lineno} -> {stripped}")
-
-        if triple_count % 2 == 1:
-            in_docstring = not in_docstring
+        if "time.time(" in line and not _is_allowed_time_time(line):
+            offenders.append(f"{path.relative_to(repo_root)}:{lineno} -> {stripped}")
+        if "time.perf_counter(" in line and not _is_allowed_perf_counter(line):
+            offenders.append(f"{path.relative_to(repo_root)}:{lineno} -> {stripped}")
 
     return offenders
 
