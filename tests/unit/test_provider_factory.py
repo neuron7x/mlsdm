@@ -8,7 +8,11 @@ Tests cover:
 4. Environment variable handling
 """
 
+import contextlib
 import os
+import sys
+from collections.abc import Callable
+from types import SimpleNamespace
 from unittest.mock import patch
 
 import pytest
@@ -19,6 +23,25 @@ from mlsdm.adapters import (
     build_multiple_providers_from_env,
     build_provider_from_env,
 )
+
+
+def _install_module_stub(monkeypatch: pytest.MonkeyPatch, name: str, client_attr: str) -> None:
+    """Install a lightweight stub module so imports succeed deterministically."""
+
+    class _DummyClient:
+        def __init__(self, api_key: str | None = None) -> None:
+            self.api_key = api_key
+
+    stub = SimpleNamespace(
+        **{
+            client_attr: _DummyClient,
+            "APITimeoutError": Exception,
+            "APIConnectionError": Exception,
+            "RateLimitError": Exception,
+            "APIStatusError": type("APIStatusError", (Exception,), {"status_code": 0}),
+        }
+    )
+    monkeypatch.setitem(sys.modules, name, stub)
 
 
 class TestBuildProviderFromEnv:
@@ -217,25 +240,31 @@ class TestProviderContract:
 class TestBuildProviderFromEnvWithOpenAI:
     """Tests for OpenAI provider creation (with mocked API key)."""
 
-    def test_openai_with_api_key_from_env(self) -> None:
+    def test_openai_with_api_key_from_env(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test OpenAI provider creation with API key from env."""
         with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key-123"}):
-            # Note: This will try to import openai package
-            # If openai is not installed, it will raise ImportError
-            try:
-                provider = build_provider_from_env(backend="openai")
-                assert provider.provider_id.startswith("openai_")
-            except ImportError:
-                pytest.skip("openai package not installed")
+            _install_module_stub(monkeypatch, "openai", "OpenAI")
+            provider = build_provider_from_env(backend="openai")
+            assert provider.provider_id.startswith("openai_")
 
-    def test_openai_with_custom_model_from_env(self) -> None:
+    def test_openai_with_custom_model_from_env(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test OpenAI provider with custom model from env."""
         with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key-123", "OPENAI_MODEL": "gpt-4"}):
-            try:
-                provider = build_provider_from_env(backend="openai")
-                assert "gpt_4" in provider.provider_id
-            except ImportError:
-                pytest.skip("openai package not installed")
+            _install_module_stub(monkeypatch, "openai", "OpenAI")
+            provider = build_provider_from_env(backend="openai")
+            assert "gpt_4" in provider.provider_id
+
+    def test_openai_missing_dependency_raises_import_error(
+        self,
+        block_imports: Callable[[set[str]], contextlib.AbstractContextManager[None]],
+    ) -> None:
+        """Ensure missing openai dependency fails deterministically."""
+        with (
+            patch.dict(os.environ, {"OPENAI_API_KEY": "test-key-123"}),
+            block_imports({"openai"}),
+            pytest.raises(ImportError, match="openai package is required"),
+        ):
+            build_provider_from_env(backend="openai")
 
 
 class TestProviderErrorHandling:
