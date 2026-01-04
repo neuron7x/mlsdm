@@ -10,11 +10,16 @@
 ## Baseline Snapshot (main-only, “here and now”)
 
 - Scope: only `main`, last five runs per key workflow, current coverage, and active alerts/jobs.
-- Key workflows (main, last 5 runs): CI Smoke (`ci-smoke.yml`) — ✅ all green; others key pipelines (CI engine, property tests, SAST/security, coverage badge) — no failing jobs observed on main in latest runs.
-- Coverage (latest main artifact): **78.62%** overall (see `reports/coverage/COVERAGE_REPORT_2025-12-22.md`).
-- Security/alerts: no active failing jobs or blocked workflows on main observed in current runs; GitHub security alert access is restricted via this token, so treat the dashboard as source of truth.
+- Key workflows (main, last 5 runs):
+  - CI Smoke (`ci-smoke.yml`) — ✅ all green.
+  - Other key pipelines (CI engine, property tests, SAST/security, coverage badge) — no failing jobs observed on main in latest runs.
+- Coverage: **78.62%** overall from the latest available main artifact (2025-12-22); no newer coverage uploads exist since that run (see `reports/coverage/COVERAGE_REPORT_2025-12-22.md`), so this value is carried forward for the 2026-01-04 baseline.
+  - Historical DL-003 milestone was recorded at 78.13%; 78.62% is the current baseline.
+  - Note: coverage data is 13 days old; rerun the coverage workflow to refresh.
+- Security/alerts: no active failing jobs or blocked workflows on main observed in current runs; GitHub security alert API access is restricted in this environment, so use the repo dashboard as the authoritative source.
 
-See [TECHNICAL_DEBT_REGISTER.md](TECHNICAL_DEBT_REGISTER.md) for the **complete unified technical debt register** with all identified issues, classifications, and remediation plans. See [ENGINEERING_DEFICIENCIES_REGISTER.md](ENGINEERING_DEFICIENCIES_REGISTER.md) for detailed engineering deficiency analysis.
+See [TECHNICAL_DEBT_REGISTER.md](TECHNICAL_DEBT_REGISTER.md) for the **complete unified technical debt register** with all identified issues, classifications, and remediation plans.
+See [ENGINEERING_DEFICIENCIES_REGISTER.md](ENGINEERING_DEFICIENCIES_REGISTER.md) for detailed engineering deficiency analysis.
 
 ---
 
