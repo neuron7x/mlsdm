@@ -613,6 +613,7 @@ class TestCognitiveControllerTimeBasedRecovery:
         controller.memory_threshold_mb = 10000.0
 
         # Even with time passed, won't recover without step cooldown
+        controller._last_emergency_time -= controller.auto_recovery_cooldown_seconds + 1.0
         controller.process_event(vector, moral_value=0.8)
         assert controller.emergency_shutdown is True
 
