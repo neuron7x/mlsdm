@@ -134,7 +134,7 @@ class TestPELMConcurrency:
             """Periodically corrupt and let auto-recovery handle it."""
             for threshold in (10, 40, 70):
                 with progress:
-                    progress.wait_for(lambda: operations_done >= threshold)
+                    progress.wait_for(lambda t=threshold: operations_done >= t)
                 with lock:
                     pelm.pointer = 9999  # Corrupt
 

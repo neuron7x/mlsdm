@@ -5,7 +5,6 @@ Tests memory monitoring, processing time limits, and emergency shutdown function
 """
 
 import gc
-import time
 
 import numpy as np
 import pytest
