@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+import inspect
+import secrets
+from dataclasses import dataclass
+from hashlib import sha256
 from threading import RLock
 from typing import TYPE_CHECKING, Any
 
@@ -10,6 +14,14 @@ from ..cognition.moral_filter_v2 import MoralFilterV2
 from ..memory.multi_level_memory import MultiLevelSynapticMemory
 from ..memory.phase_entangled_lattice_memory import PhaseEntangledLatticeMemory
 from ..rhythm.cognitive_rhythm import CognitiveRhythm
+
+
+@dataclass(frozen=True)
+class Capability:
+    """Capability token for authorized kernel mutation."""
+
+    perms: frozenset[str]
+    kernel_nonce_hash: str
 
 
 class MoralRO:
@@ -172,6 +184,10 @@ class GovernanceKernel:
         self._initial_moral_threshold = initial_moral_threshold
         self._synaptic_config = synaptic_config
 
+        # Generate capability nonce for authorization
+        self._cap_nonce = secrets.token_bytes(32)
+        self._cap_hash = sha256(self._cap_nonce).hexdigest()
+
         self._moral: MoralFilterV2
         self._synaptic: MultiLevelSynapticMemory
         self._pelm: PhaseEntangledLatticeMemory
@@ -193,13 +209,38 @@ class GovernanceKernel:
         self.pelm_ro = PelmRO(self._pelm)
         self.rhythm_ro = RhythmRO(self._rhythm)
 
-    def moral_adapt(self, accepted: bool) -> None:
+    def _assert_can_mutate(self, required_perm: str, cap: Capability | None) -> None:
+        """Validate capability for kernel mutation.
+
+        Args:
+            required_perm: Permission required for the operation.
+            cap: Capability token, or None for internal allowlist check.
+
+        Raises:
+            PermissionError: If caller is not authorized.
+        """
+        if cap is not None:
+            if cap.kernel_nonce_hash != self._cap_hash:
+                raise PermissionError("Invalid capability: nonce mismatch")
+            if required_perm not in cap.perms:
+                raise PermissionError(f"Capability missing permission: {required_perm}")
+            return
+
+        # cap is None => allow ONLY internal modules:
+        caller = inspect.stack()[2].frame.f_globals.get("__name__", "")
+        ALLOWLIST = {"mlsdm.core.cognitive_controller", "mlsdm.core.llm_wrapper"}
+        if caller not in ALLOWLIST:
+            raise PermissionError(f"Kernel mutation blocked from {caller}")
+
+    def moral_adapt(self, accepted: bool, *, cap: Capability | None = None) -> None:
+        self._assert_can_mutate("MUTATE_MORAL_THRESHOLD", cap)
         with self._lock:
             self._moral.adapt(accepted)
 
     def memory_commit(
-        self, prompt_vector: np.ndarray, phase: float, *, provenance: Any | None = None
+        self, prompt_vector: np.ndarray, phase: float, *, provenance: Any | None = None, cap: Capability | None = None
     ) -> None:
+        self._assert_can_mutate("MEMORY_COMMIT", cap)
         with self._lock:
             self._synaptic.update(prompt_vector)
             self._pelm.entangle(prompt_vector.tolist(), phase=phase, provenance=provenance)
@@ -207,6 +248,25 @@ class GovernanceKernel:
     def rhythm_step(self) -> None:
         with self._lock:
             self._rhythm.step()
+
+    def issue_capability(self, perms: set[str]) -> Capability:
+        """Issue a capability token for authorized mutation.
+
+        Args:
+            perms: Set of permissions to grant.
+
+        Returns:
+            Capability token with requested permissions.
+
+        Raises:
+            PermissionError: If caller is not in the internal allowlist.
+        """
+        # only allow internal allowlist caller
+        caller = inspect.stack()[1].frame.f_globals.get("__name__", "")
+        ALLOWLIST = {"mlsdm.core.cognitive_controller", "mlsdm.core.llm_wrapper"}
+        if caller not in ALLOWLIST:
+            raise PermissionError(f"Cannot issue capability from {caller}")
+        return Capability(perms=frozenset(perms), kernel_nonce_hash=self._cap_hash)
 
     def reset(
         self,
