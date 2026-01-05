@@ -172,21 +172,21 @@ class MemoryManager:
 
     def _init_ltm_store(self, config: dict[str, Any]) -> None:
         """Initialize LTM store if enabled in config.
-        
+
         LTM is enabled only when:
         - config.memory.ltm_enabled == True
         - config.memory.ltm_backend == "sqlite"
         - A database path is provided (config or env)
-        
+
         This method never crashes - logs errors and continues without LTM
         unless ltm_strict=True is set.
         """
         memory_cfg = config.get("memory", {})
-        
+
         # Check if LTM is enabled
         if not memory_cfg.get("ltm_enabled", False):
             return
-        
+
         # Check backend type
         backend = memory_cfg.get("ltm_backend", "sqlite")
         if backend != "sqlite":
@@ -195,7 +195,7 @@ class MemoryManager:
                 backend,
             )
             return
-        
+
         # Get database path from config or environment
         db_path = memory_cfg.get("ltm_db_path") or os.environ.get("MLSDM_LTM_DB_PATH")
         if not db_path:
@@ -204,14 +204,14 @@ class MemoryManager:
                 "Set 'memory.ltm_db_path' in config or MLSDM_LTM_DB_PATH env var. LTM disabled."
             )
             return
-        
+
         # Check for encryption configuration
         encryption_key: bytes | None = None
         encryption_enabled = (
             os.environ.get("MLSDM_LTM_ENCRYPTION", "0") == "1"
             and os.environ.get("MLSDM_LTM_KEY") is not None
         )
-        
+
         if encryption_enabled:
             key_hex = os.environ.get("MLSDM_LTM_KEY", "")
             try:
@@ -219,17 +219,17 @@ class MemoryManager:
             except ValueError:
                 logger.error("Invalid MLSDM_LTM_KEY format (expected hex). LTM disabled.")
                 return
-        
+
         # Store raw option (default: False, meaning scrubbing enabled)
         store_raw = memory_cfg.get("ltm_store_raw", False)
-        
+
         # Strict mode for LTM errors
         self._ltm_strict = memory_cfg.get("ltm_strict", False)
-        
+
         # Initialize SQLite store
         try:
             from mlsdm.memory.sqlite_store import SQLiteMemoryStore
-            
+
             self._ltm_store = SQLiteMemoryStore(
                 db_path=db_path,
                 encryption_key=encryption_key,
@@ -251,18 +251,18 @@ class MemoryManager:
 
     def _persist_to_ltm(self, content: str, provenance: MemoryProvenance | None = None) -> None:
         """Persist content to long-term memory store.
-        
+
         This is called after successful memory operations to optionally
         persist to the LTM backend. Errors are logged and do not crash
         the core path unless ltm_strict=True.
-        
+
         Args:
             content: Text content to persist
             provenance: Optional provenance metadata
         """
         if self._ltm_store is None:
             return
-        
+
         try:
             item = MemoryItem(
                 id=str(uuid.uuid4()),
@@ -318,7 +318,7 @@ class MemoryManager:
                 first_5 = event_vector[:5].tolist()
                 last_5 = event_vector[-5:].tolist()
                 vec_repr = f"{first_5}...{last_5}"
-            
+
             content = f"Event vector (dim={len(event_vector)}): {vec_repr}"
             provenance = MemoryProvenance(
                 source=MemorySource.SYSTEM_PROMPT,
