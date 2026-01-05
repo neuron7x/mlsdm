@@ -72,17 +72,6 @@ def _get_env_int(key: str, default: int) -> int:
         return default
 
 
-# Initialize OpenTelemetry tracing
-# Can be disabled via OTEL_SDK_DISABLED=true or OTEL_EXPORTER_TYPE=none
-_exporter_type_env = os.getenv("OTEL_EXPORTER_TYPE", "none")
-# Validate exporter type
-_valid_exporter_types = ("console", "otlp", "jaeger", "none")
-_exporter_type = _exporter_type_env if _exporter_type_env in _valid_exporter_types else "none"
-_tracing_config = TracingConfig(
-    exporter_type=_exporter_type,  # type: ignore[arg-type]  # Validated above
-)
-initialize_tracing(_tracing_config)
-
 # Initialize rate limiter (5 RPS per client as per SECURITY_POLICY.md)
 # Can be disabled in testing with DISABLE_RATE_LIMIT=true/1
 _secure_mode_enabled = _get_env_bool("MLSDM_SECURE_MODE", False)
@@ -115,6 +104,14 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     global _cpu_background_task
 
     # STARTUP
+    exporter_type_env = os.getenv("OTEL_EXPORTER_TYPE", "none")
+    valid_exporter_types = ("console", "otlp", "jaeger", "none")
+    exporter_type = exporter_type_env if exporter_type_env in valid_exporter_types else "none"
+    tracing_config = TracingConfig(
+        exporter_type=exporter_type,  # type: ignore[arg-type]  # Validated above
+    )
+    initialize_tracing(tracing_config)
+
     lifecycle = get_lifecycle_manager()
     await lifecycle.startup()
 
@@ -234,29 +231,7 @@ def _get_client_id(request: Request) -> str:
     return hashed
 
 
-def _ensure_runtime_state(app: FastAPI) -> None:
-    if getattr(app.state, "memory_manager", None) is not None and getattr(
-        app.state, "neuro_engine", None
-    ):
-        return
-
-    config_path = os.getenv("CONFIG_PATH", "config/default_config.yaml")
-    config = ConfigLoader.load_config(config_path)
-    manager = MemoryManager(config)
-    engine_config = NeuroEngineConfig(
-        dim=manager.dimension,
-        enable_fslgs=False,  # FSLGS is optional
-        enable_metrics=True,
-    )
-    engine = build_neuro_engine_from_env(config=engine_config)
-
-    app.state.memory_manager = manager
-    app.state.neuro_engine = engine
-    health.set_memory_manager(manager)
-
-
 def _require_manager(request: Request) -> MemoryManager:
-    _ensure_runtime_state(request.app)
     manager = cast("MemoryManager | None", getattr(request.app.state, "memory_manager", None))
     if manager is None:
         raise HTTPException(
@@ -266,7 +241,6 @@ def _require_manager(request: Request) -> MemoryManager:
 
 
 def _require_engine(request: Request) -> NeuroCognitiveEngine:
-    _ensure_runtime_state(request.app)
     engine = cast(
         "NeuroCognitiveEngine | None", getattr(request.app.state, "neuro_engine", None)
     )

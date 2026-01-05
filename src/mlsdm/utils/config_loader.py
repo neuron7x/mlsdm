@@ -236,14 +236,18 @@ class ConfigLoader:
 
         resource_config: dict[str, Any] | None = None
         resource_loaded = False
+        normalized_path = Path(path)
+        normalized_posix = normalized_path.as_posix()
+        file_exists = normalized_path.is_file()
+        is_default_config = normalized_posix == "config/default_config.yaml"
 
-        if path == "config/default_config.yaml" and not Path(path).is_file():
+        if not file_exists and is_default_config:
             resource_config = ConfigLoader._load_yaml_resource(
                 package="mlsdm.config", resource="default_config.yaml"
             )
             resource_loaded = True
 
-        if not resource_loaded and not Path(path).is_file():
+        if not resource_loaded and not file_exists:
             raise FileNotFoundError(f"Configuration file not found: {path}")
 
         if not path.endswith((".yaml", ".yml", ".ini")):
