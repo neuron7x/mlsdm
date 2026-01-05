@@ -21,7 +21,7 @@ import json
 import logging
 import os
 import sqlite3
-from typing import Any
+from typing import Any, cast
 
 from mlsdm.memory.provenance import MemoryProvenance, MemorySource
 from mlsdm.memory.store import MemoryItem, compute_content_hash
@@ -32,12 +32,11 @@ logger = logging.getLogger(__name__)
 
 # Optional cryptography import - only used when encryption is enabled
 _CRYPTOGRAPHY_AVAILABLE = False
-_AES_GCM = None
 try:
-    from cryptography.hazmat.primitives.ciphers.aead import AESGCM as _AES_GCM
+    from cryptography.hazmat.primitives.ciphers.aead import AESGCM
     _CRYPTOGRAPHY_AVAILABLE = True
 except ImportError:
-    pass
+    AESGCM = None  # type: ignore[misc, assignment]
 
 
 class SQLiteMemoryStore:
@@ -95,8 +94,8 @@ class SQLiteMemoryStore:
                     message=f"Encryption key must be exactly 32 bytes, got {len(encryption_key)}"
                 )
             # Initialize cipher
-            assert _AES_GCM is not None  # Type narrowing
-            self._cipher = _AES_GCM(encryption_key)
+            assert AESGCM is not None  # Type narrowing
+            self._cipher = AESGCM(encryption_key)
             logger.info("LTM encryption-at-rest enabled")
     
     def _get_connection(self) -> sqlite3.Connection:
@@ -175,7 +174,7 @@ class SQLiteMemoryStore:
         if self._cipher is None:
             raise RuntimeError("Encryption not configured")
         
-        plaintext_bytes = self._cipher.decrypt(nonce, ciphertext, None)
+        plaintext_bytes = cast(bytes, self._cipher.decrypt(nonce, ciphertext, None))
         return plaintext_bytes.decode("utf-8")
     
     def put(self, item: MemoryItem) -> str:
