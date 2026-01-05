@@ -6,8 +6,8 @@
 #
 # This file includes all dependencies including optional ones,
 # except excluded packages listed below.
-# Optional dependency groups discovered in pyproject.toml: dev, docs, embeddings, neurolang, observability, test, visualization
-# Optional dependency groups included in this file: all (dev, docs, embeddings, neurolang, observability, test, visualization)
+# Optional dependency groups discovered in pyproject.toml: dev, docs, embeddings, ltm, neurolang, observability, test, visualization
+# Optional dependency groups included in this file: all (dev, docs, embeddings, ltm, neurolang, observability, test, visualization)
 # Optional dependency groups excluded: none
 #
 # For minimal installation: pip install -e .
@@ -16,7 +16,8 @@
 #
 
 # Optional dependency packages excluded:
-# - jupyter: excluded from requirements.txt to avoid pip-audit failures via nbconvert
+# - jupyter: excluded from requirements.txt to avoid pip-audit failures via nbconvert (CVE-2025-53000; remove once nbconvert>=7.16.0)
+# - jupyter-core: excluded from requirements.txt to avoid pip-audit failures via nbconvert (CVE-2025-53000; remove once nbconvert>=7.16.0)
 
 # Core Dependencies (from pyproject.toml [project.dependencies])
 defusedxml>=0.7.1
@@ -54,6 +55,10 @@ sphinx>=7.0.0
 # Optional Embeddings (from pyproject.toml [project.optional-dependencies].embeddings)
 # Install with: pip install ".[embeddings]"
 sentence-transformers>=3.0.0
+
+# Optional Ltm (from pyproject.toml [project.optional-dependencies].ltm)
+# Install with: pip install ".[ltm]"
+cryptography>=42.0.0
 
 # Optional Neurolang (from pyproject.toml [project.optional-dependencies].neurolang)
 # Install with: pip install ".[neurolang]"
