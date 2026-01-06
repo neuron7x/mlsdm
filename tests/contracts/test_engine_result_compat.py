@@ -164,7 +164,7 @@ class TestEngineResultContract:
         assert dict_form["timing"]["moral_precheck"] is None
 
 
-class TestEngineTiming Contract:
+class TestEngineTimingContract:
     """Test EngineTiming contract stability."""
     
     def test_timing_required_field(self):
