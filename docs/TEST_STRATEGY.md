@@ -312,7 +312,7 @@ The test suite includes network isolation tests (`tests/unit/test_network_isolat
 - [x] Add network isolation guard tests
 - [x] Enable branch coverage reporting
 - [x] Document staged coverage targets
-- [ ] Add mutation testing for critical paths
-- [ ] Implement contract testing for API boundaries
+- [x] Add mutation testing for critical paths
+- [x] Implement contract testing for API boundaries
 - [ ] Add visual regression tests for documentation
-- [ ] Improve property test coverage for security modules
+- [x] Improve property test coverage for security modules

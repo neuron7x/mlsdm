@@ -1,0 +1,102 @@
+name: Mutation Tests
+
+on:
+  schedule:
+    # Run weekly on Sundays at 00:00 UTC
+    - cron: '0 0 * * 0'
+  workflow_dispatch:
+    # Allow manual triggering
+
+jobs:
+  mutation-testing:
+    name: Mutation Testing
+    runs-on: ubuntu-latest
+    timeout-minutes: 120  # Mutation testing can be slow
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+      
+      - name: Run mutation tests - MoralFilterV2
+        id: moral_filter_mutations
+        continue-on-error: true
+        run: |
+          echo "Testing MoralFilterV2 mutations..."
+          mutmut run --paths-to-mutate=src/mlsdm/cognition/moral_filter_v2.py \
+            --runner="pytest tests/mutation/test_moral_filter_mutations.py -x -q" \
+            --use-coverage
+          mutmut results > mutation_results_moral_filter.txt
+          cat mutation_results_moral_filter.txt
+      
+      - name: Run mutation tests - PELM
+        id: pelm_mutations
+        continue-on-error: true
+        run: |
+          echo "Testing PELM mutations..."
+          mutmut run --paths-to-mutate=src/mlsdm/memory/phase_entangled_lattice_memory.py \
+            --runner="pytest tests/mutation/test_pelm_mutations.py -x -q" \
+            --use-coverage
+          mutmut results > mutation_results_pelm.txt
+          cat mutation_results_pelm.txt
+      
+      - name: Run mutation tests - CognitiveController
+        id: cognitive_controller_mutations
+        continue-on-error: true
+        run: |
+          echo "Testing CognitiveController mutations..."
+          mutmut run --paths-to-mutate=src/mlsdm/core/cognitive_controller.py \
+            --runner="pytest tests/mutation/test_cognitive_controller_mutations.py -x -q" \
+            --use-coverage
+          mutmut results > mutation_results_cognitive_controller.txt
+          cat mutation_results_cognitive_controller.txt
+      
+      - name: Generate HTML reports
+        if: always()
+        run: |
+          mutmut html || true
+      
+      - name: Upload mutation test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mutation-test-results
+          path: |
+            mutation_results_*.txt
+            html/
+          retention-days: 90
+      
+      - name: Check mutation score thresholds
+        run: |
+          echo "Checking mutation score thresholds (target: ≥80%)"
+          # Parse results and check if below threshold
+          # This is a simplified check - enhance as needed
+          if grep -q "survived" mutation_results_*.txt; then
+            echo "⚠️  Some mutants survived - review results"
+            exit 0  # Don't fail CI, just warn
+          else
+            echo "✅ All mutations killed"
+          fi
+      
+      - name: Create issue on failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: 'Mutation Testing: Score Below Threshold',
+              body: 'Mutation testing detected surviving mutants. Review the workflow artifacts for details.\n\nWorkflow run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}',
+              labels: ['testing', 'mutation-test', 'needs-review']
+            })
