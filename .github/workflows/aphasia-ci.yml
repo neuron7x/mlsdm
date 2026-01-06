@@ -45,7 +45,9 @@ jobs:
           pip install -r requirements.txt
           pip install -e ".[test]"
           pip install .[neurolang]
-          python -c "import hypothesis, pytest"
+
+      - name: Verify test dependencies
+        run: python -c "import hypothesis, pytest"
 
       - name: Run Aphasia / NeuroLang tests
         run: |

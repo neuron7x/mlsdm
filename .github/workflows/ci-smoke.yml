@@ -218,6 +218,7 @@ jobs:
 
       - name: Check dependency drift
         run: |
+          # Regenerate requirements to surface drift in git diff for easier debugging
           python scripts/ci/export_requirements.py
           git diff --exit-code requirements.txt
 
