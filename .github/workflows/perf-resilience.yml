@@ -82,6 +82,7 @@ jobs:
           pip install -r requirements.txt
           pip install -e ".[test]"
           pip install -e ".[dev]"
+          # pytest-benchmark is not included in dev/test extras but required for SLO checks
           pip install pytest-benchmark
 
       - name: Verify test dependencies
@@ -149,6 +150,7 @@ jobs:
           pip install -r requirements.txt
           pip install -e ".[test]"
           pip install -e ".[dev]"
+          # pytest-benchmark is not included in dev/test extras but required for SLO checks
           pip install pytest-benchmark
 
       - name: Verify test dependencies
@@ -223,6 +225,7 @@ jobs:
           pip install -r requirements.txt
           pip install -e ".[test]"
           pip install -e ".[dev]"
+          # pytest-benchmark is not included in dev/test extras but required for SLO checks
           pip install pytest-benchmark
 
       - name: Verify test dependencies

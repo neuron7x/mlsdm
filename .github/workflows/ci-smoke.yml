@@ -220,6 +220,7 @@ jobs:
         run: |
           # Regenerate requirements to surface drift in git diff for easier debugging
           python scripts/ci/export_requirements.py
+          git diff requirements.txt || true
           git diff --exit-code requirements.txt
 
       - name: Validate defusedxml is resolvable
