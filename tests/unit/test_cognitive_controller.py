@@ -649,12 +649,12 @@ class TestCognitiveControllerYamlConfig:
                 "lambda_l2": 0.1,
             }
         }
-        
+
         controller = CognitiveController(
             dim=128,
             yaml_config=yaml_config
         )
-        
+
         assert controller.dim == 128
         assert controller.emergency_shutdown is False
 
@@ -666,9 +666,9 @@ class TestCognitiveControllerGetPhase:
         """Test that get_phase returns the current phase."""
         # This tests line 208 in cognitive_controller.py
         controller = CognitiveController()
-        
+
         phase = controller.get_phase()
-        
+
         assert isinstance(phase, str)
         assert phase in ["wake", "sleep"]
 
@@ -679,16 +679,14 @@ class TestCognitiveControllerProcessingTimeout:
     def test_processing_timeout_exceeded(self):
         """Test processing timeout rejection."""
         # This tests lines 373-377 in cognitive_controller.py
-        import time
         from unittest.mock import patch
-        
+
         controller = CognitiveController(max_processing_time_ms=1.0)  # Very short timeout
         vector = np.random.randn(384).astype(np.float32)
-        
+
         # Mock time.perf_counter to simulate long processing time
-        original_perf_counter = time.perf_counter
         call_count = [0]
-        
+
         def mock_perf_counter():
             call_count[0] += 1
             if call_count[0] == 1:
@@ -697,10 +695,10 @@ class TestCognitiveControllerProcessingTimeout:
             else:
                 # Second call - simulate >1ms elapsed (convert to seconds)
                 return 2.0  # 2000ms elapsed
-        
+
         with patch('time.perf_counter', side_effect=mock_perf_counter):
             result = controller.process_event(vector, moral_value=0.8)
-        
+
         # Should be rejected for processing timeout
         assert result["rejected"] is True
         assert "processing time exceeded" in result["note"]
@@ -713,34 +711,34 @@ class TestCognitiveControllerMetricsExporterExceptions:
         """Test reset_emergency_shutdown when get_metrics_exporter() raises."""
         # This tests lines 440-441 in cognitive_controller.py
         from unittest.mock import patch
-        
+
         controller = CognitiveController(memory_threshold_mb=0.001)
         vector = np.random.randn(384).astype(np.float32)
-        
+
         # Trigger emergency first
         controller.process_event(vector, moral_value=0.8)
         assert controller.emergency_shutdown is True
-        
+
         # Mock get_metrics_exporter to raise exception
         with patch('mlsdm.core.cognitive_controller.get_metrics_exporter', side_effect=Exception("Metrics unavailable")):
             # Should not raise, just log and continue
             controller.reset_emergency_shutdown()
-        
+
         assert controller.emergency_shutdown is False
 
     def test_enter_emergency_shutdown_with_metrics_exception(self):
         """Test _enter_emergency_shutdown when get_metrics_exporter() raises."""
         # This tests lines 462-463 in cognitive_controller.py
         from unittest.mock import patch
-        
+
         controller = CognitiveController(memory_threshold_mb=0.001)
         vector = np.random.randn(384).astype(np.float32)
-        
+
         # Mock get_metrics_exporter to raise exception
         with patch('mlsdm.core.cognitive_controller.get_metrics_exporter', side_effect=Exception("Metrics unavailable")):
             # Should not raise, just log and continue
             result = controller.process_event(vector, moral_value=0.8)
-        
+
         # Should still enter emergency state despite metrics failure
         assert controller.emergency_shutdown is True
         assert result["rejected"] is True
@@ -749,25 +747,25 @@ class TestCognitiveControllerMetricsExporterExceptions:
         """Test _record_auto_recovery when get_metrics_exporter() raises."""
         # This tests lines 526-528 in cognitive_controller.py
         from unittest.mock import patch
-        
+
         controller = CognitiveController(
             memory_threshold_mb=0.001,
             auto_recovery_cooldown_seconds=0.1
         )
         vector = np.random.randn(384).astype(np.float32)
-        
+
         # Trigger emergency
         controller.process_event(vector, moral_value=0.8)
         assert controller.emergency_shutdown is True
-        
+
         # Increase memory threshold and simulate cooldown passage
         controller.memory_threshold_mb = 10000.0
         controller._last_emergency_time -= 1.0
-        
+
         # Mock get_metrics_exporter to raise exception during recovery
         with patch('mlsdm.core.cognitive_controller.get_metrics_exporter', side_effect=Exception("Metrics unavailable")):
             # Should not raise, recovery should still work
-            result = controller.process_event(vector, moral_value=0.8)
-        
+            _ = controller.process_event(vector, moral_value=0.8)
+
         # Recovery should succeed despite metrics failure
         assert controller.emergency_shutdown is False
