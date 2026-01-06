@@ -79,6 +79,7 @@ dev = [
     "types-requests>=2.32.0",
     "tomli>=2.0.0; python_version < '3.11'",  # TOML backport for Py3.10 compatibility
     "sentence-transformers>=3.0.0",  # Include embeddings in dev for full testing
+    "mutmut>=2.4.0",  # Mutation testing for critical paths
 ]
 docs = [
     "sphinx>=7.0.0",
@@ -294,3 +295,26 @@ opentelemetry-api = "opentelemetry"
 opentelemetry-sdk = "opentelemetry"
 pyjwt = "jwt"
 sentence-transformers = "sentence_transformers"
+
+# ====================================================
+# Mutation Testing Configuration
+# ====================================================
+
+[tool.mutmut]
+# Paths to mutate (critical modules only)
+paths_to_mutate = "src/mlsdm/cognition/moral_filter_v2.py,src/mlsdm/memory/phase_entangled_lattice_memory.py,src/mlsdm/core/cognitive_controller.py,src/mlsdm/memory/multi_level_memory.py"
+
+# Test command
+runner = "pytest tests/mutation/ -x -q"
+
+# Test directory
+tests_dir = "tests/mutation/"
+
+# Timeout per mutant (seconds)
+timeout = 10
+
+# Paths to exclude from mutation
+dict_synonyms = "id,name,type,key,value"
+
+# Use hash mode for caching
+use_patch_file = false
