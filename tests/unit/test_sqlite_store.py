@@ -610,8 +610,8 @@ class TestSQLiteMemoryStoreEncryption:
         assert row[1] is not None
 
     @pytest.mark.skipif(not _CRYPTOGRAPHY_AVAILABLE, reason="cryptography not installed")
-    def test_encrypted_query_with_provenance(self, tmp_path):
-        """Test query returns properly decrypted content with provenance."""
+    def test_encrypted_get_with_provenance(self, tmp_path):
+        """Test get returns properly decrypted content with provenance."""
         from datetime import datetime
 
         db_path = str(tmp_path / "encrypted.db")
@@ -619,8 +619,6 @@ class TestSQLiteMemoryStoreEncryption:
 
         store = SQLiteMemoryStore(db_path=db_path, encryption_key=encryption_key)
 
-        # Note: encrypted content cannot be searched via LIKE
-        # but we can still test decryption on get
         provenance = MemoryProvenance(
             source=MemorySource.USER_INPUT,
             confidence=0.8,
