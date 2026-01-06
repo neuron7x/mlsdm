@@ -4,7 +4,43 @@ Unit Tests for Memory Store
 Tests for memory store protocols and utilities.
 """
 
-from mlsdm.memory.store import compute_content_hash
+from mlsdm.memory.store import MemoryItem, compute_content_hash
+
+
+class TestMemoryItem:
+    """Test MemoryItem dataclass."""
+
+    def test_memory_item_creation(self):
+        """Test creating a MemoryItem with required fields."""
+        item = MemoryItem(
+            id="test_id",
+            ts=1234567890.0,
+            content="test content",
+            content_hash="abc123"
+        )
+
+        assert item.id == "test_id"
+        assert item.ts == 1234567890.0
+        assert item.content == "test content"
+        assert item.content_hash == "abc123"
+        assert item.ttl_s is None
+        assert item.pii_flags == {}
+        assert item.provenance is None
+
+    def test_memory_item_with_optional_fields(self):
+        """Test creating a MemoryItem with optional fields."""
+        pii_flags = {"email": True}
+        item = MemoryItem(
+            id="test_id",
+            ts=1234567890.0,
+            content="test content",
+            content_hash="abc123",
+            ttl_s=3600.0,
+            pii_flags=pii_flags
+        )
+
+        assert item.ttl_s == 3600.0
+        assert item.pii_flags == {"email": True}
 
 
 class TestComputeContentHash:
