@@ -61,9 +61,10 @@ jobs:
           pip install -r requirements.txt
           pip install -e ".[test]"
           pip install -e ".[dev]"
+          python -m pip check
 
       - name: Verify test dependencies
-        run: python -c "import hypothesis, pytest"
+        run: python -c "import hypothesis, pytest, pytest_benchmark"
 
       - name: Lint check
         run: make lint
@@ -119,9 +120,10 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install -e ".[test]"
+          python -m pip check
 
       - name: Verify test dependencies
-        run: python -c "import hypothesis, pytest"
+        run: python -c "import hypothesis, pytest, pytest_benchmark"
 
       - name: Run property tests
         run: pytest tests/property -v --tb=short --maxfail=10
@@ -163,9 +165,10 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install -e ".[test]"
+          python -m pip check
 
       - name: Verify test dependencies
-        run: python -c "import hypothesis, pytest"
+        run: python -c "import hypothesis, pytest, pytest_benchmark"
 
       - name: Run effectiveness suite with SLO validation
         run: python scripts/run_effectiveness_suite.py --validate-slo

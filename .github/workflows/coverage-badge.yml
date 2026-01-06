@@ -56,7 +56,7 @@ jobs:
           pip install coverage-badge
 
       - name: Verify test dependencies
-        run: python -c "import hypothesis, pytest"
+        run: python -c "import hypothesis, pytest, pytest_benchmark"
       
       - name: Run coverage
         run: |

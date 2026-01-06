@@ -76,7 +76,7 @@ jobs:
           pip install -e ".[test]"
 
       - name: Verify test dependencies
-        run: python -c "import hypothesis, pytest"
+        run: python -c "import hypothesis, pytest, pytest_benchmark"
 
       - name: Run property-based tests
         run: |
@@ -146,7 +146,7 @@ jobs:
           pip install -e ".[test]"
 
       - name: Verify test dependencies
-        run: python -c "import hypothesis, pytest"
+        run: python -c "import hypothesis, pytest, pytest_benchmark"
 
       - name: Run counterexamples regression tests
         run: |

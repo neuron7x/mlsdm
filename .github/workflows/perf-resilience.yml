@@ -82,9 +82,10 @@ jobs:
           pip install -r requirements.txt
           pip install -e ".[test]"
           pip install -e ".[dev]"
+          python -m pip check
 
       - name: Verify test dependencies
-        run: python -c "import hypothesis, pytest"
+        run: python -c "import hypothesis, pytest, pytest_benchmark"
 
       - name: Run fast resilience tests
         run: |
@@ -148,9 +149,10 @@ jobs:
           pip install -r requirements.txt
           pip install -e ".[test]"
           pip install -e ".[dev]"
+          python -m pip check
 
       - name: Verify test dependencies
-        run: python -c "import hypothesis, pytest"
+        run: python -c "import hypothesis, pytest, pytest_benchmark"
 
       - name: Run SLO validation tests
         run: |
@@ -221,9 +223,10 @@ jobs:
           pip install -r requirements.txt
           pip install -e ".[test]"
           pip install -e ".[dev]"
+          python -m pip check
 
       - name: Verify test dependencies
-        run: python -c "import hypothesis, pytest"
+        run: python -c "import hypothesis, pytest, pytest_benchmark"
 
       - name: Run all resilience tests (including slow)
         run: |

@@ -181,7 +181,7 @@ jobs:
           pip install -e ".[test]"
 
       - name: Verify test dependencies
-        run: python -c "import hypothesis, pytest"
+        run: python -c "import hypothesis, pytest, pytest_benchmark"
 
       - name: Run tests
         run: |
@@ -232,7 +232,7 @@ jobs:
           pip install -e ".[test]"
 
       - name: Verify test dependencies
-        run: python -c "import hypothesis, pytest"
+        run: python -c "import hypothesis, pytest, pytest_benchmark"
 
       - name: Run tests with coverage
         run: |
@@ -303,7 +303,7 @@ jobs:
           pip install -e ".[test]"
 
       - name: Verify test dependencies
-        run: python -c "import hypothesis, pytest"
+        run: python -c "import hypothesis, pytest, pytest_benchmark"
 
       - name: Run E2E tests
         run: |
@@ -349,7 +349,7 @@ jobs:
           pip install -e ".[test]"
 
       - name: Verify test dependencies
-        run: python -c "import hypothesis, pytest"
+        run: python -c "import hypothesis, pytest, pytest_benchmark"
 
       - name: Run effectiveness suite with SLO validation
         run: |
@@ -416,7 +416,7 @@ jobs:
           pip install -e ".[test]"
 
       - name: Verify test dependencies
-        run: python -c "import hypothesis, pytest"
+        run: python -c "import hypothesis, pytest, pytest_benchmark"
 
       - name: Run benchmarks with SLO assertions
         id: benchmarks
@@ -591,7 +591,7 @@ jobs:
           pip install -e ".[test]"
 
       - name: Verify test dependencies
-        run: python -c "import hypothesis, pytest"
+        run: python -c "import hypothesis, pytest, pytest_benchmark"
 
       - name: Run Sapolsky Validation Suite tests
         run: |
