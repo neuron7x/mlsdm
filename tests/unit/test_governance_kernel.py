@@ -186,24 +186,17 @@ class TestGovernanceKernelReset:
 class TestGovernanceKernelCapabilities:
     """Test capability-based access control."""
 
-    def test_assert_can_mutate_with_valid_capability(self):
-        """Test _assert_can_mutate with a valid capability."""
-        kernel = GovernanceKernel(
-            dim=10,
-            capacity=100,
-            wake_duration=8,
-            sleep_duration=3
-        )
-        
-        # Try calling a method that checks capabilities  
-        # This tests the early return at line 227
+    def test_capability_validation_through_cognitive_controller(self):
+        """Test capability validation by calling methods through cognitive_controller."""
         import numpy as np
+        from mlsdm.core.cognitive_controller import CognitiveController
         
-        # Call moral_adapt which uses _assert_can_mutate
-        # Without capability, it should work from test context (but won't be in allowlist)
-        # So we test by calling from within the kernel methods
-        # Actually, let's just test the methods that use capabilities
-        kernel.moral_adapt(True)  # This should work from test
+        # CognitiveController is in the allowlist and will call kernel methods
+        controller = CognitiveController()
         
-        # Verify it worked
-        assert kernel.moral_ro is not None
+        # Process an event which will call kernel.moral_adapt and kernel.memory_commit internally
+        vector = np.random.randn(384).astype(np.float32)
+        result = controller.process_event(vector, moral_value=0.8)
+        
+        assert result is not None
+        assert isinstance(result, dict)
