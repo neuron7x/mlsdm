@@ -3,10 +3,15 @@ from __future__ import annotations
 import os
 import subprocess
 from pathlib import Path
+from typing import Iterable
 
 
 def repo_root() -> Path:
-    return Path(__file__).resolve().parent.parent
+    current = Path(__file__).resolve()
+    for parent in current.parents:
+        if (parent / ".git").exists() or (parent / "pyproject.toml").exists():
+            return parent
+    return current.parent.parent
 
 
 def _ref_exists(ref: str, root: Path) -> bool:
@@ -59,8 +64,9 @@ def _fallback_names(root: Path) -> list[str]:
     return [line for line in fallback.splitlines() if line.strip()]
 
 
-def list_changed_files() -> list[str]:
+def list_changed_files(ref_log: list[str] | None = None) -> list[str]:
     root = repo_root()
+    refs_checked = ref_log if ref_log is not None else []
     base_ref = os.environ.get("GITHUB_BASE_REF")
     candidates = []
     if base_ref:
@@ -69,9 +75,12 @@ def list_changed_files() -> list[str]:
 
     for ref in candidates:
         if not _ref_exists(ref, root):
+            refs_checked.append(f"{ref} (missing)")
             continue
+        refs_checked.append(ref)
         files = _diff_names(root, ref)
         if files:
             return files
 
+    refs_checked.append("HEAD (show)")
     return _fallback_names(root)

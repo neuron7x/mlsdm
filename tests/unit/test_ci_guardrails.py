@@ -3,10 +3,11 @@ from __future__ import annotations
 import importlib.util
 from pathlib import Path
 
+from scripts.git_changed_files import repo_root
+
 
 def _load_module(name: str, relative_path: str):
-    repo_root = Path(__file__).resolve().parents[2]
-    module_path = repo_root / relative_path
+    module_path = repo_root() / relative_path
     spec = importlib.util.spec_from_file_location(name, module_path)
     if spec is None or spec.loader is None:
         raise RuntimeError(f"Unable to load module {name} from {module_path}")

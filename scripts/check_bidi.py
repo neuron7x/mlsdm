@@ -42,15 +42,21 @@ def find_bidi_issues(text: str) -> list[str]:
 
 def main() -> int:
     repo_root = repo_root_path()
-    changed_files = list_changed_files()
+    refs_checked: list[str] = []
+    changed_files = list_changed_files(refs_checked)
     if not changed_files:
-        print("No changed files detected; skipping bidirectional control scan.")
+        refs = ", ".join(refs_checked) if refs_checked else "none"
+        print(f"No changed files detected; checked refs: {refs}. Skipping bidirectional control scan.")
         return 0
 
     failures: list[str] = []
+    missing_on_disk: list[str] = []
     for rel in changed_files:
         path = repo_root / rel
-        if path.is_dir() or not path.exists():
+        if path.is_dir():
+            continue
+        if not path.exists():
+            missing_on_disk.append(rel)
             continue
         try:
             text = path.read_text(encoding="utf-8")
@@ -59,6 +65,12 @@ def main() -> int:
 
         for issue in find_bidi_issues(text):
             failures.append(f"{rel}: {issue}")
+
+    if missing_on_disk:
+        print(
+            "Warning: git reported changed files that are missing on disk: "
+            + ", ".join(sorted(missing_on_disk))
+        )
 
     if failures:
         print("ERROR: Disallowed bidirectional control characters found in changed files:")
