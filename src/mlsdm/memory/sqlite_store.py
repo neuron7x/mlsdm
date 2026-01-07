@@ -34,10 +34,12 @@ logger = logging.getLogger(__name__)
 # Optional cryptography import - only used when encryption is enabled
 _CRYPTOGRAPHY_AVAILABLE = False
 try:
-    from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+    from cryptography.hazmat.primitives.ciphers.aead import AESGCM as _AESGCM
+
+    AESGCM: type[Any] | None = _AESGCM
     _CRYPTOGRAPHY_AVAILABLE = True
 except ImportError:
-    AESGCM = None  # type: ignore[misc, assignment]
+    AESGCM = None
 
 
 class SQLiteMemoryStore:
