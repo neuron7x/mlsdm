@@ -26,6 +26,9 @@ jobs:
       - name: Guard against hidden/bidirectional Unicode
         run: python scripts/check_bidi.py
 
+      - name: Guard against generated artifacts
+        run: python scripts/ci/no_generated_artifacts.py
+
       - name: Set up Python 3.11
         uses: actions/setup-python@v6
         with:
