@@ -2,7 +2,10 @@ __pycache__/
 *.pyc
 *.pyo
 .pytest_cache/
+.mypy_cache/
+.ruff_cache/
 .coverage
+.coverage.*
 coverage.json
 coverage.xml
 *.egg-info/
@@ -15,6 +18,11 @@ results/
 htmlcov/
 .hypothesis/
 
+# Local database artifacts
+*.db
+*.sqlite
+*.sqlite3
+
 # Environment configuration (contains secrets)
 mlsdm_config.sh
 .env
@@ -24,6 +32,7 @@ mlsdm_config.sh
 *.log.*
 
 # Test reports and outputs
+junit*.xml
 baseline_comparison*.png
 baseline_comparison*.json
 load_test_report.json
