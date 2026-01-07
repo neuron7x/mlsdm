@@ -3,11 +3,15 @@
 from __future__ import annotations
 
 import fnmatch
-import os
-import subprocess
 import sys
 from pathlib import Path
 from typing import Iterable
+
+REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from scripts.git_changed_files import list_changed_files
 
 FORBIDDEN_PATTERNS: tuple[str, ...] = (
     ".pytest_cache/**",
@@ -49,70 +53,6 @@ ALLOWED_EXACT: tuple[str, ...] = (
 )
 
 
-def _repo_root() -> Path:
-    return Path(__file__).resolve().parent.parent
-
-
-def _ref_exists(ref: str, repo_root: Path) -> bool:
-    return (
-        subprocess.run(
-            ["git", "rev-parse", "--verify", ref],
-            cwd=repo_root,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            check=False,
-        ).returncode
-        == 0
-    )
-
-
-def _changed_files() -> list[str]:
-    repo_root = _repo_root()
-    base_ref = os.environ.get("GITHUB_BASE_REF")
-    candidates = []
-    if base_ref:
-        candidates.append(f"origin/{base_ref}")
-    candidates.extend(["origin/main", "HEAD~1"])
-
-    for ref in candidates:
-        if not _ref_exists(ref, repo_root):
-            continue
-        try:
-            diff = subprocess.check_output(
-                [
-                    "git",
-                    "diff",
-                    "--name-only",
-                    "--diff-filter=ACMRTUXB",
-                    f"{ref}...HEAD",
-                ],
-                cwd=repo_root,
-                text=True,
-            )
-        except subprocess.CalledProcessError:
-            diff = ""
-        files = [line for line in diff.splitlines() if line.strip()]
-        if files:
-            return files
-
-    try:
-        fallback = subprocess.check_output(
-            [
-                "git",
-                "show",
-                "--pretty=format:",
-                "--name-only",
-                "--diff-filter=ACMRTUXB",
-                "HEAD",
-            ],
-            cwd=repo_root,
-            text=True,
-        )
-    except subprocess.CalledProcessError:
-        return []
-    return [line for line in fallback.splitlines() if line.strip()]
-
-
 def _is_allowlisted(path: str) -> bool:
     return path in ALLOWED_EXACT or any(path.startswith(prefix) for prefix in ALLOWED_PREFIXES)
 
@@ -142,7 +82,7 @@ def find_forbidden(paths: Iterable[str]) -> set[str]:
 
 
 def main() -> int:
-    changed_files = _changed_files()
+    changed_files = list_changed_files()
     if not changed_files:
         print("No changed files detected; skipping generated artifact check.")
         return 0
@@ -150,7 +90,7 @@ def main() -> int:
     forbidden_files = find_forbidden(changed_files)
 
     if forbidden_files:
-        print("Generated artifacts or local caches detected in the diff:")
+        print("Generated artifacts or local caches detected in changed files:")
         for path in sorted(forbidden_files):
             print(f"- {path}")
         allowed_dirs = ", ".join(sorted(set([*ALLOWED_PREFIXES, *DB_ALLOWED_PREFIXES])))

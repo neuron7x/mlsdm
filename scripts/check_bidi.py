@@ -8,10 +8,14 @@ code points.
 
 from __future__ import annotations
 
-import os
-import subprocess
 import sys
 from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from scripts.git_changed_files import list_changed_files, repo_root as repo_root_path
 
 BIDI_CODEPOINTS = {
     "\u202a": "LEFT-TO-RIGHT EMBEDDING",
@@ -28,70 +32,6 @@ BIDI_CODEPOINTS = {
 }
 
 
-def _repo_root() -> Path:
-    return Path(__file__).resolve().parent.parent
-
-
-def _ref_exists(ref: str, repo_root: Path) -> bool:
-    return (
-        subprocess.run(
-            ["git", "rev-parse", "--verify", ref],
-            cwd=repo_root,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            check=False,
-        ).returncode
-        == 0
-    )
-
-
-def _changed_files() -> list[str]:
-    repo_root = _repo_root()
-    base_ref = os.environ.get("GITHUB_BASE_REF")
-    candidates = []
-    if base_ref:
-        candidates.append(f"origin/{base_ref}")
-    candidates.extend(["origin/main", "HEAD~1"])
-
-    for ref in candidates:
-        if not _ref_exists(ref, repo_root):
-            continue
-        try:
-            diff = subprocess.check_output(
-                [
-                    "git",
-                    "diff",
-                    "--name-only",
-                    "--diff-filter=ACMRTUXB",
-                    f"{ref}...HEAD",
-                ],
-                cwd=repo_root,
-                text=True,
-            )
-        except subprocess.CalledProcessError:
-            diff = ""
-        files = [line for line in diff.splitlines() if line.strip()]
-        if files:
-            return files
-
-    try:
-        fallback = subprocess.check_output(
-            [
-                "git",
-                "show",
-                "--pretty=format:",
-                "--name-only",
-                "--diff-filter=ACMRTUXB",
-                "HEAD",
-            ],
-            cwd=repo_root,
-            text=True,
-        )
-    except subprocess.CalledProcessError:
-        return []
-    return [line for line in fallback.splitlines() if line.strip()]
-
-
 def find_bidi_issues(text: str) -> list[str]:
     failures: list[str] = []
     for ch, name in BIDI_CODEPOINTS.items():
@@ -101,8 +41,8 @@ def find_bidi_issues(text: str) -> list[str]:
 
 
 def main() -> int:
-    repo_root = _repo_root()
-    changed_files = _changed_files()
+    repo_root = repo_root_path()
+    changed_files = list_changed_files()
     if not changed_files:
         print("No changed files detected; skipping bidirectional control scan.")
         return 0
@@ -121,7 +61,7 @@ def main() -> int:
             failures.append(f"{rel}: {issue}")
 
     if failures:
-        print("ERROR: Disallowed bidirectional control characters found in diff:")
+        print("ERROR: Disallowed bidirectional control characters found in changed files:")
         for line in failures:
             print(f" - {line}")
         return 1
