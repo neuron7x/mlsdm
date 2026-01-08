@@ -2,13 +2,15 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
 from mlsdm.cognition.moral_filter_v3 import MoralFilterV3
-from mlsdm.engine.neuro_cognitive_engine import NeuroEngineConfig
 from mlsdm.memory.pelm_async import PELMAsync
+
+if TYPE_CHECKING:
+    from mlsdm.engine.neuro_cognitive_engine import NeuroEngineConfig
 
 
 class NeuroCognitiveEngineAsync:

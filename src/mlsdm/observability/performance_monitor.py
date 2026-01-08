@@ -4,7 +4,6 @@ from __future__ import annotations
 import time
 from collections import deque
 from dataclasses import dataclass
-from typing import Deque
 
 import numpy as np
 import psutil
@@ -28,8 +27,8 @@ class PerformanceMonitor:
 
     def __init__(self, window_size: int = 1000) -> None:
         """Initialize with sliding window."""
-        self._latencies: Deque[float] = deque(maxlen=window_size)
-        self._errors: Deque[bool] = deque(maxlen=window_size)
+        self._latencies: deque[float] = deque(maxlen=window_size)
+        self._errors: deque[bool] = deque(maxlen=window_size)
         self._start_time = time.time()
         self._request_count = 0
 
