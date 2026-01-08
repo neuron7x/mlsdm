@@ -35,7 +35,16 @@ from mlsdm.api.middleware import (
 )
 from mlsdm.contracts import AphasiaMetadata
 from mlsdm.core.memory_manager import MemoryManager
-from mlsdm.engine import NeuroCognitiveEngine, NeuroEngineConfig, build_neuro_engine_from_env
+from mlsdm.engine import (
+    NeuroCognitiveEngine,
+    NeuroCognitiveEngineAsync,
+    NeuroEngineConfig,
+    build_neuro_engine_from_env,
+)
+from mlsdm.observability.performance_monitor import (
+    PerformanceMonitor,
+    PerformanceMonitoringMiddleware,
+)
 from mlsdm.observability.tracing import (
     TracingConfig,
     add_span_attributes,
@@ -105,6 +114,9 @@ _rate_limit_rate = _rate_limit_requests / _rate_limit_window
 _rate_limit_capacity = max(1, _rate_limit_requests)
 _rate_limiter = RateLimiter(rate=_rate_limit_rate, capacity=_rate_limit_capacity)
 
+# Optional async engine enablement
+_async_engine_enabled = _get_env_bool("MLSDM_ASYNC_ENGINE", False)
+
 # Initialize input validator
 _validator = InputValidator()
 
@@ -127,9 +139,12 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         enable_metrics=True,
     )
     engine = build_neuro_engine_from_env(config=engine_config)
+    engine_async = NeuroCognitiveEngineAsync(config=engine_config) if _async_engine_enabled else None
 
     app.state.memory_manager = manager
     app.state.neuro_engine = engine
+    if engine_async is not None:
+        app.state.neuro_engine_async = engine_async
     health.set_memory_manager(manager)
 
     # Register cleanup tasks
@@ -171,6 +186,12 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     shutdown_tracing()
     await lifecycle.shutdown()
+    if _async_engine_enabled:
+        engine_async = cast(
+            "NeuroCognitiveEngineAsync | None", getattr(app.state, "neuro_engine_async", None)
+        )
+        if engine_async is not None:
+            await engine_async.close()
 
 
 # Initialize FastAPI with production-ready settings
@@ -182,6 +203,9 @@ app = FastAPI(
     redoc_url="/redoc",
     lifespan=lifespan,
 )
+
+# Create global performance monitor and middleware
+performance_monitor = PerformanceMonitor(window_size=10000)
 
 # Canonical app factory used by all runtime entrypoints
 def create_app() -> FastAPI:
@@ -203,6 +227,7 @@ app.add_middleware(RequestIDMiddleware)
 app.add_middleware(TimeoutMiddleware)
 app.add_middleware(PriorityMiddleware)
 app.add_middleware(BulkheadMiddleware)
+app.add_middleware(PerformanceMonitoringMiddleware, monitor=performance_monitor)
 
 # Include health check router
 app.include_router(health.router)
@@ -249,9 +274,12 @@ def _ensure_runtime_state(app: FastAPI) -> None:
         enable_metrics=True,
     )
     engine = build_neuro_engine_from_env(config=engine_config)
+    engine_async = NeuroCognitiveEngineAsync(config=engine_config) if _async_engine_enabled else None
 
     app.state.memory_manager = manager
     app.state.neuro_engine = engine
+    if engine_async is not None:
+        app.state.neuro_engine_async = engine_async
     health.set_memory_manager(manager)
 
 
@@ -275,6 +303,14 @@ def _require_engine(request: Request) -> NeuroCognitiveEngine:
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Service not initialized"
         )
     return engine
+
+
+def _get_async_engine(request: Request) -> NeuroCognitiveEngineAsync | None:
+    if not _async_engine_enabled:
+        return None
+    return cast(
+        "NeuroCognitiveEngineAsync | None", getattr(request.app.state, "neuro_engine_async", None)
+    )
 
 
 async def get_current_user(token: str | None = Depends(oauth2_scheme)) -> str | None:
@@ -570,6 +606,7 @@ async def generate(
     client_id = _get_client_id(request)
     request_id = getattr(request.state, "request_id", None)
     engine = _require_engine(request)
+    engine_async = _get_async_engine(request)
 
     # Start root span for the generate endpoint
     tracer_manager = get_tracer_manager()
@@ -630,7 +667,10 @@ async def generate(
                 kwargs["moral_value"] = request_body.moral_value
 
             # Generate response (engine has its own child spans)
-            result: dict[str, Any] = engine.generate(**kwargs)
+            if engine_async is not None:
+                result = await engine_async.generate(**kwargs)
+            else:
+                result = engine.generate(**kwargs)
 
             # Extract phase from mlsdm state if available
             mlsdm_state = result.get("mlsdm", {})
@@ -975,6 +1015,19 @@ async def infer(
                     }
                 },
             )
+
+
+@app.get("/metrics/performance", tags=["Observability"])
+async def get_performance_metrics() -> dict[str, Any]:
+    """Get real-time performance metrics."""
+    metrics = performance_monitor.get_metrics()
+    is_compliant, violations = performance_monitor.check_slo_compliance()
+
+    return {
+        "metrics": metrics.__dict__,
+        "slo_compliant": is_compliant,
+        "violations": violations,
+    }
 
 
 @app.get("/status", tags=["Health"])

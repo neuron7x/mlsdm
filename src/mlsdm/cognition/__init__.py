@@ -1,7 +1,7 @@
 """Cognition module for MLSDM cognitive processing.
 
 This module provides:
-- Moral filtering (MoralFilter, MoralFilterV2)
+- Moral filtering (MoralFilter, MoralFilterV2, MoralFilterV3)
 - Ontology matching (OntologyMatcher)
 - Synergy experience learning (SynergyExperienceMemory)
 - Role & Boundary Controller (RoleBoundaryController)
@@ -9,6 +9,7 @@ This module provides:
 
 from mlsdm.cognition.moral_filter import MoralFilter
 from mlsdm.cognition.moral_filter_v2 import MoralFilterV2
+from mlsdm.cognition.moral_filter_v3 import MoralFilterV3
 from mlsdm.cognition.ontology_matcher import OntologyMatcher
 from mlsdm.cognition.role_boundary_controller import (
     BoundaryViolationType,
@@ -30,6 +31,7 @@ from mlsdm.cognition.synergy_experience import (
 __all__ = [
     "MoralFilter",
     "MoralFilterV2",
+    "MoralFilterV3",
     "OntologyMatcher",
     "ComboStats",
     "SynergyExperienceMemory",

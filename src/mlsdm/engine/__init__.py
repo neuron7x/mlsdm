@@ -13,9 +13,11 @@ from .neuro_cognitive_engine import (
     NeuroCognitiveEngine,
     NeuroEngineConfig,
 )
+from .neuro_engine_async import NeuroCognitiveEngineAsync
 
 __all__ = [
     "NeuroCognitiveEngine",
+    "NeuroCognitiveEngineAsync",
     "NeuroEngineConfig",
     "MLSDMRejectionError",
     "EmptyResponseError",

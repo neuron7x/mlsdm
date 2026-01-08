@@ -763,6 +763,16 @@ All metrics are backed by reproducible tests with full traceability.
 | P95 Latency | ~10ms | `benchmarks/` |
 | Memory | 29.37 MB fixed | `tests/unit/` |
 
+**Performance Targets**
+
+| Metric | Target | CI Tolerance |
+|:-------|:-------|:-------------|
+| P50 Latency | 30ms | 36ms |
+| P95 Latency | 120ms | 150ms |
+| P99 Latency | 200ms | 250ms |
+| Throughput | 100 RPS | 80 RPS |
+| Error Rate | <1% | <2% |
+
 ### Cognitive Effectiveness
 
 | Metric | Value | Test Location |

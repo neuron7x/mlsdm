@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import re
+import warnings
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -11,6 +12,12 @@ if TYPE_CHECKING:
 from mlsdm.observability.policy_drift_telemetry import record_threshold_change
 
 logger = logging.getLogger(__name__)
+
+warnings.warn(
+    "moral_filter_v2 is deprecated. Use moral_filter_v3 for better performance.",
+    DeprecationWarning,
+    stacklevel=2,
+)
 
 # Import calibration defaults - these can be overridden via config
 # Type hints use Optional to allow None when calibration module unavailable
