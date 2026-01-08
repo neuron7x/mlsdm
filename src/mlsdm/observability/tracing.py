@@ -27,6 +27,7 @@ Configuration:
 
 from __future__ import annotations
 
+import importlib.util
 import logging
 import os
 from contextlib import contextmanager
@@ -37,9 +38,19 @@ from typing import TYPE_CHECKING, Any, Literal, TypeAlias
 # Runtime imports and fallbacks for OpenTelemetry
 try:
     from opentelemetry import trace
+    from opentelemetry.propagate import set_global_textmap
+    from opentelemetry.propagators.baggage import BaggagePropagator
+    from opentelemetry.propagators.composite import CompositePropagator
+    from opentelemetry.propagators.tracecontext import TraceContextTextMapPropagator
     from opentelemetry.sdk.resources import Resource
     from opentelemetry.sdk.trace import SpanProcessor, TracerProvider
     from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
+    from opentelemetry.sdk.trace.sampling import (
+        ALWAYS_OFF,
+        ALWAYS_ON,
+        ParentBased,
+        TraceIdRatioBased,
+    )
     from opentelemetry.trace import SpanKind, Status, StatusCode
 
     OTEL_AVAILABLE = True
@@ -48,11 +59,19 @@ except ImportError:
     # When OTEL is not available, define fallback values
     if not TYPE_CHECKING:
         trace = None
+        set_global_textmap = None
+        CompositePropagator = None
+        TraceContextTextMapPropagator = None
+        BaggagePropagator = None
         Resource = None
         SpanProcessor = None
         TracerProvider = None
         BatchSpanProcessor = None
         ConsoleSpanExporter = None
+        ParentBased = None
+        TraceIdRatioBased = None
+        ALWAYS_ON = None
+        ALWAYS_OFF = None
         SpanKind = None
         Status = None
         StatusCode = None
@@ -185,6 +204,23 @@ def _is_truthy(value: str | None) -> bool:
     return value.strip().lower() in _TRUE_VALUES
 
 
+def _parse_kv_pairs(value: str | None) -> dict[str, str]:
+    """Parse comma-separated key=value pairs into a dictionary."""
+    if not value:
+        return {}
+    pairs = (item.strip() for item in value.split(","))
+    parsed: dict[str, str] = {}
+    for pair in pairs:
+        if not pair or "=" not in pair:
+            continue
+        key, raw_value = pair.split("=", 1)
+        key = key.strip()
+        if not key:
+            continue
+        parsed[key] = raw_value.strip()
+    return parsed
+
+
 class TracingConfig:
     """Configuration for OpenTelemetry tracing.
 
@@ -197,7 +233,10 @@ class TracingConfig:
     - OTEL_EXPORTER_TYPE: Exporter type (console, otlp, jaeger, none)
     - OTEL_EXPORTER_OTLP_ENDPOINT: OTLP endpoint URL
     - OTEL_EXPORTER_OTLP_PROTOCOL: Protocol (http/protobuf, grpc)
+    - OTEL_EXPORTER_OTLP_HEADERS: Comma-separated header list (key=value,...)
     - OTEL_TRACES_SAMPLER_ARG: Sampling rate (0.0 to 1.0)
+    - OTEL_TRACES_SAMPLER: Sampler type (always_on, always_off, traceidratio, parentbased_*)
+    - OTEL_RESOURCE_ATTRIBUTES: Comma-separated resource attributes (key=value,...)
 
     MLSDM-specific Variables (override OTEL equivalents):
     - MLSDM_OTEL_ENABLED: Enable tracing (takes precedence over OTEL_SDK_DISABLED)
@@ -209,7 +248,10 @@ class TracingConfig:
         exporter_type: Type of exporter (console, otlp, jaeger)
         otlp_endpoint: OTLP exporter endpoint
         otlp_protocol: OTLP protocol (http/protobuf, grpc)
+        otlp_headers: Headers for OTLP exporter
         sample_rate: Sampling rate (0.0 to 1.0)
+        sampler: Sampler type name
+        resource_attributes: Resource attributes for the service
         batch_max_queue_size: Maximum queue size for batch processor
         batch_max_export_batch_size: Maximum batch size for export
         batch_schedule_delay_millis: Delay between exports in milliseconds
@@ -222,7 +264,10 @@ class TracingConfig:
         exporter_type: Literal["console", "otlp", "jaeger", "none"] | None = None,
         otlp_endpoint: str | None = None,
         otlp_protocol: Literal["http/protobuf", "grpc"] | None = None,
+        otlp_headers: dict[str, str] | None = None,
         sample_rate: float | None = None,
+        sampler: str | None = None,
+        resource_attributes: dict[str, str] | None = None,
         batch_max_queue_size: int = 2048,
         batch_max_export_batch_size: int = 512,
         batch_schedule_delay_millis: int = 5000,
@@ -236,7 +281,10 @@ class TracingConfig:
             exporter_type: Type of exporter to use
             otlp_endpoint: OTLP endpoint URL
             otlp_protocol: OTLP protocol type
+            otlp_headers: Optional headers for OTLP exporter
             sample_rate: Sampling rate (0.0 to 1.0)
+            sampler: Sampler type name
+            resource_attributes: Resource attributes for this service
             batch_max_queue_size: Maximum queue size for batch processor
             batch_max_export_batch_size: Maximum batch size for export
             batch_schedule_delay_millis: Delay between batch exports in milliseconds
@@ -270,12 +318,22 @@ class TracingConfig:
             "OTEL_EXPORTER_OTLP_PROTOCOL", "http/protobuf"
         )
 
+        self.otlp_headers = otlp_headers or _parse_kv_pairs(
+            env.get("OTEL_EXPORTER_OTLP_HEADERS")
+        )
+
         # Parse sample rate
         sample_rate_str = env.get("OTEL_TRACES_SAMPLER_ARG", "1.0")
         try:
             self.sample_rate = sample_rate if sample_rate is not None else float(sample_rate_str)
         except ValueError:
             self.sample_rate = 1.0
+
+        self.sampler = sampler or env.get("OTEL_TRACES_SAMPLER", "parentbased_always_on")
+
+        self.resource_attributes = resource_attributes or _parse_kv_pairs(
+            env.get("OTEL_RESOURCE_ATTRIBUTES")
+        )
 
         self.batch_max_queue_size = batch_max_queue_size
         self.batch_max_export_batch_size = batch_max_export_batch_size
@@ -314,6 +372,49 @@ class TracerManager:
         self._tracer: Tracer | None = None
         self._provider: Any = None  # TracerProvider or None
         self._processor: Any = None  # SpanProcessor or None
+        self._propagators_configured = False
+
+    def _configure_propagators(self) -> None:
+        """Configure W3C trace context + baggage propagation."""
+        if self._propagators_configured:
+            return
+        if not OTEL_AVAILABLE or set_global_textmap is None:
+            return
+        if CompositePropagator is None or TraceContextTextMapPropagator is None:
+            return
+        if BaggagePropagator is None:
+            return
+
+        propagator = CompositePropagator(
+            [TraceContextTextMapPropagator(), BaggagePropagator()]
+        )
+        set_global_textmap(propagator)
+        self._propagators_configured = True
+
+    def _build_sampler(self) -> Any:
+        """Create a sampler based on configuration."""
+        if not OTEL_AVAILABLE:
+            return None
+        if ParentBased is None or TraceIdRatioBased is None:
+            return None
+
+        sampler_name = (self._config.sampler or "").strip().lower()
+        sample_rate = min(max(self._config.sample_rate, 0.0), 1.0)
+
+        if sampler_name in {"always_on", "parentbased_always_on", "parentbased_alwayson"}:
+            if ALWAYS_ON is None:
+                return None
+            return ParentBased(ALWAYS_ON)
+
+        if sampler_name in {"always_off", "parentbased_always_off", "parentbased_alwaysoff"}:
+            if ALWAYS_OFF is None:
+                return None
+            return ParentBased(ALWAYS_OFF)
+
+        if sampler_name in {"traceidratio", "parentbased_traceidratio"}:
+            return ParentBased(TraceIdRatioBased(sample_rate))
+
+        return ParentBased(TraceIdRatioBased(sample_rate))
 
     @classmethod
     def get_instance(cls, config: TracingConfig | None = None) -> TracerManager:
@@ -363,17 +464,20 @@ class TracerManager:
             return
 
         try:
+            self._configure_propagators()
+
             # Create resource with service information
-            resource = Resource.create(
-                {
-                    "service.name": self._config.service_name,
-                    "service.version": MLSDM_VERSION,
-                    "deployment.environment": os.getenv("DEPLOYMENT_ENV", "development"),
-                }
-            )
+            resource_attributes = {
+                "service.name": self._config.service_name,
+                "service.version": MLSDM_VERSION,
+                "deployment.environment": os.getenv("DEPLOYMENT_ENV", "development"),
+            }
+            resource_attributes.update(self._config.resource_attributes)
+            resource = Resource.create(resource_attributes)
 
             # Create tracer provider
-            self._provider = TracerProvider(resource=resource)
+            sampler = self._build_sampler()
+            self._provider = TracerProvider(resource=resource, sampler=sampler)
 
             # Create exporter based on configuration
             exporter = self._create_exporter()
@@ -427,13 +531,19 @@ class TracerManager:
                         OTLPSpanExporter,
                     )
 
-                    return OTLPSpanExporter(endpoint=self._config.otlp_endpoint)
+                    return OTLPSpanExporter(
+                        endpoint=self._config.otlp_endpoint,
+                        headers=self._config.otlp_headers or None,
+                    )
                 else:
                     from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
                         OTLPSpanExporter,
                     )
 
-                    return OTLPSpanExporter(endpoint=self._config.otlp_endpoint)
+                    return OTLPSpanExporter(
+                        endpoint=self._config.otlp_endpoint,
+                        headers=self._config.otlp_headers or None,
+                    )
             except ImportError:
                 logger.warning("OTLP exporter not available, falling back to console exporter")
                 return ConsoleSpanExporter()
@@ -585,6 +695,50 @@ def shutdown_tracing() -> None:
     This should be called at application shutdown.
     """
     TracerManager.reset_instance()
+
+
+_fastapi_instrumented = False
+_logging_instrumented = False
+
+
+def instrument_fastapi(app: Any) -> bool:
+    """Instrument a FastAPI app with OpenTelemetry if available."""
+    global _fastapi_instrumented
+    if _fastapi_instrumented:
+        return False
+    if not OTEL_AVAILABLE:
+        return False
+    manager = get_tracer_manager()
+    if not manager._config.enabled:
+        return False
+    if importlib.util.find_spec("opentelemetry.instrumentation.fastapi") is None:
+        return False
+
+    from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+
+    FastAPIInstrumentor.instrument_app(app)
+    _fastapi_instrumented = True
+    return True
+
+
+def instrument_logging() -> bool:
+    """Instrument Python logging with OpenTelemetry if available."""
+    global _logging_instrumented
+    if _logging_instrumented:
+        return False
+    if not OTEL_AVAILABLE:
+        return False
+    manager = get_tracer_manager()
+    if not manager._config.enabled:
+        return False
+    if importlib.util.find_spec("opentelemetry.instrumentation.logging") is None:
+        return False
+
+    from opentelemetry.instrumentation.logging import LoggingInstrumentor
+
+    LoggingInstrumentor().instrument(set_logging_format=False)
+    _logging_instrumented = True
+    return True
 
 
 @contextmanager

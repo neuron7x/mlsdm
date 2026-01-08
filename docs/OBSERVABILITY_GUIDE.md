@@ -29,6 +29,10 @@ curl http://localhost:8000/health/metrics
 Set environment variables to enable tracing:
 
 ```bash
+# Install optional observability dependencies (includes exporters + instrumentation)
+pip install ".[observability]" "opentelemetry-exporter-otlp" \
+  "opentelemetry-instrumentation-fastapi" "opentelemetry-instrumentation-logging"
+
 # Enable tracing with console exporter (for debugging)
 export MLSDM_OTEL_ENABLED=true
 export OTEL_EXPORTER_TYPE=console
@@ -37,7 +41,29 @@ export OTEL_EXPORTER_TYPE=console
 export MLSDM_OTEL_ENABLED=true
 export OTEL_EXPORTER_TYPE=otlp
 export MLSDM_OTEL_ENDPOINT=http://jaeger:4318
+export OTEL_TRACES_SAMPLER=traceidratio
+export OTEL_TRACES_SAMPLER_ARG=0.1
+export OTEL_RESOURCE_ATTRIBUTES=deployment.environment=prod,service.namespace=mlsdm
+export OTEL_EXPORTER_OTLP_HEADERS=authorization=Bearer%20token
 ```
+
+### OpenTelemetry Integration Notes
+
+MLSDM configures OpenTelemetry at startup and will auto-instrument FastAPI and Python
+logging when the instrumentation packages are installed. The tracing configuration
+supports standard OTEL variables for exporters, sampling, and resource attributes.
+
+Key environment variables:
+
+| Variable | Purpose | Example |
+|---|---|---|
+| `MLSDM_OTEL_ENABLED` | Enable tracing | `true` |
+| `OTEL_EXPORTER_TYPE` | Exporter type | `otlp` |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | OTLP endpoint | `http://collector:4318` |
+| `OTEL_EXPORTER_OTLP_HEADERS` | OTLP headers | `authorization=Bearer%20token` |
+| `OTEL_TRACES_SAMPLER` | Sampler | `traceidratio` |
+| `OTEL_TRACES_SAMPLER_ARG` | Sample rate | `0.1` |
+| `OTEL_RESOURCE_ATTRIBUTES` | Resource attributes | `service.namespace=mlsdm` |
 
 ### Import Grafana Dashboard
 

@@ -41,6 +41,8 @@ from mlsdm.observability.tracing import (
     add_span_attributes,
     get_tracer_manager,
     initialize_tracing,
+    instrument_fastapi,
+    instrument_logging,
     shutdown_tracing,
 )
 from mlsdm.utils.config_loader import ConfigLoader
@@ -82,6 +84,7 @@ _tracing_config = TracingConfig(
     exporter_type=_exporter_type,  # type: ignore[arg-type]  # Validated above
 )
 initialize_tracing(_tracing_config)
+instrument_logging()
 
 # Initialize rate limiter (5 RPS per client as per SECURITY_POLICY.md)
 # Can be disabled in testing with DISABLE_RATE_LIMIT=true/1
@@ -182,6 +185,7 @@ app = FastAPI(
     redoc_url="/redoc",
     lifespan=lifespan,
 )
+instrument_fastapi(app)
 
 # Canonical app factory used by all runtime entrypoints
 def create_app() -> FastAPI:
