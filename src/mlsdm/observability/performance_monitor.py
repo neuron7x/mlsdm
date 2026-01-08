@@ -4,10 +4,16 @@ from __future__ import annotations
 import time
 from collections import deque
 from dataclasses import dataclass
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import psutil
 from starlette.middleware.base import BaseHTTPMiddleware
+
+if TYPE_CHECKING:
+    from starlette.requests import Request
+    from starlette.responses import Response
+    from starlette.types import ASGIApp
 
 
 @dataclass
@@ -70,7 +76,7 @@ class PerformanceMonitor:
     def _get_memory_usage(self) -> float:
         """Get current memory usage in MB."""
         process = psutil.Process()
-        return process.memory_info().rss / 1024 / 1024
+        return float(process.memory_info().rss) / 1024 / 1024
 
     def check_slo_compliance(self) -> tuple[bool, list[str]]:
         """Check SLO compliance and return violations."""
@@ -103,11 +109,11 @@ class PerformanceMonitor:
 class PerformanceMonitoringMiddleware(BaseHTTPMiddleware):
     """Middleware for automatic performance monitoring."""
 
-    def __init__(self, app, monitor: PerformanceMonitor) -> None:
+    def __init__(self, app: ASGIApp, monitor: PerformanceMonitor) -> None:
         super().__init__(app)
         self.monitor = monitor
 
-    async def dispatch(self, request, call_next):
+    async def dispatch(self, request: Request, call_next: Any) -> Response:
         """Monitor each request."""
         start = time.perf_counter()
 

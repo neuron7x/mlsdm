@@ -18,9 +18,9 @@ class NeuroCognitiveEngineAsync:
 
     def __init__(self, config: NeuroEngineConfig) -> None:
         self.pelm = PELMAsync(
-            capacity=config.pelm_capacity,
+            capacity=config.capacity,
             dim=config.dim,
-            max_workers=config.worker_threads or 4,
+            max_workers=config.bulkhead_memory_limit or 4,
         )
         self.moral_filter = MoralFilterV3(enable_fast_path=True)
 

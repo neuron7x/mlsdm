@@ -3,8 +3,12 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 import numpy as np
+
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
 
 
 @dataclass(frozen=True, slots=True)
@@ -38,6 +42,7 @@ class MoralFilterV3:
         self._drift_enabled = enable_drift_detection
         self._fast_path_enabled = enable_fast_path
 
+        self._drift_buffer: NDArray[np.float32] | None
         if enable_drift_detection:
             self._drift_buffer = np.zeros(20, dtype=np.float32)
             self._drift_idx = 0
