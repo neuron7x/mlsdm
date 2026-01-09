@@ -13,6 +13,7 @@ import hashlib
 import json
 import mimetypes
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -25,15 +26,21 @@ SCHEMA_VERSION = "evidence-v1"
 REQUIRED_OUTPUT_KEYS = ("coverage_xml", "junit_xml")
 OPTIONAL_INPUT_KEYS = {
     "benchmark_metrics": "benchmark-metrics.json",
+    "benchmark_log": "benchmark-output.log",
+    "security_scan": "trivy-results.sarif",
     "raw_latency": "raw_neuro_engine_latency.json",
     "memory_footprint": "memory_footprint.json",
     "iteration_metrics": "iteration-metrics.jsonl",
+    "artifact_checksums": "artifact-checksums.txt",
 }
 OPTIONAL_DESTS = {
     "benchmark_metrics": Path("benchmarks") / "benchmark-metrics.json",
+    "benchmark_log": Path("benchmarks") / "benchmark-output.log",
+    "security_scan": Path("security") / "trivy-results.sarif",
     "raw_latency": Path("benchmarks") / "raw_neuro_engine_latency.json",
     "memory_footprint": Path("memory") / "memory_footprint.json",
     "iteration_metrics": Path("iteration") / "iteration-metrics.jsonl",
+    "artifact_checksums": Path("artifacts") / "artifact-checksums.txt",
 }
 DEFAULT_INPUTS = {
     "coverage_xml": "coverage.xml",
@@ -75,6 +82,23 @@ def source_ref() -> str:
         check=False,
     )
     return result.stdout.strip() or "unknown"
+
+
+def release_tag() -> str:
+    ref = os.getenv("GITHUB_REF") or ""
+    if ref.startswith("refs/tags/"):
+        return ref.split("/", 2)[-1]
+    ref_name = os.getenv("GITHUB_REF_NAME")
+    if ref_name:
+        return ref_name
+    return "unknown"
+
+
+def evidence_ref() -> str:
+    tag = release_tag()
+    if tag and tag != "unknown":
+        return tag
+    return source_ref()
 
 
 def _prefer_uv(command: List[str]) -> List[str]:
@@ -228,6 +252,7 @@ def capture_env(evidence_dir: Path, produced: list[Path], outputs: MutableMappin
     py_path = env_dir / "python_version.txt"
     uv_lock_path = env_dir / "uv_lock_sha256.txt"
     uname_path = env_dir / "uname.txt"
+    metadata_path = env_dir / "github_metadata.json"
     py_path.write_text(sys.version.split()[0] + "\n", encoding="utf-8")
     uv_lock_path.write_text(_uv_lock_sha256() + "\n", encoding="utf-8")
     try:
@@ -235,10 +260,24 @@ def capture_env(evidence_dir: Path, produced: list[Path], outputs: MutableMappin
     except (OSError, subprocess.SubprocessError):
         uname_output = "unknown"
     uname_path.write_text(uname_output + "\n", encoding="utf-8")
-    produced.extend([py_path, uv_lock_path])
+    metadata = {
+        "git_sha": git_sha(),
+        "source_ref": source_ref(),
+        "release_tag": release_tag(),
+        "github_run_id": os.getenv("GITHUB_RUN_ID", ""),
+        "github_run_attempt": os.getenv("GITHUB_RUN_ATTEMPT", ""),
+        "github_workflow": os.getenv("GITHUB_WORKFLOW", ""),
+        "github_actor": os.getenv("GITHUB_ACTOR", ""),
+        "runner_name": os.getenv("RUNNER_NAME", ""),
+        "runner_os": os.getenv("RUNNER_OS", ""),
+        "runner_arch": os.getenv("RUNNER_ARCH", ""),
+    }
+    metadata_path.write_text(json.dumps(metadata, indent=2), encoding="utf-8")
+    produced.extend([py_path, uv_lock_path, uname_path, metadata_path])
     outputs["python_version"] = str(py_path.relative_to(evidence_dir))
     outputs["uv_lock_sha256"] = str(uv_lock_path.relative_to(evidence_dir))
     outputs["uname"] = str(uname_path.relative_to(evidence_dir))
+    outputs["github_metadata"] = str(metadata_path.relative_to(evidence_dir))
 
 
 def _build_file_index(evidence_dir: Path) -> list[dict[str, object]]:
@@ -269,6 +308,7 @@ def write_manifest(
         "schema_version": SCHEMA_VERSION,
         "git_sha": sha,
         "short_sha": short_sha,
+        "release_tag": release_tag(),
         "created_utc": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "source_ref": source_ref(),
         "commands": list(commands),
@@ -397,7 +437,8 @@ def main() -> int:
     date_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     sha_full = git_sha()
     short_sha = sha_full[:12] if sha_full != "unknown" else "unknown"
-    base_dir = root / "artifacts" / "evidence" / date_str
+    ref_name = re.sub(r"[^A-Za-z0-9._-]+", "-", evidence_ref())
+    base_dir = root / "artifacts" / "evidence" / date_str / ref_name
     temp_dir = Path(tempfile.mkdtemp(prefix="evidence-"))
     evidence_dir = temp_dir
 
@@ -427,7 +468,7 @@ def main() -> int:
         except (OSError, ValueError) as exc:
             print(f"ERROR writing manifest: {exc}", file=sys.stderr)
 
-    final_dir = base_dir / short_sha
+    final_dir = base_dir / sha_full
     base_dir.mkdir(parents=True, exist_ok=True)
     if final_dir.exists():
         shutil.rmtree(final_dir)

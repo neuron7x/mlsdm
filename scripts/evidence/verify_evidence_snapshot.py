@@ -25,8 +25,8 @@ OPTIONAL_OUTPUT_PREFIXES = {
     "uname": "env/uname.txt",
     "iteration_metrics": "iteration/iteration-metrics.jsonl",
 }
-MAX_FILE_BYTES = 2 * 1024 * 1024  # 2 MB per file
-MAX_TOTAL_BYTES = 5 * 1024 * 1024  # 5 MB total snapshot
+MAX_FILE_BYTES = 5 * 1024 * 1024  # 5 MB per file
+MAX_TOTAL_BYTES = 20 * 1024 * 1024  # 20 MB total snapshot
 SECRET_PATTERNS = [
     re.compile(r"AKIA[0-9A-Z]{16}"),  # AWS access key
     re.compile(r"(?i)aws_secret_access_key"),
@@ -180,6 +180,10 @@ def _resolve_under(evidence_dir: Path, rel: str) -> Path:
 def _ensure_outputs_valid(evidence_dir: Path, outputs: dict[str, str]) -> None:
     allowed_optional = {
         "coverage_log",
+        "artifact_checksums",
+        "benchmark_log",
+        "github_metadata",
+        "security_scan",
         "unit_log",
         "python_version",
         "uv_lock_sha256",
@@ -257,7 +261,7 @@ def _scan_secrets(evidence_dir: Path) -> None:
                 raise EvidenceError(f"Secret-like pattern found in {file_path}")
 
 
-def verify_snapshot(evidence_dir: Path) -> None:
+def verify_snapshot(evidence_dir: Path, require_complete: bool) -> None:
     if not evidence_dir.is_dir():
         raise EvidenceError(f"Evidence directory not found: {evidence_dir}")
 
@@ -265,6 +269,8 @@ def verify_snapshot(evidence_dir: Path) -> None:
     if not manifest_path.exists():
         raise EvidenceError("Missing manifest.json")
     manifest = _validate_manifest(manifest_path)
+    if require_complete and (manifest["status"]["partial"] or not manifest["status"]["ok"]):
+        raise EvidenceError("Evidence snapshot marked as partial or failed")
     outputs = manifest["outputs"]
     _ensure_outputs_valid(evidence_dir, outputs)
     _check_file_index(evidence_dir, manifest["file_index"])
@@ -292,13 +298,18 @@ def parse_args() -> argparse.Namespace:
         type=Path,
         help="Path to evidence snapshot directory (artifacts/evidence/<date>/<sha>)",
     )
+    parser.add_argument(
+        "--require-complete",
+        action="store_true",
+        help="Fail if the evidence snapshot is marked partial or failed",
+    )
     return parser.parse_args()
 
 
 def main() -> int:
     args = parse_args()
     try:
-        verify_snapshot(args.evidence_dir)
+        verify_snapshot(args.evidence_dir, args.require_complete)
     except EvidenceError as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 1

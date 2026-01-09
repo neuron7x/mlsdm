@@ -1,0 +1,51 @@
+name: Release Evidence Guard
+
+on:
+  release:
+    types: [published, created]
+
+permissions:
+  contents: write
+
+jobs:
+  enforce-evidence:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate release evidence pack
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const release = context.payload.release;
+            if (!release) {
+              core.info('No release payload; skipping.');
+              return;
+            }
+            const tag = release.tag_name || '';
+            if (!/^v\d+\.\d+\.\d+/.test(tag)) {
+              core.info(`Tag ${tag} does not match release pattern; skipping.`);
+              return;
+            }
+            const assets = release.assets || [];
+            const expectedPrefix = `evidence-pack-${tag}-`;
+            const evidenceAsset = assets.find(asset => asset.name.startsWith(expectedPrefix));
+            if (evidenceAsset) {
+              core.info(`Evidence pack found: ${evidenceAsset.name}`);
+              return;
+            }
+            const warning = [
+              '## ❌ INVALID RELEASE',
+              '',
+              '**Reason:** Evidence Pack is missing for this release tag.',
+              '',
+              'Evidence Pack is REQUIRED for every release. This release is invalid until evidence is attached by CI.',
+              ''
+            ].join('\n');
+            const updatedBody = `${warning}\n${release.body || ''}`.trim();
+            await github.rest.repos.updateRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id: release.id,
+              body: updatedBody,
+              draft: true
+            });
+            core.setFailed('Release is invalid: Evidence Pack missing.');

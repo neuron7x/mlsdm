@@ -325,8 +325,16 @@ jobs:
 
       - name: Run benchmarks
         run: |
-          pytest benchmarks/test_neuro_engine_performance.py -v -s --tb=short
+          mkdir -p reports
+          set -o pipefail
+          pytest benchmarks/test_neuro_engine_performance.py -v -s --tb=short 2>&1 | tee reports/benchmark-output.log
         timeout-minutes: 10
+      - name: Upload benchmark logs
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: benchmark-logs
+          path: reports/benchmark-output.log
 
   # Gate 8: Code Quality (Linting + Type Checking)
   code-quality:
@@ -536,6 +544,9 @@ jobs:
       - coverage-check
       - generate-changelog
 
+    outputs:
+      image_digest: ${{ steps.docker_build.outputs.digest }}
+
     permissions:
       contents: write
       packages: write
@@ -644,20 +655,16 @@ jobs:
             # Fallback: Extract from CHANGELOG.md
             awk '/^## \['${{ steps.get_version.outputs.VERSION }}'\]/,/^## \[/' CHANGELOG.md | head -n -1 > release-notes.md || echo "Release ${{ steps.get_version.outputs.TAG }}" > release-notes.md
           fi
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+      - name: Upload release assets
+        uses: actions/upload-artifact@v6
         with:
-          body_path: release-notes.md
-          files: |
+          name: release-assets
+          path: |
             sbom-cyclonedx.json
             sbom-spdx.json
             docs/openapi.json
             changelog-fragment.md
-          draft: false
-          prerelease: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            release-notes.md
 
   # Publish to TestPyPI (after Docker build succeeds)
   publish-to-testpypi:
@@ -733,6 +740,186 @@ jobs:
         # INFORMATIONAL: Upload failures should not block the workflow
         # The actual security scan already passed/failed above
         continue-on-error: true
+      - name: Upload security scan evidence
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: security-scan
+          path: trivy-results.sarif
+
+  evidence-pack:
+    name: Release Evidence Pack
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs:
+      - build-and-push-docker
+      - benchmarks
+      - security-scan
+    permissions:
+      contents: read
+    env:
+      PYTHON_VERSION: "3.11"
+    outputs:
+      evidence_archive: ${{ steps.archive.outputs.archive }}
+      evidence_sha256: ${{ steps.archive.outputs.sha256 }}
+      evidence_asset_name: ${{ steps.archive.outputs.asset_name }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -e ".[test]"
+
+      - name: Download benchmark logs
+        uses: actions/download-artifact@v7
+        with:
+          name: benchmark-logs
+          path: evidence-inputs
+
+      - name: Download security scan artifacts
+        uses: actions/download-artifact@v7
+        with:
+          name: security-scan
+          path: evidence-inputs
+
+      - name: Download release assets
+        uses: actions/download-artifact@v7
+        with:
+          name: release-assets
+          path: release-assets
+
+      - name: Run coverage gate
+        run: |
+          set -o pipefail
+          ./coverage_gate.sh 2>&1 | tee coverage-gate.log
+
+      - name: Run unit tests with JUnit
+        run: |
+          mkdir -p reports
+          set -o pipefail
+          pytest tests/unit/ tests/state/ -q --tb=short --junitxml=reports/junit.xml 2>&1 | tee reports/unit-tests.log
+
+      - name: Build artifact checksums
+        id: checksums
+        run: |
+          mkdir -p artifacts
+          {
+            echo "docker_image_digest=${{ needs.build-and-push-docker.outputs.image_digest }}"
+            sha256sum release-assets/sbom-cyclonedx.json
+            sha256sum release-assets/sbom-spdx.json
+            sha256sum release-assets/docs/openapi.json
+          } > artifacts/artifact-checksums.txt
+
+      - name: Capture evidence snapshot
+        run: |
+          cat > evidence-inputs.json <<'EOF'
+          {
+            "coverage_xml": "coverage.xml",
+            "coverage_log": "coverage-gate.log",
+            "junit_xml": "reports/junit.xml",
+            "unit_log": "reports/unit-tests.log",
+            "benchmark_log": "evidence-inputs/benchmark-output.log",
+            "security_scan": "evidence-inputs/trivy-results.sarif",
+            "artifact_checksums": "artifacts/artifact-checksums.txt"
+          }
+          EOF
+          python scripts/evidence/capture_evidence.py --mode pack --inputs evidence-inputs.json
+
+      - name: Locate evidence directory
+        id: evidence_dir
+        run: |
+          set -euo pipefail
+          DATE=$(date -u +%Y-%m-%d)
+          TAG=${GITHUB_REF#refs/tags/}
+          SHA=$(git rev-parse HEAD)
+          echo "path=artifacts/evidence/${DATE}/${TAG}/${SHA}" >> "$GITHUB_OUTPUT"
+
+      - name: Verify evidence snapshot
+        run: |
+          python scripts/evidence/verify_evidence_snapshot.py --evidence-dir "${{ steps.evidence_dir.outputs.path }}" --require-complete
+
+      - name: Archive evidence pack
+        id: archive
+        run: |
+          set -euo pipefail
+          EVIDENCE_DIR="${{ steps.evidence_dir.outputs.path }}"
+          TAG=${GITHUB_REF#refs/tags/}
+          SHA=$(git rev-parse HEAD)
+          ASSET_NAME="evidence-pack-${TAG}-${SHA}.tar.gz"
+          tar -czf "${ASSET_NAME}" -C "${EVIDENCE_DIR}" .
+          SHA256=$(sha256sum "${ASSET_NAME}" | awk '{print $1}')
+          echo "archive=${ASSET_NAME}" >> "$GITHUB_OUTPUT"
+          echo "sha256=${SHA256}" >> "$GITHUB_OUTPUT"
+          echo "asset_name=${ASSET_NAME}" >> "$GITHUB_OUTPUT"
+
+      - name: Upload evidence pack
+        uses: actions/upload-artifact@v6
+        with:
+          name: release-evidence-pack
+          path: ${{ steps.archive.outputs.archive }}
+
+  publish-release:
+    name: Publish Release
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs:
+      - build-and-push-docker
+      - evidence-pack
+    permissions:
+      contents: write
+    steps:
+      - name: Download release assets
+        uses: actions/download-artifact@v7
+        with:
+          name: release-assets
+          path: release-assets
+
+      - name: Download evidence pack
+        uses: actions/download-artifact@v7
+        with:
+          name: release-evidence-pack
+          path: .
+
+      - name: Prepare release notes
+        run: |
+          TAG=${GITHUB_REF#refs/tags/}
+          SHA=${GITHUB_SHA}
+          EVIDENCE_ASSET="${{ needs.evidence-pack.outputs.evidence_asset_name }}"
+          EVIDENCE_HASH="${{ needs.evidence-pack.outputs.evidence_sha256 }}"
+          EVIDENCE_LINK="https://github.com/${{ github.repository }}/releases/download/${TAG}/${EVIDENCE_ASSET}"
+          cp release-assets/release-notes.md release-notes.md
+          {
+            echo ""
+            echo "---"
+            echo ""
+            echo "**Evidence:** Attached / Verified"
+            echo "- Evidence Pack: ${EVIDENCE_LINK}"
+            echo "- Evidence SHA256: \`${EVIDENCE_HASH}\`"
+            echo "- Commit SHA: \`${SHA}\`"
+          } >> release-notes.md
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          body_path: release-notes.md
+          files: |
+            ${{ needs.evidence-pack.outputs.evidence_archive }}
+            release-assets/sbom-cyclonedx.json
+            release-assets/sbom-spdx.json
+            release-assets/docs/openapi.json
+            release-assets/changelog-fragment.md
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   # Post-deploy smoke test (minimal healthy endpoint check)
   post-deploy-smoke:
