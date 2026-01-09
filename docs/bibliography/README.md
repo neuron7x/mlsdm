@@ -22,6 +22,11 @@ Explicitly verify the authority of every source before adding it:
 - **Canonical identifier**: must include **DOI**, **ISBN**, or an **official issuer URL** (e.g., NIST/ISO/IEEE). Use the canonical issuer URL only when DOI/ISBN is not applicable.
 - **arXiv policy**: arXiv-only entries are allowed **only if no journal or conference version exists**. If a journal/conference version exists, use that canonical ID instead.
 
+## Peer-review Upgrade
+When a peer-reviewed version becomes available, upgrade canonical identifiers and metadata accordingly:
+- **Journal/conference version exists** → switch `canonical_id_type` to **DOI** and update `canonical_id`/`canonical_url` to the DOI-based canonical record.
+- **No peer-reviewed version exists** → keep the arXiv canonical ID **and** add a metadata note (e.g., `peer_review_note`) explaining why a peer-reviewed version is unavailable or not applicable.
+
 ## Authority-Proof Checklist (blocking)
 Complete this checklist **before** starting the Update workflow:
 - Source passes the Authoritative Source Audit (type + peer review + identifier).

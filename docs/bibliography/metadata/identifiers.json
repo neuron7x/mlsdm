@@ -12,6 +12,15 @@
     ],
     "description": "Minimum authority-proof fields required for any source record."
   },
+  "_verification_method_guidance": {
+    "recommended": {
+      "doi": "Use when the canonical identifier is a DOI; verify via Crossref or the publisher.",
+      "arxiv": "Use when the canonical identifier is an arXiv ID and no peer-reviewed version exists.",
+      "publisher": "Use for official issuer URLs (standards bodies, government, or publisher-hosted pages).",
+      "isbn": "Use when the canonical identifier is an ISBN and verified via the publisher or official catalog."
+    },
+    "description": "Recommended values for `verification_method` aligned to the canonical identifier type."
+  },
   "asha_aphasia": {
     "canonical_id": "https://www.asha.org/practice-portal/clinical-topics/aphasia/",
     "canonical_id_type": "url",
