@@ -29,6 +29,13 @@ Root:
 - Run `python scripts/validate_bibliography.py` (offline only; no network calls per `VERIFICATION.md` policy).
 - Run `python scripts/docs/validate_literature_map.py` (offline only; no network calls per `VERIFICATION.md` policy).
 
+## Safe Change Strategy
+- one-commit update
+- sync all four files
+- verify locally
+
+Incomplete updates (for example, adding a BibTeX entry without matching metadata/verification updates) are guaranteed to break CI.
+
 ## Literature map (CI-enforced)
 - `docs/bibliography/LITERATURE_MAP.md` is required and validated in CI.
 - Each subsystem entry must list 1–5 repo paths and **3+ citations** using `[@key]` from `REFERENCES.bib`.
