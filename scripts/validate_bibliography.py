@@ -66,6 +66,11 @@ def is_placeholder_domain(host: str) -> bool:
     )
 
 
+def is_meta_key(key: str) -> bool:
+    """Return True if the identifiers.json key is reserved for metadata."""
+    return key.startswith(META_KEY_PREFIX)
+
+
 def normalize_string(value: str) -> str:
     """Lowercase and strip non-alphanumeric characters for robust comparisons."""
     return re.sub(r"[^a-z0-9]+", "", value.lower())
@@ -600,7 +605,7 @@ def check_verification_table(
         for key in sorted(extra):
             errors.append(f"VERIFICATION.md contains key not present in BibTeX: {key}")
     if identifiers:
-        id_keys = {key for key in identifiers.keys() if not key.startswith(META_KEY_PREFIX)}
+        id_keys = {key for key in identifiers.keys() if not is_meta_key(key)}
         missing_from_table = id_keys - table_keys
         extra_in_table = table_keys - id_keys
         for key in sorted(missing_from_table):
@@ -638,7 +643,7 @@ def check_identifiers_against_bib(
     seen_canonical: dict[tuple[str, str], str] = {}
 
     for key, payload in identifiers.items():
-        if key.startswith(META_KEY_PREFIX):
+        if is_meta_key(key):
             continue
         if key not in bib_keys:
             errors.append(f"identifiers.json contains key not present in BibTeX: {key}")
@@ -676,7 +681,7 @@ def check_identifiers_against_bib(
                 )
             seen_canonical[canonical_key] = key
 
-    id_keys = {key for key in identifiers.keys() if not key.startswith(META_KEY_PREFIX)}
+    id_keys = {key for key in identifiers.keys() if not is_meta_key(key)}
     missing = bib_keys - id_keys
     for key in sorted(missing):
         errors.append(f"BibTeX key '{key}' missing from identifiers.json")
@@ -690,7 +695,7 @@ def check_frozen_metadata(bib_entries: list[dict], identifiers: dict[str, dict])
     bib_by_key = {entry["key"]: entry["fields"] for entry in bib_entries}
 
     for key, payload in identifiers.items():
-        if key.startswith(META_KEY_PREFIX):
+        if is_meta_key(key):
             continue
         if key not in bib_by_key:
             continue
