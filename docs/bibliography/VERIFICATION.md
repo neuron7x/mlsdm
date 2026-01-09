@@ -7,6 +7,12 @@ This document is the offline audit log for the MLSDM bibliography. The single so
 
 CI fails if any entry drifts from the frozen metadata below or if coverage is incomplete. No network calls are made during validation.
 
+## Allowed canonical_id_type
+- `doi`
+- `arxiv`
+- `isbn`
+- `url` (official publisher or official standard URL only)
+
 ## Canonical verification table
 | key | canonical_id_type | canonical_id | canonical_url | verified_on | verification_method |
 |---|---|---|---|---|---|
