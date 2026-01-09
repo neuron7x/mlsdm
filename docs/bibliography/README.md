@@ -55,3 +55,13 @@ Incomplete updates (for example, adding a BibTeX entry without matching metadata
 - `docs/bibliography/LITERATURE_MAP.md` is required and validated in CI.
 - Each subsystem entry must list 1–5 repo paths and **3+ citations** using `[@key]` from `REFERENCES.bib`.
 - To add a subsystem: append a `## Subsystem Name` block with `paths:`, `citations:`, and a short rationale, then run `python scripts/docs/validate_literature_map.py`.
+
+## Subsystem Coverage Audit
+Any change to a subsystem or its API/modules **requires** auditing the corresponding block in `docs/bibliography/LITERATURE_MAP.md` before merge.
+
+**Audit actions (blocking):**
+1) **Path existence**: confirm every path in the subsystem block exists in the repo (same rule enforced by `python scripts/docs/validate_literature_map.py`).
+2) **Citation completeness**: ensure the block still has **3+ citations** and each `[@key]` resolves to `REFERENCES.bib`.
+3) **Rationale alignment**: update the rationale so it still matches the subsystem behavior, scope, and interfaces after the change.
+
+Run `python scripts/docs/validate_literature_map.py` as the technical enforcement step whenever applicable.
