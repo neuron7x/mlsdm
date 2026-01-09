@@ -39,6 +39,21 @@ Complete this checklist **before** starting the Update workflow:
   `canonical_id_type`, `canonical_id`, `canonical_url`, `verification_method`.
 - If the source is arXiv-only, confirm and note that no journal/conference version exists.
 
+## Authority Proof (mandatory)
+Every source must include **authority proof**; without it, the source is **not allowed**.
+
+**Accepted authority proof types:**
+- **DOI**
+- **ISBN**
+- **Official issuer URL** (standards bodies, government, or publisher-hosted canonical pages)
+- **arXiv** (allowed **only** when no peer-reviewed version exists)
+
+**Prohibited:**
+- **Unstable URLs** (e.g., personal sites, link shorteners, ephemeral documents, or non-canonical mirrors).
+
+**Authority proof source field:**
+- In `metadata/identifiers.json`, the `verification_method` field records the **source of authority proof** used to validate the identifier (e.g., DOI registry, publisher, issuer catalog).
+
 ## Update workflow
 1) Add entry to `REFERENCES.bib` (unique key; include title+year + one of doi/url/eprint/isbn).
 2) Add same entry to `REFERENCES_APA7.md` with `<!-- key: ... -->` marker (APA 7).
