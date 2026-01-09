@@ -210,6 +210,7 @@ class EventType(Enum):
     # Aphasia events (for unified tracking)
     APHASIA_DETECTED = "aphasia_detected"
     APHASIA_REPAIRED = "aphasia_repaired"
+    APHASIA_SKIPPED = "aphasia_skipped"
 
 
 class RejectionReason(Enum):
@@ -1146,7 +1147,12 @@ class ObservabilityLogger:
         Returns:
             Correlation ID
         """
-        event_type = EventType.APHASIA_REPAIRED if repaired else EventType.APHASIA_DETECTED
+        if repaired:
+            event_type = EventType.APHASIA_REPAIRED
+        elif detected:
+            event_type = EventType.APHASIA_DETECTED
+        else:
+            event_type = EventType.APHASIA_SKIPPED
         metrics: dict[str, Any] = {
             "request_id": request_id,
             "detected": detected,
