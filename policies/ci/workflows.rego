@@ -147,7 +147,9 @@ is_first_party_action(uses) {
 }
 
 # Extract the ref part from an action uses string (e.g., "owner/repo@ref" -> "ref")
-# Returns empty string if no "@" is present
+# Returns empty string if no "@" is present.
+# Note: GitHub Actions refs cannot contain "@" so there's always exactly one "@" in valid uses.
+# For malformed strings with multiple "@", we take the last segment, which is a safe default.
 get_action_ref(uses) = ref {
     str_contains(uses, "@")
     parts := split(uses, "@")
