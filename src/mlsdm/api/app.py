@@ -630,7 +630,10 @@ async def generate(
                 kwargs["moral_value"] = request_body.moral_value
 
             # Generate response (engine has its own child spans)
-            result: dict[str, Any] = engine.generate(**kwargs)
+            with tracer_manager.start_span("engine.generate") as gen_span:
+                result: dict[str, Any] = engine.generate(**kwargs)
+                if gen_span is not None:
+                    gen_span.set_attribute("mlsdm.engine.prompt_length", len(kwargs["prompt"]))
 
             # Extract phase from mlsdm state if available
             mlsdm_state = result.get("mlsdm", {})
@@ -665,10 +668,27 @@ async def generate(
             metrics = None
             timing = result.get("timing")
             if timing:
-                metrics = {"timing": timing}
+                metrics = {
+                    "timing": timing,
+                    "latency_breakdown": {
+                        "total_ms": timing.get("total", 0),
+                        "moral_check_ms": timing.get("moral_precheck", 0),
+                        "embedding_ms": timing.get("embedding", 0),
+                        "generation_ms": timing.get("generation", 0),
+                        "adaptation_ms": timing.get("adaptation", 0),
+                    },
+                }
                 # Add timing to span
                 if "total" in timing:
                     span.set_attribute("mlsdm.latency_ms", timing["total"])
+                if "moral_precheck" in timing:
+                    span.set_attribute("mlsdm.moral_check_ms", timing["moral_precheck"])
+                if "embedding" in timing:
+                    span.set_attribute("mlsdm.embedding_ms", timing["embedding"])
+                if "generation" in timing:
+                    span.set_attribute("mlsdm.generation_ms", timing["generation"])
+                if "adaptation" in timing:
+                    span.set_attribute("mlsdm.adaptation_ms", timing["adaptation"])
 
             # Build memory stats from mlsdm state
             memory_stats = None

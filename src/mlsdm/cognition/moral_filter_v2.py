@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import re
+import time
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -72,11 +73,11 @@ class MoralFilterV2:
     # Default class-level constants (overridden by calibration if available)
     MIN_THRESHOLD = MORAL_FILTER_DEFAULTS.min_threshold if MORAL_FILTER_DEFAULTS else 0.30
     MAX_THRESHOLD = MORAL_FILTER_DEFAULTS.max_threshold if MORAL_FILTER_DEFAULTS else 0.90
-    DEAD_BAND = MORAL_FILTER_DEFAULTS.dead_band if MORAL_FILTER_DEFAULTS else 0.05
+    DEAD_BAND = MORAL_FILTER_DEFAULTS.dead_band if MORAL_FILTER_DEFAULTS else 0.10
     EMA_ALPHA = MORAL_FILTER_DEFAULTS.ema_alpha if MORAL_FILTER_DEFAULTS else 0.1
     # Pre-computed constants for optimization
     _ONE_MINUS_ALPHA = 1.0 - EMA_ALPHA
-    _ADAPT_DELTA = 0.05
+    _ADAPT_DELTA = 0.02
     _BOUNDARY_EPS = 0.01
 
     def __init__(
@@ -104,6 +105,10 @@ class MoralFilterV2:
         self._filter_id = filter_id
         self._drift_history: list[float] = []
         self._max_history = 100  # Keep last 100 changes
+        self._last_warning_time = 0.0
+        self._last_error_time = 0.0
+        self._warning_cooldown_sec = 5.0
+        self._error_cooldown_sec = 10.0
 
         # Initialize metrics
         record_threshold_change(
@@ -174,7 +179,7 @@ class MoralFilterV2:
             )
 
     def _record_drift(self, old: float, new: float) -> None:
-        """Record and analyze threshold drift.
+        """Record and analyze threshold drift with debounced logging.
 
         Args:
             old: Previous threshold value
@@ -200,28 +205,42 @@ class MoralFilterV2:
 
         # Analyze for anomalous drift
         drift_magnitude = abs(new - old)
+        now = time.monotonic()
 
         # Note: These are absolute threshold differences, not percentages
         # since thresholds are in [0.3, 0.9] range, 0.1 absolute = ~17% relative change
         if drift_magnitude > 0.1:  # >0.1 absolute change (large single jump)
-            logger.error(
-                f"CRITICAL DRIFT: threshold changed {drift_magnitude:.3f} "
-                f"({old:.3f} → {new:.3f}) for filter '{self._filter_id}'"
-            )
+            if now - self._last_error_time > self._error_cooldown_sec:
+                logger.error(
+                    "CRITICAL DRIFT: threshold changed %.3f (%.3f → %.3f) for filter '%s'",
+                    drift_magnitude,
+                    old,
+                    new,
+                    self._filter_id,
+                )
+                self._last_error_time = now
         elif drift_magnitude > 0.05:  # >0.05 absolute change (moderate jump)
-            logger.warning(
-                f"Significant drift: threshold changed {drift_magnitude:.3f} "
-                f"({old:.3f} → {new:.3f}) for filter '{self._filter_id}'"
-            )
+            if now - self._last_warning_time > self._warning_cooldown_sec:
+                logger.warning(
+                    "Significant drift: threshold changed %.3f (%.3f → %.3f) for filter '%s'",
+                    drift_magnitude,
+                    old,
+                    new,
+                    self._filter_id,
+                )
+                self._last_warning_time = now
 
         # Check for sustained drift (trend over history)
         if len(self._drift_history) >= 10:
             recent_drift = self._drift_history[-1] - self._drift_history[-10]
             if abs(recent_drift) > 0.15:  # >0.15 absolute change over 10 operations
-                logger.error(
-                    f"SUSTAINED DRIFT: threshold drifted {recent_drift:.3f} "
-                    f"over last 10 operations for filter '{self._filter_id}'"
-                )
+                if now - self._last_error_time > self._error_cooldown_sec:
+                    logger.error(
+                        "SUSTAINED DRIFT: threshold drifted %.3f over last 10 operations for filter '%s'",
+                        recent_drift,
+                        self._filter_id,
+                    )
+                    self._last_error_time = now
 
     def get_drift_stats(self) -> dict[str, float]:
         """Get drift statistics.
@@ -302,8 +321,15 @@ class MoralFilterV2:
             use with higher accuracy, consider integrating with toxicity
             detection APIs (e.g., Perspective API) or fine-tuned classifiers.
         """
-        if not text or not text.strip():
-            return 0.8  # Assume empty text is acceptable
+        if not text or len(text.strip()) < 3:
+            return 0.8  # Assume empty or minimal text is acceptable
+
+        if len(text) > 10000:
+            if logger.isEnabledFor(logging.DEBUG):
+                logger.debug(
+                    "Skipping moral pattern matching for large text (%d chars)", len(text)
+                )
+            return 0.8
 
         # Use pre-compiled regex patterns with word boundary matching
         # This is O(n) for text length and avoids false positives

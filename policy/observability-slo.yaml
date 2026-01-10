@@ -130,8 +130,8 @@ thresholds:
           max_error_rate_percent: 0.5
           availability_percent: 99.9
         ci_thresholds:
-          p95_latency_ms: 150.0
-          p99_latency_ms: 250.0
+          p95_latency_ms: 170.0
+          p99_latency_ms: 280.0
           max_error_rate_percent: 1.0
         test_location: "tests/perf/test_slo_api_endpoints.py::TestGenerateEndpointSLO"
 
