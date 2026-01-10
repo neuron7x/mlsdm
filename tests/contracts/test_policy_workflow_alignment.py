@@ -253,9 +253,19 @@ class TestPolicyWorkflowAlignment:
         self, repo_root: Path, security_policy: SecurityBaselinePolicy
     ) -> None:
         """Verify CI workflows use least-privilege permissions (no write-all)."""
+        def canon_permissions(value: object) -> tuple[str, object]:
+            if isinstance(value, str):
+                return ("str", value)
+            if isinstance(value, dict):
+                return ("dict", tuple(sorted((key, str(val)) for key, val in value.items())))
+            if value is None:
+                return ("none", "")
+            return ("other", repr(value))
+
         workflows_dir = repo_root / ".github" / "workflows"
         assert workflows_dir.exists(), "Workflows directory not found"
-        prohibited = set(security_policy.controls.ci_workflow_policy.prohibited_permissions)
+        prohibited_raw = security_policy.controls.ci_workflow_policy.prohibited_permissions
+        prohibited = {canon_permissions(permission) for permission in prohibited_raw}
 
         # Check all workflow files
         for workflow_file in workflows_dir.glob("*.yml"):
@@ -267,7 +277,7 @@ class TestPolicyWorkflowAlignment:
 
             # Check top-level permissions
             top_permissions = content.get("permissions")
-            assert top_permissions not in prohibited, (
+            assert canon_permissions(top_permissions) not in prohibited, (
                 f"{workflow_file.name}: Workflow has prohibited permissions (security risk)"
             )
 
@@ -278,8 +288,8 @@ class TestPolicyWorkflowAlignment:
                     continue
 
                 job_permissions = job_config.get("permissions")
-                assert job_permissions not in prohibited, (
-                    f"{workflow_file.name}: Job '{job_name}' has prohibited permissions"
+                assert canon_permissions(job_permissions) not in prohibited, (
+                    f"{workflow_file.name}: Job '{job_name}' has prohibited permissions (security risk)"
                 )
 
     def test_third_party_actions_in_sast_are_pinned(
