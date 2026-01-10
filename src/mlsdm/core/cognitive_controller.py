@@ -292,6 +292,7 @@ class CognitiveController:
                 self.step_counter += 1
                 # Optimization: Invalidate state cache when processing
                 self._state_cache_valid = False
+                current_phase_is_wake = self.rhythm.is_wake()
                 self.rhythm_step()
 
                 # Check memory usage before processing (psutil-based, legacy)
@@ -308,6 +309,15 @@ class CognitiveController:
                     return self._build_state(
                         rejected=True, note="emergency shutdown: memory exceeded"
                     )
+
+                # Check cognitive phase
+                if not current_phase_is_wake:
+                    event_span.set_attribute("mlsdm.rejected", True)
+                    event_span.set_attribute("mlsdm.rejected_reason", "sleep_phase")
+                    event_span.set_attribute("mlsdm.phase", "sleep")
+                    return self._build_state(rejected=True, note="sleep phase")
+
+                event_span.set_attribute("mlsdm.phase", "wake")
 
                 # Moral evaluation with tracing
                 with tracer_manager.start_span(
@@ -326,24 +336,15 @@ class CognitiveController:
                         event_span.set_attribute("mlsdm.rejected_reason", "morally_rejected")
                         return self._build_state(rejected=True, note="morally rejected")
 
-                # Check cognitive phase
-                if not self.rhythm.is_wake():
-                    event_span.set_attribute("mlsdm.rejected", True)
-                    event_span.set_attribute("mlsdm.rejected_reason", "sleep_phase")
-                    event_span.set_attribute("mlsdm.phase", "sleep")
-                    return self._build_state(rejected=True, note="sleep phase")
-
-                event_span.set_attribute("mlsdm.phase", "wake")
-
                 # Memory update with tracing
                 with tracer_manager.start_span(
                     "cognitive_controller.memory_update",
                     attributes={
-                        "mlsdm.phase": self.rhythm.phase,
+                        "mlsdm.phase": "wake",
                     },
                 ) as memory_span:
                     # Optimization: use cached phase value
-                    phase_val = self._phase_cache[self.rhythm.phase]
+                    phase_val = self._phase_cache["wake"]
                     self.memory_commit(vector, phase_val)
                     memory_span.set_attribute(
                         "mlsdm.pelm_used", self.pelm.get_state_stats()["used"]
