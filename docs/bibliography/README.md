@@ -16,9 +16,15 @@ Root:
 - Disallowed: personal blogs, unreviewed claims, non-stable URLs, sources without DOI/arXiv/canonical issuer URL.
 
 ## Risk-Aware Bibliography Governance
-- Categorize sources by trust tier: **Standards**, **Peer-reviewed**, **arXiv**, **Official Report**.
-- Critical subsystems (security, governance, safety) require a minimum trust tier of **Standards** or **Peer-reviewed** for their citations.
-- High-risk subsystems (security, governance) must include **2+ Standards/Peer-reviewed** citations in the Literature Map.
+### Trust tiers
+- **Standards**: normative specifications from official standards bodies (e.g., NIST/ISO/IEEE).
+- **Peer-reviewed**: journal articles or top-tier conference proceedings with formal peer review.
+- **arXiv**: preprints allowed only when no peer-reviewed version exists.
+- **Official reports**: issuer-hosted technical reports from government or recognized institutions.
+
+### Critical subsystem requirements
+- Critical subsystems (**security**, **governance**, **safety**) must cite a minimum trust tier of **Standards** or **Peer-reviewed**.
+- Critical subsystems (**security**, **governance**, **safety**) must include **at least 2** citations from **Standards** or **Peer-reviewed** sources in the Literature Map.
 
 ## Authoritative Source Audit
 Explicitly verify the authority of every source before adding it:
