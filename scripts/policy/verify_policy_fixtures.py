@@ -40,7 +40,13 @@ def main() -> int:
         return 1
 
     sys.path.insert(0, str(REPO_ROOT / "src"))
-    from mlsdm.policy.opa import run_conftest
+    from mlsdm.policy.opa import PolicyExportError, ensure_conftest_available, run_conftest
+
+    try:
+        ensure_conftest_available()
+    except PolicyExportError as exc:
+        print(f"ERROR: {exc}")
+        return 1
 
     good_result = run_conftest(GOOD_FIXTURES, args.data, args.policy_dir, REPO_ROOT)
     if good_result.returncode != 0:

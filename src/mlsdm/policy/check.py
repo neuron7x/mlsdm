@@ -69,6 +69,12 @@ def run_policy_checks(
         except PolicyExportError as exc:
             print(f"ERROR: {exc}")
             return 1
+        if not data_output.exists():
+            print(
+                "ERROR: Policy data JSON not found. Run "
+                f"'python -m mlsdm.policy.check --stage export' to generate {data_output}."
+            )
+            return 1
 
     if stage in {"all", "workflows"}:
         print("\n=== Stage 3: Conftest CI Workflow Enforcement ===")
