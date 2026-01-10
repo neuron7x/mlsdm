@@ -119,7 +119,7 @@ class NeuroEngineConfig:
     capacity: int = 20_000
     wake_duration: int = 8
     sleep_duration: int = 3
-    initial_moral_threshold: float = 0.50
+    initial_moral_threshold: float = 0.70
     llm_timeout: float = 30.0
     llm_retry_attempts: int = 3
 
@@ -982,7 +982,7 @@ class NeuroCognitiveEngine:
             response_moral_score = self._estimate_response_moral_score(response_text, prompt)
 
             # Tolerance for estimation error (matching test expectations)
-            MORAL_SCORE_TOLERANCE = 0.15
+            MORAL_SCORE_TOLERANCE = 0.10
 
             if response_moral_score < (moral_value - MORAL_SCORE_TOLERANCE):
                 # Response doesn't meet moral threshold - reject it
@@ -1160,7 +1160,28 @@ class NeuroCognitiveEngine:
                 logger.exception("Moral filter computation failed, using heuristic fallback")
 
         # Heuristic fallback (matches test expectations)
-        harmful_patterns = ["hate", "violence", "attack", "harmful"]
+        harmful_patterns = [
+            "hate",
+            "violence",
+            "attack",
+            "harmful",
+            "kill",
+            "destroy",
+            "racist",
+            "sexist",
+            "abuse",
+            "threat",
+            "harass",
+            "discriminat",
+            "slur",
+            "assault",
+            "terroris",
+            "suicide",
+            "self-harm",
+            "rape",
+            "murder",
+            "weapon",
+        ]
 
         prompt_lower = prompt.lower()
         response_lower = response_text.lower()
@@ -1286,7 +1307,7 @@ class NeuroCognitiveEngine:
             dim=config_dict.get("dimension", 384),
             wake_duration=config_dict.get("cognitive_rhythm", {}).get("wake_duration", 8),
             sleep_duration=config_dict.get("cognitive_rhythm", {}).get("sleep_duration", 3),
-            initial_moral_threshold=config_dict.get("moral_filter", {}).get("threshold", 0.50),
+            initial_moral_threshold=config_dict.get("moral_filter", {}).get("threshold", 0.70),
             capacity=config_dict.get("pelm", {}).get("capacity", 20_000),
             enable_fslgs=False,  # FSLGS integration is optional
             enable_metrics=True,

@@ -112,6 +112,10 @@ class CognitiveController:
             synaptic_config=resolved_config,
         )
         self._bind_kernel_views()
+        assert self.rhythm.phase == "wake", "Initial phase must be wake"
+        assert (
+            self.rhythm.counter == self.rhythm.wake_duration
+        ), "Initial counter must equal wake_duration"
         self.step_counter = 0
         # Optimization: Cache for phase values to avoid repeated computation
         self._phase_cache: dict[str, float] = {"wake": 0.1, "sleep": 0.9}
@@ -288,6 +292,8 @@ class CognitiveController:
                 self.step_counter += 1
                 # Optimization: Invalidate state cache when processing
                 self._state_cache_valid = False
+                current_phase_is_wake = self.rhythm.is_wake()
+                self.rhythm_step()
 
                 # Check memory usage before processing (psutil-based, legacy)
                 memory_mb = self._check_memory_usage()
@@ -303,6 +309,15 @@ class CognitiveController:
                     return self._build_state(
                         rejected=True, note="emergency shutdown: memory exceeded"
                     )
+
+                # Check cognitive phase
+                if not current_phase_is_wake:
+                    event_span.set_attribute("mlsdm.rejected", True)
+                    event_span.set_attribute("mlsdm.rejected_reason", "sleep_phase")
+                    event_span.set_attribute("mlsdm.phase", "sleep")
+                    return self._build_state(rejected=True, note="sleep phase")
+
+                event_span.set_attribute("mlsdm.phase", "wake")
 
                 # Moral evaluation with tracing
                 with tracer_manager.start_span(
@@ -321,30 +336,19 @@ class CognitiveController:
                         event_span.set_attribute("mlsdm.rejected_reason", "morally_rejected")
                         return self._build_state(rejected=True, note="morally rejected")
 
-                # Check cognitive phase
-                if not self.rhythm.is_wake():
-                    event_span.set_attribute("mlsdm.rejected", True)
-                    event_span.set_attribute("mlsdm.rejected_reason", "sleep_phase")
-                    event_span.set_attribute("mlsdm.phase", "sleep")
-                    return self._build_state(rejected=True, note="sleep phase")
-
-                event_span.set_attribute("mlsdm.phase", "wake")
-
                 # Memory update with tracing
                 with tracer_manager.start_span(
                     "cognitive_controller.memory_update",
                     attributes={
-                        "mlsdm.phase": self.rhythm.phase,
+                        "mlsdm.phase": "wake",
                     },
                 ) as memory_span:
                     # Optimization: use cached phase value
-                    phase_val = self._phase_cache[self.rhythm.phase]
+                    phase_val = self._phase_cache["wake"]
                     self.memory_commit(vector, phase_val)
                     memory_span.set_attribute(
                         "mlsdm.pelm_used", self.pelm.get_state_stats()["used"]
                     )
-
-                self.rhythm_step()
 
                 # Check global memory bound (CORE-04) after memory-modifying operations
                 current_memory_bytes = self.memory_usage_bytes()

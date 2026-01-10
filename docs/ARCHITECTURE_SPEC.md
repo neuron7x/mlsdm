@@ -862,23 +862,25 @@ For detailed specification, see [APHASIA_SPEC.md](APHASIA_SPEC.md).
    │
 3. Controller receives process_event(embedding, moral_value)
    │
-4. MoralFilter evaluates moral_value
+4. Controller captures current rhythm phase and advances the rhythm for the next event
+   │
+5. If current phase is sleep: reject early with sleep-phase metadata
+   │
+6. MoralFilter evaluates moral_value (wake phase only)
    │   ├─ Accept: continue processing
    │   └─ Reject: return early with rejection metadata
    │
-5. CognitiveRhythm advances phase
+7. MultiLevelMemory updates with event vector
    │
-6. MultiLevelMemory updates with event vector
+8. PELM stores event with current phase
    │
-7. PELM stores event with current phase
+9. OntologyMatcher classifies event
    │
-8. OntologyMatcher classifies event
+10. Controller retrieves context for prompt enrichment
    │
-9. Controller retrieves context for prompt enrichment
-   │
-10. Wrapper calls LLM with enriched prompt + phase-adjusted tokens
+11. Wrapper calls LLM with enriched prompt + phase-adjusted tokens
     │
-11. Response returned with governance metadata
+12. Response returned with governance metadata
 ```
 
 ### NeuroLang Processing Flow (NeuroLangWrapper)

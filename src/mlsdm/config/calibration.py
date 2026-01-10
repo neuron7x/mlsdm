@@ -52,11 +52,11 @@ class MoralFilterCalibration:
 
     # Dead band for EMA-based adaptation (MoralFilterV2)
     # Direction: ↑ less sensitive to small changes, ↓ more responsive
-    dead_band: float = 0.05
+    dead_band: float = 0.03
 
     # EMA alpha for accept rate smoothing (MoralFilterV2)
     # Direction: ↑ more weight on recent signals, ↓ more smoothing
-    ema_alpha: float = 0.1
+    ema_alpha: float = 0.05
 
 
 MORAL_FILTER_DEFAULTS = MoralFilterCalibration()
