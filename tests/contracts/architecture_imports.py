@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import ast
-from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
@@ -14,6 +13,7 @@ from mlsdm.config.architecture_manifest import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable, Iterator
     from pathlib import Path
 
 
