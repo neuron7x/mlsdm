@@ -1,24 +1,31 @@
-# Реєстр структурного боргу
+# Structural Debt Register
 
-Цей документ фіксує структурні борги, що впливають на еволюцію архітектури, масштабування та якість інженерних рішень.
+This register tracks architecture-level debt. It is **not** a feature backlog;
+it captures risks that degrade structural integrity, correctness, or maintainability.
 
-## Категорії
+## Entry template
 
-- **Модульне дублювання** — повторення функціональності або логіки між модулями чи пакетами.
-- **Cross-layer coupling** — зв’язування компонентів між шарами системи, що порушує межі відповідальності.
-- **Невизначені API-контракти** — відсутність або нечіткість очікуваних інтерфейсів, форматів даних та гарантій.
+```
+- id: SD-YYYY-NNN
+  title: <short description>
+  area: <module/path>
+  risk: <low|medium|high>
+  symptoms: <how the debt is observed>
+  impact: <what breaks or drifts>
+  remediation: <concrete fix>
+  owner: <role/team>
+  status: <open|in-progress|resolved>
+  opened: <YYYY-MM-DD>
+  updated: <YYYY-MM-DD>
+```
 
-## Процес оновлення
+## Governance
 
-- **Хто додає записи:** архітектори, технічні лідери або інженери, що виявили структурний борг під час розробки, рев’ю, інцидентів чи аналізу архітектури.
-- **Мінімальні поля запису:**
-  - **Опис** — суть проблеми та її прояв у системі.
-  - **Ризик** — потенційні наслідки для стабільності, масштабованості або безпеки.
-  - **Зона** — компонент, модуль або підсистема, яких це стосується.
-  - **Дата** — дата фіксації боргу.
+- New entries require evidence (link to issue/PR/test failure).
+- Resolved entries must cite remediation commit.
+- High-risk entries require mitigation plan and target date.
 
-## Шаблон запису
+## Entries
 
-| Опис | Ризик | Зона | Дата |
-| --- | --- | --- | --- |
-|  |  |  |  |
+_No entries yet._
+

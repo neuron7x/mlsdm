@@ -1,51 +1,56 @@
-# Architecture Hygiene Policy
+# Architecture Hygiene Policy (CIO Standard)
 
-**Document Version:** 1.0.0
-**Last Updated:** December 2025
-**Status:** Active
+This policy governs **structure**, **boundaries**, and **change discipline**. It does
+not alter system goals or runtime behavior; it enforces professional-grade
+architectural integrity.
 
-## Purpose
+## Objectives
 
-This policy defines the architectural hygiene rules for MLSDM. It ensures that new modules and subsystems stay aligned with the layered architecture, keep dependencies directional, and remain discoverable.
+1. Prevent cross-layer coupling and dependency drift.
+2. Preserve testable, auditable module boundaries.
+3. Ensure changes are traceable to contracts and specs.
+4. Maintain a single source of truth for structure.
 
 ## Scope
 
-Applies to all new Python modules, packages, and subsystems under `src/mlsdm/` and to any documentation that describes or constrains architecture.
+Applies to any change that:
+- Adds/removes/renames modules under `src/mlsdm/`
+- Introduces new top-level directories
+- Modifies dependency directionality
+- Changes public interfaces (API/SDK/CLI)
 
-## Single Source for New Modules
+## Non-negotiable rules
 
-**All new code modules MUST live under `src/mlsdm/`**.
+1. **Single responsibility**: each module has one primary responsibility.
+2. **Manifest authority**: `architecture_manifest.py` defines allowed dependencies.
+3. **No cross-layer imports**: violations are treated as defects.
+4. **Contract alignment**: public interfaces must be documented and tested.
+5. **Doc-code parity**: documentation must match code reality at merge time.
 
-- New modules are not permitted in `scripts/`, `tests/`, or `examples/` unless they are test harnesses or tooling that do not ship with the runtime.
-- If a new capability needs to be exposed externally, add it as a package under `src/mlsdm/<layer_or_domain>/` and document it in the architecture manifest.
+## Required updates for structural changes
 
-## No Cross-Layer Imports
+When structure changes, update all items below:
+- `src/mlsdm/config/architecture_manifest.py`
+- `tests/contracts/test_architecture_manifest.py`
+- `docs/ARCHITECTURE_SPEC.md`
+- `docs/REPO_ARCHITECTURE_MAP.md`
+- `docs/CONTRACT_BOUNDARY_INDEX.md`
 
-**Rule:** Code may only import dependencies within the same layer or from lower layers, as defined in the architecture manifest.
+## Validation gate
 
-- “Lower layer” means closer to foundational utilities (`utils`) and shared infrastructure (`observability`, `security`).
-- Cross-layer imports that violate the manifest are prohibited.
-- Enforcement: `tests/contracts/test_architecture_manifest.py` validates layer dependency rules.
+Before merge:
+- `pytest tests/contracts/test_architecture_manifest.py`
 
-## Adding a New Package or Subsystem
+## Review checklist (minimum)
 
-When introducing a new package or subsystem:
+- [ ] Module responsibility is explicit and documented.
+- [ ] Dependency changes match `architecture_manifest.py`.
+- [ ] Contract tests updated and passing.
+- [ ] Repo map and boundary index reflect the new structure.
 
-1. **Choose the layer:**
-   - Place the package under `src/mlsdm/<layer_or_domain>/` aligned with the existing layer model in `docs/ARCHITECTURE_SPEC.md`.
-2. **Register in the manifest:**
-   - Update `src/mlsdm/config/architecture_manifest.py` with the new package, layer, and allowed dependencies.
-3. **Update architecture docs:**
-   - Add or update references in `docs/ARCHITECTURE_SPEC.md` and related docs so the subsystem is visible to maintainers.
-4. **Validate dependency direction:**
-   - Ensure the new package imports only allowed dependencies and passes the architecture manifest tests.
-5. **Document public interfaces:**
-   - Expose clear entry points and document the intended API in the appropriate docs (`docs/DEVELOPER_GUIDE.md` or module-specific documentation).
+## Evidence standard
 
-## Compliance Checklist
+Attach evidence to the PR:
+- Contract test output.
+- Updated specs linking to the changed modules.
 
-- [ ] New module under `src/mlsdm/`.
-- [ ] Architecture manifest updated with layer + allowed dependencies.
-- [ ] No cross-layer imports (validated by tests).
-- [ ] Architecture docs updated with subsystem references.
-- [ ] Public interfaces documented.
