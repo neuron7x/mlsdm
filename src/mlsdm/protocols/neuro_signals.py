@@ -10,7 +10,7 @@ Changes require architectural review.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 __all__ = [
@@ -80,6 +80,7 @@ class RiskSignal:
     threat: float
     risk: float
     source: str
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
