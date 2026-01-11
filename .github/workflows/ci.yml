@@ -26,7 +26,9 @@ jobs:
         run: poetry config virtualenvs.in-project true
 
       - name: Install dependencies
-        run: poetry install --sync --with dev
+        run: |
+          poetry install --with dev
+          poetry check --lock
 
       - name: Ruff lint
         run: poetry run ruff check .

@@ -27,23 +27,17 @@ jobs:
         uses: actions/setup-python@v6
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-      - name: Cache uv dependencies
-        uses: actions/cache@v5
-        with:
-          path: |
-            ~/.cache/uv
-            .venv
-          key: uv-${{ runner.os }}-${{ hashFiles('uv.lock') }}
-          restore-keys: |
-            uv-${{ runner.os }}-
-      - name: Install deps via uv (tests)
+      - name: Install Poetry
+        run: pipx install poetry
+      - name: Configure Poetry
+        run: poetry config virtualenvs.in-project true
+      - name: Install deps via Poetry (tests)
         run: |
-          python -m pip install -U pip
-          pip install uv
-          uv sync --frozen --extra test --extra dev
+          poetry install --with dev --with test
+          poetry check --lock
       - name: Import smoke
         run: |
-          uv run python -c "import mlsdm; print('import ok')"
+          poetry run python -c "import mlsdm; print('import ok')"
 
   coverage_gate:
     runs-on: ubuntu-latest
@@ -60,27 +54,21 @@ jobs:
         uses: actions/setup-python@v6
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-      - name: Cache uv dependencies
-        uses: actions/cache@v5
-        with:
-          path: |
-            ~/.cache/uv
-            .venv
-          key: uv-${{ runner.os }}-${{ hashFiles('uv.lock') }}
-          restore-keys: |
-            uv-${{ runner.os }}-
-      - name: Install deps via uv (tests)
+      - name: Install Poetry
+        run: pipx install poetry
+      - name: Configure Poetry
+        run: poetry config virtualenvs.in-project true
+      - name: Install deps via Poetry (tests)
         run: |
-          python -m pip install -U pip
-          pip install uv
-          uv sync --frozen --extra test --extra dev
+          poetry install --with dev --with test
+          poetry check --lock
       - name: Run coverage gate (tests + coverage once)
         id: coverage
         continue-on-error: true
         run: |
           mkdir -p reports
           set -o pipefail
-          uv run bash ./coverage_gate.sh 2>&1 | tee coverage-gate.log
+          poetry run bash ./coverage_gate.sh 2>&1 | tee coverage-gate.log
           status=${PIPESTATUS[0]}
           echo "exit_code=${status}" >> "$GITHUB_OUTPUT"
           exit "${status}"
@@ -107,7 +95,7 @@ jobs:
           if [ "${{ steps.coverage.outputs.exit_code }}" != "0" ]; then
             PARTIAL_ARGS+=(--partial-reason "coverage gate failed (exit ${{ steps.coverage.outputs.exit_code }})")
           fi
-          uv run python scripts/evidence/capture_evidence.py --mode pack --inputs /tmp/evidence-inputs.json "${PARTIAL_ARGS[@]}"
+          poetry run python scripts/evidence/capture_evidence.py --mode pack --inputs /tmp/evidence-inputs.json "${PARTIAL_ARGS[@]}"
       - name: Locate latest evidence snapshot
         if: always()
         id: evidence_path
@@ -126,7 +114,7 @@ jobs:
           echo "path=${LATEST}" >> "$GITHUB_OUTPUT"
       - name: Verify evidence snapshot
         if: always()
-        run: uv run python scripts/evidence/verify_evidence_snapshot.py --evidence-dir "${{ steps.evidence_path.outputs.path }}"
+        run: poetry run python scripts/evidence/verify_evidence_snapshot.py --evidence-dir "${{ steps.evidence_path.outputs.path }}"
       - name: Upload evidence snapshot
         if: always()
         uses: actions/upload-artifact@v6

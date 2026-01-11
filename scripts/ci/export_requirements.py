@@ -61,14 +61,54 @@ def load_pyproject(path: Path) -> dict[str, Any]:
     return tomllib.loads(path.read_text(encoding="utf-8"))
 
 
+def _format_poetry_dependency(name: str, spec: Any) -> str:
+    if isinstance(spec, str):
+        return f"{name}{'' if spec == '*' else spec}"
+    if isinstance(spec, dict):
+        version = spec.get("version", "")
+        marker = spec.get("markers") or spec.get("marker")
+        requirement = f"{name}{'' if version in ('', '*') else version}"
+        if marker:
+            requirement += f"; {marker}"
+        return requirement
+    return name
+
+
 def parse_pyproject_deps(pyproject_data: dict[str, Any]) -> dict[str, Any]:
     """Parse dependencies from pyproject.toml data."""
     project = pyproject_data.get("project", {})
-    core_deps = list(project.get("dependencies", []) or [])
-    optional_deps = {
-        group: list(deps or [])
-        for group, deps in (project.get("optional-dependencies", {}) or {}).items()
-    }
+    if project:
+        core_deps = list(project.get("dependencies", []) or [])
+        optional_deps = {
+            group: list(deps or [])
+            for group, deps in (project.get("optional-dependencies", {}) or {}).items()
+        }
+        return {"core": core_deps, "optional": optional_deps}
+
+    poetry = (pyproject_data.get("tool", {}) or {}).get("poetry", {})
+    dependencies = poetry.get("dependencies", {}) or {}
+    core_deps = [
+        _format_poetry_dependency(name, spec)
+        for name, spec in dependencies.items()
+        if name != "python" and not (isinstance(spec, dict) and spec.get("optional"))
+    ]
+
+    extras = poetry.get("extras", {}) or {}
+    optional_deps: dict[str, list[str]] = {}
+    for group, names in extras.items():
+        optional_deps[group] = [
+            _format_poetry_dependency(name, dependencies.get(name, "*"))
+            for name in names
+            if name in dependencies
+        ]
+
+    groups = poetry.get("group", {}) or {}
+    for group_name, group_data in groups.items():
+        group_deps = group_data.get("dependencies", {}) or {}
+        optional_deps[group_name] = [
+            _format_poetry_dependency(name, spec) for name, spec in group_deps.items()
+        ]
+
     return {"core": core_deps, "optional": optional_deps}
 
 
