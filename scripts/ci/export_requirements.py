@@ -13,19 +13,7 @@ from __future__ import annotations
 import argparse
 import re
 import sys
-
-# Python 3.11+ has tomllib in stdlib, earlier versions need tomli backport
-if sys.version_info >= (3, 11):
-    import tomllib
-else:
-    try:
-        import tomli as tomllib
-    except ImportError as e:
-        raise ImportError(
-            "tomli package is required for Python <3.11. "
-            "Install it with: pip install tomli"
-        ) from e
-
+import tomllib
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 

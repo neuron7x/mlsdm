@@ -17,7 +17,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -272,7 +272,7 @@ def write_manifest(
         "schema_version": SCHEMA_VERSION,
         "git_sha": sha,
         "short_sha": short_sha,
-        "created_utc": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "created_utc": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "source_ref": source_ref(),
         "commands": list(commands),
         "outputs": dict(outputs),
@@ -397,7 +397,7 @@ def main() -> int:
     root = repo_root()
     os.chdir(root)
 
-    date_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    date_str = datetime.now(UTC).strftime("%Y-%m-%d")
     sha_full = git_sha()
     short_sha = sha_full[:12] if sha_full != "unknown" else "unknown"
     base_dir = root / "artifacts" / "evidence" / date_str

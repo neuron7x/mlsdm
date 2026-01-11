@@ -156,7 +156,6 @@ ARCHITECTURE_MANIFEST: tuple[ArchitectureModule, ...] = (
             "memory",
             "rhythm",
             "speech",
-            "extensions",
             "observability",
             "utils",
             "security",
@@ -222,7 +221,7 @@ ARCHITECTURE_MANIFEST: tuple[ArchitectureModule, ...] = (
             "post-generation risk gating and correction loops",
         ),
         public_interfaces=("governance.py",),
-        allowed_dependencies=(),
+        allowed_dependencies=("config",),
     ),
     ArchitectureModule(
         name="memory",
@@ -379,9 +378,21 @@ ARCHITECTURE_MANIFEST: tuple[ArchitectureModule, ...] = (
             "lightweight metrics helpers",
         ),
         public_interfaces=("config_loader.py", "config_validator.py", "metrics.py"),
-        allowed_dependencies=("security",),
+        allowed_dependencies=(),
     ),
 )
+
+
+def build_manifest_dependency_graph(
+    manifest: Iterable[ArchitectureModule] = ARCHITECTURE_MANIFEST,
+) -> dict[str, set[str]]:
+    """Build a dependency graph from manifest allowed dependencies."""
+    modules = list(manifest)
+    names = {module.name for module in modules}
+    graph: dict[str, set[str]] = {module.name: set() for module in modules}
+    for module in modules:
+        graph[module.name] = {dep for dep in module.allowed_dependencies if dep in names}
+    return graph
 
 
 def validate_manifest(manifest: Iterable[ArchitectureModule]) -> list[str]:

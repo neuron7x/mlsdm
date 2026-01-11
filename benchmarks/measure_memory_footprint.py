@@ -206,7 +206,7 @@ def main(argv: list[str] | None = None) -> int:
     import json
     import platform
     import subprocess
-    from datetime import datetime, timezone
+    from datetime import UTC, datetime
 
     parser = argparse.ArgumentParser(
         description="MLSDM Memory Footprint Benchmark",
@@ -269,7 +269,7 @@ def main(argv: list[str] | None = None) -> int:
                 git_sha = "unknown"
 
             output = {
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
                 "commit": git_sha,
                 "pelm_mb": round(pelm_mb, 2),
                 "controller_mb": round(controller_mb, 2),

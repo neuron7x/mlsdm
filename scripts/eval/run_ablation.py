@@ -30,7 +30,7 @@ import random
 import sys
 import time
 from dataclasses import asdict, dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -468,7 +468,7 @@ class AblationRunner:
         report = AblationReport(
             mode=self.mode,
             seed=self.seed,
-            timestamp=datetime.now(timezone.utc).isoformat(),
+            timestamp=datetime.now(UTC).isoformat(),
         )
 
         start_time = time.perf_counter()
@@ -508,7 +508,7 @@ class AblationRunner:
         """
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
-        timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+        timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
         filename = f"{self.mode}_{timestamp}.json"
         output_path = self.output_dir / filename
 

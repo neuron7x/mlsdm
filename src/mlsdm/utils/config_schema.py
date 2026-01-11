@@ -6,10 +6,9 @@ properly validated before use.
 """
 
 import logging
-from typing import Any
+from typing import Any, Self
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
-from typing_extensions import Self
 
 logger = logging.getLogger(__name__)
 
