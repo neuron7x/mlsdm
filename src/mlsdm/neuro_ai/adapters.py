@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
-from mlsdm.contracts.neuro_signals import (
+from mlsdm.protocols.neuro_signals import (
     ActionGatingSignal,
     RewardPredictionErrorSignal,
     StabilityMetrics,

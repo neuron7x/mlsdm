@@ -10,7 +10,7 @@ from dataclasses import dataclass, field, replace
 from enum import Enum
 from typing import TYPE_CHECKING, Any, Protocol
 
-from mlsdm.contracts.neuro_signals import (
+from mlsdm.protocols.neuro_signals import (
     ActionGatingSignal,
     RewardPredictionErrorSignal,
     RiskSignal,

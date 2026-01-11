@@ -1,7 +1,9 @@
 """
-Re-export protocol signals for backwards compatibility.
+Protocol definitions for inter-module communication.
 
-DEPRECATED: Import directly from mlsdm.protocols.neuro_signals.
+This module defines lightweight, stable protocol models used by cognitive-core
+modules to communicate via standardized signals without creating circular
+dependencies.
 """
 
 from mlsdm.protocols.neuro_signals import (

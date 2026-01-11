@@ -12,7 +12,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
 
-from mlsdm.contracts.neuro_signals import ActionGatingSignal, RiskSignal
+from mlsdm.protocols.neuro_signals import ActionGatingSignal, RiskSignal
 
 
 class RiskMode(str, Enum):
