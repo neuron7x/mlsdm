@@ -48,7 +48,7 @@ def _collect_schemas(spec: dict[str, Any]) -> dict[str, Any]:
 def _collect_required_properties(schema: dict[str, Any]) -> set[str]:
     required = set(schema.get("required", []) or [])
     properties = schema.get("properties", {}) or {}
-    for prop_name, prop_schema in properties.items():
+    for _prop_name, prop_schema in properties.items():
         if isinstance(prop_schema, dict):
             required |= _collect_required_properties(prop_schema)
     return required
@@ -91,7 +91,7 @@ def check_breaking_changes(
 
         base_responses = op_details.get("responses", {}) or {}
         cand_responses = candidate_ops[op_key].get("responses", {}) or {}
-        for status_code in base_responses.keys():
+        for status_code in base_responses:
             if status_code not in cand_responses:
                 failures.append(
                     f"removed response {status_code} for {op_key[1].upper()} {op_key[0]}"

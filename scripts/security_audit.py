@@ -14,8 +14,8 @@ Usage:
 
 from __future__ import annotations
 
-import importlib.util
 import argparse
+import importlib.util
 import json
 import subprocess
 import sys

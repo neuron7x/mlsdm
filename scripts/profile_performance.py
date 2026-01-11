@@ -5,13 +5,11 @@ from __future__ import annotations
 import argparse
 import cProfile
 import json
-import os
+import pstats
 from datetime import datetime
 from io import StringIO
 from pathlib import Path
 from typing import Any
-
-import pstats
 
 from tests.benchmarks.compare_baselines import (
     BenchmarkSuite,

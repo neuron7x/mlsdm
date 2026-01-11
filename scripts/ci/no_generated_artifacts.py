@@ -5,7 +5,10 @@ from __future__ import annotations
 import fnmatch
 import subprocess
 import sys
-from typing import Iterable
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable
 
 FORBIDDEN_PATTERNS: tuple[str, ...] = (
     ".pytest_cache/**",
@@ -88,7 +91,7 @@ def main() -> int:
         print("Generated artifacts or local caches detected in the repository:")
         for path in sorted(forbidden_files):
             print(f"- {path}")
-        allowed_dirs = ", ".join(sorted(set([*ALLOWED_PREFIXES, *DB_ALLOWED_PREFIXES])))
+        allowed_dirs = ", ".join(sorted({*ALLOWED_PREFIXES, *DB_ALLOWED_PREFIXES}))
         print(
             "\nRemove these files from commits or ensure they live in allowed directories "
             f"({allowed_dirs})."
