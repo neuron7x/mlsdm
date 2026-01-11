@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
 
 from mlsdm.cognition.homeostasis import HomeostasisLimits, apply_homeostatic_brake
-from mlsdm.cognition.prediction_error import PredictionErrorSignals
+
+if TYPE_CHECKING:
+    from mlsdm.cognition.prediction_error import PredictionErrorSignals
 
 
 def _clamp(value: float, minimum: float, maximum: float) -> float:

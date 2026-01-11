@@ -17,7 +17,10 @@ import random
 import statistics
 from collections import Counter
 from pathlib import Path
-from typing import Sequence
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 from mlsdm.core.iteration_loop import (
     EnvironmentAdapter,

@@ -27,7 +27,10 @@ else:
         ) from e
 
 from pathlib import Path
-from typing import Any, Iterable
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable
 
 # Project root is two levels up from this script
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
@@ -118,7 +121,7 @@ def generate_requirements(deps: dict[str, Any]) -> str:
     """Generate requirements.txt content from parsed dependencies."""
     optional_groups = sorted(deps["optional"].keys())
     group_list = _format_group_list(optional_groups)
-    header = """\
+    header = f"""\
 # GENERATED FILE - DO NOT EDIT MANUALLY
 # This file is auto-generated from pyproject.toml dependencies.
 # Regenerate with: python scripts/ci/export_requirements.py
@@ -135,7 +138,7 @@ def generate_requirements(deps: dict[str, Any]) -> str:
 # For embeddings support: pip install -e ".[embeddings]"
 # For full dev install: pip install -r requirements.txt
 #
-""".format(group_list=group_list)
+"""
     lines = [header]
     lines.extend(_format_excluded_packages(EXCLUDED_PACKAGES))
     lines.append("")

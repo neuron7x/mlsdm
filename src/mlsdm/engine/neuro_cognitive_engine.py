@@ -1354,7 +1354,13 @@ class NeuroCognitiveEngine:
     ) -> float | None:
         for step in validation_steps:
             if step.get("step") == "moral_precheck" and "score" in step:
-                return step["score"]
+                score = step.get("score")
+                if score is None:
+                    return None
+                try:
+                    return float(score)
+                except (TypeError, ValueError):
+                    return None
         return None
 
     def _get_memory_used_bytes(self) -> float | None:

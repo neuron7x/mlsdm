@@ -27,7 +27,7 @@ class PredictionErrorSignals:
         perception_weight: float = 0.4,
         memory_weight: float = 0.3,
         policy_weight: float = 0.3,
-    ) -> "PredictionErrorSignals":
+    ) -> PredictionErrorSignals:
         pe = _clamp(perception_error)
         me = _clamp(memory_error)
         po = _clamp(policy_error)

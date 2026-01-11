@@ -19,7 +19,10 @@ import sys
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Iterable, List, Mapping, MutableMapping
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable, Mapping, MutableMapping
 
 SCHEMA_VERSION = "evidence-v1"
 REQUIRED_OUTPUT_KEYS = ("coverage_xml", "junit_xml")
@@ -77,7 +80,7 @@ def source_ref() -> str:
     return result.stdout.strip() or "unknown"
 
 
-def _prefer_uv(command: List[str]) -> List[str]:
+def _prefer_uv(command: list[str]) -> list[str]:
     """Prefix command with `uv run` if available to mirror CI."""
     if os.getenv("DISABLE_UV_RUN"):
         return command
@@ -86,7 +89,7 @@ def _prefer_uv(command: List[str]) -> List[str]:
     return command
 
 
-def run_command(command: List[str], log_path: Path) -> subprocess.CompletedProcess[str]:
+def run_command(command: list[str], log_path: Path) -> subprocess.CompletedProcess[str]:
     log_path.parent.mkdir(parents=True, exist_ok=True)
     result = subprocess.run(
         command,

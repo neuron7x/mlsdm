@@ -128,6 +128,7 @@ ARCHITECTURE_MANIFEST: tuple[ArchitectureModule, ...] = (
         public_interfaces=("neuro_cognitive_engine.py", "factory.py"),
         allowed_dependencies=(
             "core",
+            "cognition",
             "router",
             "adapters",
             "security",

@@ -605,7 +605,7 @@ def check_verification_table(
         for key in sorted(extra):
             errors.append(f"VERIFICATION.md contains key not present in BibTeX: {key}")
     if identifiers:
-        id_keys = {key for key in identifiers.keys() if not is_meta_key(key)}
+        id_keys = {key for key in identifiers if not is_meta_key(key)}
         missing_from_table = id_keys - table_keys
         extra_in_table = table_keys - id_keys
         for key in sorted(missing_from_table):
@@ -681,7 +681,7 @@ def check_identifiers_against_bib(
                 )
             seen_canonical[canonical_key] = key
 
-    id_keys = {key for key in identifiers.keys() if not is_meta_key(key)}
+    id_keys = {key for key in identifiers if not is_meta_key(key)}
     missing = bib_keys - id_keys
     for key in sorted(missing):
         errors.append(f"BibTeX key '{key}' missing from identifiers.json")

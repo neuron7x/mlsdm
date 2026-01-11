@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-
 DEFAULT_MAX_MEMORY_BYTES = int(1.4 * 1024**3)
 
 

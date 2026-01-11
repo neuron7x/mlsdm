@@ -17,7 +17,10 @@ import importlib.util
 import re
 import sys
 from pathlib import Path
-from typing import Iterable
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable
 
 
 def find_repo_root(start: Path | None = None) -> Path:
@@ -41,14 +44,14 @@ def load_bib_keys(repo_root: Path) -> set[str]:
 
     try:
         from scripts.validate_bibliography import parse_bibtex_entries  # type: ignore
-    except ModuleNotFoundError:
+    except ModuleNotFoundError as err:
         module_path = _resolve_validate_bibliography_path(repo_root)
         spec = importlib.util.spec_from_file_location("validate_bibliography", module_path)
         if spec is None or spec.loader is None:
-            raise ImportError(f"Unable to load parser from {module_path}")
+            raise ImportError(f"Unable to load parser from {module_path}") from err
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
-        parse_bibtex_entries = getattr(module, "parse_bibtex_entries")
+        parse_bibtex_entries = module.parse_bibtex_entries
 
     content = bib_path.read_text(encoding="utf-8")
     entries, parse_errors = parse_bibtex_entries(content)

@@ -9,9 +9,9 @@ import math
 import re
 import sys
 from pathlib import Path
-from typing import Any, Iterable, Tuple
+from typing import Any
 
-from defusedxml import ElementTree as ET
+from defusedxml import ElementTree
 
 SCHEMA_VERSION = "evidence-v1"
 REQUIRED_OUTPUTS = {
@@ -123,8 +123,8 @@ def _validate_manifest(path: Path) -> dict[str, Any]:
 
 def _parse_coverage_percent(path: Path) -> float:
     try:
-        root = ET.parse(path).getroot()
-    except ET.ParseError as exc:
+        root = ElementTree.parse(path).getroot()
+    except ElementTree.ParseError as exc:
         raise EvidenceError(f"coverage.xml is not valid XML: {exc}") from exc
 
     line_rate = root.attrib.get("line-rate")
@@ -141,7 +141,7 @@ def _parse_coverage_percent(path: Path) -> float:
     return rate * 100.0
 
 
-def _aggregate_tests(element: ET.Element) -> Tuple[int, int, int, int]:
+def _aggregate_tests(element: ElementTree.Element) -> tuple[int, int, int, int]:
     tests = int(element.attrib.get("tests", 0))
     failures = int(element.attrib.get("failures", 0))
     errors = int(element.attrib.get("errors", 0))
@@ -155,10 +155,10 @@ def _aggregate_tests(element: ET.Element) -> Tuple[int, int, int, int]:
     return tests, failures, errors, skipped
 
 
-def _parse_junit(path: Path) -> Tuple[int, int, int, int]:
+def _parse_junit(path: Path) -> tuple[int, int, int, int]:
     try:
-        root = ET.parse(path).getroot()
-    except ET.ParseError as exc:
+        root = ElementTree.parse(path).getroot()
+    except ElementTree.ParseError as exc:
         raise EvidenceError(f"junit.xml is not valid XML: {exc}") from exc
 
     if root.tag not in {"testsuite", "testsuites"}:
