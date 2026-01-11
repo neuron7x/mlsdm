@@ -8,6 +8,7 @@ Usage:
     python scripts/ci/export_requirements.py
     python scripts/ci/export_requirements.py --check  # CI mode: fail if drift detected
 """
+
 from __future__ import annotations
 
 import argparse
@@ -24,6 +25,8 @@ if TYPE_CHECKING:
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 PYPROJECT_PATH = PROJECT_ROOT / "pyproject.toml"
 REQUIREMENTS_PATH = PROJECT_ROOT / "requirements.txt"
+
+
 def _normalize_package_name(name: str) -> str:
     normalized = name.strip().lower()
     normalized = normalized.replace("_", "-").replace(".", "-")
@@ -32,12 +35,9 @@ def _normalize_package_name(name: str) -> str:
 
 
 def _normalize_excluded_packages(
-    excluded_packages: dict[str, dict[str, str]]
+    excluded_packages: dict[str, dict[str, str]],
 ) -> dict[str, dict[str, str]]:
-    return {
-        _normalize_package_name(name): metadata
-        for name, metadata in excluded_packages.items()
-    }
+    return {_normalize_package_name(name): metadata for name, metadata in excluded_packages.items()}
 
 
 EXCLUDED_PACKAGES: dict[str, dict[str, str]] = _normalize_excluded_packages(
@@ -181,12 +181,14 @@ def generate_requirements(deps: dict[str, Any]) -> str:
         lines.append(
             f"# Optional {title} (from pyproject.toml [project.optional-dependencies].{group})"
         )
-        lines.append(f"# Install with: pip install \".[{group}]\"")
+        lines.append(f'# Install with: pip install ".[{group}]"')
         for dep in sorted(filter_excluded_dependencies(deps["optional"][group]), key=str.lower):
             lines.append(dep)
         lines.append("")
 
-    lines.append("# Security: Pin minimum versions for indirect dependencies with known vulnerabilities")
+    lines.append(
+        "# Security: Pin minimum versions for indirect dependencies with known vulnerabilities"
+    )
     lines.append("certifi>=2025.11.12")
     lines.append("cryptography>=46.0.3")
     lines.append("jinja2>=3.1.6")

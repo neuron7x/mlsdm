@@ -259,12 +259,15 @@ def main(argv: list[str] | None = None) -> int:
         # Write JSON output if requested
         if args.json_out:
             try:
-                git_sha = subprocess.run(
-                    ["git", "rev-parse", "HEAD"],
-                    capture_output=True,
-                    text=True,
-                    check=False,
-                ).stdout.strip() or "unknown"
+                git_sha = (
+                    subprocess.run(
+                        ["git", "rev-parse", "HEAD"],
+                        capture_output=True,
+                        text=True,
+                        check=False,
+                    ).stdout.strip()
+                    or "unknown"
+                )
             except Exception:
                 git_sha = "unknown"
 

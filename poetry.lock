@@ -2408,27 +2408,6 @@ develop = false
 typing-extensions = {version = "*", markers = "python_full_version < \"3.11\""}
 
 [[package]]
-name = "mlsdm-governed-cognitive-memory"
-version = "1.2.0"
-description = ""
-optional = false
-python-versions = ">=3.11,<4.0"
-groups = []
-files = []
-develop = false
-
-[package.dependencies]
-fastapi = "*"
-numpy = {version = "*", markers = "python_full_version < \"3.11\" or python_full_version >= \"3.11\""}
-prometheus-client = "*"
-psutil = "*"
-pydantic = "*"
-pyyaml = "*"
-requests = "*"
-tenacity = "*"
-uvicorn = "*"
-
-[[package]]
 name = "mpmath"
 version = "1.3.0"
 description = ""

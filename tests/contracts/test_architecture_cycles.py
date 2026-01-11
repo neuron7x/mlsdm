@@ -14,6 +14,7 @@ from tests.contracts.architecture_imports import build_module_dependency_graph
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
+
 def _sorted_nodes(graph: dict[str, set[str]]) -> list[str]:
     return sorted(graph.keys())
 
@@ -51,12 +52,8 @@ def test_manifest_dependency_graph_is_acyclic() -> None:
     graph = build_manifest_dependency_graph(ARCHITECTURE_MANIFEST)
     cycles = find_cycles(graph)
     if cycles:
-        formatted = "\n".join(
-            f"manifest cycle: {_format_cycle(cycle)}" for cycle in cycles
-        )
-        raise AssertionError(
-            "Manifest dependency cycles detected:\n" + formatted
-        )
+        formatted = "\n".join(f"manifest cycle: {_format_cycle(cycle)}" for cycle in cycles)
+        raise AssertionError("Manifest dependency cycles detected:\n" + formatted)
 
 
 def test_code_dependency_graph_is_acyclic() -> None:
@@ -75,6 +72,4 @@ def test_code_dependency_graph_is_acyclic() -> None:
                         f"  evidence: {source} -> {target}: "
                         f"{path.relative_to(PACKAGE_ROOT)} ({statement})"
                     )
-        raise AssertionError(
-            "Code dependency cycles detected:\n" + "\n".join(lines)
-        )
+        raise AssertionError("Code dependency cycles detected:\n" + "\n".join(lines))

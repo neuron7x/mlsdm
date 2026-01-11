@@ -27,17 +27,15 @@ jobs:
         uses: actions/setup-python@v6
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-      - name: Install Poetry
-        run: pipx install poetry
-      - name: Configure Poetry
-        run: poetry config virtualenvs.in-project true
-      - name: Install deps via Poetry (tests)
+      - name: Install deps via pip (tests)
         run: |
-          poetry install --with dev --with test
-          poetry check --lock
+          python -m pip install -U pip
+          pip install -r requirements.txt
+          pip install -e ".[test]"
+          python -m pip check
       - name: Import smoke
         run: |
-          poetry run python -c "import mlsdm; print('import ok')"
+          python -c "import mlsdm; print('import ok')"
 
   coverage_gate:
     runs-on: ubuntu-latest
@@ -54,21 +52,19 @@ jobs:
         uses: actions/setup-python@v6
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-      - name: Install Poetry
-        run: pipx install poetry
-      - name: Configure Poetry
-        run: poetry config virtualenvs.in-project true
-      - name: Install deps via Poetry (tests)
+      - name: Install deps via pip (tests)
         run: |
-          poetry install --with dev --with test
-          poetry check --lock
+          python -m pip install -U pip
+          pip install -r requirements.txt
+          pip install -e ".[test]"
+          python -m pip check
       - name: Run coverage gate (tests + coverage once)
         id: coverage
         continue-on-error: true
         run: |
           mkdir -p reports
           set -o pipefail
-          poetry run bash ./coverage_gate.sh 2>&1 | tee coverage-gate.log
+          bash ./coverage_gate.sh 2>&1 | tee coverage-gate.log
           status=${PIPESTATUS[0]}
           echo "exit_code=${status}" >> "$GITHUB_OUTPUT"
           exit "${status}"
@@ -95,7 +91,7 @@ jobs:
           if [ "${{ steps.coverage.outputs.exit_code }}" != "0" ]; then
             PARTIAL_ARGS+=(--partial-reason "coverage gate failed (exit ${{ steps.coverage.outputs.exit_code }})")
           fi
-          poetry run python scripts/evidence/capture_evidence.py --mode pack --inputs /tmp/evidence-inputs.json "${PARTIAL_ARGS[@]}"
+          python scripts/evidence/capture_evidence.py --mode pack --inputs /tmp/evidence-inputs.json "${PARTIAL_ARGS[@]}"
       - name: Locate latest evidence snapshot
         if: always()
         id: evidence_path
@@ -114,7 +110,7 @@ jobs:
           echo "path=${LATEST}" >> "$GITHUB_OUTPUT"
       - name: Verify evidence snapshot
         if: always()
-        run: poetry run python scripts/evidence/verify_evidence_snapshot.py --evidence-dir "${{ steps.evidence_path.outputs.path }}"
+        run: python scripts/evidence/verify_evidence_snapshot.py --evidence-dir "${{ steps.evidence_path.outputs.path }}"
       - name: Upload evidence snapshot
         if: always()
         uses: actions/upload-artifact@v6

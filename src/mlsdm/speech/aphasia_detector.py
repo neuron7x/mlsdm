@@ -104,10 +104,7 @@ class AphasiaBrocaDetector:
 
         total_words = sum(word_counts)
         function_word_count = sum(
-            1
-            for s in sentences
-            for w in s.split()
-            if w.lower() in self.function_words
+            1 for s in sentences for w in s.split() if w.lower() in self.function_words
         )
         function_word_ratio = function_word_count / max(total_words, 1)
 

@@ -185,7 +185,11 @@ def capture_pytest_junit(
 
 
 def _record_output(
-    evidence_dir: Path, produced: list[Path], outputs: MutableMapping[str, str], key: str, dest_path: Path
+    evidence_dir: Path,
+    produced: list[Path],
+    outputs: MutableMapping[str, str],
+    key: str,
+    dest_path: Path,
 ) -> None:
     produced.append(dest_path)
     outputs[key] = str(dest_path.relative_to(evidence_dir))
@@ -225,7 +229,9 @@ def _copy_log_file(
     _record_output(evidence_dir, produced, outputs, key, dest_path)
 
 
-def capture_env(evidence_dir: Path, produced: list[Path], outputs: MutableMapping[str, str]) -> None:
+def capture_env(
+    evidence_dir: Path, produced: list[Path], outputs: MutableMapping[str, str]
+) -> None:
     env_dir = evidence_dir / "env"
     env_dir.mkdir(parents=True, exist_ok=True)
     py_path = env_dir / "python_version.txt"
@@ -234,7 +240,9 @@ def capture_env(evidence_dir: Path, produced: list[Path], outputs: MutableMappin
     py_path.write_text(sys.version.split()[0] + "\n", encoding="utf-8")
     uv_lock_path.write_text(_uv_lock_sha256() + "\n", encoding="utf-8")
     try:
-        uname_output = subprocess.run(["uname", "-a"], capture_output=True, text=True, check=False).stdout.strip()
+        uname_output = subprocess.run(
+            ["uname", "-a"], capture_output=True, text=True, check=False
+        ).stdout.strip()
     except (OSError, subprocess.SubprocessError):
         uname_output = "unknown"
     uname_path.write_text(uname_output + "\n", encoding="utf-8")
@@ -323,7 +331,9 @@ def _load_inputs(inputs_path: Path | None) -> dict[str, Path]:
             data[key] = value
     resolved: dict[str, Path] = {}
     for key, value in data.items():
-        resolved[key] = (repo_root() / value).resolve() if not os.path.isabs(value) else Path(value).resolve()
+        resolved[key] = (
+            (repo_root() / value).resolve() if not os.path.isabs(value) else Path(value).resolve()
+        )
     return resolved
 
 
@@ -413,8 +423,12 @@ def main() -> int:
         inputs = _load_inputs(args.inputs)
         _maybe_run_commands(args.mode, commands, produced, outputs, inputs, evidence_dir, failures)
         _ensure_outputs_present(inputs)
-        capture_coverage(evidence_dir, produced, outputs, inputs["coverage_xml"], inputs.get("coverage_log"))
-        capture_pytest_junit(evidence_dir, produced, outputs, inputs["junit_xml"], inputs.get("unit_log"))
+        capture_coverage(
+            evidence_dir, produced, outputs, inputs["coverage_xml"], inputs.get("coverage_log")
+        )
+        capture_pytest_junit(
+            evidence_dir, produced, outputs, inputs["junit_xml"], inputs.get("unit_log")
+        )
         capture_env(evidence_dir, produced, outputs)
         for key, dest in OPTIONAL_DESTS.items():
             _copy_optional(evidence_dir, produced, outputs, key, inputs[key], dest)

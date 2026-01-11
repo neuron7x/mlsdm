@@ -102,7 +102,13 @@ ARCHITECTURE_MANIFEST: tuple[ArchitectureModule, ...] = (
             "runtime entrypoints for serving and health checks",
             "environment bootstrap and process lifecycle glue",
         ),
-        public_interfaces=("serve.py", "dev_entry.py", "cloud_entry.py", "agent_entry.py", "health.py"),
+        public_interfaces=(
+            "serve.py",
+            "dev_entry.py",
+            "cloud_entry.py",
+            "agent_entry.py",
+            "health.py",
+        ),
         allowed_dependencies=("api", "config", "core", "engine", "utils"),
     ),
     ArchitectureModule(
@@ -210,7 +216,15 @@ ARCHITECTURE_MANIFEST: tuple[ArchitectureModule, ...] = (
             "adapters.py",
             "config.py",
         ),
-        allowed_dependencies=("cognition", "config", "core", "memory", "rhythm", "utils", "protocols"),
+        allowed_dependencies=(
+            "cognition",
+            "config",
+            "core",
+            "memory",
+            "rhythm",
+            "utils",
+            "protocols",
+        ),
     ),
     ArchitectureModule(
         name="speech",
@@ -243,7 +257,11 @@ ARCHITECTURE_MANIFEST: tuple[ArchitectureModule, ...] = (
             "system state schemas and migrations",
             "persistence contracts for long-lived runtime state",
         ),
-        public_interfaces=("system_state_schema.py", "system_state_store.py", "system_state_migrations.py"),
+        public_interfaces=(
+            "system_state_schema.py",
+            "system_state_store.py",
+            "system_state_migrations.py",
+        ),
         allowed_dependencies=(),
     ),
     ArchitectureModule(
@@ -300,7 +318,15 @@ ARCHITECTURE_MANIFEST: tuple[ArchitectureModule, ...] = (
             "emergency fallback directives for safe execution",
         ),
         public_interfaces=("__init__.py", "safety_control.py"),
-        allowed_dependencies=("config", "security", "cognition", "observability", "contracts", "protocols", "utils"),
+        allowed_dependencies=(
+            "config",
+            "security",
+            "cognition",
+            "observability",
+            "contracts",
+            "protocols",
+            "utils",
+        ),
     ),
     ArchitectureModule(
         name="security",
@@ -330,7 +356,13 @@ ARCHITECTURE_MANIFEST: tuple[ArchitectureModule, ...] = (
             "configuration schemas and calibration defaults",
             "runtime mode and performance SLO definitions",
         ),
-        public_interfaces=("__init__.py", "calibration.py", "runtime.py", "perf_slo.py", "env_compat.py"),
+        public_interfaces=(
+            "__init__.py",
+            "calibration.py",
+            "runtime.py",
+            "perf_slo.py",
+            "env_compat.py",
+        ),
         allowed_dependencies=("policy",),
     ),
     ArchitectureModule(
@@ -365,7 +397,13 @@ ARCHITECTURE_MANIFEST: tuple[ArchitectureModule, ...] = (
             "typed contracts for engine inputs, outputs, and errors",
             "shared protocol models for API and governance",
         ),
-        public_interfaces=("__init__.py", "engine_models.py", "speech_models.py", "errors.py", "neuro_signals.py"),
+        public_interfaces=(
+            "__init__.py",
+            "engine_models.py",
+            "speech_models.py",
+            "errors.py",
+            "neuro_signals.py",
+        ),
         allowed_dependencies=("protocols",),
     ),
     ArchitectureModule(
@@ -427,8 +465,6 @@ def validate_manifest(manifest: Iterable[ArchitectureModule]) -> list[str]:
 
         for dependency in module.allowed_dependencies:
             if dependency not in names:
-                issues.append(
-                    f"Module '{module.name}' declares unknown dependency '{dependency}'"
-                )
+                issues.append(f"Module '{module.name}' declares unknown dependency '{dependency}'")
 
     return issues
