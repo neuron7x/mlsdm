@@ -34,6 +34,7 @@ from typing import TYPE_CHECKING, Any, Literal
 
 from mlsdm.core.llm_wrapper import LLMWrapper
 from mlsdm.observability.tracing import get_tracer_manager
+from mlsdm.risk import RiskDirective, RiskInputSignals, SafetyControlContour
 from mlsdm.utils.bulkhead import (
     Bulkhead,
     BulkheadCompartment,
@@ -149,6 +150,9 @@ class NeuroEngineConfig:
 
     # Observability / Metrics
     enable_metrics: bool = False
+
+    # Risk control / degradation
+    risk_token_cap: int = 128
 
     # Multi-LLM routing (Phase 8)
     router_mode: Literal["single", "rule_based", "ab_test", "ab_test_canary"] = "single"
@@ -336,6 +340,12 @@ class NeuroCognitiveEngine:
             )
             self._circuit_breaker = CircuitBreaker(name="llm-provider", config=cb_config)
 
+        # Risk control contour
+        self._safety_contour = SafetyControlContour()
+        self._risk_mode: str | None = None
+        self._risk_degrade_actions: tuple[str, ...] = ()
+        self._risk_assessment: dict[str, Any] | None = None
+
     # ------------------------------------------------------------------ #
     # Internal builders                                                   #
     # ------------------------------------------------------------------ #
@@ -403,6 +413,10 @@ class NeuroCognitiveEngine:
         cognitive_load: float | None = None,
         moral_value: float | None = None,
         context_top_k: int | None = None,
+        security_flags: list[str] | tuple[str, ...] | None = None,
+        cognition_risk_score: float | None = None,
+        observability_anomaly_score: float | None = None,
+        risk_metadata: dict[str, Any] | None = None,
         enable_diagnostics: bool = True,
     ) -> dict[str, Any]:
         """Запустити повний пайплайн з pre-flight, MLSDM і FSLGS.
@@ -415,6 +429,7 @@ class NeuroCognitiveEngine:
         - validation_steps: список кроків перевірки
         - error: None або {type, message, ...}
         - rejected_at: None або "pre_flight"/"generation"/"pre_moral"
+        - meta: dict з даними ризик-контурів (risk_mode, degrade_actions)
         """
 
         timing: dict[str, float] = {}
@@ -429,6 +444,10 @@ class NeuroCognitiveEngine:
                 cognitive_load=cognitive_load,
                 moral_value=moral_value,
                 context_top_k=context_top_k,
+                security_flags=security_flags,
+                cognition_risk_score=cognition_risk_score,
+                observability_anomaly_score=observability_anomaly_score,
+                risk_metadata=risk_metadata,
                 enable_diagnostics=enable_diagnostics,
                 timing=timing,
                 validation_steps=validation_steps,
@@ -461,6 +480,10 @@ class NeuroCognitiveEngine:
         cognitive_load: float | None,
         moral_value: float | None,
         context_top_k: int | None,
+        security_flags: list[str] | tuple[str, ...] | None,
+        cognition_risk_score: float | None,
+        observability_anomaly_score: float | None,
+        risk_metadata: dict[str, Any] | None,
         enable_diagnostics: bool,
         timing: dict[str, float],
         validation_steps: list[dict[str, Any]],
@@ -486,6 +509,7 @@ class NeuroCognitiveEngine:
 
         mlsdm_state: dict[str, Any] | None = None
         fslgs_result: dict[str, Any] | None = None
+        early_result: dict[str, Any] | None = None
 
         # Get tracer manager for child spans
         tracer_manager = get_tracer_manager()
@@ -502,137 +526,187 @@ class NeuroCognitiveEngine:
                     "mlsdm.user_intent": user_intent,
                 },
             ) as pipeline_span:
-                # Step 3: PRE-FLIGHT moral check
-                with tracer_manager.start_span("engine.moral_precheck") as moral_span:
-                    rejection = self._run_moral_precheck(
-                        prompt, moral_value, timing, validation_steps
+                # Step 2.5: Risk contour assessment and gating
+                risk_directive = self._evaluate_risk(
+                    security_flags=security_flags,
+                    cognition_risk_score=cognition_risk_score,
+                    observability_anomaly_score=observability_anomaly_score,
+                    risk_metadata=risk_metadata,
+                    validation_steps=validation_steps,
+                )
+                pipeline_span.set_attribute("mlsdm.risk_mode", self._risk_mode or "unknown")
+
+                if not risk_directive.allow_execution:
+                    pipeline_span.set_attribute("mlsdm.rejected_at", "pre_flight")
+                    early_result = self._build_error_response(
+                        error_type="risk_emergency",
+                        message="Risk contour blocked execution.",
+                        rejected_at="pre_flight",
+                        mlsdm_state=None,
+                        fslgs_result=None,
+                        timing=timing,
+                        validation_steps=validation_steps,
+                        record_generation_metrics=False,
                     )
-                    if rejection is not None:
-                        moral_span.set_attribute("mlsdm.rejected", True)
-                        pipeline_span.set_attribute("mlsdm.rejected_at", "pre_flight")
-                        return rejection
-
-                # Step 4: PRE-FLIGHT grammar check
-                with tracer_manager.start_span("engine.grammar_precheck") as grammar_span:
-                    rejection = self._run_grammar_precheck(prompt, timing, validation_steps)
-                    if rejection is not None:
-                        grammar_span.set_attribute("mlsdm.rejected", True)
-                        pipeline_span.set_attribute("mlsdm.rejected_at", "pre_flight")
-                        return rejection
-
-                # Step 5: MAIN generation pipeline
-                self._runtime_moral_value = moral_value
-                self._runtime_context_top_k = context_top_k
-
-                try:
-                    with tracer_manager.start_span("engine.llm_generation") as gen_span:
-                        response_text, mlsdm_state, fslgs_result = self._run_llm_generation(
-                            prompt,
-                            max_tokens,
-                            cognitive_load,
-                            user_intent,
-                            moral_value,
-                            context_top_k,
-                            enable_diagnostics,
-                            timing,
+                else:
+                    risk_override_response, max_tokens = self._apply_risk_directive(
+                        risk_directive, max_tokens
+                    )
+                    if risk_override_response is not None:
+                        early_result = self._build_success_response(
+                            risk_override_response,
+                            mlsdm_state=None,
+                            fslgs_result=None,
+                            timing=timing,
+                            validation_steps=validation_steps,
                         )
-                        gen_span.set_attribute("mlsdm.response_length", len(response_text))
 
-                    # Step 6: POST-generation moral check
-                    with tracer_manager.start_span("engine.post_moral_check") as post_span:
-                        rejection = self._run_post_moral_check(
-                            response_text,
-                            prompt,
-                            moral_value,
-                            mlsdm_state,
-                            fslgs_result,
-                            timing,
-                            validation_steps,
+                if early_result is not None:
+                    pipeline_span.set_attribute("mlsdm.accepted", early_result["error"] is None)
+                    pipeline_span.set_attribute("mlsdm.risk_degraded", True)
+                else:
+                    # Step 3: PRE-FLIGHT moral check
+                    with tracer_manager.start_span("engine.moral_precheck") as moral_span:
+                        rejection = self._run_moral_precheck(
+                            prompt, moral_value, timing, validation_steps
                         )
                         if rejection is not None:
-                            post_span.set_attribute("mlsdm.rejected", True)
-                            pipeline_span.set_attribute("mlsdm.rejected_at", "pre_moral")
+                            moral_span.set_attribute("mlsdm.rejected", True)
+                            pipeline_span.set_attribute("mlsdm.rejected_at", "pre_flight")
                             return rejection
 
-                except MLSDMRejectionError as e:
-                    # Use self._last_mlsdm_state since mlsdm_state may be None
-                    # when exception is raised before return
-                    pipeline_span.set_attribute("mlsdm.error_type", "mlsdm_rejection")
-                    return self._build_error_response(
-                        error_type="mlsdm_rejection",
-                        message=str(e),
-                        rejected_at="generation",
-                        mlsdm_state=self._last_mlsdm_state,
-                        fslgs_result=fslgs_result,
-                        timing=timing,
-                        validation_steps=validation_steps,
-                        record_generation_metrics=True,
-                    )
-                except EmptyResponseError as e:
-                    # Use self._last_mlsdm_state since mlsdm_state may be None
-                    # when exception is raised before return
-                    pipeline_span.set_attribute("mlsdm.error_type", "empty_response")
-                    return self._build_error_response(
-                        error_type="empty_response",
-                        message=str(e),
-                        rejected_at="generation",
-                        mlsdm_state=self._last_mlsdm_state,
-                        fslgs_result=fslgs_result,
-                        timing=timing,
-                        validation_steps=validation_steps,
-                        record_generation_metrics=True,
-                    )
-                except BulkheadFullError as e:
-                    # Bulkhead is at capacity - graceful rejection
-                    pipeline_span.set_attribute("mlsdm.error_type", "bulkhead_full")
-                    pipeline_span.set_attribute("mlsdm.bulkhead_compartment", e.compartment.value)
-                    return self._build_error_response(
-                        error_type="bulkhead_full",
-                        message=f"System at capacity: {e.compartment.value} bulkhead full",
-                        rejected_at="generation",
-                        mlsdm_state=self._last_mlsdm_state,
-                        fslgs_result=fslgs_result,
-                        timing=timing,
-                        validation_steps=validation_steps,
-                        record_generation_metrics=False,
-                    )
-                except CircuitOpenError as e:
-                    # Circuit breaker is open - fast-fail to protect system
-                    pipeline_span.set_attribute("mlsdm.error_type", "circuit_open")
-                    pipeline_span.set_attribute("mlsdm.circuit_name", e.name)
-                    pipeline_span.set_attribute(
-                        "mlsdm.recovery_time_remaining", e.recovery_time_remaining
-                    )
-                    return self._build_error_response(
-                        error_type="circuit_open",
-                        message=f"LLM provider circuit breaker open: {e.name}. Recovery in {e.recovery_time_remaining:.1f}s",
-                        rejected_at="generation",
-                        mlsdm_state=self._last_mlsdm_state,
-                        fslgs_result=fslgs_result,
-                        timing=timing,
-                        validation_steps=validation_steps,
-                        record_generation_metrics=False,
-                    )
-                except Exception as e:
-                    # General provider/LLM error - record failure and return structured error
-                    # Circuit breaker failure is already recorded in _run_llm_generation
-                    pipeline_span.set_attribute("mlsdm.error_type", "provider_error")
-                    tracer_manager.record_exception(pipeline_span, e)
-                    return self._build_error_response(
-                        error_type="provider_error",
-                        message=str(e),
-                        rejected_at="generation",
-                        mlsdm_state=self._last_mlsdm_state,
-                        fslgs_result=fslgs_result,
-                        timing=timing,
-                        validation_steps=validation_steps,
-                        record_generation_metrics=True,
-                    )
+                    # Step 4: PRE-FLIGHT grammar check
+                    with tracer_manager.start_span("engine.grammar_precheck") as grammar_span:
+                        rejection = self._run_grammar_precheck(prompt, timing, validation_steps)
+                        if rejection is not None:
+                            grammar_span.set_attribute("mlsdm.rejected", True)
+                            pipeline_span.set_attribute("mlsdm.rejected_at", "pre_flight")
+                            return rejection
 
-                # Mark pipeline as successful
-                pipeline_span.set_attribute("mlsdm.accepted", True)
-                if mlsdm_state:
-                    pipeline_span.set_attribute("mlsdm.phase", mlsdm_state.get("phase", "unknown"))
+                    # Step 5: MAIN generation pipeline
+                    self._runtime_moral_value = moral_value
+                    self._runtime_context_top_k = context_top_k
+
+                    try:
+                        with tracer_manager.start_span("engine.llm_generation") as gen_span:
+                            response_text, mlsdm_state, fslgs_result = (
+                                self._run_llm_generation(
+                                    prompt,
+                                    max_tokens,
+                                    cognitive_load,
+                                    user_intent,
+                                    moral_value,
+                                    context_top_k,
+                                    enable_diagnostics,
+                                    timing,
+                                )
+                            )
+                            gen_span.set_attribute("mlsdm.response_length", len(response_text))
+
+                        # Step 6: POST-generation moral check
+                        with tracer_manager.start_span("engine.post_moral_check") as post_span:
+                            rejection = self._run_post_moral_check(
+                                response_text,
+                                prompt,
+                                moral_value,
+                                mlsdm_state,
+                                fslgs_result,
+                                timing,
+                                validation_steps,
+                            )
+                            if rejection is not None:
+                                post_span.set_attribute("mlsdm.rejected", True)
+                                pipeline_span.set_attribute("mlsdm.rejected_at", "pre_moral")
+                                return rejection
+
+                    except MLSDMRejectionError as e:
+                        # Use self._last_mlsdm_state since mlsdm_state may be None
+                        # when exception is raised before return
+                        pipeline_span.set_attribute("mlsdm.error_type", "mlsdm_rejection")
+                        return self._build_error_response(
+                            error_type="mlsdm_rejection",
+                            message=str(e),
+                            rejected_at="generation",
+                            mlsdm_state=self._last_mlsdm_state,
+                            fslgs_result=fslgs_result,
+                            timing=timing,
+                            validation_steps=validation_steps,
+                            record_generation_metrics=True,
+                        )
+                    except EmptyResponseError as e:
+                        # Use self._last_mlsdm_state since mlsdm_state may be None
+                        # when exception is raised before return
+                        pipeline_span.set_attribute("mlsdm.error_type", "empty_response")
+                        return self._build_error_response(
+                            error_type="empty_response",
+                            message=str(e),
+                            rejected_at="generation",
+                            mlsdm_state=self._last_mlsdm_state,
+                            fslgs_result=fslgs_result,
+                            timing=timing,
+                            validation_steps=validation_steps,
+                            record_generation_metrics=True,
+                        )
+                    except BulkheadFullError as e:
+                        # Bulkhead is at capacity - graceful rejection
+                        pipeline_span.set_attribute("mlsdm.error_type", "bulkhead_full")
+                        pipeline_span.set_attribute(
+                            "mlsdm.bulkhead_compartment", e.compartment.value
+                        )
+                        return self._build_error_response(
+                            error_type="bulkhead_full",
+                            message=f"System at capacity: {e.compartment.value} bulkhead full",
+                            rejected_at="generation",
+                            mlsdm_state=self._last_mlsdm_state,
+                            fslgs_result=fslgs_result,
+                            timing=timing,
+                            validation_steps=validation_steps,
+                            record_generation_metrics=False,
+                        )
+                    except CircuitOpenError as e:
+                        # Circuit breaker is open - fast-fail to protect system
+                        pipeline_span.set_attribute("mlsdm.error_type", "circuit_open")
+                        pipeline_span.set_attribute("mlsdm.circuit_name", e.name)
+                        pipeline_span.set_attribute(
+                            "mlsdm.recovery_time_remaining", e.recovery_time_remaining
+                        )
+                        return self._build_error_response(
+                            error_type="circuit_open",
+                            message=f"LLM provider circuit breaker open: {e.name}. Recovery in {e.recovery_time_remaining:.1f}s",
+                            rejected_at="generation",
+                            mlsdm_state=self._last_mlsdm_state,
+                            fslgs_result=fslgs_result,
+                            timing=timing,
+                            validation_steps=validation_steps,
+                            record_generation_metrics=False,
+                        )
+                    except Exception as e:
+                        # General provider/LLM error - record failure and return structured error
+                        # Circuit breaker failure is already recorded in _run_llm_generation
+                        pipeline_span.set_attribute("mlsdm.error_type", "provider_error")
+                        tracer_manager.record_exception(pipeline_span, e)
+                        return self._build_error_response(
+                            error_type="provider_error",
+                            message=str(e),
+                            rejected_at="generation",
+                            mlsdm_state=self._last_mlsdm_state,
+                            fslgs_result=fslgs_result,
+                            timing=timing,
+                            validation_steps=validation_steps,
+                            record_generation_metrics=True,
+                        )
+
+                    # Mark pipeline as successful
+                    pipeline_span.set_attribute("mlsdm.accepted", True)
+                    if mlsdm_state:
+                        pipeline_span.set_attribute(
+                            "mlsdm.phase", mlsdm_state.get("phase", "unknown")
+                        )
+
+        if early_result is not None:
+            if early_result["error"] is None:
+                self._record_success_metrics(timing)
+            return early_result
 
         # Step 7: Success path - record metrics and build response
         self._record_success_metrics(timing)
@@ -1036,7 +1110,78 @@ class NeuroCognitiveEngine:
             meta["backend_id"] = self._selected_provider_id
         if self._selected_variant is not None:
             meta["variant"] = self._selected_variant
+        if self._risk_mode is not None:
+            meta["risk_mode"] = self._risk_mode
+            meta["degrade_actions"] = list(self._risk_degrade_actions)
         return meta
+
+    def _evaluate_risk(
+        self,
+        *,
+        security_flags: list[str] | tuple[str, ...] | None,
+        cognition_risk_score: float | None,
+        observability_anomaly_score: float | None,
+        risk_metadata: dict[str, Any] | None,
+        validation_steps: list[dict[str, Any]],
+    ) -> RiskDirective:
+        """Assess risk contour signals and return directive."""
+        signals = RiskInputSignals(
+            security_flags=tuple(security_flags or ()),
+            cognition_risk_score=float(cognition_risk_score or 0.0),
+            observability_anomaly_score=float(observability_anomaly_score or 0.0),
+            metadata=risk_metadata or {},
+        )
+        assessment = self._safety_contour.assess(signals)
+        directive = self._safety_contour.decide(assessment)
+
+        self._risk_assessment = {
+            "composite_score": assessment.composite_score,
+            "mode": assessment.mode.value,
+            "reasons": assessment.reasons,
+        }
+        self._risk_mode = directive.mode.value
+        self._risk_degrade_actions = directive.degrade_actions
+
+        validation_steps.append(
+            {
+                "step": "risk_assessment",
+                "passed": directive.allow_execution,
+                "score": assessment.composite_score,
+                "reason": ",".join(assessment.reasons) if assessment.reasons else None,
+                "mode": directive.mode.value,
+            }
+        )
+
+        logger.info(
+            "Risk contour decision: mode=%s allow_execution=%s degrade_actions=%s",
+            directive.mode.value,
+            directive.allow_execution,
+            directive.degrade_actions,
+        )
+
+        return directive
+
+    def _apply_risk_directive(
+        self,
+        directive: RiskDirective,
+        max_tokens: int,
+    ) -> tuple[str | None, int]:
+        """Apply risk directive to execution parameters."""
+        adjusted_max_tokens = max_tokens
+        if "token_cap" in directive.degrade_actions:
+            adjusted_max_tokens = min(max_tokens, self.config.risk_token_cap)
+
+        if "safe_response" in directive.degrade_actions:
+            return self._build_safe_response(), adjusted_max_tokens
+
+        return None, adjusted_max_tokens
+
+    def _build_safe_response(self) -> str:
+        """Return a safe fallback response for degraded mode."""
+        return (
+            "Your request is being handled in safe mode. "
+            "Please rephrase or provide additional context."
+        )
 
     def _build_error_response(
         self,

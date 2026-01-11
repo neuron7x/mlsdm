@@ -222,6 +222,8 @@ class EngineResultMeta(BaseModel):
     Attributes:
         backend_id: ID of the LLM provider used (if multi-LLM routing enabled).
         variant: A/B test variant used (if A/B testing enabled).
+        risk_mode: Safety control mode applied to the request.
+        degrade_actions: Degradations applied during execution (token caps, safe response).
     """
 
     backend_id: str | None = Field(
@@ -231,6 +233,14 @@ class EngineResultMeta(BaseModel):
     variant: str | None = Field(
         default=None,
         description="A/B test variant (if A/B testing enabled)",
+    )
+    risk_mode: str | None = Field(
+        default=None,
+        description="Risk mode applied by safety control contour",
+    )
+    degrade_actions: list[str] | None = Field(
+        default=None,
+        description="Degradation actions applied by safety control contour",
     )
 
     @classmethod
@@ -246,6 +256,8 @@ class EngineResultMeta(BaseModel):
         return cls(
             backend_id=meta_dict.get("backend_id"),
             variant=meta_dict.get("variant"),
+            risk_mode=meta_dict.get("risk_mode"),
+            degrade_actions=meta_dict.get("degrade_actions"),
         )
 
 
