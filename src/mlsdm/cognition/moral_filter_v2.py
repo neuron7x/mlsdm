@@ -80,7 +80,7 @@ class MoralFilterV2:
     _ONE_MINUS_ALPHA = 1.0 - EMA_ALPHA
     _ADAPT_DELTA = 0.05
     _BOUNDARY_EPS = 0.01
-    _ENABLE_DRIFT_LOGGING = os.getenv("MLSDM_DRIFT_LOGGING", "production") != "silent"
+    _DRIFT_LOGGING_MODE = os.getenv("MLSDM_DRIFT_LOGGING", "production")
     _DRIFT_LOG_THRESHOLD = float(os.getenv("MLSDM_DRIFT_THRESHOLD", "0.05"))
     _DRIFT_CRITICAL_THRESHOLD = float(os.getenv("MLSDM_DRIFT_CRITICAL_THRESHOLD", "0.1"))
     _DRIFT_MIN_LOGGING = float(os.getenv("MLSDM_DRIFT_MIN_LOGGING", "0.03"))
@@ -202,8 +202,16 @@ class MoralFilterV2:
             ema_value=self.ema_accept_rate,
         )
 
-        if not self._ENABLE_DRIFT_LOGGING:
-            return
+        # Check for sustained drift (trend over history)
+        if len(self._drift_history) >= 10:
+            recent_drift = self._drift_history[-1] - self._drift_history[-10]
+            if abs(recent_drift) >= 0.15:  # >=0.15 absolute change over 10 operations
+                logger.error(
+                    "SUSTAINED DRIFT: threshold drifted %.3f over last 10 operations "
+                    "for filter '%s'",
+                    recent_drift,
+                    self._filter_id,
+                )
 
         # Analyze for anomalous drift
         drift_magnitude = abs(new - old)
@@ -221,24 +229,16 @@ class MoralFilterV2:
                 new,
                 self._filter_id,
             )
-        elif drift_magnitude > self._DRIFT_LOG_THRESHOLD:
+        elif (
+            drift_magnitude > self._DRIFT_LOG_THRESHOLD
+            and self._DRIFT_LOGGING_MODE != "silent"
+        ):
             if logger.isEnabledFor(logging.WARNING):
                 logger.warning(
                     "Significant drift: threshold changed %.3f (%.3f → %.3f) for filter '%s'",
                     drift_magnitude,
                     old,
                     new,
-                    self._filter_id,
-                )
-
-        # Check for sustained drift (trend over history)
-        if len(self._drift_history) >= 10:
-            recent_drift = self._drift_history[-1] - self._drift_history[-10]
-            if abs(recent_drift) > 0.15:  # >0.15 absolute change over 10 operations
-                logger.error(
-                    "SUSTAINED DRIFT: threshold drifted %.3f over last 10 operations "
-                    "for filter '%s'",
-                    recent_drift,
                     self._filter_id,
                 )
 
