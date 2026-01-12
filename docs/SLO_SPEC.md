@@ -228,6 +228,12 @@ error_rate = total_errors / total_requests
 
 SLOs define target reliability levels for each SLI.
 
+### CI Tolerance Band
+
+CI environments can introduce 2-5% latency variance due to shared infrastructure.
+For CI-only SLO validation, a 2% tolerance band is applied to P95 latency checks
+to reduce flaky failures without changing production monitoring thresholds.
+
 ### SLO-1: Availability
 
 **Target:** ≥ 99.9% of requests successful (over 28-day window)
