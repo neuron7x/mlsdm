@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import logging
+import os
 import re
+from collections import deque
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -78,6 +80,10 @@ class MoralFilterV2:
     _ONE_MINUS_ALPHA = 1.0 - EMA_ALPHA
     _ADAPT_DELTA = 0.05
     _BOUNDARY_EPS = 0.01
+    _ENABLE_DRIFT_LOGGING = os.getenv("MLSDM_DRIFT_LOGGING", "production") != "silent"
+    _DRIFT_LOG_THRESHOLD = float(os.getenv("MLSDM_DRIFT_THRESHOLD", "0.05"))
+    _DRIFT_CRITICAL_THRESHOLD = float(os.getenv("MLSDM_DRIFT_CRITICAL_THRESHOLD", "0.1"))
+    _DRIFT_MIN_LOGGING = float(os.getenv("MLSDM_DRIFT_MIN_LOGGING", "0.03"))
 
     def __init__(
         self, initial_threshold: float | None = None, filter_id: str = "default"
@@ -102,8 +108,8 @@ class MoralFilterV2:
 
         # NEW: Drift detection
         self._filter_id = filter_id
-        self._drift_history: list[float] = []
         self._max_history = 100  # Keep last 100 changes
+        self._drift_history: deque[float] = deque(maxlen=self._max_history)
 
         # Initialize metrics
         record_threshold_change(
@@ -187,8 +193,6 @@ class MoralFilterV2:
         """
         # Update drift history
         self._drift_history.append(new)
-        if len(self._drift_history) > self._max_history:
-            self._drift_history.pop(0)
 
         # Record metrics
         record_threshold_change(
@@ -198,29 +202,44 @@ class MoralFilterV2:
             ema_value=self.ema_accept_rate,
         )
 
+        if not self._ENABLE_DRIFT_LOGGING:
+            return
+
         # Analyze for anomalous drift
         drift_magnitude = abs(new - old)
 
+        if drift_magnitude <= self._DRIFT_MIN_LOGGING:
+            return
+
         # Note: These are absolute threshold differences, not percentages
         # since thresholds are in [0.3, 0.9] range, 0.1 absolute = ~17% relative change
-        if drift_magnitude > 0.1:  # >0.1 absolute change (large single jump)
+        if drift_magnitude > self._DRIFT_CRITICAL_THRESHOLD:
             logger.error(
-                f"CRITICAL DRIFT: threshold changed {drift_magnitude:.3f} "
-                f"({old:.3f} → {new:.3f}) for filter '{self._filter_id}'"
+                "CRITICAL DRIFT: threshold changed %.3f (%.3f → %.3f) for filter '%s'",
+                drift_magnitude,
+                old,
+                new,
+                self._filter_id,
             )
-        elif drift_magnitude > 0.05:  # >0.05 absolute change (moderate jump)
-            logger.warning(
-                f"Significant drift: threshold changed {drift_magnitude:.3f} "
-                f"({old:.3f} → {new:.3f}) for filter '{self._filter_id}'"
-            )
+        elif drift_magnitude > self._DRIFT_LOG_THRESHOLD:
+            if logger.isEnabledFor(logging.WARNING):
+                logger.warning(
+                    "Significant drift: threshold changed %.3f (%.3f → %.3f) for filter '%s'",
+                    drift_magnitude,
+                    old,
+                    new,
+                    self._filter_id,
+                )
 
         # Check for sustained drift (trend over history)
         if len(self._drift_history) >= 10:
             recent_drift = self._drift_history[-1] - self._drift_history[-10]
             if abs(recent_drift) > 0.15:  # >0.15 absolute change over 10 operations
                 logger.error(
-                    f"SUSTAINED DRIFT: threshold drifted {recent_drift:.3f} "
-                    f"over last 10 operations for filter '{self._filter_id}'"
+                    "SUSTAINED DRIFT: threshold drifted %.3f over last 10 operations "
+                    "for filter '%s'",
+                    recent_drift,
+                    self._filter_id,
                 )
 
     def get_drift_stats(self) -> dict[str, float]:

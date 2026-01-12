@@ -22,6 +22,8 @@ Usage:
     )
 """
 
+from threading import Lock
+
 from prometheus_client import Counter, Gauge
 
 # Metrics for policy drift detection
@@ -55,6 +57,11 @@ moral_drift_events = Counter(
     ["filter_id", "severity"],
 )
 
+_metric_batch: list[dict[str, float | str]] = []
+_batch_lock = Lock()
+_BATCH_SIZE = 10
+_BATCH_DRIFT_THRESHOLD = 0.05
+
 
 def record_threshold_change(
     filter_id: str, old_threshold: float, new_threshold: float, ema_value: float
@@ -72,6 +79,66 @@ def record_threshold_change(
         Tracks current threshold, boundary violations, EMA deviation,
         and drift event severity.
     """
+    drift = abs(new_threshold - old_threshold)
+
+    if drift < _BATCH_DRIFT_THRESHOLD:
+        _enqueue_metric(
+            filter_id=filter_id,
+            old_threshold=old_threshold,
+            new_threshold=new_threshold,
+            ema_value=ema_value,
+        )
+        return
+
+    _record_single_metric(
+        filter_id=filter_id,
+        old_threshold=old_threshold,
+        new_threshold=new_threshold,
+        ema_value=ema_value,
+    )
+
+
+def flush_metric_batch() -> None:
+    """Flush any batched threshold metrics."""
+    with _batch_lock:
+        _flush_metrics_locked()
+
+
+def _enqueue_metric(
+    filter_id: str, old_threshold: float, new_threshold: float, ema_value: float
+) -> None:
+    with _batch_lock:
+        _metric_batch.append(
+            {
+                "filter_id": filter_id,
+                "old_threshold": old_threshold,
+                "new_threshold": new_threshold,
+                "ema_value": ema_value,
+            }
+        )
+        if len(_metric_batch) >= _BATCH_SIZE:
+            _flush_metrics_locked()
+
+
+def _flush_metrics_locked() -> None:
+    if not _metric_batch:
+        return
+
+    batch = list(_metric_batch)
+    _metric_batch.clear()
+
+    for entry in batch:
+        _record_single_metric(
+            filter_id=str(entry["filter_id"]),
+            old_threshold=float(entry["old_threshold"]),
+            new_threshold=float(entry["new_threshold"]),
+            ema_value=float(entry["ema_value"]),
+        )
+
+
+def _record_single_metric(
+    filter_id: str, old_threshold: float, new_threshold: float, ema_value: float
+) -> None:
     # Update current value
     moral_threshold_gauge.labels(filter_id=filter_id).set(new_threshold)
 

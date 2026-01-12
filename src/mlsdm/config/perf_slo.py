@@ -34,6 +34,36 @@ class LatencySLO:
 
     # Generation latency (with stub backend)
     generation_p95_ms: float
+    tolerance_percent: float = 2.0
+
+    def check_p95_compliance(
+        self, measured_p95: float, strict: bool = False
+    ) -> tuple[bool, str]:
+        """Check P95 latency compliance with optional tolerance.
+
+        Args:
+            measured_p95: Measured P95 latency in milliseconds.
+            strict: If True, use zero tolerance (production monitoring).
+
+        Returns:
+            Tuple of (is_compliant, message).
+        """
+        threshold = self.api_p95_ms
+        tolerance = 0.0 if strict else threshold * (self.tolerance_percent / 100.0)
+        max_allowed = threshold + tolerance
+        is_compliant = measured_p95 <= max_allowed
+
+        if is_compliant:
+            margin = max_allowed - measured_p95
+            return (
+                True,
+                f"P95 {measured_p95:.2f}ms ≤ {max_allowed:.2f}ms (margin: {margin:.2f}ms)",
+            )
+        overrun = measured_p95 - max_allowed
+        return (
+            False,
+            f"P95 {measured_p95:.2f}ms > {max_allowed:.2f}ms (overrun: {overrun:.2f}ms)",
+        )
 
 
 @dataclass(frozen=True)

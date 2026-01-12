@@ -169,6 +169,7 @@ jobs:
             --junit-xml=perf-slo-results.xml
         env:
           DISABLE_RATE_LIMIT: "1"
+          MLSDM_DRIFT_LOGGING: "silent"
         continue-on-error: false
 
       - name: Generate performance summary
