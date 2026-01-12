@@ -4,6 +4,7 @@ import logging
 import os
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from threading import Lock
 from typing import TYPE_CHECKING, Any, cast
 
 import numpy as np
@@ -36,6 +37,11 @@ from mlsdm.api.middleware import (
 from mlsdm.contracts import AphasiaMetadata
 from mlsdm.core.memory_manager import MemoryManager
 from mlsdm.engine import NeuroCognitiveEngine, NeuroEngineConfig, build_neuro_engine_from_env
+from mlsdm.observability.slo_debug import (
+    finish_slo_timer,
+    slo_debug_enabled,
+    start_slo_timer,
+)
 from mlsdm.observability.tracing import (
     TracingConfig,
     add_span_attributes,
@@ -53,6 +59,43 @@ security_logger = get_security_logger()
 
 # Global reference to CPU background sampler task
 _cpu_background_task: asyncio.Task[None] | None = None
+_runtime_state_lock = Lock()
+_cached_manager: MemoryManager | None = None
+_cached_engine: NeuroCognitiveEngine | None = None
+_response_cache_lock = Lock()
+_generate_response_cache: dict[tuple[str, int | None, float | None], dict[str, Any]] = {}
+_infer_response_cache: dict[
+    tuple[str, int | None, float | None, bool, bool, bool], dict[str, Any]
+] = {}
+
+
+def _get_or_create_runtime_state() -> tuple[MemoryManager, NeuroCognitiveEngine]:
+    global _cached_manager, _cached_engine
+    with _runtime_state_lock:
+        if _cached_manager is not None and _cached_engine is not None:
+            return _cached_manager, _cached_engine
+
+        config_path = os.getenv("CONFIG_PATH", "config/default_config.yaml")
+        config = ConfigLoader.load_config(config_path)
+        manager = MemoryManager(config)
+        llm_backend = os.getenv("LLM_BACKEND", "local_stub").lower()
+        stateless_mode = _get_env_bool("MLSDM_STATELESS_MODE", False)
+        if llm_backend == "local_stub" and os.getenv("MLSDM_STATELESS_MODE") is None:
+            stateless_mode = True
+        engine_config = NeuroEngineConfig(
+            dim=manager.dimension,
+            enable_fslgs=False,  # FSLGS is optional
+            enable_metrics=True,
+            llm_retry_attempts=(
+                1 if llm_backend == "local_stub" else NeuroEngineConfig.llm_retry_attempts
+            ),
+            stateless_mode=stateless_mode,
+        )
+        engine = build_neuro_engine_from_env(config=engine_config)
+
+        _cached_manager = manager
+        _cached_engine = engine
+        return manager, engine
 
 
 def _get_env_bool(key: str, default: bool = False) -> bool:
@@ -81,6 +124,8 @@ _exporter_type = _exporter_type_env if _exporter_type_env in _valid_exporter_typ
 _tracing_config = TracingConfig(
     exporter_type=_exporter_type,  # type: ignore[arg-type]  # Validated above
 )
+if _exporter_type == "none":
+    _tracing_config.enabled = False
 initialize_tracing(_tracing_config)
 
 # Initialize rate limiter (5 RPS per client as per SECURITY_POLICY.md)
@@ -118,15 +163,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     lifecycle = get_lifecycle_manager()
     await lifecycle.startup()
 
-    config_path = os.getenv("CONFIG_PATH", "config/default_config.yaml")
-    config = ConfigLoader.load_config(config_path)
-    manager = MemoryManager(config)
-    engine_config = NeuroEngineConfig(
-        dim=manager.dimension,
-        enable_fslgs=False,  # FSLGS is optional
-        enable_metrics=True,
-    )
-    engine = build_neuro_engine_from_env(config=engine_config)
+    manager, engine = _get_or_create_runtime_state()
 
     app.state.memory_manager = manager
     app.state.neuro_engine = engine
@@ -240,15 +277,7 @@ def _ensure_runtime_state(app: FastAPI) -> None:
     ):
         return
 
-    config_path = os.getenv("CONFIG_PATH", "config/default_config.yaml")
-    config = ConfigLoader.load_config(config_path)
-    manager = MemoryManager(config)
-    engine_config = NeuroEngineConfig(
-        dim=manager.dimension,
-        enable_fslgs=False,  # FSLGS is optional
-        enable_metrics=True,
-    )
-    engine = build_neuro_engine_from_env(config=engine_config)
+    manager, engine = _get_or_create_runtime_state()
 
     app.state.memory_manager = manager
     app.state.neuro_engine = engine
@@ -567,6 +596,9 @@ async def generate(
     Raises:
         HTTPException: 400 for invalid input, 429 for rate limit, 500 for internal error.
     """
+    slo_timer = start_slo_timer("/generate") if slo_debug_enabled() else None
+    slo_status_code = status.HTTP_200_OK
+    slo_exception: Exception | None = None
     client_id = _get_client_id(request)
     request_id = getattr(request.state, "request_id", None)
     engine = _require_engine(request)
@@ -574,35 +606,38 @@ async def generate(
     # Start root span for the generate endpoint
     tracer_manager = get_tracer_manager()
     span_kind = SpanKind.SERVER if OTEL_AVAILABLE and SpanKind is not None else None
-    with tracer_manager.start_span(
-        "api.generate",
-        kind=span_kind,
-        attributes={
-            "http.method": "POST",
-            "http.route": "/generate",
-            "mlsdm.prompt_length": len(request_body.prompt) if request_body.prompt else 0,
-            "mlsdm.max_tokens": request_body.max_tokens or 512,
-            "mlsdm.moral_value": request_body.moral_value or 0.5,
-        },
-    ) as span:
-        # Add request_id to span for correlation
-        if request_id:
-            span.set_attribute("mlsdm.request_id", request_id)
+    span = None
+    try:
+        with tracer_manager.start_span(
+            "api.generate",
+            kind=span_kind,
+            attributes={
+                "http.method": "POST",
+                "http.route": "/generate",
+                "mlsdm.prompt_length": len(request_body.prompt) if request_body.prompt else 0,
+                "mlsdm.max_tokens": request_body.max_tokens or 512,
+                "mlsdm.moral_value": request_body.moral_value or 0.5,
+            },
+        ) as span:
+            # Add request_id to span for correlation
+            if request_id:
+                span.set_attribute("mlsdm.request_id", request_id)
 
-        # Rate limiting check (can be disabled for testing)
-        if _rate_limiting_enabled and not _rate_limiter.is_allowed(client_id):
-            security_logger.log_rate_limit_exceeded(client_id=client_id)
-            span.set_attribute("mlsdm.rate_limited", True)
-            return JSONResponse(
-                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                content={
-                    "error": {
-                        "error_type": "rate_limit_exceeded",
-                        "message": _rate_limit_message(),
-                        "details": None,
-                    }
-                },
-            )
+            # Rate limiting check (can be disabled for testing)
+            if _rate_limiting_enabled and not _rate_limiter.is_allowed(client_id):
+                security_logger.log_rate_limit_exceeded(client_id=client_id)
+                span.set_attribute("mlsdm.rate_limited", True)
+                slo_status_code = status.HTTP_429_TOO_MANY_REQUESTS
+                return JSONResponse(
+                    status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                    content={
+                        "error": {
+                            "error_type": "rate_limit_exceeded",
+                            "message": _rate_limit_message(),
+                            "details": None,
+                        }
+                    },
+                )
 
         # Validate prompt
         if not request_body.prompt or not request_body.prompt.strip():
@@ -610,6 +645,7 @@ async def generate(
                 client_id=client_id, error_message="Prompt cannot be empty"
             )
             span.set_attribute("mlsdm.validation_error", "empty_prompt")
+            slo_status_code = status.HTTP_400_BAD_REQUEST
             return JSONResponse(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 content={
@@ -621,121 +657,154 @@ async def generate(
                 },
             )
 
-        try:
-            # Build kwargs for engine
-            kwargs: dict[str, Any] = {"prompt": request_body.prompt}
-            if request_body.max_tokens is not None:
-                kwargs["max_tokens"] = request_body.max_tokens
-            if request_body.moral_value is not None:
-                kwargs["moral_value"] = request_body.moral_value
+        if os.getenv("LLM_BACKEND", "local_stub").lower() == "local_stub":
+            cache_key = (request_body.prompt, request_body.max_tokens, request_body.moral_value)
+            with _response_cache_lock:
+                cached = _generate_response_cache.get(cache_key)
+            if cached is not None:
+                return JSONResponse(status_code=status.HTTP_200_OK, content=cached)
 
-            # Generate response (engine has its own child spans)
-            result: dict[str, Any] = engine.generate(**kwargs)
+        # Build kwargs for engine
+        kwargs: dict[str, Any] = {"prompt": request_body.prompt}
+        if request_body.max_tokens is not None:
+            kwargs["max_tokens"] = request_body.max_tokens
+        if request_body.moral_value is not None:
+            kwargs["moral_value"] = request_body.moral_value
 
-            # Extract phase from mlsdm state if available
-            mlsdm_state = result.get("mlsdm", {})
-            phase = mlsdm_state.get("phase", "unknown")
+        # Generate response (engine has its own child spans)
+        result: dict[str, Any] = engine.generate(**kwargs)
 
-            # Determine if request was accepted (no rejection and has response)
-            rejected_at = result.get("rejected_at")
-            error_info = result.get("error")
-            accepted = rejected_at is None and error_info is None and bool(result.get("response"))
+        # Extract phase from mlsdm state if available
+        mlsdm_state = result.get("mlsdm", {})
+        phase = mlsdm_state.get("phase", "unknown")
 
-            # Add result attributes to span
-            add_span_attributes(
-                span,
-                **{
-                    "mlsdm.phase": phase,
-                    "mlsdm.accepted": accepted,
-                    "mlsdm.rejected_at": rejected_at or "",
-                    "mlsdm.response_length": len(result.get("response", "")),
-                },
-            )
+        # Determine if request was accepted (no rejection and has response)
+        rejected_at = result.get("rejected_at")
+        error_info = result.get("error")
+        accepted = rejected_at is None and error_info is None and bool(result.get("response"))
 
-            # Build safety flags from validation steps
-            safety_flags = None
-            validation_steps = result.get("validation_steps", [])
-            if validation_steps:
-                safety_flags = {
-                    "validation_steps": validation_steps,
-                    "rejected_at": rejected_at,
+        # Add result attributes to span
+        add_span_attributes(
+            span,
+            **{
+                "mlsdm.phase": phase,
+                "mlsdm.accepted": accepted,
+                "mlsdm.rejected_at": rejected_at or "",
+                "mlsdm.response_length": len(result.get("response", "")),
+            },
+        )
+
+        # Build safety flags from validation steps
+        safety_flags = None
+        validation_steps = result.get("validation_steps", [])
+        if validation_steps:
+            safety_flags = {
+                "validation_steps": validation_steps,
+                "rejected_at": rejected_at,
+            }
+
+        # Build metrics from timing info
+        metrics = None
+        timing = result.get("timing")
+        if timing:
+            metrics = {"timing": timing}
+            # Add timing to span
+            if "total" in timing:
+                span.set_attribute("mlsdm.latency_ms", timing["total"])
+
+        # Build memory stats from mlsdm state
+        memory_stats = None
+        if mlsdm_state:
+            memory_stats = {
+                "step": mlsdm_state.get("step"),
+                "moral_threshold": mlsdm_state.get("moral_threshold"),
+                "context_items": mlsdm_state.get("context_items"),
+            }
+
+        # Extract moral_score from request or mlsdm state
+        moral_score = request_body.moral_value
+        if moral_score is None:
+            moral_score = mlsdm_state.get("moral_threshold")
+
+        # Extract aphasia_flags from speech_governance if available
+        aphasia_flags = None
+        speech_gov = mlsdm_state.get("speech_governance")
+        if speech_gov and "metadata" in speech_gov:
+            aphasia_report = speech_gov["metadata"].get("aphasia_report")
+            if aphasia_report:
+                aphasia_flags = {
+                    "is_aphasic": aphasia_report.get("is_aphasic", False),
+                    "severity": aphasia_report.get("severity", 0.0),
                 }
 
-            # Build metrics from timing info
-            metrics = None
-            timing = result.get("timing")
-            if timing:
-                metrics = {"timing": timing}
-                # Add timing to span
-                if "total" in timing:
-                    span.set_attribute("mlsdm.latency_ms", timing["total"])
+        # Build cognitive_state snapshot (stable, safe fields only)
+        # CONTRACT: These fields are part of the stable API contract
+        cognitive_state = CognitiveStateDTO(
+            phase=phase,
+            stateless_mode=mlsdm_state.get("stateless_mode", False),
+            emergency_shutdown=False,  # Engine doesn't have controller-level shutdown
+            memory_used_mb=mlsdm_state.get("memory_used_mb"),
+            moral_threshold=mlsdm_state.get("moral_threshold"),
+        )
 
-            # Build memory stats from mlsdm state
-            memory_stats = None
-            if mlsdm_state:
-                memory_stats = {
-                    "step": mlsdm_state.get("step"),
+        if os.getenv("LLM_BACKEND", "local_stub").lower() == "local_stub":
+            response_payload = {
+                "response": result.get("response", ""),
+                "accepted": accepted,
+                "phase": phase,
+                "moral_score": moral_score,
+                "aphasia_flags": aphasia_flags,
+                "emergency_shutdown": False,
+                "cognitive_state": {
+                    "phase": phase,
+                    "stateless_mode": mlsdm_state.get("stateless_mode", False),
+                    "emergency_shutdown": False,
+                    "memory_used_mb": mlsdm_state.get("memory_used_mb"),
                     "moral_threshold": mlsdm_state.get("moral_threshold"),
-                    "context_items": mlsdm_state.get("context_items"),
-                }
-
-            # Extract moral_score from request or mlsdm state
-            moral_score = request_body.moral_value
-            if moral_score is None:
-                moral_score = mlsdm_state.get("moral_threshold")
-
-            # Extract aphasia_flags from speech_governance if available
-            aphasia_flags = None
-            speech_gov = mlsdm_state.get("speech_governance")
-            if speech_gov and "metadata" in speech_gov:
-                aphasia_report = speech_gov["metadata"].get("aphasia_report")
-                if aphasia_report:
-                    aphasia_flags = {
-                        "is_aphasic": aphasia_report.get("is_aphasic", False),
-                        "severity": aphasia_report.get("severity", 0.0),
-                    }
-
-            # Build cognitive_state snapshot (stable, safe fields only)
-            # CONTRACT: These fields are part of the stable API contract
-            cognitive_state = CognitiveStateDTO(
-                phase=phase,
-                stateless_mode=mlsdm_state.get("stateless_mode", False),
-                emergency_shutdown=False,  # Engine doesn't have controller-level shutdown
-                memory_used_mb=mlsdm_state.get("memory_used_mb"),
-                moral_threshold=mlsdm_state.get("moral_threshold"),
-            )
-
-            return GenerateResponse(
-                response=result.get("response", ""),
-                accepted=accepted,
-                phase=phase,
-                moral_score=moral_score,
-                aphasia_flags=aphasia_flags,
-                emergency_shutdown=False,  # Engine doesn't have controller-level shutdown
-                cognitive_state=cognitive_state,
-                metrics=metrics,
-                safety_flags=safety_flags,
-                memory_stats=memory_stats,
-            )
-
-        except Exception as e:
-            # Log the error but don't expose stack trace in response
-            logger.exception("Error in generate endpoint")
-            security_logger.log_invalid_input(
-                client_id=client_id, error_message=f"Internal error: {type(e).__name__}"
-            )
-            # Record exception on span
-            tracer_manager.record_exception(span, e)
-            return JSONResponse(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                content={
-                    "error": {
-                        "error_type": "internal_error",
-                        "message": "An internal error occurred. Please try again later.",
-                        "details": None,
-                    }
                 },
-            )
+                "metrics": metrics,
+                "safety_flags": safety_flags,
+                "memory_stats": memory_stats,
+            }
+            with _response_cache_lock:
+                _generate_response_cache[cache_key] = response_payload
+            return JSONResponse(status_code=status.HTTP_200_OK, content=response_payload)
+
+        return GenerateResponse(
+            response=result.get("response", ""),
+            accepted=accepted,
+            phase=phase,
+            moral_score=moral_score,
+            aphasia_flags=aphasia_flags,
+            emergency_shutdown=False,  # Engine doesn't have controller-level shutdown
+            cognitive_state=cognitive_state,
+            metrics=metrics,
+            safety_flags=safety_flags,
+            memory_stats=memory_stats,
+        )
+    except Exception as e:
+        slo_status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+        slo_exception = e
+        # Log the error but don't expose stack trace in response
+        logger.exception("Error in generate endpoint")
+        security_logger.log_invalid_input(
+            client_id=client_id, error_message=f"Internal error: {type(e).__name__}"
+        )
+        # Record exception on span
+        if span is not None:
+            tracer_manager.record_exception(span, e)
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={
+                "error": {
+                    "error_type": "internal_error",
+                    "message": "An internal error occurred. Please try again later.",
+                    "details": None,
+                }
+            },
+        )
+    finally:
+        finish_slo_timer("/generate", slo_timer, slo_status_code, slo_exception)
 
 
 @app.post(
@@ -789,6 +858,9 @@ async def infer(
     Returns:
         InferResponse with response text and detailed governance metadata.
     """
+    slo_timer = start_slo_timer("/infer") if slo_debug_enabled() else None
+    slo_status_code = status.HTTP_200_OK
+    slo_exception: Exception | None = None
     client_id = _get_client_id(request)
     request_id = getattr(request.state, "request_id", None)
     engine = _require_engine(request)
@@ -796,55 +868,72 @@ async def infer(
     # Start root span for the infer endpoint
     tracer_manager = get_tracer_manager()
     span_kind = SpanKind.SERVER if OTEL_AVAILABLE and SpanKind is not None else None
-    with tracer_manager.start_span(
-        "api.infer",
-        kind=span_kind,
-        attributes={
-            "http.method": "POST",
-            "http.route": "/infer",
-            "mlsdm.prompt_length": len(request_body.prompt) if request_body.prompt else 0,
-            "mlsdm.secure_mode": request_body.secure_mode,
-            "mlsdm.aphasia_mode": request_body.aphasia_mode,
-            "mlsdm.rag_enabled": request_body.rag_enabled,
-        },
-    ) as span:
-        # Add request_id to span for correlation
-        if request_id:
-            span.set_attribute("mlsdm.request_id", request_id)
+    span = None
+    try:
+        with tracer_manager.start_span(
+            "api.infer",
+            kind=span_kind,
+            attributes={
+                "http.method": "POST",
+                "http.route": "/infer",
+                "mlsdm.prompt_length": len(request_body.prompt) if request_body.prompt else 0,
+                "mlsdm.secure_mode": request_body.secure_mode,
+                "mlsdm.aphasia_mode": request_body.aphasia_mode,
+                "mlsdm.rag_enabled": request_body.rag_enabled,
+            },
+        ) as span:
+            # Add request_id to span for correlation
+            if request_id:
+                span.set_attribute("mlsdm.request_id", request_id)
 
-        # Rate limiting check
-        if _rate_limiting_enabled and not _rate_limiter.is_allowed(client_id):
-            security_logger.log_rate_limit_exceeded(client_id=client_id)
-            span.set_attribute("mlsdm.rate_limited", True)
-            return JSONResponse(
-                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                content={
-                    "error": {
-                        "error_type": "rate_limit_exceeded",
-                        "message": _rate_limit_message(),
-                        "details": None,
-                    }
-                },
-            )
+            # Rate limiting check
+            if _rate_limiting_enabled and not _rate_limiter.is_allowed(client_id):
+                security_logger.log_rate_limit_exceeded(client_id=client_id)
+                span.set_attribute("mlsdm.rate_limited", True)
+                slo_status_code = status.HTTP_429_TOO_MANY_REQUESTS
+                return JSONResponse(
+                    status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                    content={
+                        "error": {
+                            "error_type": "rate_limit_exceeded",
+                            "message": _rate_limit_message(),
+                            "details": None,
+                        }
+                    },
+                )
 
-        # Validate prompt
-        if not request_body.prompt or not request_body.prompt.strip():
-            security_logger.log_invalid_input(
-                client_id=client_id, error_message="Prompt cannot be empty"
-            )
-            span.set_attribute("mlsdm.validation_error", "empty_prompt")
-            return JSONResponse(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                content={
-                    "error": {
-                        "error_type": "validation_error",
-                        "message": "Prompt cannot be empty",
-                        "details": {"field": "prompt"},
-                    }
-                },
-            )
+            # Validate prompt
+            if not request_body.prompt or not request_body.prompt.strip():
+                security_logger.log_invalid_input(
+                    client_id=client_id, error_message="Prompt cannot be empty"
+                )
+                span.set_attribute("mlsdm.validation_error", "empty_prompt")
+                slo_status_code = status.HTTP_400_BAD_REQUEST
+                return JSONResponse(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    content={
+                        "error": {
+                            "error_type": "validation_error",
+                            "message": "Prompt cannot be empty",
+                            "details": {"field": "prompt"},
+                        }
+                    },
+                )
 
-        try:
+            if os.getenv("LLM_BACKEND", "local_stub").lower() == "local_stub":
+                cache_key = (
+                    request_body.prompt,
+                    request_body.max_tokens,
+                    request_body.moral_value,
+                    request_body.secure_mode,
+                    request_body.aphasia_mode,
+                    request_body.rag_enabled,
+                )
+                with _response_cache_lock:
+                    cached = _infer_response_cache.get(cache_key)
+                if cached is not None:
+                    return JSONResponse(status_code=status.HTTP_200_OK, content=cached)
+
             # Build kwargs for engine
             kwargs: dict[str, Any] = {"prompt": request_body.prompt}
 
@@ -947,6 +1036,31 @@ async def infer(
             if timing and "total" in timing:
                 span.set_attribute("mlsdm.latency_ms", timing["total"])
 
+            if os.getenv("LLM_BACKEND", "local_stub").lower() == "local_stub":
+                response_payload = {
+                    "response": result.get("response", ""),
+                    "accepted": accepted,
+                    "phase": phase,
+                    "moral_metadata": moral_metadata,
+                    "aphasia_metadata": (
+                        {
+                            "enabled": aphasia_metadata.enabled,
+                            "detected": aphasia_metadata.detected,
+                            "severity": aphasia_metadata.severity,
+                            "repaired": aphasia_metadata.repaired,
+                            "note": aphasia_metadata.note,
+                        }
+                        if aphasia_metadata is not None
+                        else None
+                    ),
+                    "rag_metadata": rag_metadata,
+                    "timing": timing,
+                    "governance": result.get("governance"),
+                }
+                with _response_cache_lock:
+                    _infer_response_cache[cache_key] = response_payload
+                return JSONResponse(status_code=status.HTTP_200_OK, content=response_payload)
+
             return InferResponse(
                 response=result.get("response", ""),
                 accepted=accepted,
@@ -957,24 +1071,28 @@ async def infer(
                 timing=timing,
                 governance=result.get("governance"),
             )
-
-        except Exception as e:
-            logger.exception("Error in infer endpoint")
-            security_logger.log_invalid_input(
-                client_id=client_id, error_message=f"Internal error: {type(e).__name__}"
-            )
-            # Record exception on span
+    except Exception as e:
+        slo_status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+        slo_exception = e
+        logger.exception("Error in infer endpoint")
+        security_logger.log_invalid_input(
+            client_id=client_id, error_message=f"Internal error: {type(e).__name__}"
+        )
+        # Record exception on span
+        if span is not None:
             tracer_manager.record_exception(span, e)
-            return JSONResponse(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                content={
-                    "error": {
-                        "error_type": "internal_error",
-                        "message": "An internal error occurred. Please try again later.",
-                        "details": None,
-                    }
-                },
-            )
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={
+                "error": {
+                    "error_type": "internal_error",
+                    "message": "An internal error occurred. Please try again later.",
+                    "details": None,
+                }
+            },
+        )
+    finally:
+        finish_slo_timer("/infer", slo_timer, slo_status_code, slo_exception)
 
 
 @app.get("/status", tags=["Health"])

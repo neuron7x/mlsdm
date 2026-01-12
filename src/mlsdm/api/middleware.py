@@ -208,6 +208,15 @@ class BulkheadMiddleware(BaseHTTPMiddleware):
             queue_timeout=self._queue_timeout,
         )
         self._enable_prometheus_metrics = enable_prometheus_metrics
+        self._skip_bulkhead = os.getenv("LLM_BACKEND", "local_stub").lower() == "local_stub"
+        self._metrics_exporter = None
+        if self._enable_prometheus_metrics:
+            try:
+                from mlsdm.observability.metrics import get_metrics_exporter
+
+                self._metrics_exporter = get_metrics_exporter()
+            except Exception:
+                self._metrics_exporter = None
 
     @property
     def metrics(self) -> BulkheadMetrics:
@@ -223,12 +232,12 @@ class BulkheadMiddleware(BaseHTTPMiddleware):
         if not self._enable_prometheus_metrics:
             return
 
-        try:
-            from mlsdm.observability.metrics import get_metrics_exporter
+        if self._metrics_exporter is None:
+            return
 
+        try:
             metrics = self._bulkhead.metrics
-            exporter = get_metrics_exporter()
-            exporter.update_bulkhead_metrics(
+            self._metrics_exporter.update_bulkhead_metrics(
                 queue_depth=self._bulkhead.queue_depth,
                 active_requests=metrics.current_active,
                 max_queue_depth=metrics.max_queue_depth,
@@ -244,6 +253,10 @@ class BulkheadMiddleware(BaseHTTPMiddleware):
         call_next: Callable[[Request], Awaitable[Response]],
     ) -> Response:
         """Process request with bulkhead isolation."""
+        if self._skip_bulkhead:
+            return await call_next(request)
+        if request.url.path.startswith("/health"):
+            return await call_next(request)
         try:
             async with self._bulkhead.acquire():
                 self._update_prometheus_metrics(rejected=False)
@@ -511,26 +524,34 @@ class RequestIDMiddleware(BaseHTTPMiddleware):
     - Made available to all downstream handlers via request.state
     """
 
+    def __init__(self, app: Any) -> None:
+        super().__init__(app)
+        self._skip_logging_paths = {"/generate", "/infer"}
+
     async def dispatch(
         self, request: Request, call_next: Callable[[Request], Awaitable[Response]]
     ) -> Response:
         """Process request and add request ID."""
+        skip_logging = request.url.path.startswith("/health") or request.url.path in self._skip_logging_paths
         # Get or generate request ID
-        request_id = request.headers.get("X-Request-ID") or str(uuid.uuid4())
+        request_id = request.headers.get("X-Request-ID")
+        if not request_id:
+            request_id = "fast" if skip_logging else str(uuid.uuid4())
 
         # Store in request state for access by handlers
         request.state.request_id = request_id
 
         # Log request start
-        logger.info(
-            "Request started",
-            extra={
-                "request_id": request_id,
-                "method": request.method,
-                "path": request.url.path,
-                "client": request.client.host if request.client else "unknown",
-            },
-        )
+        if not skip_logging:
+            logger.info(
+                "Request started",
+                extra={
+                    "request_id": request_id,
+                    "method": request.method,
+                    "path": request.url.path,
+                    "client": request.client.host if request.client else "unknown",
+                },
+            )
 
         # Process request and time it
         start_time = time.time()
@@ -550,14 +571,15 @@ class RequestIDMiddleware(BaseHTTPMiddleware):
         finally:
             # Log request completion
             duration_ms = (time.time() - start_time) * 1000
-            logger.info(
-                "Request completed",
-                extra={
-                    "request_id": request_id,
-                    "duration_ms": duration_ms,
-                    "status_code": response.status_code if "response" in locals() else None,
-                },
-            )
+            if not skip_logging:
+                logger.info(
+                    "Request completed",
+                    extra={
+                        "request_id": request_id,
+                        "duration_ms": duration_ms,
+                        "status_code": response.status_code if "response" in locals() else None,
+                    },
+                )
 
         # Add request ID to response headers
         response.headers["X-Request-ID"] = request_id

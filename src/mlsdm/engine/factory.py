@@ -10,7 +10,8 @@ from __future__ import annotations
 import contextlib
 import hashlib
 import os
-from typing import TYPE_CHECKING
+from collections import OrderedDict
+from typing import TYPE_CHECKING, cast
 
 import numpy as np
 
@@ -49,16 +50,15 @@ def build_stub_embedding_fn(dim: int = 384) -> Callable[[str], np.ndarray]:
         >>> assert vec.shape == (384,)
     """
 
+    cache: OrderedDict[str, np.ndarray] = OrderedDict()
+
     def embedding_fn(text: str) -> np.ndarray:
-        """
-        Generate a deterministic embedding for the given text.
+        """Cached deterministic embedding for repeated prompts."""
+        cached = cache.get(text)
+        if cached is not None:
+            cache.move_to_end(text)
+            return cast("np.ndarray", cached.copy())
 
-        Args:
-            text: Input text to embed.
-
-        Returns:
-            A deterministic embedding vector of shape (dim,).
-        """
         # Create a deterministic hash-based seed
         text_hash = hashlib.sha256(text.encode("utf-8")).hexdigest()
         seed = int(text_hash[:8], 16) % (2**31)
@@ -72,7 +72,12 @@ def build_stub_embedding_fn(dim: int = 384) -> Callable[[str], np.ndarray]:
         if norm > 0:
             vector = vector / norm
 
-        return vector.astype(np.float32)
+        embedding = vector.astype(np.float32)
+        cache[text] = embedding
+        cache.move_to_end(text)
+        if len(cache) > 1024:
+            cache.popitem(last=False)
+        return cast("np.ndarray", embedding.copy())
 
     return embedding_fn
 

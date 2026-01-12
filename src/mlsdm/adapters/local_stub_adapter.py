@@ -6,6 +6,7 @@ Provides a deterministic mock for testing and development without external API c
 
 from __future__ import annotations
 
+from functools import lru_cache
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -29,7 +30,8 @@ def build_local_stub_llm_adapter() -> Callable[[str, int], str]:
         >>> assert response.startswith("NEURO-RESPONSE:")
     """
 
-    def llm_generate_fn(prompt: str, max_tokens: int) -> str:
+    @lru_cache(maxsize=2048)
+    def _cached_response(prompt: str, max_tokens: int) -> str:
         """
         Generate a deterministic stub response.
 
@@ -64,5 +66,8 @@ def build_local_stub_llm_adapter() -> Callable[[str, int], str]:
             base_response = base_response[:max_chars]
 
         return base_response
+
+    def llm_generate_fn(prompt: str, max_tokens: int) -> str:
+        return _cached_response(prompt, max_tokens)
 
     return llm_generate_fn

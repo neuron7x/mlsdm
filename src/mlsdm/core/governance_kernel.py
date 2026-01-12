@@ -243,7 +243,7 @@ class GovernanceKernel:
         self._assert_can_mutate("MEMORY_COMMIT", cap)
         with self._lock:
             self._synaptic.update(prompt_vector)
-            self._pelm.entangle(prompt_vector.tolist(), phase=phase, provenance=provenance)
+            self._pelm.entangle(prompt_vector, phase=phase, provenance=provenance)
 
     def rhythm_step(self) -> None:
         with self._lock:

@@ -15,7 +15,9 @@ Prevents LLM degradation, memory bloat, toxicity, and identity loss.
 from __future__ import annotations
 
 import logging
+import os
 import time
+from collections import deque
 from collections.abc import Callable  # noqa: TC003 - used at runtime in type hints
 from datetime import datetime
 from enum import Enum
@@ -342,6 +344,12 @@ class LLMWrapper:
         self.pelm_failure_count = 0
         self.embedding_failure_count = 0
         self.llm_failure_count = 0
+        self._prompt_dedup_max = int(os.getenv("MLSDM_PROMPT_DEDUP_CACHE", "128"))
+        self._recent_prompts: deque[str] = deque()
+        self._recent_prompt_set: set[str] = set()
+        self._context_cache_ttl = float(os.getenv("MLSDM_CONTEXT_CACHE_TTL", "5.0"))
+        self._context_cache_max = int(os.getenv("MLSDM_CONTEXT_CACHE_MAX", "256"))
+        self._context_cache: dict[str, tuple[float, list[Any], str]] = {}
 
     @property
     def qilm_failure_count(self) -> int:
@@ -489,84 +497,105 @@ class LLMWrapper:
         with self._lock:
             self.step_counter += 1
 
-            # Step 1: Moral evaluation and phase check
-            with tracer_manager.start_span(
-                "llm_wrapper.moral_filter",
-                attributes={
-                    "mlsdm.moral_value": moral_value,
-                    "mlsdm.moral_threshold": self.moral.threshold,
-                },
-            ) as moral_span:
-                rejection = self._check_moral_and_phase(moral_value)
-                if rejection is not None:
-                    moral_span.set_attribute("mlsdm.moral.accepted", False)
-                    moral_span.set_attribute(
-                        "mlsdm.moral.rejection_reason", rejection.get("note", "")
-                    )
-                    return rejection
-                moral_span.set_attribute("mlsdm.moral.accepted", True)
+        # Step 1: Moral evaluation and phase check
+        with tracer_manager.start_span(
+            "llm_wrapper.moral_filter",
+            attributes={
+                "mlsdm.moral_value": moral_value,
+                "mlsdm.moral_threshold": self.moral.threshold,
+            },
+        ) as moral_span:
+            rejection = self._check_moral_and_phase(moral_value)
+            if rejection is not None:
+                moral_span.set_attribute("mlsdm.moral.accepted", False)
+                moral_span.set_attribute("mlsdm.moral.rejection_reason", rejection.get("note", ""))
+                return rejection
+            moral_span.set_attribute("mlsdm.moral.accepted", True)
 
-            # Step 2: Embed prompt
-            embed_result = self._embed_and_validate_prompt(prompt)
-            if isinstance(embed_result, dict):
-                return embed_result
-            prompt_vector = embed_result
+        is_wake = self.rhythm.is_wake()
+        phase_val = self.WAKE_PHASE if is_wake else self.SLEEP_PHASE
 
-            # Step 3: Retrieve context and build enhanced prompt
-            is_wake = self.rhythm.is_wake()
-            phase_val = self.WAKE_PHASE if is_wake else self.SLEEP_PHASE
-            with tracer_manager.start_span(
-                "llm_wrapper.memory_retrieval",
-                attributes={
-                    "mlsdm.phase": "wake" if is_wake else "sleep",
-                    "mlsdm.context_top_k": context_top_k or 5,
-                },
-            ) as memory_span:
-                memories, enhanced_prompt = self._retrieve_and_build_context(
-                    prompt, prompt_vector, phase_val, context_top_k
-                )
-                memory_span.set_attribute("mlsdm.context_items_retrieved", len(memories))
-                memory_span.set_attribute("mlsdm.stateless_mode", self.stateless_mode)
-
-            # Step 4: Determine max tokens
+        if self.stateless_mode:
             max_tokens = self._determine_max_tokens(max_tokens, is_wake)
-
-            # Step 5: Generate and govern response
             with tracer_manager.start_span(
                 "llm_wrapper.llm_call",
                 attributes={
-                    "mlsdm.prompt_length": len(enhanced_prompt),
+                    "mlsdm.prompt_length": len(prompt),
                     "mlsdm.max_tokens": max_tokens,
                 },
             ) as llm_span:
-                gen_result = self._generate_and_govern(prompt, enhanced_prompt, max_tokens)
+                gen_result = self._generate_and_govern(prompt, prompt, max_tokens)
                 if self._is_error_response(gen_result):
                     llm_span.set_attribute("mlsdm.llm_call.error", True)
                     return cast("dict[str, Any]", gen_result)
-                # At this point gen_result must be a tuple
                 response_text, governed_metadata = cast(
                     "tuple[str, dict[str, Any] | None]", gen_result
                 )
                 llm_span.set_attribute("mlsdm.response_length", len(response_text))
                 llm_span.set_attribute("mlsdm.llm_call.error", False)
 
-            # Step 6: Update memory state
-            with tracer_manager.start_span(
-                "llm_wrapper.memory_update",
-                attributes={
-                    "mlsdm.phase": "wake" if is_wake else "sleep",
-                    "mlsdm.stateless_mode": self.stateless_mode,
-                },
-            ):
-                self._update_memory_after_generate(prompt_vector, phase_val, response_text)
+            with self._lock:
+                self.accepted_count += 1
 
-            # Step 7: Advance rhythm and consolidate
-            self._advance_rhythm_and_consolidate()
+            return self._build_success_response(response_text, [], max_tokens, governed_metadata)
 
-            # Step 8: Build final response
-            return self._build_success_response(
-                response_text, memories, max_tokens, governed_metadata
+        # Step 2: Embed prompt (lock-free)
+        embed_result = self._embed_and_validate_prompt(prompt)
+        if isinstance(embed_result, dict):
+            return embed_result
+        prompt_vector = embed_result
+
+        # Step 3: Retrieve context and build enhanced prompt (read-only path)
+        with tracer_manager.start_span(
+            "llm_wrapper.memory_retrieval",
+            attributes={
+                "mlsdm.phase": "wake" if is_wake else "sleep",
+                "mlsdm.context_top_k": context_top_k or 5,
+            },
+        ) as memory_span:
+            memories, enhanced_prompt = self._retrieve_and_build_context(
+                prompt, prompt_vector, phase_val, context_top_k
             )
+            memory_span.set_attribute("mlsdm.context_items_retrieved", len(memories))
+            memory_span.set_attribute("mlsdm.stateless_mode", self.stateless_mode)
+
+        # Step 4: Determine max tokens
+        max_tokens = self._determine_max_tokens(max_tokens, is_wake)
+
+        # Step 5: Generate and govern response (lock-free)
+        with tracer_manager.start_span(
+            "llm_wrapper.llm_call",
+            attributes={
+                "mlsdm.prompt_length": len(enhanced_prompt),
+                "mlsdm.max_tokens": max_tokens,
+            },
+        ) as llm_span:
+            gen_result = self._generate_and_govern(prompt, enhanced_prompt, max_tokens)
+            if self._is_error_response(gen_result):
+                llm_span.set_attribute("mlsdm.llm_call.error", True)
+                return cast("dict[str, Any]", gen_result)
+            # At this point gen_result must be a tuple
+            response_text, governed_metadata = cast(
+                "tuple[str, dict[str, Any] | None]", gen_result
+            )
+            llm_span.set_attribute("mlsdm.response_length", len(response_text))
+            llm_span.set_attribute("mlsdm.llm_call.error", False)
+
+        # Step 6: Update memory state
+        with tracer_manager.start_span(
+            "llm_wrapper.memory_update",
+            attributes={
+                "mlsdm.phase": "wake" if is_wake else "sleep",
+                "mlsdm.stateless_mode": self.stateless_mode,
+            },
+        ):
+            self._update_memory_after_generate(prompt, prompt_vector, phase_val, response_text)
+
+        # Step 7: Advance rhythm and consolidate
+        self._advance_rhythm_and_consolidate()
+
+        # Step 8: Build final response
+        return self._build_success_response(response_text, memories, max_tokens, governed_metadata)
 
     def _check_moral_and_phase(self, moral_value: float) -> dict[str, Any] | None:
         """Check moral acceptability and cognitive phase. Returns rejection response or None."""
@@ -574,7 +603,8 @@ class LLMWrapper:
         self._kernel.moral_adapt(accepted)
 
         if not accepted:
-            self.rejected_count += 1
+            with self._lock:
+                self.rejected_count += 1
             return self._build_rejection_response("morally rejected")
 
         is_wake = self.rhythm.is_wake()
@@ -618,13 +648,20 @@ class LLMWrapper:
         context_top_k: int | None,
     ) -> tuple[list[Any], str]:
         """Retrieve context from memory and build enhanced prompt."""
+        if self._context_cache_ttl > 0:
+            cached = self._context_cache.get(prompt)
+            if cached:
+                cached_at, cached_memories, cached_prompt = cached
+                if time.time() - cached_at <= self._context_cache_ttl:
+                    return cached_memories, cached_prompt
+
         memories: list[Any] = []
         if context_top_k is None:
             context_top_k = PELM_DEFAULTS.default_top_k if PELM_DEFAULTS else 5
         try:
             memories = self._safe_pelm_operation(
                 "retrieve",
-                query_vector=prompt_vector.tolist(),
+                query_vector=prompt_vector,
                 current_phase=phase_val,
                 phase_tolerance=self.DEFAULT_PHASE_TOLERANCE,
                 top_k=context_top_k,
@@ -635,6 +672,12 @@ class LLMWrapper:
 
         context_text = self._build_context_from_memories(memories)
         enhanced_prompt = self._enhance_prompt(prompt, context_text)
+
+        if self._context_cache_ttl > 0:
+            if len(self._context_cache) >= self._context_cache_max:
+                self._context_cache.clear()
+            self._context_cache[prompt] = (time.time(), memories, enhanced_prompt)
+
         return memories, enhanced_prompt
 
     def _determine_max_tokens(self, max_tokens: int | None, is_wake: bool) -> int:
@@ -676,6 +719,7 @@ class LLMWrapper:
 
     def _update_memory_after_generate(
         self,
+        prompt: str,
         prompt_vector: np.ndarray,
         phase_val: float,
         response_text: str = "",
@@ -683,11 +727,25 @@ class LLMWrapper:
         """Update memory with provenance tracking (skip if in stateless mode).
 
         Args:
+            prompt: Original prompt text (used for deduplication)
             prompt_vector: The embedding vector to store
             phase_val: The current phase value
             response_text: The LLM-generated response (for confidence estimation)
         """
-        if not self.stateless_mode:
+        skip_commit = False
+        if self._prompt_dedup_max > 0:
+            prompt_key = prompt.strip()
+            with self._lock:
+                if prompt_key in self._recent_prompt_set:
+                    skip_commit = True
+                else:
+                    if len(self._recent_prompts) >= self._prompt_dedup_max:
+                        old = self._recent_prompts.popleft()
+                        self._recent_prompt_set.discard(old)
+                    self._recent_prompts.append(prompt_key)
+                    self._recent_prompt_set.add(prompt_key)
+
+        if not self.stateless_mode and not skip_commit:
             try:
                 # Estimate confidence for LLM-generated response
                 confidence = self._estimate_confidence(response_text)
@@ -701,22 +759,23 @@ class LLMWrapper:
                 )
 
                 self._kernel.memory_commit(prompt_vector, phase_val, provenance=provenance)
-                self.consolidation_buffer.append(prompt_vector)
+                with self._lock:
+                    self.consolidation_buffer.append(prompt_vector)
             except Exception as mem_err:
                 self._record_pelm_failure()
                 _logger.debug("Memory update failed (graceful degradation): %s", mem_err)
 
-        self.accepted_count += 1
+        with self._lock:
+            self.accepted_count += 1
 
     def _advance_rhythm_and_consolidate(self) -> None:
         """Advance cognitive rhythm and perform consolidation if entering sleep."""
         self._kernel.rhythm_step()
 
-        if (
-            self.rhythm.is_sleep()
-            and len(self.consolidation_buffer) > 0
-            and not self.stateless_mode
-        ):
+        with self._lock:
+            has_buffer = len(self.consolidation_buffer) > 0
+
+        if self.rhythm.is_sleep() and has_buffer and not self.stateless_mode:
             try:
                 self._consolidate_memories()
             except Exception as consol_err:
@@ -754,8 +813,9 @@ class LLMWrapper:
         This simulates biological memory consolidation where recent experiences
         are integrated into long-term storage with appropriate phase encoding.
         """
-        if len(self.consolidation_buffer) == 0:
-            return
+        with self._lock:
+            if len(self.consolidation_buffer) == 0:
+                return
 
         # During sleep, re-encode memories with sleep phase
         # Use higher confidence for consolidated memories
@@ -765,7 +825,11 @@ class LLMWrapper:
             timestamp=datetime.now(),
         )
 
-        for vector in self.consolidation_buffer:
+        with self._lock:
+            buffer = list(self.consolidation_buffer)
+            self.consolidation_buffer.clear()
+
+        for vector in buffer:
             # Re-entangle with sleep phase for long-term storage
             try:
                 self._kernel.memory_commit(
@@ -774,9 +838,6 @@ class LLMWrapper:
             except Exception:
                 self._record_pelm_failure()
                 raise
-
-        # Clear buffer
-        self.consolidation_buffer.clear()
 
     def _build_context_from_memories(self, memories: list[Any]) -> str:
         """Build context text from retrieved memories."""

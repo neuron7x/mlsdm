@@ -154,6 +154,7 @@ class NeuroEngineConfig:
     default_context_top_k: int = 5
     default_cognitive_load: float = 0.5
     default_user_intent: str = "conversational"
+    stateless_mode: bool = False
 
     # Observability / Metrics
     enable_metrics: bool = False
@@ -302,6 +303,7 @@ class NeuroCognitiveEngine:
             llm_timeout=self.config.llm_timeout,
             llm_retry_attempts=self.config.llm_retry_attempts,
         )
+        self._mlsdm.stateless_mode = self.config.stateless_mode
 
         self._last_mlsdm_state: dict[str, Any] | None = None
 

@@ -21,10 +21,15 @@ from typing import Any
 import numpy as np
 import psutil
 from fastapi import APIRouter, Response, status
-from fastapi.responses import PlainTextResponse
+from fastapi.responses import JSONResponse, PlainTextResponse
 from pydantic import BaseModel, Field
 
 from mlsdm.observability.metrics import get_metrics_exporter
+from mlsdm.observability.slo_debug import (
+    finish_slo_timer,
+    slo_debug_enabled,
+    start_slo_timer,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -130,6 +135,17 @@ _cognitive_controller: Any | None = None
 _neuro_engine: Any | None = None
 
 
+def _warm_health_models() -> None:
+    """Warm Pydantic model caches to avoid first-request latency spikes."""
+    now = time.time()
+    SimpleHealthStatus(status="healthy")
+    LivenessStatus(status="alive", timestamp=now)
+    HealthStatus(status="alive", timestamp=now)
+
+
+_warm_health_models()
+
+
 def set_memory_manager(manager: Any) -> None:
     """Set the global memory manager reference for health checks.
 
@@ -197,11 +213,16 @@ async def health_check() -> SimpleHealthStatus:
     Returns:
         SimpleHealthStatus with status="healthy" if service is responsive.
     """
-    return SimpleHealthStatus(status="healthy")
+    slo_timer = start_slo_timer("/health") if slo_debug_enabled() else None
+    status_code = status.HTTP_200_OK
+    try:
+        return SimpleHealthStatus(status="healthy")
+    finally:
+        finish_slo_timer("/health", slo_timer, status_code)
 
 
 @router.get("/liveness", response_model=HealthStatus)
-async def liveness() -> HealthStatus:
+async def liveness() -> Response:
     """Liveness probe endpoint (legacy).
 
     Indicates whether the process is alive and running.
@@ -212,14 +233,19 @@ async def liveness() -> HealthStatus:
     Returns:
         HealthStatus with 200 status code
     """
-    return HealthStatus(
-        status="alive",
-        timestamp=time.time(),
-    )
+    slo_timer = start_slo_timer("/health/liveness") if slo_debug_enabled() else None
+    status_code = status.HTTP_200_OK
+    try:
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content={"status": "alive", "timestamp": time.time()},
+        )
+    finally:
+        finish_slo_timer("/health/liveness", slo_timer, status_code)
 
 
 @router.get("/live", response_model=LivenessStatus)
-async def live() -> LivenessStatus:
+async def live() -> Response:
     """Liveness probe endpoint.
 
     Returns 200 if the process is alive - no dependency checks.
@@ -228,10 +254,15 @@ async def live() -> LivenessStatus:
     Returns:
         LivenessStatus with 200 status code
     """
-    return LivenessStatus(
-        status="alive",
-        timestamp=time.time(),
-    )
+    slo_timer = start_slo_timer("/health/live") if slo_debug_enabled() else None
+    status_code = status.HTTP_200_OK
+    try:
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content={"status": "alive", "timestamp": time.time()},
+        )
+    finally:
+        finish_slo_timer("/health/live", slo_timer, status_code)
 
 
 def _check_cognitive_controller_health() -> tuple[bool, str | None]:
@@ -538,7 +569,19 @@ async def ready(response: Response) -> ReadinessStatus:
     Returns:
         ReadinessStatus with status, components, and details
     """
-    return await _compute_readiness(response)
+    slo_timer = start_slo_timer("/health/ready") if slo_debug_enabled() else None
+    status_code = status.HTTP_200_OK
+    slo_exception: Exception | None = None
+    try:
+        result = await _compute_readiness(response)
+        status_code = response.status_code
+        return result
+    except Exception as e:
+        status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+        slo_exception = e
+        raise
+    finally:
+        finish_slo_timer("/health/ready", slo_timer, status_code, slo_exception)
 
 
 @router.get("/readiness", response_model=ReadinessStatus)
@@ -561,7 +604,19 @@ async def readiness(response: Response) -> ReadinessStatus:
     Returns:
         ReadinessStatus with appropriate status code (identical to /health/ready)
     """
-    return await _compute_readiness(response)
+    slo_timer = start_slo_timer("/health/readiness") if slo_debug_enabled() else None
+    status_code = status.HTTP_200_OK
+    slo_exception: Exception | None = None
+    try:
+        result = await _compute_readiness(response)
+        status_code = response.status_code
+        return result
+    except Exception as e:
+        status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+        slo_exception = e
+        raise
+    finally:
+        finish_slo_timer("/health/readiness", slo_timer, status_code, slo_exception)
 
 
 @router.get("/detailed", response_model=DetailedHealthStatus)

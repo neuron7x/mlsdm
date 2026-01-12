@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import os
 import re
+import time
 from collections import deque
 from typing import TYPE_CHECKING, Any
 
@@ -80,10 +81,14 @@ class MoralFilterV2:
     _ONE_MINUS_ALPHA = 1.0 - EMA_ALPHA
     _ADAPT_DELTA = 0.05
     _BOUNDARY_EPS = 0.01
-    _DRIFT_LOGGING_MODE = os.getenv("MLSDM_DRIFT_LOGGING", "production")
+    _DRIFT_LOGGING_MODE = os.getenv(
+        "MLSDM_DRIFT_LOGGING",
+        "silent" if os.getenv("LLM_BACKEND", "local_stub").lower() == "local_stub" else "production",
+    )
     _DRIFT_LOG_THRESHOLD = float(os.getenv("MLSDM_DRIFT_THRESHOLD", "0.05"))
     _DRIFT_CRITICAL_THRESHOLD = float(os.getenv("MLSDM_DRIFT_CRITICAL_THRESHOLD", "0.1"))
     _DRIFT_MIN_LOGGING = float(os.getenv("MLSDM_DRIFT_MIN_LOGGING", "0.03"))
+    _DRIFT_LOG_INTERVAL = float(os.getenv("MLSDM_DRIFT_LOG_INTERVAL", "2.0"))
 
     def __init__(
         self, initial_threshold: float | None = None, filter_id: str = "default"
@@ -110,6 +115,7 @@ class MoralFilterV2:
         self._filter_id = filter_id
         self._max_history = 100  # Keep last 100 changes
         self._drift_history: deque[float] = deque(maxlen=self._max_history)
+        self._last_drift_log_at: dict[str, float] = {}
 
         # Initialize metrics
         record_threshold_change(
@@ -202,16 +208,20 @@ class MoralFilterV2:
             ema_value=self.ema_accept_rate,
         )
 
+        if self._DRIFT_LOGGING_MODE == "silent":
+            return
+
         # Check for sustained drift (trend over history)
         if len(self._drift_history) >= 10:
             recent_drift = self._drift_history[-1] - self._drift_history[-10]
             if abs(recent_drift) >= 0.15:  # >=0.15 absolute change over 10 operations
-                logger.error(
-                    "SUSTAINED DRIFT: threshold drifted %.3f over last 10 operations "
-                    "for filter '%s'",
-                    recent_drift,
-                    self._filter_id,
-                )
+                if self._should_log("sustained"):
+                    logger.error(
+                        "SUSTAINED DRIFT: threshold drifted %.3f over last 10 operations "
+                        "for filter '%s'",
+                        recent_drift,
+                        self._filter_id,
+                    )
 
         # Analyze for anomalous drift
         drift_magnitude = abs(new - old)
@@ -222,18 +232,19 @@ class MoralFilterV2:
         # Note: These are absolute threshold differences, not percentages
         # since thresholds are in [0.3, 0.9] range, 0.1 absolute = ~17% relative change
         if drift_magnitude > self._DRIFT_CRITICAL_THRESHOLD:
-            logger.error(
-                "CRITICAL DRIFT: threshold changed %.3f (%.3f → %.3f) for filter '%s'",
-                drift_magnitude,
-                old,
-                new,
-                self._filter_id,
-            )
+            if self._should_log("critical"):
+                logger.error(
+                    "CRITICAL DRIFT: threshold changed %.3f (%.3f → %.3f) for filter '%s'",
+                    drift_magnitude,
+                    old,
+                    new,
+                    self._filter_id,
+                )
         elif (
             drift_magnitude > self._DRIFT_LOG_THRESHOLD
             and self._DRIFT_LOGGING_MODE != "silent"
         ):
-            if logger.isEnabledFor(logging.WARNING):
+            if logger.isEnabledFor(logging.WARNING) and self._should_log("warning"):
                 logger.warning(
                     "Significant drift: threshold changed %.3f (%.3f → %.3f) for filter '%s'",
                     drift_magnitude,
@@ -241,6 +252,15 @@ class MoralFilterV2:
                     new,
                     self._filter_id,
                 )
+
+    def _should_log(self, key: str) -> bool:
+        """Throttle drift logging to reduce hot-path overhead."""
+        now = time.monotonic()
+        last = self._last_drift_log_at.get(key, 0.0)
+        if now - last >= self._DRIFT_LOG_INTERVAL:
+            self._last_drift_log_at[key] = now
+            return True
+        return False
 
     def get_drift_stats(self) -> dict[str, float]:
         """Get drift statistics.

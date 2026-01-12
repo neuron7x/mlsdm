@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import math
+import os
 import time
 import uuid
 from dataclasses import dataclass
@@ -113,6 +114,10 @@ class PhaseEntangledLatticeMemory:
         # Optimization: Pre-allocate query buffer to reduce allocations during retrieval
         self._query_buffer = np.zeros(dimension, dtype=np.float32)
         self._checksum = self._compute_checksum()
+        self._integrity_check_interval = int(
+            os.getenv("MLSDM_PELM_INTEGRITY_INTERVAL", "200")
+        )
+        self._integrity_check_counter = 0
 
         # Provenance tracking for AI safety (TD-003)
         self._provenance: list[MemoryProvenance] = []
@@ -127,7 +132,17 @@ class PhaseEntangledLatticeMemory:
         Raises:
             RuntimeError: If corruption is detected and recovery fails.
         """
-        if self._detect_corruption_unsafe():
+        self._integrity_check_counter += 1
+        if (
+            self._integrity_check_interval <= 1
+            or self._integrity_check_counter >= self._integrity_check_interval
+        ):
+            self._integrity_check_counter = 0
+            corrupted = self._detect_corruption_unsafe()
+        else:
+            return
+
+        if corrupted:
             recovered = self._auto_recover_unsafe()
             # Record corruption event
             if _OBSERVABILITY_AVAILABLE:
@@ -147,7 +162,7 @@ class PhaseEntangledLatticeMemory:
 
     def entangle(
         self,
-        vector: list[float],
+        vector: list[float] | np.ndarray,
         phase: float,
         correlation_id: str | None = None,
         provenance: MemoryProvenance | None = None,
@@ -200,25 +215,35 @@ class PhaseEntangledLatticeMemory:
                     )
                 return -1  # Rejection sentinel value
 
-            # Validate vector type
-            if not isinstance(vector, list):
-                raise TypeError(f"vector must be a list, got {type(vector).__name__}")
-            if len(vector) != self.dimension:
-                raise ValueError(
-                    f"vector dimension mismatch: expected {self.dimension}, got {len(vector)}"
-                )
-
-            # Validate vector values (check for NaN/inf)
-            for i, val in enumerate(vector):
-                if not isinstance(val, int | float):
-                    raise TypeError(
-                        f"vector element at index {i} must be numeric, got {type(val).__name__}"
-                    )
-                if math.isnan(val) or math.isinf(val):
+            if isinstance(vector, np.ndarray):
+                if vector.ndim != 1 or vector.shape[0] != self.dimension:
                     raise ValueError(
-                        f"vector contains invalid value at index {i}: {val}. "
-                        "NaN and infinity are not allowed in memory vectors."
+                        f"vector dimension mismatch: expected {self.dimension}, got {vector.shape}"
                     )
+                if not np.isfinite(vector).all():
+                    raise ValueError("vector contains NaN or Inf values.")
+                vec_np = vector.astype(np.float32, copy=False)
+            else:
+                # Validate vector type
+                if not isinstance(vector, list):
+                    raise TypeError(f"vector must be a list, got {type(vector).__name__}")
+                if len(vector) != self.dimension:
+                    raise ValueError(
+                        f"vector dimension mismatch: expected {self.dimension}, got {len(vector)}"
+                    )
+
+                # Validate vector values (check for NaN/inf)
+                for i, val in enumerate(vector):
+                    if not isinstance(val, int | float):
+                        raise TypeError(
+                            f"vector element at index {i} must be numeric, got {type(val).__name__}"
+                        )
+                    if math.isnan(val) or math.isinf(val):
+                        raise ValueError(
+                            f"vector contains invalid value at index {i}: {val}. "
+                            "NaN and infinity are not allowed in memory vectors."
+                        )
+                vec_np = np.array(vector, dtype=np.float32)
 
             # Validate phase type and range
             if not isinstance(phase, int | float):
@@ -233,7 +258,6 @@ class PhaseEntangledLatticeMemory:
                     "Phase values represent cognitive states (e.g., 0.1=wake, 0.9=sleep)."
                 )
 
-            vec_np = np.array(vector, dtype=np.float32)
             norm = max(safe_norm(vec_np), self.MIN_NORM_THRESHOLD)
 
             # Check capacity and evict if necessary
@@ -438,7 +462,7 @@ class PhaseEntangledLatticeMemory:
     @overload
     def retrieve(
         self,
-        query_vector: list[float],
+        query_vector: list[float] | np.ndarray,
         current_phase: float,
         phase_tolerance: float | None = None,
         top_k: int | None = None,
@@ -450,7 +474,7 @@ class PhaseEntangledLatticeMemory:
     @overload
     def retrieve(
         self,
-        query_vector: list[float],
+        query_vector: list[float] | np.ndarray,
         current_phase: float,
         phase_tolerance: float | None = None,
         top_k: int | None = None,
@@ -461,7 +485,7 @@ class PhaseEntangledLatticeMemory:
 
     def retrieve(
         self,
-        query_vector: list[float],
+        query_vector: list[float] | np.ndarray,
         current_phase: float,
         phase_tolerance: float | None = None,
         top_k: int | None = None,
@@ -500,12 +524,20 @@ class PhaseEntangledLatticeMemory:
 
             # Optimization: Use pre-allocated buffer with numpy copy
             # Validate dimension first to avoid buffer overflow
-            if len(query_vector) != self.dimension:
-                raise ValueError(
-                    f"query_vector dimension mismatch: expected {self.dimension}, "
-                    f"got {len(query_vector)}"
-                )
-            self._query_buffer[:] = query_vector
+            if isinstance(query_vector, np.ndarray):
+                if query_vector.ndim != 1 or query_vector.shape[0] != self.dimension:
+                    raise ValueError(
+                        f"query_vector dimension mismatch: expected {self.dimension}, "
+                        f"got {query_vector.shape}"
+                    )
+                self._query_buffer[:] = query_vector
+            else:
+                if len(query_vector) != self.dimension:
+                    raise ValueError(
+                        f"query_vector dimension mismatch: expected {self.dimension}, "
+                        f"got {len(query_vector)}"
+                    )
+                self._query_buffer[:] = query_vector
             q_vec = self._query_buffer
             q_norm = safe_norm(q_vec)
             if q_norm < self.MIN_NORM_THRESHOLD:
