@@ -389,5 +389,92 @@ aphasia:
         assert aphasia_params["aphasia_severity_threshold"] == 0.7
 
 
+class TestDriftLoggingEnvInjection:
+    """Tests for drift_logging environment variable injection (REL-006 regression tests).
+    
+    These tests ensure that MLSDM_DRIFT_LOGGING env var is properly mapped to
+    the drift_logging config field and validated against the schema.
+    """
+
+    def test_env_drift_logging_silent_mode(self, tmp_path, monkeypatch):
+        """Test MLSDM_DRIFT_LOGGING='silent' is injected and validated."""
+        config_file = tmp_path / "config.yaml"
+        config_file.write_text("dimension: 384")
+
+        monkeypatch.setenv("MLSDM_DRIFT_LOGGING", "silent")
+
+        config = ConfigLoader.load_config(str(config_file), validate=True, env_override=True)
+        assert config["drift_logging"] == "silent"
+
+    def test_env_drift_logging_verbose_mode(self, tmp_path, monkeypatch):
+        """Test MLSDM_DRIFT_LOGGING='verbose' is injected and validated."""
+        config_file = tmp_path / "config.yaml"
+        config_file.write_text("dimension: 384")
+
+        monkeypatch.setenv("MLSDM_DRIFT_LOGGING", "verbose")
+
+        config = ConfigLoader.load_config(str(config_file), validate=True, env_override=True)
+        assert config["drift_logging"] == "verbose"
+
+    def test_env_drift_logging_not_set_defaults_to_none(self, tmp_path):
+        """Test drift_logging defaults to None when env var not set."""
+        config_file = tmp_path / "config.yaml"
+        config_file.write_text("dimension: 384")
+
+        config = ConfigLoader.load_config(str(config_file), validate=True, env_override=True)
+        assert config["drift_logging"] is None
+
+    def test_env_drift_logging_invalid_value_fails_validation(self, tmp_path, monkeypatch):
+        """Test MLSDM_DRIFT_LOGGING with invalid value fails with clear error."""
+        config_file = tmp_path / "config.yaml"
+        config_file.write_text("dimension: 384")
+
+        monkeypatch.setenv("MLSDM_DRIFT_LOGGING", "loud")
+
+        with pytest.raises(ValueError) as exc_info:
+            ConfigLoader.load_config(str(config_file), validate=True, env_override=True)
+        
+        error_msg = str(exc_info.value)
+        # Should mention validation failure and the allowed values
+        assert "validation failed" in error_msg.lower()
+        assert "silent" in error_msg or "verbose" in error_msg
+
+    def test_env_drift_logging_from_default_config(self, monkeypatch):
+        """Test env injection works with actual default config."""
+        monkeypatch.setenv("MLSDM_DRIFT_LOGGING", "silent")
+
+        config = ConfigLoader.load_config(
+            "config/default_config.yaml",
+            validate=True,
+            env_override=True
+        )
+        assert config["drift_logging"] == "silent"
+
+    def test_yaml_drift_logging_overridden_by_env(self, tmp_path, monkeypatch):
+        """Test env var overrides YAML file drift_logging value."""
+        config_file = tmp_path / "config.yaml"
+        config_file.write_text("""
+dimension: 384
+drift_logging: verbose
+""")
+
+        monkeypatch.setenv("MLSDM_DRIFT_LOGGING", "silent")
+
+        config = ConfigLoader.load_config(str(config_file), validate=True, env_override=True)
+        # Env var should override YAML value
+        assert config["drift_logging"] == "silent"
+
+    def test_yaml_drift_logging_without_env_override(self, tmp_path):
+        """Test YAML drift_logging value used when env_override=False."""
+        config_file = tmp_path / "config.yaml"
+        config_file.write_text("""
+dimension: 384
+drift_logging: verbose
+""")
+
+        config = ConfigLoader.load_config(str(config_file), validate=True, env_override=False)
+        assert config["drift_logging"] == "verbose"
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

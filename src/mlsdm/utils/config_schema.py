@@ -6,7 +6,7 @@ properly validated before use.
 """
 
 import logging
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from typing_extensions import Self
@@ -475,6 +475,28 @@ class SystemConfig(BaseModel):
         default_factory=APIConfig,
         description="API reliability configuration (REL-002, REL-004, REL-005).",
     )
+    drift_logging: Literal["silent", "verbose"] | None = Field(
+        default=None,
+        description=(
+            "Drift logging verbosity mode. Controls logging level for policy/config drift detection. "
+            "Allowed values: 'silent' (minimal logging), 'verbose' (detailed logging), or None (default behavior). "
+            "Can be set via MLSDM_DRIFT_LOGGING environment variable."
+        ),
+    )
+
+    @field_validator("drift_logging")
+    @classmethod
+    def validate_drift_logging(cls, v: str | None) -> str | None:
+        """Validate drift_logging is in allowed set or None."""
+        if v is None:
+            return v
+        allowed = {"silent", "verbose"}
+        if v not in allowed:
+            raise ValueError(
+                f"Invalid drift_logging value: '{v}'. "
+                f"Must be one of: {', '.join(sorted(allowed))}, or None."
+            )
+        return v
 
     @model_validator(mode="after")
     def validate_ontology_dimension(self) -> Self:
