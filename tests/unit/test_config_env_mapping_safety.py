@@ -81,11 +81,15 @@ class TestEnvMappingExhaustiveness:
         
         This ensures the env mapping system is comprehensive and any schema field
         can be overridden via env vars if needed.
+        
+        Note: Complex nested fields (objects) are typically not set as a whole via
+        env vars, but their sub-fields can be set using double-underscore notation.
         """
         # Get all top-level SystemConfig fields
         schema_fields = SystemConfig.model_fields.keys()
         
-        # Fields that are complex objects (not simple values)
+        # Fields that are complex objects (not simple values that can be set via single env var)
+        # These can have their nested fields set via MLSDM_FIELD__SUBFIELD notation
         complex_fields = {
             "multi_level_memory",
             "moral_filter", 
@@ -100,15 +104,16 @@ class TestEnvMappingExhaustiveness:
             "api",
         }
         
-        # Simple fields that can be overridden via env vars
+        # Simple fields that can be overridden via single env var
+        # These are primitive types (int, bool, str, enum, etc.)
         simple_fields = {
-            "dimension": "768",
-            "strict_mode": "true",
-            "drift_logging": "silent",
+            "dimension",        # int
+            "strict_mode",      # bool
+            "drift_logging",    # Literal["silent", "verbose"] | None
         }
         
         # Ensure we've categorized all fields
-        all_categorized = complex_fields | set(simple_fields.keys())
+        all_categorized = complex_fields | simple_fields
         uncategorized = set(schema_fields) - all_categorized
         
         assert not uncategorized, (
@@ -116,12 +121,21 @@ class TestEnvMappingExhaustiveness:
             f"Please add them to either 'complex_fields' or 'simple_fields' "
             f"in this test."
         )
+        
+        # Verify counts match expectations
+        assert len(complex_fields) == 11, f"Expected 11 complex fields, got {len(complex_fields)}"
+        assert len(simple_fields) == 3, f"Expected 3 simple fields, got {len(simple_fields)}"
 
     def test_schema_field_count_matches_expected(self):
         """Test that schema field count is as expected.
         
-        This test will fail if new fields are added without updating tests,
-        serving as a reminder to check env mapping safety.
+        This test is intentionally brittle and will fail if new fields are added.
+        This is by design - it serves as a forcing function to ensure that:
+        1. New fields added to workflow env vars are also added to the schema
+        2. Tests are updated to validate the new fields
+        3. Field categorization in test_all_schema_fields_can_be_set_via_env is updated
+        
+        When this test fails, it's a reminder to review env mapping safety.
         """
         schema_fields = list(SystemConfig.model_fields.keys())
         expected_count = 14  # Updated for drift_logging field (REL-006)
