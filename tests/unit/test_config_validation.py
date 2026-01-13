@@ -85,6 +85,50 @@ class TestSystemConfig:
             SystemConfig(unknown_field="value")
         assert "Extra inputs are not permitted" in str(exc_info.value)
 
+    def test_drift_logging_silent_mode(self):
+        """Test drift_logging accepts 'silent' mode."""
+        config = SystemConfig(drift_logging="silent")
+        assert config.drift_logging == "silent"
+
+    def test_drift_logging_verbose_mode(self):
+        """Test drift_logging accepts 'verbose' mode."""
+        config = SystemConfig(drift_logging="verbose")
+        assert config.drift_logging == "verbose"
+
+    def test_drift_logging_none_allowed(self):
+        """Test drift_logging accepts None (default)."""
+        config = SystemConfig(drift_logging=None)
+        assert config.drift_logging is None
+
+    def test_drift_logging_default_is_none(self):
+        """Test drift_logging defaults to None when not specified."""
+        config = SystemConfig()
+        assert config.drift_logging is None
+
+    def test_drift_logging_invalid_value_rejected(self):
+        """Test drift_logging rejects invalid values with clear message."""
+        with pytest.raises(ValidationError) as exc_info:
+            SystemConfig(drift_logging="loud")
+        error_msg = str(exc_info.value)
+        assert "silent" in error_msg and "verbose" in error_msg
+
+    def test_drift_logging_dict_validation(self):
+        """Test drift_logging validation via validate_config_dict."""
+        # Valid values should pass
+        config_dict = {"drift_logging": "silent"}
+        config = validate_config_dict(config_dict)
+        assert config.drift_logging == "silent"
+
+        config_dict = {"drift_logging": "verbose"}
+        config = validate_config_dict(config_dict)
+        assert config.drift_logging == "verbose"
+
+        # Invalid value should fail
+        with pytest.raises(ValueError) as exc_info:
+            validate_config_dict({"drift_logging": "invalid"})
+        error_msg = str(exc_info.value)
+        assert "validation failed" in error_msg.lower()
+
 
 class TestMultiLevelMemoryConfig:
     """Tests for MultiLevelMemoryConfig validation."""
