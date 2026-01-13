@@ -391,7 +391,7 @@ aphasia:
 
 class TestDriftLoggingEnvInjection:
     """Tests for drift_logging environment variable injection (REL-006 regression tests).
-    
+
     These tests ensure that MLSDM_DRIFT_LOGGING env var is properly mapped to
     the drift_logging config field and validated against the schema.
     """
@@ -433,7 +433,7 @@ class TestDriftLoggingEnvInjection:
 
         with pytest.raises(ValueError) as exc_info:
             ConfigLoader.load_config(str(config_file), validate=True, env_override=True)
-        
+
         error_msg = str(exc_info.value)
         # Should mention validation failure and the allowed values
         assert "validation failed" in error_msg.lower()
