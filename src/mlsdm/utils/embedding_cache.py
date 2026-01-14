@@ -99,6 +99,8 @@ class EmbeddingCache:
             config: Cache configuration. Uses defaults if not provided.
         """
         self.config = config or EmbeddingCacheConfig()
+        if self.config.max_size <= 0:
+            self.config.enabled = False
         self._cache: OrderedDict[str, _CacheEntry] = OrderedDict()
         self._lock = threading.Lock()
         self._hits = 0
