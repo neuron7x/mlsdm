@@ -6,17 +6,25 @@ on:
       - 'CITATION.cff'
       - 'CITATION.bib'
       - 'docs/bibliography/**'
+      - 'docs/NEURO_FOUNDATIONS.md'
+      - 'docs/APHASIA_SPEC.md'
+      - 'docs/APHASIA_OBSERVABILITY.md'
       - 'scripts/validate_bibliography.py'
       - 'scripts/check_bidi.py'
       - 'scripts/docs/validate_literature_map.py'
+      - 'scripts/docs/validate_doc_citations.py'
   pull_request:
     paths:
       - 'CITATION.cff'
       - 'CITATION.bib'
       - 'docs/bibliography/**'
+      - 'docs/NEURO_FOUNDATIONS.md'
+      - 'docs/APHASIA_SPEC.md'
+      - 'docs/APHASIA_OBSERVABILITY.md'
       - 'scripts/validate_bibliography.py'
       - 'scripts/check_bidi.py'
       - 'scripts/docs/validate_literature_map.py'
+      - 'scripts/docs/validate_doc_citations.py'
 
 permissions:
   contents: read

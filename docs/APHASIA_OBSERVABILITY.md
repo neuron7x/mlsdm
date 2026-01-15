@@ -7,7 +7,12 @@ detection and repair in the MLSDM system.
 
 The Aphasia-Broca subsystem detects telegraphic speech patterns in LLM outputs that are
 characteristic of Broca's aphasia (agrammatism, missing function words, short fragmented
-sentences). When detected, the system can optionally repair these outputs.
+sentences) [@asha_aphasia; @fedorenko2023_agrammatic]. When detected, the system can
+optionally repair these outputs.
+
+**Non-Clinical Boundary:** Aphasia/Broca terminology in MLSDM denotes LLM-output
+phenotypes inspired by literature. It is not a clinical aphasia model and must not be
+used for diagnosis or medical decisions.
 
 All observability features are designed to expose only **metadata** - no user prompts,
 LLM responses, or other content is ever logged or exposed through metrics.
