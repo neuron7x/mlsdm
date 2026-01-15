@@ -13,6 +13,7 @@ This register consolidates code, test, CI/CD, security, documentation, and depen
 
 - ✅ Latest green CI on `main`: `ci-neuro-cognitive-engine` workflow observed green on 2025-12-20 (full test/type/lint matrix).  
 - ⚠️ Recent PR workflow required manual approval (`action_required`) with no jobs executed (workflows gated as of 2025-12-20).  
+- 🧾 Coverage badge verification (GitHub Actions `coverage-badge` on `main`, 2026-01-15, reviewer: Codex): runs 21022704090, 20961719696, 20900689678. Artifact references: `coverage-badge-artifacts-21022704090` (https://api.github.com/repos/neuron7x/mlsdm/actions/artifacts/5137035815/zip); runs 20961719696 and 20900689678 report no retained artifacts (https://api.github.com/repos/neuron7x/mlsdm/actions/runs/20961719696/artifacts, https://api.github.com/repos/neuron7x/mlsdm/actions/runs/20900689678/artifacts).  
 - 📄 Prior structured reviews: `ENGINEERING_DEFICIENCIES_REGISTER.md`, `TECHNICAL_DEBT_REGISTER.md`, `RISK_REGISTER.md`.  
 - 🧪 Local defaults: `make test` (unit/integration minus load), `coverage_gate.sh` (75% line threshold), `ruff`, `mypy`, `deptry`, `pip-audit`.
 
