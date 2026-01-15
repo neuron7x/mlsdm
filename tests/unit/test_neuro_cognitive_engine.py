@@ -665,12 +665,28 @@ class TestNeuroCognitiveEngineExceptionHandling:
 
         # Should handle empty response gracefully
         assert result["error"] is not None
-        # Error should indicate empty response (type='empty_response' is used by engine)
         error_type = result["error"].get("type", "")
-        error_message = result["error"].get("message", "")
-        assert (
-            error_type == "empty_response" or "empty" in error_message.lower()
-        ), f"Expected empty_response error, got type='{error_type}', message='{error_message}'"
+        assert error_type == "empty_response"
+        assert error_type != "mlsdm_rejection"
+
+    def test_whitespace_response_error_handling(self):
+        """Test that whitespace-only response from MLSDM is handled properly."""
+        llm_fn = Mock(return_value="   ")
+        embed_fn = Mock(return_value=np.random.randn(384))
+
+        config = NeuroEngineConfig(enable_fslgs=False)
+        engine = NeuroCognitiveEngine(
+            llm_generate_fn=llm_fn,
+            embedding_fn=embed_fn,
+            config=config,
+        )
+
+        result = engine.generate("Test prompt")
+
+        assert result["error"] is not None
+        error_type = result["error"].get("type", "")
+        assert error_type == "empty_response"
+        assert error_type != "mlsdm_rejection"
 
 
 class TestCircuitBreakerIntegration:

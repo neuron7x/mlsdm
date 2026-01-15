@@ -39,6 +39,7 @@ from ..speech.governance import (  # noqa: TC001 - used at runtime in function s
 from ..utils.embedding_cache import EmbeddingCache, EmbeddingCacheConfig
 from .cognitive_state import CognitiveState
 from .governance_kernel import GovernanceKernel
+from .response_quality import ResponseQualityGate
 
 if TYPE_CHECKING:
     from mlsdm.config import (
@@ -257,6 +258,7 @@ class LLMWrapper:
         )
         # Initialize reliability components
         self._init_reliability()
+        self._quality_gate = ResponseQualityGate()
         # Initialize state tracking
         self._init_state_tracking()
 
@@ -550,7 +552,18 @@ class LLMWrapper:
                 llm_span.set_attribute("mlsdm.response_length", len(response_text))
                 llm_span.set_attribute("mlsdm.llm_call.error", False)
 
-            # Step 6: Update memory state
+            # Step 6: Sentinel empty-response handling (bypass quality gate)
+            if self._is_empty_response(response_text):
+                return self._build_empty_response()
+
+            # Step 6: Apply response quality gate
+            quality_rejection, suppress_memory, quality_metadata, confidence = (
+                self._apply_quality_gate(prompt, response_text)
+            )
+            if quality_rejection is not None:
+                return quality_rejection
+
+            # Step 7: Update memory state
             with tracer_manager.start_span(
                 "llm_wrapper.memory_update",
                 attributes={
@@ -558,14 +571,17 @@ class LLMWrapper:
                     "mlsdm.stateless_mode": self.stateless_mode,
                 },
             ):
-                self._update_memory_after_generate(prompt_vector, phase_val, response_text)
+                if not suppress_memory:
+                    self._update_memory_after_generate(
+                        prompt_vector, phase_val, response_text, confidence
+                    )
 
-            # Step 7: Advance rhythm and consolidate
+            # Step 8: Advance rhythm and consolidate
             self._advance_rhythm_and_consolidate()
 
-            # Step 8: Build final response
+            # Step 9: Build final response
             return self._build_success_response(
-                response_text, memories, max_tokens, governed_metadata
+                response_text, memories, max_tokens, governed_metadata, quality_metadata
             )
 
     def _check_moral_and_phase(self, moral_value: float) -> dict[str, Any] | None:
@@ -674,11 +690,32 @@ class LLMWrapper:
 
         return response_text, governed_metadata
 
+    def _apply_quality_gate(
+        self, prompt: str, response_text: str
+    ) -> tuple[dict[str, Any] | None, bool, dict[str, Any] | None, float]:
+        """Evaluate response quality and return rejection, memory suppression, and metadata."""
+        confidence = self._estimate_confidence(response_text)
+        decision = self._quality_gate.evaluate(
+            prompt=prompt,
+            response=response_text,
+            confidence=confidence,
+        )
+        if decision.action == "reject":
+            reason = "quality_gate:" + ",".join(decision.triggered_modes)
+            return self._build_rejection_response(reason, decision.as_dict()), True, None, confidence
+
+        quality_metadata = None
+        if decision.action != "accept":
+            quality_metadata = decision.as_dict()
+
+        return None, decision.suppress_memory, quality_metadata, confidence
+
     def _update_memory_after_generate(
         self,
         prompt_vector: np.ndarray,
         phase_val: float,
         response_text: str = "",
+        confidence: float | None = None,
     ) -> None:
         """Update memory with provenance tracking (skip if in stateless mode).
 
@@ -690,7 +727,8 @@ class LLMWrapper:
         if not self.stateless_mode:
             try:
                 # Estimate confidence for LLM-generated response
-                confidence = self._estimate_confidence(response_text)
+                if confidence is None:
+                    confidence = self._estimate_confidence(response_text)
 
                 # Create provenance metadata
                 provenance = MemoryProvenance(
@@ -728,6 +766,7 @@ class LLMWrapper:
         memories: list[Any],
         max_tokens: int,
         governed_metadata: dict[str, Any] | None,
+        quality_metadata: dict[str, Any] | None,
     ) -> dict[str, Any]:
         """Build the successful response dictionary."""
         result: dict[str, Any] = {
@@ -744,6 +783,8 @@ class LLMWrapper:
 
         if governed_metadata is not None:
             result["speech_governance"] = governed_metadata
+        if quality_metadata is not None:
+            result["quality_gate"] = quality_metadata
 
         return result
 
@@ -798,14 +839,32 @@ class LLMWrapper:
 
         return f"{context}\n\nUser: {prompt}"
 
-    def _build_rejection_response(self, reason: str) -> dict[str, Any]:
+    def _build_rejection_response(
+        self, reason: str, details: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         """Build response for rejected requests."""
-        return {
+        response = {
             "response": "",
             "accepted": False,
             "phase": self.rhythm.phase,
             "step": self.step_counter,
             "note": reason,
+            "moral_threshold": round(self.moral.threshold, 4),
+            "context_items": 0,
+            "max_tokens_used": 0,
+        }
+        if details is not None:
+            response["quality_gate"] = details
+        return response
+
+    def _build_empty_response(self) -> dict[str, Any]:
+        """Build response for empty LLM output (sentinel error)."""
+        return {
+            "response": "",
+            "accepted": True,
+            "phase": self.rhythm.phase,
+            "step": self.step_counter,
+            "note": "empty_response",
             "moral_threshold": round(self.moral.threshold, 4),
             "context_items": 0,
             "max_tokens_used": 0,
@@ -827,6 +886,11 @@ class LLMWrapper:
     def _is_error_response(self, result: Any) -> bool:
         """Check if a result is an error response dict."""
         return isinstance(result, dict) and "note" in result and "error" in result.get("note", "")
+
+    @staticmethod
+    def _is_empty_response(response: str) -> bool:
+        """Return True when the LLM output is empty or whitespace-only."""
+        return len(response.strip()) == 0
 
     def _estimate_confidence(self, response: str) -> float:
         """Estimate confidence level of LLM-generated response using heuristics.
