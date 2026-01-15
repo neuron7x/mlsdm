@@ -1,0 +1,749 @@
+{
+  "schema_version": 1,
+  "measured_paths_root": "src/mlsdm",
+  "modules": [
+    {
+      "path": "src/mlsdm/__init__.py",
+      "lines": 32,
+      "covered": 19,
+      "percent": 59.38
+    },
+    {
+      "path": "src/mlsdm/adapters/__init__.py",
+      "lines": 6,
+      "covered": 6,
+      "percent": 100.0
+    },
+    {
+      "path": "src/mlsdm/adapters/anthropic_adapter.py",
+      "lines": 23,
+      "covered": 4,
+      "percent": 17.39
+    },
+    {
+      "path": "src/mlsdm/adapters/llm_provider.py",
+      "lines": 106,
+      "covered": 60,
+      "percent": 56.6
+    },
+    {
+      "path": "src/mlsdm/adapters/local_stub_adapter.py",
+      "lines": 13,
+      "covered": 12,
+      "percent": 92.31
+    },
+    {
+      "path": "src/mlsdm/adapters/openai_adapter.py",
+      "lines": 22,
+      "covered": 4,
+      "percent": 18.18
+    },
+    {
+      "path": "src/mlsdm/adapters/provider_factory.py",
+      "lines": 42,
+      "covered": 41,
+      "percent": 97.62
+    },
+    {
+      "path": "src/mlsdm/api/app.py",
+      "lines": 372,
+      "covered": 151,
+      "percent": 40.59
+    },
+    {
+      "path": "src/mlsdm/api/health.py",
+      "lines": 295,
+      "covered": 191,
+      "percent": 64.75
+    },
+    {
+      "path": "src/mlsdm/api/lifecycle.py",
+      "lines": 57,
+      "covered": 16,
+      "percent": 28.07
+    },
+    {
+      "path": "src/mlsdm/api/middleware.py",
+      "lines": 193,
+      "covered": 127,
+      "percent": 65.8
+    },
+    {
+      "path": "src/mlsdm/api/schemas.py",
+      "lines": 34,
+      "covered": 34,
+      "percent": 100.0
+    },
+    {
+      "path": "src/mlsdm/cli/__init__.py",
+      "lines": 296,
+      "covered": 191,
+      "percent": 64.53
+    },
+    {
+      "path": "src/mlsdm/cli/__main__.py",
+      "lines": 2,
+      "covered": 2,
+      "percent": 100.0
+    },
+    {
+      "path": "src/mlsdm/cli/main.py",
+      "lines": 24,
+      "covered": 24,
+      "percent": 100.0
+    },
+    {
+      "path": "src/mlsdm/cognition/__init__.py",
+      "lines": 6,
+      "covered": 6,
+      "percent": 100.0
+    },
+    {
+      "path": "src/mlsdm/cognition/homeostasis.py",
+      "lines": 21,
+      "covered": 19,
+      "percent": 90.48
+    },
+    {
+      "path": "src/mlsdm/cognition/moral_filter.py",
+      "lines": 20,
+      "covered": 20,
+      "percent": 100.0
+    },
+    {
+      "path": "src/mlsdm/cognition/moral_filter_v2.py",
+      "lines": 108,
+      "covered": 107,
+      "percent": 99.07
+    },
+    {
+      "path": "src/mlsdm/cognition/neuromodulation.py",
+      "lines": 40,
+      "covered": 40,
+      "percent": 100.0
+    },
+    {
+      "path": "src/mlsdm/cognition/ontology_matcher.py",
+      "lines": 33,
+      "covered": 33,
+      "percent": 100.0
+    },
+    {
+      "path": "src/mlsdm/cognition/prediction_error.py",
+      "lines": 32,
+      "covered": 31,
+      "percent": 96.88
+    },
+    {
+      "path": "src/mlsdm/cognition/role_boundary_controller.py",
+      "lines": 175,
+      "covered": 175,
+      "percent": 100.0
+    },
+    {
+      "path": "src/mlsdm/cognition/synergy_experience.py",
+      "lines": 181,
+      "covered": 175,
+      "percent": 96.69
+    },
+    {
+      "path": "src/mlsdm/config/__init__.py",
+      "lines": 2,
+      "covered": 2,
+      "percent": 100.0
+    },
+    {
+      "path": "src/mlsdm/config/architecture_manifest.py",
+      "lines": 45,
+      "covered": 21,
+      "percent": 46.67
+    },
+    {
+      "path": "src/mlsdm/config/calibration.py",
+      "lines": 114,
+      "covered": 111,
+      "percent": 97.37
+    },
+    {
+      "path": "src/mlsdm/config/env_compat.py",
+      "lines": 8,
+      "covered": 8,
+      "percent": 100.0
+    },
+    {
+      "path": "src/mlsdm/config/perf_slo.py",
+      "lines": 67,
+      "covered": 55,
+      "percent": 82.09
+    },
+    {
+      "path": "src/mlsdm/config/runtime.py",
+      "lines": 163,
+      "covered": 145,
+      "percent": 88.96
+    },
+    {
+      "path": "src/mlsdm/contracts/__init__.py",
+      "lines": 5,
+      "covered": 5,
+      "percent": 100.0
+    },
+    {
+      "path": "src/mlsdm/contracts/engine_models.py",
+      "lines": 65,
+      "covered": 49,
+      "percent": 75.38
+    },
+    {
+      "path": "src/mlsdm/contracts/errors.py",
+      "lines": 22,
+      "covered": 15,
+      "percent": 68.18
+    },
+    {
+      "path": "src/mlsdm/contracts/neuro_signals.py",
+      "lines": 2,
+      "covered": 2,
+      "percent": 100.0
+    },
+    {
+      "path": "src/mlsdm/contracts/speech_models.py",
+      "lines": 84,
+      "covered": 45,
+      "percent": 53.57
+    },
+    {
+      "path": "src/mlsdm/core/__init__.py",
+      "lines": 2,
+      "covered": 2,
+      "percent": 100.0
+    },
+    {
+      "path": "src/mlsdm/core/cognitive_controller.py",
+      "lines": 224,
+      "covered": 203,
+      "percent": 90.62
+    },
+    {
+      "path": "src/mlsdm/core/cognitive_state.py",
+      "lines": 17,
+      "covered": 16,
+      "percent": 94.12
+    },
+    {
+      "path": "src/mlsdm/core/governance_kernel.py",
+      "lines": 173,
+      "covered": 172,
+      "percent": 99.42
+    },
+    {
+      "path": "src/mlsdm/core/iteration_loop.py",
+      "lines": 316,
+      "covered": 309,
+      "percent": 97.78
+    },
+    {
+      "path": "src/mlsdm/core/llm_pipeline.py",
+      "lines": 249,
+      "covered": 225,
+      "percent": 90.36
+    },
+    {
+      "path": "src/mlsdm/core/llm_wrapper.py",
+      "lines": 416,
+      "covered": 403,
+      "percent": 96.88
+    },
+    {
+      "path": "src/mlsdm/core/memory_manager.py",
+      "lines": 254,
+      "covered": 248,
+      "percent": 97.64
+    },
+    {
+      "path": "src/mlsdm/core/response_quality.py",
+      "lines": 133,
+      "covered": 124,
+      "percent": 93.23
+    },
+    {
+      "path": "src/mlsdm/deploy/__init__.py",
+      "lines": 2,
+      "covered": 2,
+      "percent": 100.0
+    },
+    {
+      "path": "src/mlsdm/deploy/canary_manager.py",
+      "lines": 108,
+      "covered": 108,
+      "percent": 100.0
+    },
+    {
+      "path": "src/mlsdm/engine/__init__.py",
+      "lines": 3,
+      "covered": 3,
+      "percent": 100.0
+    },
+    {
+      "path": "src/mlsdm/engine/factory.py",
+      "lines": 64,
+      "covered": 53,
+      "percent": 82.81
+    },
+    {
+      "path": "src/mlsdm/engine/neuro_cognitive_engine.py",
+      "lines": 504,
+      "covered": 406,
+      "percent": 80.56
+    },
+    {
+      "path": "src/mlsdm/extensions/__init__.py",
+      "lines": 2,
+      "covered": 2,
+      "percent": 100.0
+    },
+    {
+      "path": "src/mlsdm/extensions/neuro_lang_extension.py",
+      "lines": 374,
+      "covered": 190,
+      "percent": 50.8
+    },
+    {
+      "path": "src/mlsdm/memory/__init__.py",
+      "lines": 4,
+      "covered": 4,
+      "percent": 100.0
+    },
+    {
+      "path": "src/mlsdm/memory/multi_level_memory.py",
+      "lines": 104,
+      "covered": 104,
+      "percent": 100.0
+    },
+    {
+      "path": "src/mlsdm/memory/phase_entangled_lattice_memory.py",
+      "lines": 303,
+      "covered": 303,
+      "percent": 100.0
+    },
+    {
+      "path": "src/mlsdm/memory/provenance.py",
+      "lines": 25,
+      "covered": 25,
+      "percent": 100.0
+    },
+    {
+      "path": "src/mlsdm/memory/qilm_module.py",
+      "lines": 27,
+      "covered": 27,
+      "percent": 100.0
+    },
+    {
+      "path": "src/mlsdm/memory/qilm_v2.py",
+      "lines": 3,
+      "covered": 3,
+      "percent": 100.0
+    },
+    {
+      "path": "src/mlsdm/memory/sqlite_store.py",
+      "lines": 165,
+      "covered": 155,
+      "percent": 93.94
+    },
+    {
+      "path": "src/mlsdm/memory/store.py",
+      "lines": 28,
+      "covered": 22,
+      "percent": 78.57
+    },
+    {
+      "path": "src/mlsdm/neuro_ai/__init__.py",
+      "lines": 6,
+      "covered": 6,
+      "percent": 100.0
+    },
+    {
+      "path": "src/mlsdm/neuro_ai/adapters.py",
+      "lines": 182,
+      "covered": 145,
+      "percent": 79.67
+    },
+    {
+      "path": "src/mlsdm/neuro_ai/config.py",
+      "lines": 27,
+      "covered": 23,
+      "percent": 85.19
+    },
+    {
+      "path": "src/mlsdm/neuro_ai/contract_api.py",
+      "lines": 73,
+      "covered": 68,
+      "percent": 93.15
+    },
+    {
+      "path": "src/mlsdm/neuro_ai/contracts.py",
+      "lines": 25,
+      "covered": 25,
+      "percent": 100.0
+    },
+    {
+      "path": "src/mlsdm/neuro_ai/prediction_error.py",
+      "lines": 47,
+      "covered": 41,
+      "percent": 87.23
+    },
+    {
+      "path": "src/mlsdm/observability/__init__.py",
+      "lines": 10,
+      "covered": 10,
+      "percent": 100.0
+    },
+    {
+      "path": "src/mlsdm/observability/aphasia_logging.py",
+      "lines": 28,
+      "covered": 27,
+      "percent": 96.43
+    },
+    {
+      "path": "src/mlsdm/observability/aphasia_metrics.py",
+      "lines": 26,
+      "covered": 24,
+      "percent": 92.31
+    },
+    {
+      "path": "src/mlsdm/observability/decision_trace.py",
+      "lines": 20,
+      "covered": 20,
+      "percent": 100.0
+    },
+    {
+      "path": "src/mlsdm/observability/exporters.py",
+      "lines": 54,
+      "covered": 54,
+      "percent": 100.0
+    },
+    {
+      "path": "src/mlsdm/observability/logger.py",
+      "lines": 322,
+      "covered": 215,
+      "percent": 66.77
+    },
+    {
+      "path": "src/mlsdm/observability/memory_telemetry.py",
+      "lines": 223,
+      "covered": 176,
+      "percent": 78.92
+    },
+    {
+      "path": "src/mlsdm/observability/metrics.py",
+      "lines": 421,
+      "covered": 294,
+      "percent": 69.83
+    },
+    {
+      "path": "src/mlsdm/observability/policy_drift_telemetry.py",
+      "lines": 46,
+      "covered": 42,
+      "percent": 91.3
+    },
+    {
+      "path": "src/mlsdm/observability/tracing.py",
+      "lines": 305,
+      "covered": 212,
+      "percent": 69.51
+    },
+    {
+      "path": "src/mlsdm/policy/__init__.py",
+      "lines": 3,
+      "covered": 3,
+      "percent": 100.0
+    },
+    {
+      "path": "src/mlsdm/policy/check.py",
+      "lines": 88,
+      "covered": 50,
+      "percent": 56.82
+    },
+    {
+      "path": "src/mlsdm/policy/loader.py",
+      "lines": 437,
+      "covered": 381,
+      "percent": 87.19
+    },
+    {
+      "path": "src/mlsdm/policy/opa.py",
+      "lines": 48,
+      "covered": 21,
+      "percent": 43.75
+    },
+    {
+      "path": "src/mlsdm/policy/validation.py",
+      "lines": 118,
+      "covered": 104,
+      "percent": 88.14
+    },
+    {
+      "path": "src/mlsdm/protocols/__init__.py",
+      "lines": 2,
+      "covered": 2,
+      "percent": 100.0
+    },
+    {
+      "path": "src/mlsdm/protocols/neuro_signals.py",
+      "lines": 50,
+      "covered": 50,
+      "percent": 100.0
+    },
+    {
+      "path": "src/mlsdm/rhythm/cognitive_rhythm.py",
+      "lines": 32,
+      "covered": 31,
+      "percent": 96.88
+    },
+    {
+      "path": "src/mlsdm/risk/__init__.py",
+      "lines": 2,
+      "covered": 2,
+      "percent": 100.0
+    },
+    {
+      "path": "src/mlsdm/risk/safety_control.py",
+      "lines": 65,
+      "covered": 51,
+      "percent": 78.46
+    },
+    {
+      "path": "src/mlsdm/router/__init__.py",
+      "lines": 2,
+      "covered": 2,
+      "percent": 100.0
+    },
+    {
+      "path": "src/mlsdm/router/llm_router.py",
+      "lines": 93,
+      "covered": 93,
+      "percent": 100.0
+    },
+    {
+      "path": "src/mlsdm/sdk/__init__.py",
+      "lines": 2,
+      "covered": 2,
+      "percent": 100.0
+    },
+    {
+      "path": "src/mlsdm/sdk/neuro_engine_client.py",
+      "lines": 107,
+      "covered": 107,
+      "percent": 100.0
+    },
+    {
+      "path": "src/mlsdm/security/__init__.py",
+      "lines": 5,
+      "covered": 5,
+      "percent": 100.0
+    },
+    {
+      "path": "src/mlsdm/security/guardrails.py",
+      "lines": 150,
+      "covered": 146,
+      "percent": 97.33
+    },
+    {
+      "path": "src/mlsdm/security/llm_safety.py",
+      "lines": 187,
+      "covered": 179,
+      "percent": 95.72
+    },
+    {
+      "path": "src/mlsdm/security/mtls.py",
+      "lines": 108,
+      "covered": 108,
+      "percent": 100.0
+    },
+    {
+      "path": "src/mlsdm/security/oidc.py",
+      "lines": 192,
+      "covered": 150,
+      "percent": 78.12
+    },
+    {
+      "path": "src/mlsdm/security/payload_scrubber.py",
+      "lines": 90,
+      "covered": 66,
+      "percent": 73.33
+    },
+    {
+      "path": "src/mlsdm/security/policy_engine.py",
+      "lines": 123,
+      "covered": 116,
+      "percent": 94.31
+    },
+    {
+      "path": "src/mlsdm/security/rate_limit.py",
+      "lines": 65,
+      "covered": 54,
+      "percent": 83.08
+    },
+    {
+      "path": "src/mlsdm/security/rbac.py",
+      "lines": 193,
+      "covered": 169,
+      "percent": 87.56
+    },
+    {
+      "path": "src/mlsdm/security/signing.py",
+      "lines": 118,
+      "covered": 118,
+      "percent": 100.0
+    },
+    {
+      "path": "src/mlsdm/speech/__init__.py",
+      "lines": 2,
+      "covered": 2,
+      "percent": 100.0
+    },
+    {
+      "path": "src/mlsdm/speech/governance.py",
+      "lines": 30,
+      "covered": 25,
+      "percent": 83.33
+    },
+    {
+      "path": "src/mlsdm/state/__init__.py",
+      "lines": 3,
+      "covered": 3,
+      "percent": 100.0
+    },
+    {
+      "path": "src/mlsdm/state/system_state_migrations.py",
+      "lines": 62,
+      "covered": 54,
+      "percent": 87.1
+    },
+    {
+      "path": "src/mlsdm/state/system_state_schema.py",
+      "lines": 83,
+      "covered": 75,
+      "percent": 90.36
+    },
+    {
+      "path": "src/mlsdm/state/system_state_store.py",
+      "lines": 186,
+      "covered": 147,
+      "percent": 79.03
+    },
+    {
+      "path": "src/mlsdm/utils/__init__.py",
+      "lines": 9,
+      "covered": 9,
+      "percent": 100.0
+    },
+    {
+      "path": "src/mlsdm/utils/array_pool.py",
+      "lines": 99,
+      "covered": 98,
+      "percent": 98.99
+    },
+    {
+      "path": "src/mlsdm/utils/bulkhead.py",
+      "lines": 128,
+      "covered": 125,
+      "percent": 97.66
+    },
+    {
+      "path": "src/mlsdm/utils/cache.py",
+      "lines": 233,
+      "covered": 228,
+      "percent": 97.85
+    },
+    {
+      "path": "src/mlsdm/utils/circuit_breaker.py",
+      "lines": 234,
+      "covered": 233,
+      "percent": 99.57
+    },
+    {
+      "path": "src/mlsdm/utils/coherence_safety_metrics.py",
+      "lines": 170,
+      "covered": 170,
+      "percent": 100.0
+    },
+    {
+      "path": "src/mlsdm/utils/config_loader.py",
+      "lines": 227,
+      "covered": 198,
+      "percent": 87.22
+    },
+    {
+      "path": "src/mlsdm/utils/config_schema.py",
+      "lines": 188,
+      "covered": 183,
+      "percent": 97.34
+    },
+    {
+      "path": "src/mlsdm/utils/config_validator.py",
+      "lines": 117,
+      "covered": 116,
+      "percent": 99.15
+    },
+    {
+      "path": "src/mlsdm/utils/data_serializer.py",
+      "lines": 84,
+      "covered": 73,
+      "percent": 86.9
+    },
+    {
+      "path": "src/mlsdm/utils/embedding_cache.py",
+      "lines": 112,
+      "covered": 108,
+      "percent": 96.43
+    },
+    {
+      "path": "src/mlsdm/utils/errors.py",
+      "lines": 246,
+      "covered": 235,
+      "percent": 95.53
+    },
+    {
+      "path": "src/mlsdm/utils/input_validator.py",
+      "lines": 167,
+      "covered": 133,
+      "percent": 79.64
+    },
+    {
+      "path": "src/mlsdm/utils/math_constants.py",
+      "lines": 103,
+      "covered": 100,
+      "percent": 97.09
+    },
+    {
+      "path": "src/mlsdm/utils/metrics.py",
+      "lines": 50,
+      "covered": 49,
+      "percent": 98.0
+    },
+    {
+      "path": "src/mlsdm/utils/rate_limiter.py",
+      "lines": 56,
+      "covered": 49,
+      "percent": 87.5
+    },
+    {
+      "path": "src/mlsdm/utils/security_logger.py",
+      "lines": 88,
+      "covered": 81,
+      "percent": 92.05
+    },
+    {
+      "path": "src/mlsdm/utils/time_provider.py",
+      "lines": 35,
+      "covered": 33,
+      "percent": 94.29
+    }
+  ],
+  "totals": {
+    "lines": 13017,
+    "covered": 10974,
+    "percent": 84.31
+  }
+}
