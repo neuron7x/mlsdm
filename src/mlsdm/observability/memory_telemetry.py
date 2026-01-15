@@ -472,7 +472,7 @@ def log_pelm_integrity_violation(
             metrics["blocked_count"] = blocked_count
 
         obs_logger.warning(
-            EventType.SECURITY,
+            EventType.SYSTEM_WARNING,
             f"PELM integrity violation: reason={reason} source={source}",
             correlation_id=correlation_id,
             metrics=metrics,
