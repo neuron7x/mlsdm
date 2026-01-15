@@ -88,10 +88,10 @@ Each risk is assessed using the Impact × Likelihood framework and tracked throu
 | **R009** | Technical | Race conditions in concurrent access | High | Low | Medium | Mitigated | Thread-safe locks, property tests |
 | **R010** | Technical | Checkpoint loading RCE (NeuroLang) | Critical | Very Low | High | Mitigated | Path restriction, secure mode |
 | **R011** | Governance | Audit trail gaps | Medium | Low | Low | Mitigated | Structured logging, correlation IDs |
-| **R012** | Governance | Policy drift without detection | High | Medium | High | Partially Mitigated | Observable thresholds, drift alerts (planned) |
+| **R012** | Governance | Policy drift without detection | High | Medium | High | Mitigated | Drift budget monitor, escalation FSM, evidence artifacts |
 | **R013** | Governance | Undetected model degradation | Medium | Medium | Medium | Mitigated | Aphasia detection, quality metrics |
 | **R014** | Content | Aphasia detection false negatives | Medium | Low | Low | Mitigated | Configurable thresholds, multiple flags |
-| **R015** | Content | Hallucination propagation via memory | High | Medium | High | Partially Mitigated | Memory provenance (future), confidence scoring |
+| **R015** | Content | Hallucination propagation via memory | High | Medium | High | Mitigated | Provenance enforcement, quarantine, retrieval gating |
 | **R016** | Behavioral | Sleep phase exploitation for reduced filtering | Medium | Low | Low | Mitigated | Phase-aware moral enforcement |
 | **R017** | Technical | Dependency vulnerability exploitation | High | Medium | High | Mitigated | Weekly pip-audit, Dependabot |
 | **R018** | Content | Indirect prompt injection via context | High | Medium | High | Partially Mitigated | Context sanitization (future) |
@@ -314,6 +314,29 @@ PyTorch checkpoint files can contain arbitrary code that executes during `torch.
 
 ---
 
+### R012: Policy Drift without Detection
+
+**Category:** Governance Safety
+**Risk Owner:** Safety Team
+
+**Description:**
+Adaptive moral thresholds could drift outside budget without detection, reducing safety enforcement.
+
+**Current Controls:**
+- Drift budgets loaded from policy SLOs (`threshold_drift_max`)
+- Deterministic escalation FSM: `OK → WARN → DEGRADED → HALT/CLAMP`
+- Metrics + logging emitted on state transitions
+- Clamp enforcement halts drift beyond budget
+
+**Validation:**
+- `tests/risk/test_policy_drift_monitor.py::test_policy_drift_monitor_escalates_and_halts`
+- `tests/integration/test_policy_drift_enforcement.py::test_policy_drift_halt_clamps_threshold`
+- Evidence: `artifacts/evidence/policy_drift_report.json`
+
+**Status:** ✅ Mitigated
+
+---
+
 ### R015: Hallucination Propagation via Memory
 
 **Category:** Content Safety
@@ -323,21 +346,17 @@ PyTorch checkpoint files can contain arbitrary code that executes during `torch.
 Hallucinated content from LLM responses could be stored in memory and retrieved as context for future responses, creating a feedback loop of misinformation.
 
 **Current Controls:**
-- Aphasia detection flags low-quality responses
-- Memory decay (L1→L2→L3) reduces long-term impact
+- Provenance metadata enforced for memory writes (source + confidence)
+- LLM-generated and low-confidence memories quarantined by default
+- Retrieval gating excludes quarantined memories unless explicitly requested
 - Wake/sleep cycles provide consolidation opportunities
 
-**Planned Controls:**
-- Memory provenance tracking (source + confidence)
-- Factual consistency checking
-- Hallucination detection before memory storage
+**Validation:**
+- `tests/integration/test_memory_provenance_enforcement.py::test_llm_provenance_quarantined_by_default`
+- `tests/unit/test_memory_provenance.py`
+- Evidence: `artifacts/evidence/provenance_integrity_report.json`
 
-**Status:** ⚠️ Partially Mitigated
-
-**Action Items:**
-- [ ] Implement memory provenance metadata
-- [ ] Add confidence scoring to stored embeddings
-- [ ] Create hallucination detection pre-filter
+**Status:** ✅ Mitigated
 
 ---
 
@@ -389,19 +408,19 @@ Malicious instructions embedded in retrieved context (from memory or external so
 
 | Category | Total | Mitigated | Partial | Open |
 |----------|-------|-----------|---------|------|
-| Content Safety | 7 | 6 | 1 | 0 |
+| Content Safety | 7 | 7 | 0 | 0 |
 | Behavioral Safety | 4 | 4 | 0 | 0 |
 | Technical Safety | 5 | 5 | 0 | 0 |
-| Governance Safety | 2 | 1 | 1 | 0 |
+| Governance Safety | 2 | 2 | 0 | 0 |
 
 ### Critical/High Risks Requiring Action
 
 | Risk ID | Description | Action Required | Status |
 |---------|-------------|-----------------|--------|
 | ~~R003~~ | ~~Multi-turn jailbreak~~ | ~~Attack pattern detection~~ | ✅ Mitigated |
-| R015 | Hallucination propagation | Memory provenance | ⚠️ Open |
+| ~~R015~~ | ~~Hallucination propagation~~ | ~~Memory provenance~~ | ✅ Mitigated |
 | ~~R018~~ | ~~Indirect prompt injection~~ | ~~Context sanitization~~ | ✅ Mitigated |
-| R012 | Policy drift detection | Drift alerting system | ⚠️ Open |
+| ~~R012~~ | ~~Policy drift detection~~ | ~~Drift alerting system~~ | ✅ Mitigated |
 
 ---
 
@@ -420,6 +439,7 @@ Malicious instructions embedded in retrieved context (from memory or external so
 |------|---------|---------|--------|
 | Nov 2025 | 1.0.0 | Initial risk register creation | Principal AI Safety Engineer |
 | Dec 2025 | 1.1.0 | R003, R018 mitigated: Multi-turn attack detection & context sanitization | @copilot |
+| Jan 2026 | 1.2.0 | R012, R015 mitigated: drift monitor + provenance gating | @codex |
 
 ---
 

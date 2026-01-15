@@ -11,6 +11,7 @@ from hypothesis import given, settings
 from hypothesis import strategies as st
 
 from mlsdm.memory import PhaseEntangledLatticeMemory
+from tests.utils.memory_helpers import entangle_with_provenance
 
 
 class TestPELMPropertyCoverage:
@@ -43,7 +44,7 @@ class TestPELMPropertyCoverage:
         for _ in range(num_stores):
             emb = np.random.randn(16).astype(np.float32).tolist()
             embeddings.append(emb)
-            pelm.entangle(emb, phase_value)
+            entangle_with_provenance(pelm, emb, phase_value)
 
         # Should retrieve at least some vectors
         results = pelm.retrieve(embeddings[0], phase_value, top_k=min(5, num_stores))
@@ -61,7 +62,7 @@ class TestPELMPropertyCoverage:
         # Store vectors with known phases
         phases = [0.0, 0.2, 0.4, 0.6, 0.8, 1.0]
         for phase in phases:
-            pelm.entangle(np.random.randn(16).astype(np.float32).tolist(), phase)
+            entangle_with_provenance(pelm, np.random.randn(16).astype(np.float32).tolist(), phase)
 
         query = np.random.randn(16).astype(np.float32).tolist()
         results = pelm.retrieve(query, query_phase, top_k=10, phase_tolerance=tolerance)
@@ -79,7 +80,7 @@ class TestPELMErrorPaths:
 
         # Test with numpy array instead of list
         with pytest.raises(TypeError, match="vector must be a list"):
-            pelm.entangle(np.array([1.0, 2.0, 3.0]), 0.5)
+            entangle_with_provenance(pelm, np.array([1.0, 2.0, 3.0]), 0.5)
 
     def test_entangle_with_invalid_element_type(self):
         """Test entangle raises TypeError for non-numeric vector elements"""
@@ -87,21 +88,21 @@ class TestPELMErrorPaths:
 
         # Test with string in vector
         with pytest.raises(TypeError, match="vector element.*must be numeric"):
-            pelm.entangle([1.0, "invalid", 3.0], 0.5)
+            entangle_with_provenance(pelm, [1.0, "invalid", 3.0], 0.5)
 
     def test_entangle_with_nan_value(self):
         """Test entangle raises ValueError for NaN in vector"""
         pelm = PhaseEntangledLatticeMemory(dimension=3, capacity=100)
 
         with pytest.raises(ValueError, match="vector contains invalid value"):
-            pelm.entangle([1.0, float("nan"), 3.0], 0.5)
+            entangle_with_provenance(pelm, [1.0, float("nan"), 3.0], 0.5)
 
     def test_entangle_with_inf_value(self):
         """Test entangle raises ValueError for infinity in vector"""
         pelm = PhaseEntangledLatticeMemory(dimension=3, capacity=100)
 
         with pytest.raises(ValueError, match="vector contains invalid value"):
-            pelm.entangle([1.0, float("inf"), 3.0], 0.5)
+            entangle_with_provenance(pelm, [1.0, float("inf"), 3.0], 0.5)
 
     def test_retrieve_from_empty_memory(self):
         """Test retrieve from empty memory returns empty list"""
@@ -134,7 +135,7 @@ class TestPELMErrorPaths:
         vector = [1.0] * 16
 
         with pytest.raises(ValueError, match="phase.*must be"):
-            pelm.entangle(vector, -0.1)
+            entangle_with_provenance(pelm, vector, -0.1)
 
     def test_entangle_with_phase_greater_than_one(self):
         """Test entangle raises ValueError for phase > 1.0"""
@@ -142,7 +143,7 @@ class TestPELMErrorPaths:
         vector = [1.0] * 16
 
         with pytest.raises(ValueError, match="phase.*must be"):
-            pelm.entangle(vector, 1.1)
+            entangle_with_provenance(pelm, vector, 1.1)
 
     def test_retrieve_phase_filtering_with_no_matches(self):
         """Test retrieve returns empty list when no phases match tolerance"""
@@ -150,7 +151,7 @@ class TestPELMErrorPaths:
 
         # Store vectors with phase 0.0
         for _ in range(5):
-            pelm.entangle([1.0] * 16, 0.0)
+            entangle_with_provenance(pelm, [1.0] * 16, 0.0)
 
         # Query with phase 1.0 and very small tolerance (should return empty or minimal results)
         query = [1.0] * 16

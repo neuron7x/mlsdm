@@ -33,9 +33,9 @@ Quality gates recommended for every merge:
 
 | ID | Category | Severity | Status | Location | Symptom | Root Cause | Impact/Risk |
 |----|----------|----------|--------|----------|---------|------------|-------------|
-| AUD-SEC-001 | Security / Code | High | Open | `src/mlsdm/security/llm_safety.py` | No automated alert when moral filter drifts | Drift monitor (R012) not implemented | Safety controls can silently degrade, allowing harmful output |
-| AUD-CODE-001 | Code / CI | Medium | Open | `src/mlsdm/api/*`, `.github/workflows/ci-neuro-cognitive-engine.yml` | API schema breaks are not caught in CI | No OpenAPI diff/version gate | Clients can break without detection |
-| AUD-CODE-002 | Code / Security | Medium | Open | `src/mlsdm/memory/*` | Memory entries lack provenance metadata | Provenance tracking (R015) not modeled | Hallucination propagation and forensics gaps |
+| AUD-SEC-001 | Security / Code | High | Closed | `src/mlsdm/security/llm_safety.py` | No automated alert when moral filter drifts | Drift monitor (R012) not implemented | Safety controls can silently degrade, allowing harmful output |
+| AUD-CODE-001 | Code / CI | Medium | Closed | `src/mlsdm/api/*`, `.github/workflows/ci-neuro-cognitive-engine.yml` | API schema breaks are not caught in CI | No OpenAPI diff/version gate | Clients can break without detection |
+| AUD-CODE-002 | Code / Security | Medium | Closed | `src/mlsdm/memory/*` | Memory entries lack provenance metadata | Provenance tracking (R015) not modeled | Hallucination propagation and forensics gaps |
 | AUD-TEST-001 | Tests | Medium | Open | `Makefile` (`pytest --ignore=tests/load`) | Load/stress suite excluded from default target | Default test target skips `tests/load` to save time | Perf/resource regressions may ship unnoticed |
 | AUD-CI-001 | CI/CD | Low | Open | `.github/workflows/ci-neuro-cognitive-engine.yml` | PR workflows can sit in `action_required` with zero jobs | Approval gating for PR workflows | PRs may appear green while checks are unrun |
 | AUD-DEP-001 | Dependencies | Medium | Open | `requirements*.txt`, `uv.lock` | pip-audit reports 1 unresolved vulnerability (2025-12-19) | Vulnerable transitive not yet patched | Security exposure until patched |
@@ -45,9 +45,9 @@ Quality gates recommended for every merge:
 
 | ID | Repro/Detection | Recommended Fix | Closure Criteria | Evidence |
 |----|-----------------|-----------------|------------------|----------|
-| AUD-SEC-001 | Lower moral threshold in config and chat; no drift alert/metric fires | Add drift monitor + metrics/alerts; tie into moral filter EMA; add unit/integration tests | Alert emitted and covered by tests; CI gate executes new tests | `RISK_REGISTER.md` (R012), `ENGINEERING_DEFICIENCIES_REGISTER.md` SEC-S001 |
-| AUD-CODE-001 | Alter response schema; pipeline remains green | Add OpenAPI diff step, publish schema artifact, version routes | CI fails on incompatible API diff; schema artifact stored per release | `ENGINEERING_DEFICIENCIES_REGISTER.md` ARCH-S001 |
-| AUD-CODE-002 | Inject synthetic memory entry; no source/policy trace recorded | Add origin/policy metadata to memory models; guard tests rejecting untrusted entries | Provenance fields enforced in models; tests assert rejection of untrusted entries | `ENGINEERING_DEFICIENCIES_REGISTER.md` SEC-S001 (R015) |
+| AUD-SEC-001 | Lower moral threshold in config and chat; no drift alert/metric fires | Add drift monitor + metrics/alerts; tie into moral filter EMA; add unit/integration tests | Alert emitted and covered by tests; CI gate executes new tests | `tests/risk/test_policy_drift_monitor.py`, `tests/integration/test_policy_drift_enforcement.py`, `artifacts/evidence/policy_drift_report.json` |
+| AUD-CODE-001 | Alter response schema; pipeline remains green | Add OpenAPI diff step, publish schema artifact, version routes | CI fails on incompatible API diff; schema artifact stored per release | `tests/integration/test_openapi_contract_evidence.py`, `artifacts/evidence/openapi_schema.json`, `artifacts/evidence/openapi_diff_report.json` |
+| AUD-CODE-002 | Inject synthetic memory entry; no source/policy trace recorded | Add origin/policy metadata to memory models; guard tests rejecting untrusted entries | Provenance fields enforced in models; tests assert rejection of untrusted entries | `tests/integration/test_memory_provenance_enforcement.py`, `artifacts/evidence/provenance_integrity_report.json` |
 | AUD-TEST-001 | Run `make test`; load suite is skipped | Schedule nightly CI job for `tests/load`; note in release checklist | Nightly job green or fails on regression; checklist references load run | `Makefile` line 51; `TESTING_STRATEGY.md` (load tests optional) |
 | AUD-CI-001 | Open PR from non-trusted branch; workflow shows `action_required` and no jobs | Enforce branch protection requiring successful workflow; auto-request approval/rerun | Workflow transitions to `success` after approval; branch protection blocks merge otherwise | GitHub Actions CI (approval gating observed 2025-12-20) |
 | AUD-DEP-001 | Run `pip-audit` -> reports 1 vulnerability | Patch/pin dependency and re-run `pip-audit`; add scheduled CI step | `pip-audit` returns 0 vulns in CI | `TECHNICAL_DEBT_REGISTER.md` (pip-audit row, 2025-12-19) |
@@ -57,8 +57,8 @@ Quality gates recommended for every merge:
 
 ## Remediation Plan (Prioritized)
 
-1. **Blockers (High):** Implement policy drift monitor (AUD-SEC-001).  
-2. **Stability:** Add OpenAPI diff gate + memory provenance (AUD-CODE-001/002).  
+1. **Blockers (High):** Implement policy drift monitor (AUD-SEC-001). ✅ Closed  
+2. **Stability:** Add OpenAPI diff gate + memory provenance (AUD-CODE-001/002). ✅ Closed  
 3. **Risk Containment:** Enable scheduled load tests and enforce CI approval+branch protection (AUD-TEST-001, AUD-CI-001).  
 4. **Security Hygiene:** Patch pip-audit finding and keep dependency review green (AUD-DEP-001).  
 5. **Governance:** Keep this register updated per release (AUD-DOC-001).

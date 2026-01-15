@@ -24,6 +24,8 @@ import numpy as np
 import psutil
 import pytest
 
+from tests.utils.memory_helpers import entangle_with_provenance
+
 # Add src to path for standalone execution
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
@@ -128,13 +130,13 @@ class TestPELMPerformance:
 
         # Warmup
         for i in range(min(50, PELM_N_OPS)):
-            pelm.entangle(vectors[i], phases[i])
+            entangle_with_provenance(pelm, vectors[i], phases[i])
 
         # Benchmark
         start_total = time.perf_counter()
         for v, p in zip(vectors, phases, strict=True):
             start = time.perf_counter()
-            pelm.entangle(v, p)
+            entangle_with_provenance(pelm, v, p)
             latencies.append((time.perf_counter() - start) * 1000)
         total_time = (time.perf_counter() - start_total) * 1000
 
@@ -170,7 +172,7 @@ class TestPELMPerformance:
         phases = [np.random.random() for _ in range(PELM_N_OPS)]
 
         for v, p in zip(vectors, phases, strict=True):
-            pelm.entangle(v, p)
+            entangle_with_provenance(pelm, v, p)
 
         latencies: list[float] = []
 
@@ -316,7 +318,7 @@ def run_all_benchmarks() -> dict:
     start_total = time.perf_counter()
     for v, p in zip(vectors, phases, strict=True):
         start = time.perf_counter()
-        pelm.entangle(v, p)
+        entangle_with_provenance(pelm, v, p)
         pelm_entangle_latencies.append((time.perf_counter() - start) * 1000)
     total_time = (time.perf_counter() - start_total) * 1000
     results["pelm_entangle"] = {

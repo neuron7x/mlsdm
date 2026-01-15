@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, Literal, overload
 import numpy as np
 
 from mlsdm.memory.provenance import MemoryProvenance, MemorySource
+from mlsdm.memory.provenance_policy import MemoryProvenancePolicy
 from mlsdm.utils.math_constants import safe_norm
 
 if TYPE_CHECKING:
@@ -31,6 +32,8 @@ except ImportError:
 try:
     from mlsdm.observability.memory_telemetry import (
         record_pelm_corruption,
+        record_pelm_provenance_violation,
+        record_pelm_quarantine,
         record_pelm_retrieve,
         record_pelm_store,
     )
@@ -79,7 +82,13 @@ class PhaseEntangledLatticeMemory:
     DEFAULT_TOP_K = PELM_DEFAULTS.default_top_k if PELM_DEFAULTS else 5
     MIN_NORM_THRESHOLD = PELM_DEFAULTS.min_norm_threshold if PELM_DEFAULTS else 1e-9
 
-    def __init__(self, dimension: int = 384, capacity: int | None = None) -> None:
+    def __init__(
+        self,
+        dimension: int = 384,
+        capacity: int | None = None,
+        *,
+        provenance_policy: MemoryProvenancePolicy | None = None,
+    ) -> None:
         # Use calibration default if not specified
         if capacity is None:
             capacity = self.DEFAULT_CAPACITY
@@ -117,7 +126,8 @@ class PhaseEntangledLatticeMemory:
         # Provenance tracking for AI safety (TD-003)
         self._provenance: list[MemoryProvenance] = []
         self._memory_ids: list[str] = []
-        self._confidence_threshold = 0.5  # Minimum confidence for storage
+        self._quarantined: list[bool] = []
+        self._provenance_policy = provenance_policy or MemoryProvenancePolicy()
 
     def _ensure_integrity(self) -> None:
         """
@@ -177,14 +187,24 @@ class PhaseEntangledLatticeMemory:
             # Generate unique memory ID
             memory_id = str(uuid.uuid4())
 
-            # Create default provenance if not provided
             if provenance is None:
+                if _OBSERVABILITY_AVAILABLE:
+                    record_pelm_provenance_violation("missing_provenance", correlation_id)
                 provenance = MemoryProvenance(
-                    source=MemorySource.SYSTEM_PROMPT, confidence=1.0, timestamp=datetime.now()
+                    source=MemorySource.SYSTEM_PROMPT,
+                    confidence=0.0,
+                    timestamp=datetime.now(),
                 )
 
-            # Check confidence threshold - reject low-confidence memories
-            if provenance.confidence < self._confidence_threshold:
+            if not isinstance(provenance, MemoryProvenance):
+                if _OBSERVABILITY_AVAILABLE:
+                    record_pelm_provenance_violation("invalid_provenance_type", correlation_id)
+                raise TypeError(
+                    f"provenance must be MemoryProvenance, got {type(provenance).__name__}"
+                )
+
+            decision = self._provenance_policy.decide_write(provenance)
+            if decision.reject:
                 # Log rejection for observability
                 if _OBSERVABILITY_AVAILABLE and start_time is not None:
                     latency_ms = (time.perf_counter() - start_time) * 1000
@@ -198,6 +218,7 @@ class PhaseEntangledLatticeMemory:
                         latency_ms=latency_ms,
                         correlation_id=correlation_id,
                     )
+                    record_pelm_provenance_violation(decision.reason or "rejected", correlation_id)
                 return -1  # Rejection sentinel value
 
             # Validate vector type
@@ -249,9 +270,14 @@ class PhaseEntangledLatticeMemory:
             if idx < len(self._provenance):
                 self._provenance[idx] = provenance
                 self._memory_ids[idx] = memory_id
+                self._quarantined[idx] = decision.quarantined
             else:
                 self._provenance.append(provenance)
                 self._memory_ids.append(memory_id)
+                self._quarantined.append(decision.quarantined)
+
+            if decision.quarantined and _OBSERVABILITY_AVAILABLE:
+                record_pelm_quarantine(decision.reason or "quarantined", correlation_id)
 
             # Update pointer with wraparound check
             new_pointer = self.pointer + 1
@@ -320,7 +346,18 @@ class PhaseEntangledLatticeMemory:
                 f"{len(vectors)} vectors, {len(phases)} phases"
             )
 
-        if provenances is not None and len(provenances) != len(vectors):
+        if provenances is None:
+            if _OBSERVABILITY_AVAILABLE:
+                record_pelm_provenance_violation("missing_provenance_batch", correlation_id)
+            provenances = [
+                MemoryProvenance(
+                    source=MemorySource.SYSTEM_PROMPT,
+                    confidence=0.0,
+                    timestamp=datetime.now(),
+                )
+                for _ in range(len(vectors))
+            ]
+        if len(provenances) != len(vectors):
             raise ValueError(
                 f"provenances must match vectors length: "
                 f"{len(vectors)} vectors, {len(provenances)} provenances"
@@ -337,17 +374,20 @@ class PhaseEntangledLatticeMemory:
             last_accepted: tuple[int, float, float] | None = None
 
             for i, (vector, phase) in enumerate(zip(vectors, phases, strict=True)):
-                # Get or create provenance for this vector
-                if provenances is not None:
-                    provenance = provenances[i]
-                else:
-                    provenance = MemoryProvenance(
-                        source=MemorySource.SYSTEM_PROMPT, confidence=1.0, timestamp=datetime.now()
+                provenance = provenances[i]
+                if not isinstance(provenance, MemoryProvenance):
+                    if _OBSERVABILITY_AVAILABLE:
+                        record_pelm_provenance_violation("invalid_provenance_type", correlation_id)
+                    raise TypeError(
+                        f"provenance at index {i} must be MemoryProvenance, got "
+                        f"{type(provenance).__name__}"
                     )
 
-                # Check confidence threshold
-                if provenance.confidence < self._confidence_threshold:
+                decision = self._provenance_policy.decide_write(provenance)
+                if decision.reject:
                     indices.append(-1)  # Reject
+                    if _OBSERVABILITY_AVAILABLE:
+                        record_pelm_provenance_violation(decision.reason or "rejected", correlation_id)
                     continue
 
                 # Generate unique memory ID
@@ -393,9 +433,14 @@ class PhaseEntangledLatticeMemory:
                 if idx < len(self._provenance):
                     self._provenance[idx] = provenance
                     self._memory_ids[idx] = memory_id
+                    self._quarantined[idx] = decision.quarantined
                 else:
                     self._provenance.append(provenance)
                     self._memory_ids.append(memory_id)
+                    self._quarantined.append(decision.quarantined)
+
+                if decision.quarantined and _OBSERVABILITY_AVAILABLE:
+                    record_pelm_quarantine(decision.reason or "quarantined", correlation_id)
 
                 indices.append(idx)
                 last_accepted = (idx, float(phase), float(norm))
@@ -444,6 +489,7 @@ class PhaseEntangledLatticeMemory:
         top_k: int | None = None,
         correlation_id: str | None = None,
         min_confidence: float = 0.0,
+        include_quarantined: bool = False,
         return_indices: Literal[False] = False,
     ) -> list[MemoryRetrieval]: ...
 
@@ -456,6 +502,7 @@ class PhaseEntangledLatticeMemory:
         top_k: int | None = None,
         correlation_id: str | None = None,
         min_confidence: float = 0.0,
+        include_quarantined: bool = False,
         return_indices: Literal[True] = True,
     ) -> tuple[list[MemoryRetrieval], list[int]]: ...
 
@@ -467,6 +514,7 @@ class PhaseEntangledLatticeMemory:
         top_k: int | None = None,
         correlation_id: str | None = None,
         min_confidence: float = 0.0,
+        include_quarantined: bool = False,
         return_indices: bool = False,
     ) -> list[MemoryRetrieval] | tuple[list[MemoryRetrieval], list[int]]:
         # Use calibration defaults if not specified
@@ -522,11 +570,18 @@ class PhaseEntangledLatticeMemory:
                 if i < provenance_size:
                     confidence_mask[i] = self._provenance[i].confidence >= min_confidence
                 else:
-                    # Backward compatibility: treat missing provenance as high confidence.
-                    confidence_mask[i] = True
+                    confidence_mask[i] = False
+
+            quarantine_mask = np.empty(self.size, dtype=bool)
+            quarantine_size = len(self._quarantined)
+            for i in range(self.size):
+                if i < quarantine_size:
+                    quarantine_mask[i] = not self._quarantined[i] or include_quarantined
+                else:
+                    quarantine_mask[i] = include_quarantined
 
             # Combine phase and confidence masks
-            valid_mask = phase_mask & confidence_mask
+            valid_mask = phase_mask & confidence_mask & quarantine_mask
 
             if not np.any(valid_mask):
                 # Record empty result due to phase mismatch
@@ -577,9 +632,8 @@ class PhaseEntangledLatticeMemory:
                     prov = self._provenance[glob]
                     mem_id = self._memory_ids[glob]
                 else:
-                    # Fallback for memories created before provenance was added
                     prov = MemoryProvenance(
-                        source=MemorySource.SYSTEM_PROMPT, confidence=1.0, timestamp=datetime.now()
+                        source=MemorySource.SYSTEM_PROMPT, confidence=0.0, timestamp=datetime.now()
                     )
                     mem_id = str(uuid.uuid4())
 

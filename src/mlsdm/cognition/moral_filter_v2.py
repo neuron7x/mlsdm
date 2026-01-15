@@ -11,6 +11,7 @@ if TYPE_CHECKING:
 
 # Import drift telemetry
 from mlsdm.observability.policy_drift_telemetry import record_threshold_change
+from mlsdm.risk.policy_drift_monitor import PolicyDriftMonitor, PolicyDriftState
 
 logger = logging.getLogger(__name__)
 
@@ -110,6 +111,10 @@ class MoralFilterV2:
         self._filter_id = filter_id
         self._max_history = 100  # Keep last 100 changes
         self._drift_history: deque[float] = deque(maxlen=self._max_history)
+        self._drift_monitor = PolicyDriftMonitor(
+            baseline_threshold=self.threshold, filter_id=self._filter_id
+        )
+        self._halted = False
 
         # Initialize metrics
         record_threshold_change(
@@ -132,6 +137,14 @@ class MoralFilterV2:
 
     def adapt(self, accepted: bool) -> None:
         """Adapt threshold with drift detection."""
+        if self._halted:
+            logger.error(
+                "Policy drift HALT active for filter '%s'; threshold clamped at %.3f",
+                self._filter_id,
+                self.threshold,
+            )
+            return
+
         # Store old value for drift calculation
         old_threshold = self.threshold
 
@@ -154,6 +167,15 @@ class MoralFilterV2:
         # NEW: Record drift if threshold changed
         if self.threshold != old_threshold:
             self._record_drift(old_threshold, self.threshold)
+            decision = self._drift_monitor.evaluate(self.threshold, self.ema_accept_rate)
+            if decision.action == "clamp" and decision.clamped_threshold is not None:
+                self.threshold = decision.clamped_threshold
+                self._halted = True
+                logger.error(
+                    "Policy drift clamp enforced for filter '%s': threshold set to %.3f",
+                    self._filter_id,
+                    self.threshold,
+                )
 
     def get_state(self) -> dict[str, float]:
         return {

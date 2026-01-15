@@ -24,6 +24,7 @@ from mlsdm.core.cognitive_controller import CognitiveController
 from mlsdm.core.llm_wrapper import LLMWrapper
 from mlsdm.engine.neuro_cognitive_engine import NeuroCognitiveEngine, NeuroEngineConfig
 from mlsdm.memory import PhaseEntangledLatticeMemory
+from tests.utils.memory_helpers import entangle_with_provenance
 
 # ============================================================================
 # Test Fixtures
@@ -211,7 +212,7 @@ class TestMemoryPressureResilience:
         for i in range(500):
             vec = np.random.randn(384).astype(np.float32).tolist()
             phase = (i % 10) / 10.0
-            pelm.entangle(vec, phase=phase)
+            entangle_with_provenance(pelm, vec, phase=phase)
 
             if i % 10 == 0 and pelm.size > 0:
                 query = np.random.randn(384).astype(np.float32).tolist()
@@ -231,7 +232,7 @@ class TestMemoryPressureResilience:
         # Add some data
         for i in range(50):
             vec = [float(i)] * 10
-            pelm.entangle(vec, phase=0.5)
+            entangle_with_provenance(pelm, vec, phase=0.5)
 
         # Simulate corruption (manually corrupt pointer)
         pelm.pointer = 9999  # Invalid pointer
@@ -593,7 +594,7 @@ class TestRecoveryMechanisms:
         # Add data
         for i in range(50):
             vec = [float(i)] * 10
-            pelm.entangle(vec, phase=0.5)
+            entangle_with_provenance(pelm, vec, phase=0.5)
 
         # Corrupt state
         pelm.pointer = 99999

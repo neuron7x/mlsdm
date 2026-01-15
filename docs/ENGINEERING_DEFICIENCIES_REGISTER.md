@@ -69,37 +69,41 @@ Based on comprehensive analysis, no critical issues requiring immediate resoluti
 
 ## STRATEGIC (Affecting Scalability and Stability)
 
-### SEC-S001: Partially Mitigated AI Security Risks [PARTIALLY RESOLVED]
+### SEC-S001: Partially Mitigated AI Security Risks [RESOLVED]
 
-**Priority:** HIGH → MEDIUM (2 of 4 items resolved)
+**Priority:** HIGH → RESOLVED (4 of 4 items resolved)
 **Category:** Security
 **Source:** `RISK_REGISTER.md`
 
-**Description:** Originally 5 security risks had "Partially Mitigated" status. Now 2 are resolved:
+**Description:** Originally 5 security risks had "Partially Mitigated" status. Now 4 are resolved:
 
 **Resolved (December 2025):**
 - ✅ R003: Multi-turn jailbreak → **Implemented** `analyze_conversation_patterns()` in `llm_safety.py`
 - ✅ R018: Indirect prompt injection → **Implemented** `sanitize_context()` in `llm_safety.py`
+- ✅ R012: Policy drift detection → **Implemented** drift budget monitor + escalation FSM with evidence artifacts
+- ✅ R015: Hallucination propagation → **Implemented** provenance enforcement, quarantine, and retrieval gating
 
 **Still Open:**
-- R012: Policy drift detection (drift alerting system required)
-- R015: Hallucination propagation (memory provenance required)
+- None
 
 **Implementation Details:**
 - `analyze_conversation_patterns()`: Detects gradual manipulation across turns, persistence after refusal, hypothetical framing attacks
 - `sanitize_context()`: Removes embedded instructions, hidden unicode, markdown comment injections
 - Both functions exported via `mlsdm.security` module
 - 15 new tests added covering both functions
+- Drift monitor integrates SLO budgets and escalates `OK → WARN → DEGRADED → HALT`
+- Provenance policy quarantines LLM/low-confidence memories and gates retrieval
 
 **Recommended Actions:**
 - [x] Implement attack pattern detection in PELM memory
 - [x] Add anomaly detection for conversation patterns
-- [ ] Implement memory provenance tracking (R015)
+- [x] Implement memory provenance tracking (R015)
 - [x] Add context sanitization layer
+- [x] Add policy drift detection and alerting (R012)
 
 ---
 
-### ARCH-S001: Lack of Formal API Contract Validation
+### ARCH-S001: Lack of Formal API Contract Validation [RESOLVED]
 
 **Priority:** MEDIUM
 **Category:** Architecture
@@ -110,7 +114,7 @@ Based on comprehensive analysis, no critical issues requiring immediate resoluti
 **Impact:** Potential breaking changes may go unnoticed.
 
 **Recommended Actions:**
-- [ ] Integrate OpenAPI diff into CI for detecting breaking changes
+- [x] Integrate OpenAPI diff into CI for detecting breaking changes
 - [ ] Implement API versioning (v1, v2) in URLs
 
 ---

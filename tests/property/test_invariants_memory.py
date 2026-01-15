@@ -12,6 +12,7 @@ from hypothesis import strategies as st
 
 from mlsdm.memory.multi_level_memory import MultiLevelSynapticMemory
 from mlsdm.memory.phase_entangled_lattice_memory import PhaseEntangledLatticeMemory
+from tests.utils.memory_helpers import entangle_with_provenance
 
 # Test tolerances
 RESONANCE_ORDERING_TOLERANCE = 1e-6  # Tolerance for floating point comparison in ordering
@@ -268,7 +269,7 @@ def test_pelm_capacity_enforcement(dim, capacity):
     for i in range(num_inserts):
         vec = np.random.randn(dim).astype(np.float32)
         phase = float(i % 10) / 10.0  # Phase in [0, 1)
-        pelm.entangle(vec.tolist(), phase=phase)
+        entangle_with_provenance(pelm, vec.tolist(), phase=phase)
 
     # Check size doesn't exceed capacity
     size = pelm.size
@@ -290,7 +291,7 @@ def test_pelm_vector_dimensionality(dim, num_vectors):
     for i in range(num_vectors):
         vec = np.random.randn(dim).astype(np.float32)
         phase = float(i) / float(num_vectors)
-        pelm.entangle(vec.tolist(), phase=phase)
+        entangle_with_provenance(pelm, vec.tolist(), phase=phase)
 
     # Query and check dimensions
     query = np.random.randn(dim).astype(np.float32)
@@ -327,7 +328,7 @@ def test_pelm_nearest_neighbor_availability(dim, num_vectors, k):
     phase = 0.5
     for i in range(num_vectors):
         vec = np.random.randn(dim).astype(np.float32)
-        pelm.entangle(vec.tolist(), phase=phase)
+        entangle_with_provenance(pelm, vec.tolist(), phase=phase)
 
     # Query with matching phase
     query = np.random.randn(dim).astype(np.float32)
@@ -358,7 +359,7 @@ def test_pelm_retrieval_relevance_ordering(dim, k):
     phase = 0.5
     for _ in range(10):
         vec = np.random.randn(dim).astype(np.float32)
-        pelm.entangle(vec.tolist(), phase=phase)
+        entangle_with_provenance(pelm, vec.tolist(), phase=phase)
 
     # Query
     query = np.random.randn(dim).astype(np.float32)
@@ -387,7 +388,7 @@ def test_pelm_overflow_eviction_policy(dim):
     phase = 0.5
     for i in range(capacity):
         vec = np.random.randn(dim).astype(np.float32)
-        pelm.entangle(vec.tolist(), phase=phase)
+        entangle_with_provenance(pelm, vec.tolist(), phase=phase)
 
     # Verify at capacity
     assert pelm.size == capacity
@@ -395,7 +396,7 @@ def test_pelm_overflow_eviction_policy(dim):
     # Add more vectors (should trigger wraparound)
     for i in range(5):
         vec = np.random.randn(dim).astype(np.float32)
-        pelm.entangle(vec.tolist(), phase=phase)
+        entangle_with_provenance(pelm, vec.tolist(), phase=phase)
 
     # Should still be at capacity (wraparound maintains capacity)
     assert pelm.size == capacity, f"Size {pelm.size} != capacity {capacity} after overflow"
@@ -427,7 +428,7 @@ def test_various_capacities(capacity):
     phase = 0.5
     for i in range(capacity):
         vec = np.random.randn(10).astype(np.float32)
-        pelm.entangle(vec.tolist(), phase=phase)
+        entangle_with_provenance(pelm, vec.tolist(), phase=phase)
 
     assert pelm.size <= capacity
 
@@ -448,7 +449,7 @@ def test_single_vector_retrieval():
 
     vec = np.random.randn(10).astype(np.float32)
     phase = 0.5
-    pelm.entangle(vec.tolist(), phase=phase)
+    entangle_with_provenance(pelm, vec.tolist(), phase=phase)
 
     query = np.random.randn(10).astype(np.float32)
     neighbors = pelm.retrieve(query.tolist(), current_phase=phase, phase_tolerance=0.5, top_k=5)
@@ -485,7 +486,7 @@ def test_memory_never_exceeds_capacity_under_random_load(dim, capacity, num_inse
     for i in range(num_inserts):
         vec = np.random.randn(dim).astype(np.float32)
         phase = np.random.random()  # Random phase in [0, 1)
-        pelm.entangle(vec.tolist(), phase=phase)
+        entangle_with_provenance(pelm, vec.tolist(), phase=phase)
 
         # Check capacity invariant after each insert
         current_size = pelm.size
@@ -524,7 +525,7 @@ def test_pelm_mixed_phase_capacity_enforcement(dim, capacity):
         vec = np.random.randn(dim).astype(np.float32)
         # Alternate between wake-like (0.1) and sleep-like (0.9) phases
         phase = 0.1 if i % 2 == 0 else 0.9
-        pelm.entangle(vec.tolist(), phase=phase)
+        entangle_with_provenance(pelm, vec.tolist(), phase=phase)
 
         # Capacity invariant must hold
         assert pelm.size <= capacity, f"Size {pelm.size} > capacity {capacity} at insert {i+1}"
@@ -549,7 +550,7 @@ def test_pelm_retrieval_after_overflow(dim, capacity):
     common_phase = 0.5
     for i in range(capacity * 2):
         vec = np.random.randn(dim).astype(np.float32)
-        pelm.entangle(vec.tolist(), phase=common_phase)
+        entangle_with_provenance(pelm, vec.tolist(), phase=common_phase)
 
     # Retrieval should work
     query = np.random.randn(dim).astype(np.float32)
@@ -588,7 +589,7 @@ def test_pelm_no_corruption_under_stress(dim):
         if op == 0 or op == 1:  # Entangle (2/3 of ops)
             vec = np.random.randn(dim).astype(np.float32)
             phase = np.random.random()
-            pelm.entangle(vec.tolist(), phase=phase)
+            entangle_with_provenance(pelm, vec.tolist(), phase=phase)
         else:  # Retrieve (1/3 of ops)
             if pelm.size > 0:
                 query = np.random.randn(dim).astype(np.float32)

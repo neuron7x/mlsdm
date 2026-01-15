@@ -94,9 +94,8 @@ class TestPELMProvenanceStorage:
         assert pelm._provenance[0].confidence == 0.9
 
     def test_reject_low_confidence(self):
-        """Low confidence memories should be rejected."""
+        """Low confidence memories should be quarantined."""
         pelm = PhaseEntangledLatticeMemory(dimension=16, capacity=10)
-        pelm._confidence_threshold = 0.5
 
         vector = np.random.randn(16).astype(np.float32).tolist()
         provenance = MemoryProvenance(
@@ -107,8 +106,9 @@ class TestPELMProvenanceStorage:
 
         idx = pelm.entangle(vector, phase=0.5, provenance=provenance)
 
-        assert idx == -1  # Rejected
-        assert pelm.size == 0
+        assert idx >= 0
+        assert pelm.size == 1
+        assert pelm._quarantined[0] is True
 
     def test_default_provenance_when_none(self):
         """When no provenance provided, should use system default."""
@@ -121,8 +121,7 @@ class TestPELMProvenanceStorage:
         assert pelm.size == 1
         assert len(pelm._provenance) == 1
         assert pelm._provenance[0].source == MemorySource.SYSTEM_PROMPT
-        assert pelm._provenance[0].confidence == 1.0
-
+        assert pelm._provenance[0].confidence == 0.0
 
 class TestPELMProvenanceRetrieval:
     """Test PELM retrieval with confidence filtering."""
@@ -130,8 +129,6 @@ class TestPELMProvenanceRetrieval:
     def test_retrieve_filters_by_confidence(self):
         """Retrieval should filter out low-confidence memories."""
         pelm = PhaseEntangledLatticeMemory(dimension=16, capacity=10)
-        # Lower the threshold so both can be stored
-        pelm._confidence_threshold = 0.3
 
         # Store high confidence memory
         vector_high = np.random.randn(16).astype(np.float32).tolist()
@@ -187,10 +184,8 @@ class TestPELMProvenanceRetrieval:
         assert results[0].provenance.confidence == 0.95
 
     def test_retrieve_with_zero_min_confidence(self):
-        """With min_confidence=0.0, all memories should be retrieved."""
+        """With include_quarantined, all memories should be retrieved."""
         pelm = PhaseEntangledLatticeMemory(dimension=16, capacity=10)
-        # Lower threshold to allow all to be stored
-        pelm._confidence_threshold = 0.0
 
         # Store memories with varying confidence
         for conf in [0.3, 0.5, 0.9]:
@@ -204,7 +199,13 @@ class TestPELMProvenanceRetrieval:
             )
 
         query = np.random.randn(16).astype(np.float32).tolist()
-        results = pelm.retrieve(query, current_phase=0.5, top_k=10, min_confidence=0.0)
+        results = pelm.retrieve(
+            query,
+            current_phase=0.5,
+            top_k=10,
+            min_confidence=0.0,
+            include_quarantined=True,
+        )
 
         # All memories should be returned (subject to phase tolerance)
         assert len(results) == 3
@@ -312,8 +313,13 @@ class TestPELMBatchProvenance:
 
     def test_entangle_batch_rejects_low_confidence(self):
         """Batch entangle should reject low confidence memories."""
-        pelm = PhaseEntangledLatticeMemory(dimension=16, capacity=10)
-        pelm._confidence_threshold = 0.5
+        from mlsdm.memory.provenance_policy import MemoryProvenancePolicy
+
+        pelm = PhaseEntangledLatticeMemory(
+            dimension=16,
+            capacity=10,
+            provenance_policy=MemoryProvenancePolicy(store_min_confidence=0.5),
+        )
 
         vectors = [np.random.randn(16).astype(np.float32).tolist() for _ in range(3)]
         phases = [0.5, 0.5, 0.5]

@@ -15,6 +15,7 @@ import pytest
 
 from mlsdm.memory.multi_level_memory import MultiLevelSynapticMemory
 from mlsdm.memory.phase_entangled_lattice_memory import PhaseEntangledLatticeMemory
+from tests.utils.memory_helpers import entangle_with_provenance
 
 # Test tolerances
 REGRESSION_TOLERANCE = 0.40  # Tolerance for known failure variance in heuristic estimates
@@ -298,7 +299,7 @@ class TestMemoryCounterexamples:
                 phase = 0.5
                 for i in range(case["vectors_inserted"]):
                     vec = np.random.randn(384).astype(np.float32)
-                    pelm.entangle(vec.tolist(), phase=phase)
+                    entangle_with_provenance(pelm, vec.tolist(), phase=phase)
 
                 actual_size = pelm.size
 

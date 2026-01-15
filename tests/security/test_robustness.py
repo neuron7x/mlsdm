@@ -16,6 +16,7 @@ import pytest
 
 from mlsdm.cognition.moral_filter import MoralFilter
 from mlsdm.cognition.moral_filter_v2 import MoralFilterV2
+from tests.utils.memory_helpers import entangle_with_provenance
 
 
 class TestMoralFilterThresholdStability:
@@ -219,8 +220,8 @@ class TestStatelessFallback:
         pelm = PhaseEntangledLatticeMemory(dimension=10, capacity=100)
 
         # Add some data
-        pelm.entangle([1.0] * 10, 0.5)
-        pelm.entangle([2.0] * 10, 0.6)
+        entangle_with_provenance(pelm, [1.0] * 10, 0.5)
+        entangle_with_provenance(pelm, [2.0] * 10, 0.6)
 
         # Corrupt pointer
         pelm.pointer = 9999
@@ -249,11 +250,11 @@ class TestStatelessFallback:
 
         # NaN in vector should be rejected
         with pytest.raises(ValueError, match="invalid"):
-            pelm.entangle([1.0, float("nan"), 3.0], 0.5)
+            entangle_with_provenance(pelm, [1.0, float("nan"), 3.0], 0.5)
 
         # Inf in vector should be rejected
         with pytest.raises(ValueError, match="invalid"):
-            pelm.entangle([float("inf"), 2.0, 3.0], 0.5)
+            entangle_with_provenance(pelm, [float("inf"), 2.0, 3.0], 0.5)
 
     @pytest.mark.security
     def test_pelm_handles_extreme_dimensions(self):
@@ -295,7 +296,7 @@ class TestConcurrencyRobustness:
             try:
                 for i in range(count):
                     vector = [float(thread_id * 1000 + i)] * 10
-                    pelm.entangle(vector, (thread_id + i) / 100.0 % 1.0)
+                    entangle_with_provenance(pelm, vector, (thread_id + i) / 100.0 % 1.0)
             except Exception as e:
                 errors.put((thread_id, str(e)))
 

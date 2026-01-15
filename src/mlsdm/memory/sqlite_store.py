@@ -41,6 +41,14 @@ try:
 except ImportError:
     AESGCM = None
 
+# Observability imports - gracefully handle missing module
+try:
+    from mlsdm.observability.memory_telemetry import record_pelm_provenance_violation
+
+    _OBSERVABILITY_AVAILABLE = True
+except ImportError:
+    _OBSERVABILITY_AVAILABLE = False
+
 
 class SQLiteMemoryStore:
     """SQLite-backed long-term memory store with optional encryption.
@@ -194,6 +202,24 @@ class SQLiteMemoryStore:
         Returns:
             The ID of the stored item
         """
+        if item.provenance is None:
+            logger.error("LTM write missing provenance; applying quarantine default")
+            if _OBSERVABILITY_AVAILABLE:
+                record_pelm_provenance_violation("ltm_missing_provenance")
+            item = MemoryItem(
+                id=item.id,
+                ts=item.ts,
+                content=item.content,
+                content_hash=item.content_hash,
+                ttl_s=item.ttl_s,
+                pii_flags=item.pii_flags,
+                provenance=MemoryProvenance(
+                    source=MemorySource.SYSTEM_PROMPT,
+                    confidence=0.0,
+                    timestamp=dt.now(),
+                ),
+            )
+
         conn = self._get_connection()
         cursor = conn.cursor()
 

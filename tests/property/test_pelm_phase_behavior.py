@@ -13,6 +13,7 @@ from hypothesis import given, settings
 from hypothesis import strategies as st
 
 from mlsdm.memory.phase_entangled_lattice_memory import PhaseEntangledLatticeMemory
+from tests.utils.memory_helpers import entangle_with_provenance
 
 # Phase constants matching those used in cognitive_controller
 # These values (0.1 for wake, 0.9 for sleep) create maximum separation
@@ -32,7 +33,7 @@ def test_pelm_phase_isolation_wake_only():
     for i in range(5):
         vec = np.random.randn(10).astype(np.float32)
         wake_vectors.append(vec)
-        pelm.entangle(vec.tolist(), phase=WAKE_PHASE)
+        entangle_with_provenance(pelm, vec.tolist(), phase=WAKE_PHASE)
 
     # Query during wake phase with tight tolerance
     query = wake_vectors[0]  # Use stored vector as query
@@ -69,7 +70,7 @@ def test_pelm_phase_isolation_sleep_only():
     for i in range(5):
         vec = np.random.randn(10).astype(np.float32)
         sleep_vectors.append(vec)
-        pelm.entangle(vec.tolist(), phase=SLEEP_PHASE)
+        entangle_with_provenance(pelm, vec.tolist(), phase=SLEEP_PHASE)
 
     # Query during sleep phase with tight tolerance
     query = sleep_vectors[0]
@@ -97,7 +98,7 @@ def test_pelm_phase_tolerance_controls_retrieval():
 
     # Store vector during wake phase
     vec = np.random.randn(10).astype(np.float32)
-    pelm.entangle(vec.tolist(), phase=WAKE_PHASE)
+    entangle_with_provenance(pelm, vec.tolist(), phase=WAKE_PHASE)
 
     # Query during sleep with TIGHT tolerance - should find nothing
     results_tight = pelm.retrieve(
@@ -124,14 +125,14 @@ def test_pelm_phase_mixed_storage():
     for i in range(5):
         vec = np.random.randn(10).astype(np.float32)
         wake_vectors.append(vec)
-        pelm.entangle(vec.tolist(), phase=WAKE_PHASE)
+        entangle_with_provenance(pelm, vec.tolist(), phase=WAKE_PHASE)
 
     # Store 5 sleep vectors
     sleep_vectors = []
     for i in range(5):
         vec = np.random.randn(10).astype(np.float32)
         sleep_vectors.append(vec)
-        pelm.entangle(vec.tolist(), phase=SLEEP_PHASE)
+        entangle_with_provenance(pelm, vec.tolist(), phase=SLEEP_PHASE)
 
     # Query wake vector during wake phase with moderate tolerance
     query_wake = wake_vectors[0]
@@ -164,7 +165,7 @@ def test_pelm_phase_values_stored_correctly():
     # Store with specific phase
     vec = np.random.randn(10).astype(np.float32)
     stored_phase = 0.42
-    pelm.entangle(vec.tolist(), phase=stored_phase)
+    entangle_with_provenance(pelm, vec.tolist(), phase=stored_phase)
 
     # Retrieve with loose tolerance
     results = pelm.retrieve(vec.tolist(), current_phase=stored_phase, phase_tolerance=1.0, top_k=1)
@@ -192,7 +193,7 @@ def test_pelm_property_phase_filtering(num_vectors, query_phase):
     phases = np.random.uniform(0.0, 1.0, num_vectors)
     for i in range(num_vectors):
         vec = np.random.randn(10).astype(np.float32)
-        pelm.entangle(vec.tolist(), phase=float(phases[i]))
+        entangle_with_provenance(pelm, vec.tolist(), phase=float(phases[i]))
 
     # Query with specific tolerance
     tolerance = 0.2
@@ -225,14 +226,14 @@ def test_pelm_property_phase_separation(wake_count, sleep_count):
     for _ in range(wake_count):
         vec = np.random.randn(10).astype(np.float32)
         wake_vectors.append(vec)
-        pelm.entangle(vec.tolist(), phase=WAKE_PHASE)
+        entangle_with_provenance(pelm, vec.tolist(), phase=WAKE_PHASE)
 
     # Store sleep vectors
     sleep_vectors = []
     for _ in range(sleep_count):
         vec = np.random.randn(10).astype(np.float32)
         sleep_vectors.append(vec)
-        pelm.entangle(vec.tolist(), phase=SLEEP_PHASE)
+        entangle_with_provenance(pelm, vec.tolist(), phase=SLEEP_PHASE)
 
     # Query wake vector during sleep with tight tolerance
     if wake_vectors:
@@ -257,7 +258,7 @@ def test_pelm_resonance_with_phase():
     # Store a known vector
     vec = np.ones(10, dtype=np.float32)
     vec = vec / np.linalg.norm(vec)  # Normalize
-    pelm.entangle(vec.tolist(), phase=0.5)
+    entangle_with_provenance(pelm, vec.tolist(), phase=0.5)
 
     # Query with same vector (should have high similarity)
     results = pelm.retrieve(vec.tolist(), current_phase=0.5, phase_tolerance=0.1, top_k=1)
@@ -276,7 +277,7 @@ def test_pelm_empty_results_outside_phase():
     # Store vectors all at phase 0.5
     for _ in range(5):
         vec = np.random.randn(10).astype(np.float32)
-        pelm.entangle(vec.tolist(), phase=0.5)
+        entangle_with_provenance(pelm, vec.tolist(), phase=0.5)
 
     # Query at phase 0.0 with very tight tolerance
     query = np.random.randn(10).astype(np.float32)

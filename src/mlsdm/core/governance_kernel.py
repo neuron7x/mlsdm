@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import inspect
+import logging
 import secrets
 from dataclasses import dataclass
 from hashlib import sha256
@@ -13,6 +14,7 @@ if TYPE_CHECKING:
 from ..cognition.moral_filter_v2 import MoralFilterV2
 from ..memory.multi_level_memory import MultiLevelSynapticMemory
 from ..memory.phase_entangled_lattice_memory import PhaseEntangledLatticeMemory
+from ..memory.provenance import MemoryProvenance
 from ..rhythm.cognitive_rhythm import CognitiveRhythm
 
 
@@ -242,6 +244,12 @@ class GovernanceKernel:
     ) -> None:
         self._assert_can_mutate("MEMORY_COMMIT", cap)
         with self._lock:
+            if provenance is None or not isinstance(provenance, MemoryProvenance):
+                reason = "missing_provenance" if provenance is None else "invalid_provenance_type"
+                logger.error("Memory commit blocked: %s", reason)
+                if _OBSERVABILITY_AVAILABLE:
+                    record_pelm_provenance_violation(reason)
+                raise ValueError("Provenance is required for memory commits")
             self._synaptic.update(prompt_vector)
             self._pelm.entangle(prompt_vector.tolist(), phase=phase, provenance=provenance)
 
@@ -292,3 +300,12 @@ class GovernanceKernel:
             if synaptic_config is not None:
                 self._synaptic_config = synaptic_config
             self._initialize_components()
+logger = logging.getLogger(__name__)
+
+# Observability imports - gracefully handle missing module
+try:
+    from mlsdm.observability.memory_telemetry import record_pelm_provenance_violation
+
+    _OBSERVABILITY_AVAILABLE = True
+except ImportError:
+    _OBSERVABILITY_AVAILABLE = False

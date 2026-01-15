@@ -51,6 +51,24 @@ moral_ema_deviation = Gauge(
     ["filter_id"],
 )
 
+policy_drift_state = Gauge(
+    "mlsdm_policy_drift_state",
+    "Current policy drift state (0=OK, 1=WARN, 2=DEGRADED, 3=HALT)",
+    ["filter_id"],
+)
+
+policy_drift_budget_ratio = Gauge(
+    "mlsdm_policy_drift_budget_ratio",
+    "Current drift magnitude divided by drift budget",
+    ["filter_id"],
+)
+
+policy_drift_state_transitions = Counter(
+    "mlsdm_policy_drift_state_transitions_total",
+    "Policy drift state transitions",
+    ["filter_id", "state"],
+)
+
 moral_drift_events = Counter(
     "mlsdm_moral_drift_events_total",
     "Total policy drift events detected",
@@ -161,3 +179,19 @@ def _record_single_metric(
         moral_drift_events.labels(filter_id=filter_id, severity="critical").inc()
     elif drift > 0.05:  # WARNING: >0.05 absolute change
         moral_drift_events.labels(filter_id=filter_id, severity="warning").inc()
+
+
+def record_policy_drift_state_change(
+    *,
+    filter_id: str,
+    state: int,
+    drift: float,
+    budget: float,
+    ema_value: float,
+) -> None:
+    """Record policy drift state changes and budget ratios."""
+    policy_drift_state.labels(filter_id=filter_id).set(state)
+    ratio = drift / budget if budget else 0.0
+    policy_drift_budget_ratio.labels(filter_id=filter_id).set(ratio)
+    policy_drift_state_transitions.labels(filter_id=filter_id, state=str(state)).inc()
+    moral_ema_deviation.labels(filter_id=filter_id).set(abs(ema_value - 0.5))

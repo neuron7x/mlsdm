@@ -16,6 +16,7 @@ from prometheus_client import CollectorRegistry
 
 from mlsdm.memory import PELM
 from mlsdm.memory.multi_level_memory import MultiLevelSynapticMemory
+from tests.utils.memory_helpers import entangle_with_provenance
 from mlsdm.observability.memory_telemetry import (
     MemoryMetricsExporter,
     MemoryOperationTimer,
@@ -331,7 +332,7 @@ class TestPELMIntegration:
         pelm = PELM(dimension=64, capacity=100)
 
         # Store a vector
-        pelm.entangle([0.1] * 64, 0.5, correlation_id="test-entangle")
+        entangle_with_provenance(pelm, [0.1] * 64, 0.5, correlation_id="test-entangle")
 
         # Verify metrics were recorded
         exporter = get_memory_metrics_exporter()
@@ -342,7 +343,7 @@ class TestPELMIntegration:
         pelm = PELM(dimension=64, capacity=100)
 
         # Store and retrieve
-        pelm.entangle([0.1] * 64, 0.5)
+        entangle_with_provenance(pelm, [0.1] * 64, 0.5)
         pelm.retrieve([0.1] * 64, 0.5, correlation_id="test-retrieve")
 
         # Verify retrieve metrics
@@ -367,7 +368,7 @@ class TestPELMIntegration:
 
         # Store multiple vectors
         for i in range(5):
-            pelm.entangle([0.1 * i] * 64, 0.5)
+            entangle_with_provenance(pelm, [0.1 * i] * 64, 0.5)
 
         exporter = get_memory_metrics_exporter()
         # Capacity should reflect 5 items
@@ -416,7 +417,7 @@ class TestObservabilityNoVectorDataLeakage:
         unique_vector = [0.12345] * 64
 
         pelm = PELM(dimension=64, capacity=100)
-        pelm.entangle(unique_vector, 0.5)
+        entangle_with_provenance(pelm, unique_vector, 0.5)
 
         # Check that the unique value doesn't appear in metrics export
         exporter = get_memory_metrics_exporter()

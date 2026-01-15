@@ -11,6 +11,8 @@ from queue import Queue
 import numpy as np
 import pytest
 
+from tests.utils.memory_helpers import entangle_with_provenance
+
 
 class TestPELMConcurrency:
     """Concurrency tests for PhaseEntangledLatticeMemory."""
@@ -31,7 +33,7 @@ class TestPELMConcurrency:
                 for i in range(iterations):
                     vector = [float(worker_id * 1000 + i)] * 10
                     phase = (worker_id * 10 + i) % 100 / 100.0
-                    pelm.entangle(vector, phase)
+                    entangle_with_provenance(pelm, vector, phase)
             except Exception as e:
                 errors.put(("entangle", worker_id, str(e)))
 
@@ -81,7 +83,7 @@ class TestPELMConcurrency:
             try:
                 for i in range(count):
                     vector = [float(worker_id), float(i)] + [0.0] * 3
-                    pelm.entangle(vector, 0.5)
+                    entangle_with_provenance(pelm, vector, 0.5)
             except Exception as e:
                 errors.put((worker_id, str(e)))
 
@@ -123,7 +125,7 @@ class TestPELMConcurrency:
             for i in range(count):
                 try:
                     vector = [float(worker_id + i)] * 5
-                    pelm.entangle(vector, 0.5)
+                    entangle_with_provenance(pelm, vector, 0.5)
                     with progress:
                         operations_done += 1
                         progress.notify_all()
@@ -340,7 +342,7 @@ class TestStressConditions:
                     if op == "entangle":
                         vec = np.random.randn(10).tolist()
                         phase = np.random.random()
-                        pelm.entangle(vec, phase)
+                        entangle_with_provenance(pelm, vec, phase)
                     else:
                         query = np.random.randn(10).tolist()
                         phase = np.random.random()

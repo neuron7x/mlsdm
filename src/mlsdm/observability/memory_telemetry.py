@@ -102,6 +102,20 @@ class MemoryMetricsExporter:
             registry=self.registry,
         )
 
+        self.pelm_provenance_violations_total = Counter(
+            "mlsdm_memory_pelm_provenance_violations_total",
+            "Total number of PELM provenance violations",
+            ["reason"],
+            registry=self.registry,
+        )
+
+        self.pelm_quarantine_total = Counter(
+            "mlsdm_memory_pelm_quarantine_total",
+            "Total number of quarantined memory entries",
+            ["reason"],
+            registry=self.registry,
+        )
+
         self.pelm_retrieve_total = Counter(
             "mlsdm_memory_pelm_retrieve_total",
             "Total number of PELM retrieve operations",
@@ -207,6 +221,16 @@ class MemoryMetricsExporter:
         """Increment PELM store counter."""
         with self._lock:
             self.pelm_store_total.inc()
+
+    def increment_pelm_provenance_violation(self, reason: str) -> None:
+        """Increment PELM provenance violation counter."""
+        with self._lock:
+            self.pelm_provenance_violations_total.labels(reason=reason).inc()
+
+    def increment_pelm_quarantine(self, reason: str) -> None:
+        """Increment PELM quarantine counter."""
+        with self._lock:
+            self.pelm_quarantine_total.labels(reason=reason).inc()
 
     def increment_pelm_retrieve(self, result: str = "hit") -> None:
         """Increment PELM retrieve counter.
@@ -515,6 +539,43 @@ def log_pelm_corruption(
         logger.debug("PELM corruption logging failed", exc_info=True)
 
 
+def log_pelm_event(
+    event: str,
+    message: str,
+    metrics: dict[str, Any] | None = None,
+    correlation_id: str | None = None,
+) -> None:
+    """Log a generic PELM event."""
+    try:
+        obs_logger = get_observability_logger()
+        obs_logger.info(
+            EventType.MEMORY_STORE,
+            message,
+            correlation_id=correlation_id,
+            metrics=metrics or {"event": event, "component": "pelm"},
+        )
+    except Exception:
+        logger.debug("PELM event logging failed", exc_info=True)
+
+
+def log_pelm_error(
+    error_type: str,
+    message: str,
+    correlation_id: str | None = None,
+) -> None:
+    """Log a PELM error event."""
+    try:
+        obs_logger = get_observability_logger()
+        obs_logger.error(
+            EventType.SYSTEM_ERROR,
+            message,
+            correlation_id=correlation_id,
+            metrics={"event": error_type, "component": "pelm"},
+        )
+    except Exception:
+        logger.debug("PELM error logging failed", exc_info=True)
+
+
 def log_synaptic_update(
     l1_norm: float,
     l2_norm: float,
@@ -711,6 +772,35 @@ def record_pelm_store(
     except Exception:
         # Graceful degradation
         logger.debug("Failed to record PELM store event", exc_info=True)
+
+
+def record_pelm_provenance_violation(reason: str, correlation_id: str | None = None) -> None:
+    """Record a provenance violation during PELM storage."""
+    try:
+        exporter = get_memory_metrics_exporter()
+        exporter.increment_pelm_provenance_violation(reason)
+        log_pelm_error(
+            error_type="provenance_violation",
+            message=f"Provenance violation: {reason}",
+            correlation_id=correlation_id,
+        )
+    except Exception:
+        logger.debug("Failed to record PELM provenance violation", exc_info=True)
+
+
+def record_pelm_quarantine(reason: str, correlation_id: str | None = None) -> None:
+    """Record a quarantine event for PELM storage."""
+    try:
+        exporter = get_memory_metrics_exporter()
+        exporter.increment_pelm_quarantine(reason)
+        log_pelm_event(
+            MemoryEventType.PELM_STORE,
+            f"Quarantined memory due to {reason}",
+            {"reason": reason},
+            correlation_id=correlation_id,
+        )
+    except Exception:
+        logger.debug("Failed to record PELM quarantine event", exc_info=True)
 
 
 def record_pelm_retrieve(

@@ -6,6 +6,7 @@ import pytest
 from mlsdm.memory.phase_entangled_lattice_memory import (
     PhaseEntangledLatticeMemory,
 )
+from tests.utils.memory_helpers import default_provenance, entangle_with_provenance
 
 
 class TestPELMBatchEntangle:
@@ -21,8 +22,9 @@ class TestPELMBatchEntangle:
             [0.0, 0.0, 1.0, 0.0],
         ]
         phases = [0.1, 0.5, 0.9]
+        provenances = [default_provenance() for _ in vectors]
 
-        indices = pelm.entangle_batch(vectors, phases)
+        indices = pelm.entangle_batch(vectors, phases, provenances=provenances)
 
         assert len(indices) == 3
         assert indices == [0, 1, 2]
@@ -43,8 +45,9 @@ class TestPELMBatchEntangle:
 
         vectors = [[1.0, 2.0, 3.0, 4.0]]
         phases = [0.5]
+        provenances = [default_provenance()]
 
-        indices = pelm.entangle_batch(vectors, phases)
+        indices = pelm.entangle_batch(vectors, phases, provenances=provenances)
 
         assert len(indices) == 1
         assert indices[0] == 0
@@ -61,8 +64,9 @@ class TestPELMBatchEntangle:
             [0.0, 0.0, 0.0, 1.0],
         ]
         phases = [0.1, 0.2, 0.3, 0.4]
+        provenances = [default_provenance() for _ in vectors]
 
-        pelm.entangle_batch(vectors, phases)
+        pelm.entangle_batch(vectors, phases, provenances=provenances)
 
         # Verify each vector is at expected index
         for i, (vec, phase) in enumerate(zip(vectors, phases, strict=True)):
@@ -78,8 +82,9 @@ class TestPELMBatchEntangle:
             [0.0, 1.0, 0.0, 0.0],
         ]
         phases = [0.1, 0.1]
+        provenances = [default_provenance() for _ in vectors]
 
-        pelm.entangle_batch(vectors, phases)
+        pelm.entangle_batch(vectors, phases, provenances=provenances)
 
         # Retrieve with query matching first vector
         results = pelm.retrieve([1.0, 0.0, 0.0, 0.0], current_phase=0.1, top_k=1)
@@ -174,13 +179,13 @@ class TestPELMBatchEntangle:
         # Fill to capacity
         vectors1 = [[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0]]
         phases1 = [0.1, 0.2, 0.3]
-        pelm.entangle_batch(vectors1, phases1)
+        pelm.entangle_batch(vectors1, phases1, provenances=[default_provenance() for _ in vectors1])
         assert pelm.size == 3
 
         # Add more (should wrap around)
         vectors2 = [[0.0, 0.0, 0.0, 1.0]]
         phases2 = [0.4]
-        indices = pelm.entangle_batch(vectors2, phases2)
+        indices = pelm.entangle_batch(vectors2, phases2, provenances=[default_provenance()])
 
         assert indices[0] == 0  # Wrapped to position 0
         assert pelm.size == 3  # Still at capacity
@@ -212,14 +217,14 @@ class TestPELMBatchEntanglePerformance:
         # Time batch operation
         pelm_batch = PhaseEntangledLatticeMemory(dimension=dim, capacity=1000)
         start = time.perf_counter()
-        pelm_batch.entangle_batch(vectors, phases)
+        pelm_batch.entangle_batch(vectors, phases, provenances=[default_provenance() for _ in vectors])
         batch_time = time.perf_counter() - start
 
         # Time individual operations
         pelm_individual = PhaseEntangledLatticeMemory(dimension=dim, capacity=1000)
         start = time.perf_counter()
         for vec, phase in zip(vectors, phases, strict=True):
-            pelm_individual.entangle(vec, phase)
+            entangle_with_provenance(pelm_individual, vec, phase)
         individual_time = time.perf_counter() - start
 
         # Batch should be at least as fast (usually faster due to single lock acquisition)
@@ -234,7 +239,7 @@ class TestPELMBatchEntanglePerformance:
         phases = [0.5] * 10
 
         # Batch should update checksum once at the end
-        pelm.entangle_batch(vectors, phases)
+        pelm.entangle_batch(vectors, phases, provenances=[default_provenance() for _ in vectors])
 
         # Verify memory is not corrupted
         assert not pelm.detect_corruption()
