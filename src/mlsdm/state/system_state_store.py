@@ -92,6 +92,50 @@ def _convert_numpy_to_python(obj: Any) -> Any:
     return obj
 
 
+def _read_state_data(
+    filepath: str,
+    *,
+    file_format: str,
+    verify_checksum: bool,
+) -> dict[str, Any]:
+    """Read raw state data from disk and return a decoded dictionary."""
+    if file_format == ".json":
+        with open(filepath, "rb") as f:
+            data = f.read()
+
+        # Verify checksum if requested
+        if verify_checksum:
+            checksum_path = _get_checksum_path(filepath)
+            if os.path.exists(checksum_path):
+                with open(checksum_path, encoding="utf-8") as f:
+                    stored_checksum = f.read().strip()
+                computed_checksum = _compute_checksum(data)
+                if stored_checksum != computed_checksum:
+                    raise StateCorruptionError(
+                        f"Checksum mismatch for {filepath}. "
+                        f"Expected {stored_checksum}, got {computed_checksum}"
+                    )
+
+        parsed = json.loads(data.decode("utf-8"))
+        if not isinstance(parsed, dict):
+            raise StateLoadError(
+                f"Expected JSON object in {filepath}, got {type(parsed).__name__}"
+            )
+        return parsed
+
+    if file_format == ".npz":
+        arrs = np.load(filepath, allow_pickle=True)
+        if "state" in arrs:
+            state_data = arrs["state"]
+            # Handle numpy.void objects from npz loading
+            return state_data.item() if hasattr(state_data, "item") else dict(state_data)
+
+        # Legacy format: direct state dict
+        return {k: v.tolist() if isinstance(v, np.ndarray) else v for k, v in arrs.items()}
+
+    raise ValueError(f"Unsupported format: {file_format}")
+
+
 @retry(
     stop=stop_after_attempt(3),
     wait=wait_exponential(multiplier=0.5, max=10),
@@ -228,40 +272,11 @@ def load_system_state(
 
     try:
         ext = os.path.splitext(filepath)[1].lower()
-
-        if ext == ".json":
-            with open(filepath, "rb") as f:
-                data = f.read()
-
-            # Verify checksum if requested
-            if verify_checksum:
-                checksum_path = _get_checksum_path(filepath)
-                if os.path.exists(checksum_path):
-                    with open(checksum_path, encoding="utf-8") as f:
-                        stored_checksum = f.read().strip()
-                    computed_checksum = _compute_checksum(data)
-                    if stored_checksum != computed_checksum:
-                        raise StateCorruptionError(
-                            f"Checksum mismatch for {filepath}. "
-                            f"Expected {stored_checksum}, got {computed_checksum}"
-                        )
-
-            state_dict = json.loads(data.decode("utf-8"))
-
-        elif ext == ".npz":
-            arrs = np.load(filepath, allow_pickle=True)
-            if "state" in arrs:
-                state_data = arrs["state"]
-                # Handle numpy.void objects from npz loading
-                state_dict = state_data.item() if hasattr(state_data, "item") else dict(state_data)
-            else:
-                # Legacy format: direct state dict
-                state_dict = {
-                    k: v.tolist() if isinstance(v, np.ndarray) else v for k, v in arrs.items()
-                }
-
-        else:
-            raise ValueError(f"Unsupported format: {ext}")
+        state_dict = _read_state_data(
+            filepath,
+            file_format=ext,
+            verify_checksum=verify_checksum,
+        )
 
         # Convert numpy types if any
         state_dict = _convert_numpy_to_python(state_dict)
@@ -359,22 +374,11 @@ def recover_system_state(filepath: str) -> SystemStateRecord:
         # Load directly from backup file
         # Read the backup data and parse manually (backup doesn't have its own checksum)
         ext = os.path.splitext(filepath)[1].lower()
-
-        if ext == ".json":
-            with open(backup_path, "rb") as f:
-                data = f.read()
-            state_dict = json.loads(data.decode("utf-8"))
-        elif ext == ".npz":
-            arrs = np.load(backup_path, allow_pickle=True)
-            if "state" in arrs:
-                state_data = arrs["state"]
-                state_dict = state_data.item() if hasattr(state_data, "item") else dict(state_data)
-            else:
-                state_dict = {
-                    k: v.tolist() if isinstance(v, np.ndarray) else v for k, v in arrs.items()
-                }
-        else:
-            raise ValueError(f"Unsupported format: {ext}")
+        state_dict = _read_state_data(
+            backup_path,
+            file_format=ext,
+            verify_checksum=False,
+        )
 
         # Convert numpy types if any
         state_dict = _convert_numpy_to_python(state_dict)
