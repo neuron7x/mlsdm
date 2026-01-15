@@ -116,6 +116,14 @@ def _ensure_deterministic_random_state() -> None:
     _set_random_seeds(_DEFAULT_SEED)
 
 
+@pytest.fixture(autouse=True, scope="function")
+def _reset_safety_boundary_tracker() -> None:
+    """Reset safety boundary tracking between tests to avoid cross-test state."""
+    from mlsdm.observability.safety_boundary_tracker import reset_safety_boundary_tracker
+
+    reset_safety_boundary_tracker()
+
+
 @pytest.fixture
 def deterministic_seed() -> int:
     """
