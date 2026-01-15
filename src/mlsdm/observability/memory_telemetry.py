@@ -65,6 +65,7 @@ class MemoryEventType:
     PELM_CAPACITY_WARNING = "pelm_capacity_warning"
     PELM_CORRUPTION_DETECTED = "pelm_corruption_detected"
     PELM_RECOVERY_ATTEMPTED = "pelm_recovery_attempted"
+    PELM_INTEGRITY_VIOLATION = "pelm_integrity_violation"
 
     # Synaptic Memory events
     SYNAPTIC_UPDATE = "synaptic_update"
@@ -113,6 +114,13 @@ class MemoryMetricsExporter:
             "mlsdm_memory_pelm_corruption_total",
             "Total number of PELM corruption events detected",
             ["recovered"],  # recovered: true, false
+            registry=self.registry,
+        )
+
+        self.pelm_integrity_violation_total = Counter(
+            "mlsdm_memory_pelm_integrity_violations_total",
+            "Total number of PELM memory integrity violations",
+            ["reason", "source"],
             registry=self.registry,
         )
 
@@ -263,6 +271,11 @@ class MemoryMetricsExporter:
         """Increment synaptic update counter."""
         with self._lock:
             self.synaptic_update_total.inc()
+
+    def increment_pelm_integrity_violation(self, reason: str, source: str) -> None:
+        """Increment integrity violation counter."""
+        with self._lock:
+            self.pelm_integrity_violation_total.labels(reason=reason, source=source).inc()
 
     def increment_synaptic_consolidation(self, transfer: str) -> None:
         """Increment synaptic consolidation counter.
@@ -435,6 +448,37 @@ def log_pelm_retrieve(
         )
     except Exception:
         logger.debug("PELM retrieve logging failed", exc_info=True)
+
+
+def log_pelm_integrity_violation(
+    reason: str,
+    source: str,
+    confidence: float | None = None,
+    blocked_count: int | None = None,
+    correlation_id: str | None = None,
+) -> None:
+    """Log a PELM memory integrity violation event."""
+    try:
+        obs_logger = get_observability_logger()
+        metrics: dict[str, Any] = {
+            "event": MemoryEventType.PELM_INTEGRITY_VIOLATION,
+            "component": "pelm",
+            "reason": reason,
+            "source": source,
+        }
+        if confidence is not None:
+            metrics["confidence"] = round(confidence, 4)
+        if blocked_count is not None:
+            metrics["blocked_count"] = blocked_count
+
+        obs_logger.warning(
+            EventType.SECURITY,
+            f"PELM integrity violation: reason={reason} source={source}",
+            correlation_id=correlation_id,
+            metrics=metrics,
+        )
+    except Exception:
+        logger.debug("PELM integrity violation logging failed", exc_info=True)
 
 
 def log_pelm_capacity_warning(
@@ -711,6 +755,28 @@ def record_pelm_store(
     except Exception:
         # Graceful degradation
         logger.debug("Failed to record PELM store event", exc_info=True)
+
+
+def record_pelm_integrity_violation(
+    reason: str,
+    source: str,
+    confidence: float | None = None,
+    blocked_count: int | None = None,
+    correlation_id: str | None = None,
+) -> None:
+    """Record a PELM integrity violation (metrics + logging)."""
+    try:
+        exporter = get_memory_metrics_exporter()
+        exporter.increment_pelm_integrity_violation(reason=reason, source=source)
+        log_pelm_integrity_violation(
+            reason=reason,
+            source=source,
+            confidence=confidence,
+            blocked_count=blocked_count,
+            correlation_id=correlation_id,
+        )
+    except Exception:
+        logger.debug("Failed to record PELM integrity violation", exc_info=True)
 
 
 def record_pelm_retrieve(

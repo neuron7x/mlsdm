@@ -61,6 +61,11 @@ class SecurityEventType(Enum):
     ANOMALY_DETECTED = "anomaly_detected"
     THRESHOLD_BREACH = "threshold_breach"
 
+    # Safety enforcement events
+    POLICY_DRIFT_ENFORCED = "policy_drift_enforced"
+    MEMORY_INTEGRITY_VIOLATION = "memory_integrity_violation"
+    SAFETY_BOUNDARY_QUARANTINE = "safety_boundary_quarantine"
+
     # System events
     SYSTEM_ERROR = "system_error"
     STARTUP = "system_startup"
@@ -197,6 +202,62 @@ class SecurityLogger:
             "Rate limit exceeded",
             correlation_id=correlation_id,
             client_id=client_id,
+        )
+
+    def log_policy_drift_enforced(
+        self,
+        filter_id: str,
+        action: str,
+        drift_magnitude: float,
+        correlation_id: str | None = None,
+    ) -> str:
+        """Log policy drift enforcement action."""
+        return self._log_event(
+            SecurityEventType.POLICY_DRIFT_ENFORCED,
+            logging.ERROR,
+            f"Policy drift enforcement applied: action={action}",
+            correlation_id=correlation_id,
+            additional_data={
+                "filter_id": filter_id,
+                "action": action,
+                "drift_magnitude": drift_magnitude,
+            },
+        )
+
+    def log_memory_integrity_violation(
+        self,
+        reason: str,
+        source: str,
+        confidence: float | None = None,
+        correlation_id: str | None = None,
+    ) -> str:
+        """Log memory integrity violation."""
+        data: dict[str, Any] = {"reason": reason, "source": source}
+        if confidence is not None:
+            data["confidence"] = confidence
+        return self._log_event(
+            SecurityEventType.MEMORY_INTEGRITY_VIOLATION,
+            logging.WARNING,
+            "Memory integrity violation detected",
+            correlation_id=correlation_id,
+            additional_data=data,
+        )
+
+    def log_safety_boundary_quarantine(
+        self,
+        client_id: str,
+        hit_count: int,
+        window_size: int,
+        correlation_id: str | None = None,
+    ) -> str:
+        """Log safety boundary quarantine action."""
+        return self._log_event(
+            SecurityEventType.SAFETY_BOUNDARY_QUARANTINE,
+            logging.WARNING,
+            "Safety boundary quarantine activated",
+            correlation_id=correlation_id,
+            client_id=client_id,
+            additional_data={"hit_count": hit_count, "window_size": window_size},
         )
 
     def log_invalid_input(

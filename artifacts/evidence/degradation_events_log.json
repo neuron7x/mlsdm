@@ -1,0 +1,13 @@
+{
+  "schema_version": "mlsdm-safety-evidence-v1",
+  "generated_utc": "2026-01-07T00:00:00Z",
+  "invariant": "I4",
+  "detector": "src/mlsdm/observability/safety_boundary_tracker.py::record_safety_boundary_decision",
+  "enforcement": {
+    "action": "quarantine",
+    "trigger": ">=3 denials within a 10-decision window"
+  },
+  "tests": [
+    "tests/security/test_runtime_safety_enforcement.py::test_safety_boundary_quarantine_on_repeated_denials"
+  ]
+}

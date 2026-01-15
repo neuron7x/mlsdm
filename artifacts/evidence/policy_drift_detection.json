@@ -1,0 +1,17 @@
+{
+  "schema_version": "mlsdm-safety-evidence-v1",
+  "generated_utc": "2026-01-07T00:00:00Z",
+  "risk_id": "R012",
+  "risk": "Policy drift without detection",
+  "detectors": [
+    "src/mlsdm/cognition/moral_filter_v2.py::_record_drift",
+    "src/mlsdm/observability/policy_drift_telemetry.py::record_drift_enforcement"
+  ],
+  "enforcement": {
+    "action": "lockdown",
+    "behavior": "threshold clamped to MAX_THRESHOLD and adaptive updates halted"
+  },
+  "tests": [
+    "tests/security/test_runtime_safety_enforcement.py::test_policy_drift_lockdown_triggers_on_critical_drift"
+  ]
+}

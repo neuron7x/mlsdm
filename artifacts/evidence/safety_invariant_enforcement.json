@@ -1,0 +1,38 @@
+{
+  "schema_version": "mlsdm-safety-evidence-v1",
+  "generated_utc": "2026-01-07T00:00:00Z",
+  "invariants": [
+    {
+      "id": "I1",
+      "name": "Safety Enforcement Invariant",
+      "enforcement_points": [
+        "src/mlsdm/cognition/moral_filter_v2.py::_apply_drift_lockdown",
+        "src/mlsdm/memory/phase_entangled_lattice_memory.py::_is_low_confidence_provenance",
+        "src/mlsdm/security/guardrails.py::_apply_safety_boundary_enforcement"
+      ]
+    },
+    {
+      "id": "I4",
+      "name": "Fail-Safe Invariant",
+      "enforcement_points": [
+        "src/mlsdm/cognition/moral_filter_v2.py::_apply_drift_lockdown",
+        "src/mlsdm/security/guardrails.py::_apply_safety_boundary_enforcement"
+      ]
+    },
+    {
+      "id": "I5",
+      "name": "Observability Invariant",
+      "enforcement_points": [
+        "src/mlsdm/observability/policy_drift_telemetry.py::record_drift_enforcement",
+        "src/mlsdm/observability/memory_telemetry.py::record_pelm_integrity_violation",
+        "src/mlsdm/observability/safety_boundary_tracker.py::record_safety_boundary_decision"
+      ]
+    }
+  ],
+  "tests": [
+    "tests/security/test_runtime_safety_enforcement.py::test_policy_drift_lockdown_triggers_on_critical_drift",
+    "tests/security/test_runtime_safety_enforcement.py::test_low_confidence_llm_memory_rejected",
+    "tests/security/test_runtime_safety_enforcement.py::test_retrieval_filters_low_confidence_llm_memory",
+    "tests/security/test_runtime_safety_enforcement.py::test_safety_boundary_quarantine_on_repeated_denials"
+  ]
+}

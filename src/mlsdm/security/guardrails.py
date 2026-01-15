@@ -38,6 +38,7 @@ from typing import TYPE_CHECKING, Any, TypedDict
 if TYPE_CHECKING:
     from fastapi import Request
 
+from mlsdm.observability.safety_boundary_tracker import record_safety_boundary_decision
 from mlsdm.observability.tracing import get_tracer_manager
 from mlsdm.utils.security_logger import SecurityEventType, get_security_logger
 
@@ -212,6 +213,9 @@ async def enforce_request_guardrails(
 
         # Build policy decision
         decision = _build_policy_decision(results, context)
+
+        # Safety boundary enforcement (repeated denials)
+        _apply_safety_boundary_enforcement(decision, context)
 
         # Log decision (Repudiation protection)
         _log_guardrail_decision(decision, context, span)
@@ -532,6 +536,35 @@ def _build_policy_decision(
         stride_categories=stride_categories,
         checks_performed=checks_performed,
         metadata=metadata,
+    )
+
+
+def _apply_safety_boundary_enforcement(
+    decision: PolicyDecision,
+    context: GuardrailContext,
+) -> None:
+    """Apply safety boundary enforcement for repeated denials."""
+    boundary_key = context.client_id or "anonymous"
+    enforcement = record_safety_boundary_decision(boundary_key, decision["allow"])
+    if not enforcement.triggered:
+        decision["metadata"]["safety_boundary"] = {
+            "hit_count": enforcement.hit_count,
+            "window_size": enforcement.window_size,
+        }
+        return
+
+    decision["allow"] = False
+    decision["reasons"].append("safety_boundary_quarantine")
+    decision["metadata"]["safety_boundary"] = {
+        "hit_count": enforcement.hit_count,
+        "window_size": enforcement.window_size,
+        "action": enforcement.action,
+        "reason": enforcement.reason,
+    }
+    security_logger.log_safety_boundary_quarantine(
+        client_id=boundary_key,
+        hit_count=enforcement.hit_count,
+        window_size=enforcement.window_size,
     )
 
 

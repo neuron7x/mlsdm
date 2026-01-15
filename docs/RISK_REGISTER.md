@@ -1,8 +1,8 @@
 # AI Safety Risk Register
 
-**Document Version:** 1.0.0
+**Document Version:** 1.2.0
 **Project Version:** 1.2.0
-**Last Updated:** November 2025
+**Last Updated:** January 2026
 **Owner:** Principal AI Safety Engineer
 **Status:** Active
 
@@ -88,10 +88,10 @@ Each risk is assessed using the Impact × Likelihood framework and tracked throu
 | **R009** | Technical | Race conditions in concurrent access | High | Low | Medium | Mitigated | Thread-safe locks, property tests |
 | **R010** | Technical | Checkpoint loading RCE (NeuroLang) | Critical | Very Low | High | Mitigated | Path restriction, secure mode |
 | **R011** | Governance | Audit trail gaps | Medium | Low | Low | Mitigated | Structured logging, correlation IDs |
-| **R012** | Governance | Policy drift without detection | High | Medium | High | Partially Mitigated | Observable thresholds, drift alerts (planned) |
+| **R012** | Governance | Policy drift without detection | High | Medium | High | Mitigated | Drift lockdown enforcement, metrics, audit logs |
 | **R013** | Governance | Undetected model degradation | Medium | Medium | Medium | Mitigated | Aphasia detection, quality metrics |
 | **R014** | Content | Aphasia detection false negatives | Medium | Low | Low | Mitigated | Configurable thresholds, multiple flags |
-| **R015** | Content | Hallucination propagation via memory | High | Medium | High | Partially Mitigated | Memory provenance (future), confidence scoring |
+| **R015** | Content | Hallucination propagation via memory | High | Medium | High | Mitigated | Provenance enforcement, low-confidence rejection, integrity logs |
 | **R016** | Behavioral | Sleep phase exploitation for reduced filtering | Medium | Low | Low | Mitigated | Phase-aware moral enforcement |
 | **R017** | Technical | Dependency vulnerability exploitation | High | Medium | High | Mitigated | Weekly pip-audit, Dependabot |
 | **R018** | Content | Indirect prompt injection via context | High | Medium | High | Partially Mitigated | Context sanitization (future) |
@@ -314,6 +314,29 @@ PyTorch checkpoint files can contain arbitrary code that executes during `torch.
 
 ---
 
+### R012: Policy Drift without Detection
+
+**Category:** Governance Safety
+**Risk Owner:** Safety Team
+
+**Description:**
+Adaptive thresholding could drift without detection, eroding policy compliance over time.
+
+**Current Controls:**
+- Drift telemetry with deterministic enforcement (critical/sustained drift lockdown)
+- Lockdown clamps threshold to MAX and halts adaptation
+- Structured audit logs and Prometheus drift enforcement metrics
+
+**Validation:**
+- `tests/security/test_runtime_safety_enforcement.py::test_policy_drift_lockdown_triggers_on_critical_drift`
+- Evidence: `artifacts/evidence/policy_drift_detection.json`
+
+**Status:** ✅ Mitigated
+
+**Residual Risk:** Low - Lockdown provides deterministic containment; requires manual review to resume adaptation.
+
+---
+
 ### R015: Hallucination Propagation via Memory
 
 **Category:** Content Safety
@@ -323,21 +346,19 @@ PyTorch checkpoint files can contain arbitrary code that executes during `torch.
 Hallucinated content from LLM responses could be stored in memory and retrieved as context for future responses, creating a feedback loop of misinformation.
 
 **Current Controls:**
-- Aphasia detection flags low-quality responses
-- Memory decay (L1→L2→L3) reduces long-term impact
-- Wake/sleep cycles provide consolidation opportunities
+- Memory provenance tracking with enforced confidence gates
+- Low-confidence LLM/retrieved memories rejected at storage
+- Low-confidence LLM/retrieved memories filtered at retrieval
+- Integrity violations emit structured logs and metrics
 
-**Planned Controls:**
-- Memory provenance tracking (source + confidence)
-- Factual consistency checking
-- Hallucination detection before memory storage
+**Validation:**
+- `tests/security/test_runtime_safety_enforcement.py::test_low_confidence_llm_memory_rejected`
+- `tests/security/test_runtime_safety_enforcement.py::test_retrieval_filters_low_confidence_llm_memory`
+- Evidence: `artifacts/evidence/memory_integrity_guarantees.json`
 
-**Status:** ⚠️ Partially Mitigated
+**Status:** ✅ Mitigated
 
-**Action Items:**
-- [ ] Implement memory provenance metadata
-- [ ] Add confidence scoring to stored embeddings
-- [ ] Create hallucination detection pre-filter
+**Residual Risk:** Low - High-confidence LLM memories are still stored but remain provenance-tracked.
 
 ---
 
@@ -380,8 +401,8 @@ Malicious instructions embedded in retrieved context (from memory or external so
 
 | Status | Count | Percentage |
 |--------|-------|------------|
-| ✅ Mitigated | 15 | 83% |
-| ⚠️ Partially Mitigated | 3 | 17% |
+| ✅ Mitigated | 17 | 94% |
+| ⚠️ Partially Mitigated | 1 | 6% |
 | ❌ Open | 0 | 0% |
 | 📋 Accepted | 0 | 0% |
 
@@ -389,19 +410,19 @@ Malicious instructions embedded in retrieved context (from memory or external so
 
 | Category | Total | Mitigated | Partial | Open |
 |----------|-------|-----------|---------|------|
-| Content Safety | 7 | 6 | 1 | 0 |
+| Content Safety | 7 | 7 | 0 | 0 |
 | Behavioral Safety | 4 | 4 | 0 | 0 |
 | Technical Safety | 5 | 5 | 0 | 0 |
-| Governance Safety | 2 | 1 | 1 | 0 |
+| Governance Safety | 2 | 2 | 0 | 0 |
 
 ### Critical/High Risks Requiring Action
 
 | Risk ID | Description | Action Required | Status |
 |---------|-------------|-----------------|--------|
 | ~~R003~~ | ~~Multi-turn jailbreak~~ | ~~Attack pattern detection~~ | ✅ Mitigated |
-| R015 | Hallucination propagation | Memory provenance | ⚠️ Open |
+| ~~R015~~ | ~~Hallucination propagation~~ | ~~Memory integrity enforcement~~ | ✅ Mitigated |
 | ~~R018~~ | ~~Indirect prompt injection~~ | ~~Context sanitization~~ | ✅ Mitigated |
-| R012 | Policy drift detection | Drift alerting system | ⚠️ Open |
+| ~~R012~~ | ~~Policy drift detection~~ | ~~Drift enforcement + lockdown~~ | ✅ Mitigated |
 
 ---
 
@@ -426,6 +447,7 @@ Malicious instructions embedded in retrieved context (from memory or external so
 |------|---------|---------|--------|
 | Nov 2025 | 1.0.0 | Initial risk register creation | Principal AI Safety Engineer |
 | Dec 2025 | 1.1.0 | R003, R018 mitigated: Multi-turn attack detection & context sanitization | @copilot |
+| Jan 2026 | 1.2.0 | R012, R015 mitigated: Drift lockdown + memory integrity enforcement | @codex |
 
 ---
 

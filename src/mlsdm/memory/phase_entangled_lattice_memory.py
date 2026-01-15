@@ -13,9 +13,12 @@ import numpy as np
 
 from mlsdm.memory.provenance import MemoryProvenance, MemorySource
 from mlsdm.utils.math_constants import safe_norm
+from mlsdm.utils.security_logger import get_security_logger
 
 if TYPE_CHECKING:
     from mlsdm.config import PELMCalibration
+
+security_logger = get_security_logger()
 
 
 # Import calibration defaults - these can be overridden via config
@@ -31,6 +34,7 @@ except ImportError:
 try:
     from mlsdm.observability.memory_telemetry import (
         record_pelm_corruption,
+        record_pelm_integrity_violation,
         record_pelm_retrieve,
         record_pelm_store,
     )
@@ -78,6 +82,7 @@ class PhaseEntangledLatticeMemory:
     DEFAULT_PHASE_TOLERANCE = PELM_DEFAULTS.phase_tolerance if PELM_DEFAULTS else 0.15
     DEFAULT_TOP_K = PELM_DEFAULTS.default_top_k if PELM_DEFAULTS else 5
     MIN_NORM_THRESHOLD = PELM_DEFAULTS.min_norm_threshold if PELM_DEFAULTS else 1e-9
+    LLM_MIN_CONFIDENCE = 0.7
 
     def __init__(self, dimension: int = 384, capacity: int | None = None) -> None:
         # Use calibration default if not specified
@@ -118,6 +123,13 @@ class PhaseEntangledLatticeMemory:
         self._provenance: list[MemoryProvenance] = []
         self._memory_ids: list[str] = []
         self._confidence_threshold = 0.5  # Minimum confidence for storage
+
+    @staticmethod
+    def _is_low_confidence_provenance(provenance: MemoryProvenance) -> bool:
+        return provenance.source in (
+            MemorySource.LLM_GENERATION,
+            MemorySource.RETRIEVED_CONTEXT,
+        ) and provenance.confidence < PhaseEntangledLatticeMemory.LLM_MIN_CONFIDENCE
 
     def _ensure_integrity(self) -> None:
         """
@@ -182,6 +194,22 @@ class PhaseEntangledLatticeMemory:
                 provenance = MemoryProvenance(
                     source=MemorySource.SYSTEM_PROMPT, confidence=1.0, timestamp=datetime.now()
                 )
+
+            if self._is_low_confidence_provenance(provenance):
+                if _OBSERVABILITY_AVAILABLE and start_time is not None:
+                    record_pelm_integrity_violation(
+                        reason="low_confidence_provenance",
+                        source=provenance.source.value,
+                        confidence=provenance.confidence,
+                        correlation_id=correlation_id,
+                    )
+                security_logger.log_memory_integrity_violation(
+                    reason="low_confidence_provenance",
+                    source=provenance.source.value,
+                    confidence=provenance.confidence,
+                    correlation_id=correlation_id,
+                )
+                return -1
 
             # Check confidence threshold - reject low-confidence memories
             if provenance.confidence < self._confidence_threshold:
@@ -344,6 +372,23 @@ class PhaseEntangledLatticeMemory:
                     provenance = MemoryProvenance(
                         source=MemorySource.SYSTEM_PROMPT, confidence=1.0, timestamp=datetime.now()
                     )
+
+                if self._is_low_confidence_provenance(provenance):
+                    if _OBSERVABILITY_AVAILABLE and start_time is not None:
+                        record_pelm_integrity_violation(
+                            reason="low_confidence_provenance",
+                            source=provenance.source.value,
+                            confidence=provenance.confidence,
+                            correlation_id=correlation_id,
+                        )
+                    security_logger.log_memory_integrity_violation(
+                        reason="low_confidence_provenance",
+                        source=provenance.source.value,
+                        confidence=provenance.confidence,
+                        correlation_id=correlation_id,
+                    )
+                    indices.append(-1)  # Reject
+                    continue
 
                 # Check confidence threshold
                 if provenance.confidence < self._confidence_threshold:
@@ -518,15 +563,35 @@ class PhaseEntangledLatticeMemory:
             # Add confidence filtering
             confidence_mask = np.empty(self.size, dtype=bool)
             provenance_size = len(self._provenance)
+            blocked_low_confidence = 0
             for i in range(self.size):
                 if i < provenance_size:
-                    confidence_mask[i] = self._provenance[i].confidence >= min_confidence
+                    provenance = self._provenance[i]
+                    if self._is_low_confidence_provenance(provenance):
+                        confidence_mask[i] = False
+                        blocked_low_confidence += 1
+                    else:
+                        confidence_mask[i] = provenance.confidence >= min_confidence
                 else:
                     # Backward compatibility: treat missing provenance as high confidence.
                     confidence_mask[i] = True
 
             # Combine phase and confidence masks
             valid_mask = phase_mask & confidence_mask
+
+            if blocked_low_confidence > 0 and _OBSERVABILITY_AVAILABLE:
+                record_pelm_integrity_violation(
+                    reason="low_confidence_retrieval",
+                    source="mixed",
+                    blocked_count=blocked_low_confidence,
+                    correlation_id=correlation_id,
+                )
+            if blocked_low_confidence > 0:
+                security_logger.log_memory_integrity_violation(
+                    reason="low_confidence_retrieval",
+                    source="mixed",
+                    correlation_id=correlation_id,
+                )
 
             if not np.any(valid_mask):
                 # Record empty result due to phase mismatch

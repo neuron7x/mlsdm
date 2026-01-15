@@ -1,0 +1,18 @@
+{
+  "schema_version": "mlsdm-safety-evidence-v1",
+  "generated_utc": "2026-01-07T00:00:00Z",
+  "risk_id": "R015",
+  "risk": "Hallucination propagation via memory",
+  "enforcement_points": [
+    "src/mlsdm/memory/phase_entangled_lattice_memory.py::_is_low_confidence_provenance",
+    "src/mlsdm/observability/memory_telemetry.py::record_pelm_integrity_violation"
+  ],
+  "behavior": {
+    "storage_rejection": "low-confidence LLM or retrieved provenance is rejected",
+    "retrieval_filter": "low-confidence LLM or retrieved provenance is excluded"
+  },
+  "tests": [
+    "tests/security/test_runtime_safety_enforcement.py::test_low_confidence_llm_memory_rejected",
+    "tests/security/test_runtime_safety_enforcement.py::test_retrieval_filters_low_confidence_llm_memory"
+  ]
+}

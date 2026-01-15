@@ -10,9 +10,14 @@ if TYPE_CHECKING:
     from mlsdm.config import MoralFilterCalibration
 
 # Import drift telemetry
-from mlsdm.observability.policy_drift_telemetry import record_threshold_change
+from mlsdm.observability.policy_drift_telemetry import (
+    record_drift_enforcement,
+    record_threshold_change,
+)
+from mlsdm.utils.security_logger import get_security_logger
 
 logger = logging.getLogger(__name__)
+security_logger = get_security_logger()
 
 # Import calibration defaults - these can be overridden via config
 # Type hints use Optional to allow None when calibration module unavailable
@@ -110,6 +115,8 @@ class MoralFilterV2:
         self._filter_id = filter_id
         self._max_history = 100  # Keep last 100 changes
         self._drift_history: deque[float] = deque(maxlen=self._max_history)
+        self._drift_lockdown = False
+        self._drift_violation_count = 0
 
         # Initialize metrics
         record_threshold_change(
@@ -132,6 +139,8 @@ class MoralFilterV2:
 
     def adapt(self, accepted: bool) -> None:
         """Adapt threshold with drift detection."""
+        if self._drift_lockdown:
+            return
         # Store old value for drift calculation
         old_threshold = self.threshold
 
@@ -162,6 +171,8 @@ class MoralFilterV2:
             "min_threshold": float(self.MIN_THRESHOLD),
             "max_threshold": float(self.MAX_THRESHOLD),
             "dead_band": float(self.DEAD_BAND),
+            "drift_lockdown": float(self._drift_lockdown),
+            "drift_violation_count": float(self._drift_violation_count),
         }
 
     def _log_boundary_cases(self, moral_value: float) -> None:
@@ -212,6 +223,10 @@ class MoralFilterV2:
                     recent_drift,
                     self._filter_id,
                 )
+                self._apply_drift_lockdown(
+                    reason="sustained_drift",
+                    drift_magnitude=abs(recent_drift),
+                )
 
         # Analyze for anomalous drift
         drift_magnitude = abs(new - old)
@@ -229,6 +244,10 @@ class MoralFilterV2:
                 new,
                 self._filter_id,
             )
+            self._apply_drift_lockdown(
+                reason="critical_drift",
+                drift_magnitude=drift_magnitude,
+            )
         elif (
             drift_magnitude > self._DRIFT_LOG_THRESHOLD
             and self._DRIFT_LOGGING_MODE != "silent"
@@ -241,6 +260,25 @@ class MoralFilterV2:
                     new,
                     self._filter_id,
                 )
+
+    def _apply_drift_lockdown(self, reason: str, drift_magnitude: float) -> None:
+        """Apply deterministic drift lockdown with observability hooks."""
+        self._drift_violation_count += 1
+        if not self._drift_lockdown:
+            self._drift_lockdown = True
+            self.threshold = self.MAX_THRESHOLD
+        record_drift_enforcement(
+            filter_id=self._filter_id,
+            action="lockdown",
+            reason=reason,
+            drift_magnitude=drift_magnitude,
+            lockdown_active=self._drift_lockdown,
+        )
+        security_logger.log_policy_drift_enforced(
+            filter_id=self._filter_id,
+            action="lockdown",
+            drift_magnitude=drift_magnitude,
+        )
 
     def get_drift_stats(self) -> dict[str, float]:
         """Get drift statistics.
