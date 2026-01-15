@@ -414,6 +414,12 @@ Malicious instructions embedded in retrieved context (from memory or external so
 | Post-Incident Update | As needed | - | Incident Owner |
 | Pre-Release Review | Per release | v1.3.0 | Safety Team |
 
+### Coverage-Badge Verification (GitHub Actions)
+
+| Verification Date | Reviewer | Consecutive Successful Run IDs (main) | Artifact References |
+|-------------------|----------|---------------------------------------|---------------------|
+| 2026-01-15 | Codex | 21022704090, 20961719696, 20900689678 | `coverage-badge-artifacts-21022704090` (https://api.github.com/repos/neuron7x/mlsdm/actions/artifacts/5137035815/zip); no retained artifacts for 20961719696, 20900689678 (https://api.github.com/repos/neuron7x/mlsdm/actions/runs/20961719696/artifacts, https://api.github.com/repos/neuron7x/mlsdm/actions/runs/20900689678/artifacts) |
+
 ### Change Log
 
 | Date | Version | Changes | Author |
