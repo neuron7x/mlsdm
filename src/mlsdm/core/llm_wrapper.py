@@ -552,6 +552,10 @@ class LLMWrapper:
                 llm_span.set_attribute("mlsdm.response_length", len(response_text))
                 llm_span.set_attribute("mlsdm.llm_call.error", False)
 
+            # Step 6: Sentinel empty-response handling (bypass quality gate)
+            if self._is_empty_response(response_text):
+                return self._build_empty_response()
+
             # Step 6: Apply response quality gate
             quality_rejection, suppress_memory, quality_metadata, confidence = (
                 self._apply_quality_gate(prompt, response_text)
@@ -853,6 +857,19 @@ class LLMWrapper:
             response["quality_gate"] = details
         return response
 
+    def _build_empty_response(self) -> dict[str, Any]:
+        """Build response for empty LLM output (sentinel error)."""
+        return {
+            "response": "",
+            "accepted": True,
+            "phase": self.rhythm.phase,
+            "step": self.step_counter,
+            "note": "empty_response",
+            "moral_threshold": round(self.moral.threshold, 4),
+            "context_items": 0,
+            "max_tokens_used": 0,
+        }
+
     def _build_error_response(self, error: str) -> dict[str, Any]:
         """Build response for errors."""
         return {
@@ -869,6 +886,11 @@ class LLMWrapper:
     def _is_error_response(self, result: Any) -> bool:
         """Check if a result is an error response dict."""
         return isinstance(result, dict) and "note" in result and "error" in result.get("note", "")
+
+    @staticmethod
+    def _is_empty_response(response: str) -> bool:
+        """Return True when the LLM output is empty or whitespace-only."""
+        return len(response.strip()) == 0
 
     def _estimate_confidence(self, response: str) -> float:
         """Estimate confidence level of LLM-generated response using heuristics.

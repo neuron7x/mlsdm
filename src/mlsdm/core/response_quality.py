@@ -113,6 +113,7 @@ class ResponseQualityGate:
     def evaluate(self, *, prompt: str, response: str, confidence: float) -> QualityGateDecision:
         prompt_tokens = self._tokenize(prompt)
         response_tokens = self._tokenize(response)
+        response_is_empty = len(response.strip()) == 0
 
         signals: dict[str, FailureModeSignal] = {}
 
@@ -121,7 +122,21 @@ class ResponseQualityGate:
         signals["incoherence"] = self._incoherence_signal(response_tokens)
         signals["telegraphing"] = self._telegraphing_signal(response, response_tokens)
         signals["drift"] = self._drift_signal(prompt_tokens, response_tokens)
-        signals["hallucination"] = self._hallucination_signal(confidence)
+        signals["hallucination"] = (
+            self._hallucination_signal_for_empty()
+            if response_is_empty
+            else self._hallucination_signal(confidence)
+        )
+
+        if response_is_empty:
+            triggered_modes = tuple(name for name, sig in signals.items() if sig.triggered)
+            return QualityGateDecision(
+                allow_response=True,
+                suppress_memory=True,
+                action="degrade",
+                triggered_modes=triggered_modes,
+                signals=signals,
+            )
 
         triggered_modes = tuple(name for name, sig in signals.items() if sig.triggered)
 
@@ -335,4 +350,13 @@ class ResponseQualityGate:
             threshold=1.0 - self._HALLUCINATION_CONFIDENCE_THRESHOLD,
             triggered=triggered,
             evidence={"confidence": confidence},
+        )
+
+    def _hallucination_signal_for_empty(self) -> FailureModeSignal:
+        return FailureModeSignal(
+            mode="hallucination",
+            score=0.0,
+            threshold=1.0 - self._HALLUCINATION_CONFIDENCE_THRESHOLD,
+            triggered=False,
+            evidence={"confidence": None, "skipped": "empty_response"},
         )

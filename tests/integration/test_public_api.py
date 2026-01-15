@@ -315,7 +315,13 @@ class TestEndToEndIntegration:
         """Test multiple turns of conversation."""
         from mlsdm import create_llm_wrapper
 
-        wrapper = create_llm_wrapper(wake_duration=10)
+        def deterministic_llm(prompt: str, max_tokens: int) -> str:
+            return (
+                "Deterministic response for integration testing with enough tokens "
+                "to stay within the quality gate thresholds."
+            )
+
+        wrapper = create_llm_wrapper(llm_generate_fn=deterministic_llm, wake_duration=10)
 
         prompts = [
             "Hello, how are you?",
