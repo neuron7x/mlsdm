@@ -27,10 +27,12 @@ CI fails if any entry drifts from the frozen metadata below or if coverage is in
 | davies2018_loihi | doi | 10.1109/MM.2018.112130359 | https://doi.org/10.1109/MM.2018.112130359 | 2025-12-30 | crossref |
 | elkishky2022_sigstore | doi | 10.1145/3548606.3560596 | https://doi.org/10.1145/3548606.3560596 | 2025-12-30 | crossref |
 | fedorenko2023_agrammatic | doi | 10.1080/02687038.2022.2143233 | https://doi.org/10.1080/02687038.2022.2143233 | 2025-12-30 | crossref |
+| friederici2011_brain | doi | 10.1152/physrev.00006.2011 | https://doi.org/10.1152/physrev.00006.2011 | 2025-12-30 | crossref |
 | foster2006_reverse | doi | 10.1038/nature04587 | https://doi.org/10.1038/nature04587 | 2025-12-30 | crossref |
 | fusi2005_cascade | doi | 10.1016/j.neuron.2005.02.001 | https://doi.org/10.1016/j.neuron.2005.02.001 | 2025-12-30 | crossref |
 | gabriel2020_alignment | doi | 10.1007/s11023-020-09539-2 | https://doi.org/10.1007/s11023-020-09539-2 | 2025-12-30 | crossref |
 | hastings2018_circadian | doi | 10.1038/s41583-018-0026-z | https://doi.org/10.1038/s41583-018-0026-z | 2025-12-30 | crossref |
+| hickok2007_cortical | doi | 10.1038/nrn2113 | https://doi.org/10.1038/nrn2113 | 2025-12-30 | crossref |
 | hbp2024_assessment | doi | 10.2759/6494125 | https://doi.org/10.2759/6494125 | 2025-12-30 | crossref |
 | hebb1949_organization | isbn | 9780471362728 | https://archive.org/details/organizationofbe00hebb | 2025-12-30 | publisher |
 | hong2025_agents | doi | 10.3389/fpsyg.2025.1591618 | https://doi.org/10.3389/fpsyg.2025.1591618 | 2025-12-30 | crossref |
@@ -55,11 +57,14 @@ CI fails if any entry drifts from the frozen metadata below or if coverage is in
 | torresarias2019_intoto | url | https://www.usenix.org/conference/usenixsecurity19/presentation/torres-arias | https://www.usenix.org/conference/usenixsecurity19/presentation/torres-arias | 2025-12-30 | publisher |
 | touvron2023_llama | arxiv | arXiv:2302.13971 | https://arxiv.org/abs/2302.13971 | 2025-12-30 | arxiv |
 | touvron2023_llama2 | arxiv | arXiv:2307.09288 | https://arxiv.org/abs/2307.09288 | 2025-12-30 | arxiv |
+| tononi2014_sleep | doi | 10.1016/j.neuron.2013.12.025 | https://doi.org/10.1016/j.neuron.2013.12.025 | 2025-12-30 | crossref |
+| turrigiano2012_homeostatic | doi | 10.1101/cshperspect.a005736 | https://doi.org/10.1101/cshperspect.a005736 | 2025-12-30 | crossref |
 | vallverdu2025_neuroq | doi | 10.3390/biomimetics10080516 | https://doi.org/10.3390/biomimetics10080516 | 2025-12-30 | crossref |
 | vaswani2017_attention | arxiv | arXiv:1706.03762 | https://arxiv.org/abs/1706.03762 | 2025-12-30 | arxiv |
 | vasylenko2025_mlsdm | url | https://github.com/neuron7x/mlsdm-governed-cognitive-memory | https://github.com/neuron7x/mlsdm-governed-cognitive-memory | 2025-12-30 | publisher |
 | wang2024_clllm | arxiv | arXiv:2402.01364 | https://arxiv.org/abs/2402.01364 | 2025-12-30 | arxiv |
 | weidinger2023_veil | doi | 10.1073/pnas.2213709120 | https://doi.org/10.1073/pnas.2213709120 | 2025-12-30 | crossref |
+| xie2013_glymphatic | doi | 10.1126/science.1241224 | https://doi.org/10.1126/science.1241224 | 2025-12-30 | crossref |
 | wu2022_memorizing | arxiv | arXiv:2203.08913 | https://arxiv.org/abs/2203.08913 | 2025-12-30 | arxiv |
 | yao2022_react | arxiv | arXiv:2210.03629 | https://arxiv.org/abs/2210.03629 | 2025-12-30 | arxiv |
 
