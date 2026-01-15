@@ -6,6 +6,7 @@ Rules:
 - Citations must use inline syntax [@bibkey].
 - Cited keys must exist in docs/bibliography/REFERENCES.bib.
 - Foundation docs must contain at least one citation.
+- Neuro-core docs must not contain free-form author-year citations.
 Excludes docs/bibliography/* and docs/archive/* from scanning.
 """
 
@@ -20,6 +21,8 @@ if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
 
 RE_CITATION_BLOCK = re.compile(r"\[@([^\]]+)\]")
+RE_AUTHOR_YEAR = re.compile(r"\b[A-Z][A-Za-z'’\-]+(?:\s+et al\.)?,\s*\d{4}\b")
+RE_AUTHOR_YEAR_AMP = re.compile(r"\b[A-Z][A-Za-z'’\-]+\s*&\s*[A-Z][A-Za-z'’\-]+,\s*\d{4}\b")
 
 FOUNDATION_DOCS: tuple[str, ...] = (
     "docs/ARCHITECTURE_SPEC.md",
@@ -27,6 +30,11 @@ FOUNDATION_DOCS: tuple[str, ...] = (
     "docs/ALIGNMENT_AND_SAFETY_FOUNDATIONS.md",
     "docs/FORMAL_INVARIANTS.md",
     "docs/DEVELOPER_GUIDE.md",
+)
+NEURO_CORE_DOCS: tuple[str, ...] = (
+    "docs/NEURO_FOUNDATIONS.md",
+    "docs/APHASIA_SPEC.md",
+    "docs/APHASIA_OBSERVABILITY.md",
 )
 
 
@@ -65,7 +73,7 @@ def load_bib_keys(repo_root: Path) -> set[str]:
 def iter_doc_files(repo_root: Path) -> Iterable[Path]:
     """Yield markdown files under docs/, excluding bibliography and archive."""
     docs_root = repo_root / "docs"
-    for path in docs_root.rglob("*.md"):
+    for path in sorted(docs_root.rglob("*.md")):
         relative_parts = path.relative_to(repo_root).parts
         if "bibliography" in relative_parts or "archive" in relative_parts:
             continue
@@ -85,12 +93,16 @@ def extract_citations(text: str) -> list[str]:
 
 
 def validate_doc_citations(
-    repo_root: Path, foundation_docs: Sequence[str] | None = None
+    repo_root: Path,
+    foundation_docs: Sequence[str] | None = None,
+    neuro_core_docs: Sequence[str] | None = None,
 ) -> list[str]:
     """Validate citations across docs; return list of error messages."""
     errors: list[str] = []
-    foundation = tuple(foundation_docs or FOUNDATION_DOCS)
+    foundation = tuple(FOUNDATION_DOCS if foundation_docs is None else foundation_docs)
     foundation_set = {Path(doc).as_posix() for doc in foundation}
+    neuro_core = tuple(NEURO_CORE_DOCS if neuro_core_docs is None else neuro_core_docs)
+    neuro_core_set = {Path(doc).as_posix() for doc in neuro_core}
 
     bib_keys = load_bib_keys(repo_root)
 
@@ -105,6 +117,16 @@ def validate_doc_citations(
             if key not in bib_keys:
                 errors.append(f"UNKNOWN CITATION: {rel} -> [@{key}] not found")
 
+        if rel in neuro_core_set:
+            for line_no, line in enumerate(content.splitlines(), start=1):
+                if "[@" in line:
+                    continue
+                if RE_AUTHOR_YEAR_AMP.search(line) or RE_AUTHOR_YEAR.search(line):
+                    errors.append(
+                        "FREEFORM CITATION: "
+                        f"{rel}:{line_no} uses author-year without [@bibkey]"
+                    )
+
     # Foundation docs must have at least one citation
     for rel in foundation_set:
         path = repo_root / rel
@@ -115,7 +137,17 @@ def validate_doc_citations(
         if not citations:
             errors.append(f"MISSING CITATIONS: {rel} has 0 citations")
 
-    return errors
+    # Neuro-core docs must have at least one citation
+    for rel in neuro_core_set:
+        path = repo_root / rel
+        if not path.exists():
+            errors.append(f"NEURO-CORE DOC MISSING: {rel}")
+            continue
+        citations = citations_by_file.get(rel, [])
+        if not citations:
+            errors.append(f"MISSING CITATIONS: {rel} has 0 citations (neuro-core)")
+
+    return sorted(errors)
 
 
 def main() -> int:

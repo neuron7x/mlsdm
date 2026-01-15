@@ -164,6 +164,19 @@
     "verification_method": "crossref",
     "verified_on": "2025-12-30"
   },
+  "friederici2011_brain": {
+    "canonical_id": "10.1152/physrev.00006.2011",
+    "canonical_id_type": "doi",
+    "canonical_url": "https://doi.org/10.1152/physrev.00006.2011",
+    "frozen_metadata": {
+      "first_author_family": "Friederici",
+      "title": "The brain basis of language processing: From structure to function",
+      "venue": "Physiological Reviews",
+      "year": "2011"
+    },
+    "verification_method": "crossref",
+    "verified_on": "2025-12-30"
+  },
   "foster2006_reverse": {
     "canonical_id": "10.1038/nature04587",
     "canonical_id_type": "doi",
@@ -212,6 +225,19 @@
       "title": "Generation of circadian rhythms in the suprachiasmatic nucleus",
       "venue": "Nature Reviews Neuroscience",
       "year": "2018"
+    },
+    "verification_method": "crossref",
+    "verified_on": "2025-12-30"
+  },
+  "hickok2007_cortical": {
+    "canonical_id": "10.1038/nrn2113",
+    "canonical_id_type": "doi",
+    "canonical_url": "https://doi.org/10.1038/nrn2113",
+    "frozen_metadata": {
+      "first_author_family": "Hickok",
+      "title": "The cortical organization of speech processing",
+      "venue": "Nature Reviews Neuroscience",
+      "year": "2007"
     },
     "verification_method": "crossref",
     "verified_on": "2025-12-30"
@@ -424,6 +450,32 @@
     "verification_method": "crossref",
     "verified_on": "2025-12-30"
   },
+  "tononi2014_sleep": {
+    "canonical_id": "10.1016/j.neuron.2013.12.025",
+    "canonical_id_type": "doi",
+    "canonical_url": "https://doi.org/10.1016/j.neuron.2013.12.025",
+    "frozen_metadata": {
+      "first_author_family": "Tononi",
+      "title": "Sleep and the price of plasticity: From synaptic and cellular homeostasis to memory consolidation and integration",
+      "venue": "Neuron",
+      "year": "2014"
+    },
+    "verification_method": "crossref",
+    "verified_on": "2025-12-30"
+  },
+  "turrigiano2012_homeostatic": {
+    "canonical_id": "10.1101/cshperspect.a005736",
+    "canonical_id_type": "doi",
+    "canonical_url": "https://doi.org/10.1101/cshperspect.a005736",
+    "frozen_metadata": {
+      "first_author_family": "Turrigiano",
+      "title": "Homeostatic synaptic plasticity: Local and global mechanisms for stabilizing neuronal function",
+      "venue": "Cold Spring Harbor Perspectives in Biology",
+      "year": "2012"
+    },
+    "verification_method": "crossref",
+    "verified_on": "2025-12-30"
+  },
   "openai2023_gpt4": {
     "canonical_id": "arXiv:2303.08774",
     "canonical_id_type": "arxiv",
@@ -589,6 +641,19 @@
       "title": "Using the Veil of Ignorance to Align AI Systems with Principles of Justice",
       "venue": "PNAS",
       "year": "2023"
+    },
+    "verification_method": "crossref",
+    "verified_on": "2025-12-30"
+  },
+  "xie2013_glymphatic": {
+    "canonical_id": "10.1126/science.1241224",
+    "canonical_id_type": "doi",
+    "canonical_url": "https://doi.org/10.1126/science.1241224",
+    "frozen_metadata": {
+      "first_author_family": "Xie",
+      "title": "Sleep drives metabolite clearance from the adult brain",
+      "venue": "Science",
+      "year": "2013"
     },
     "verification_method": "crossref",
     "verified_on": "2025-12-30"

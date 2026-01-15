@@ -23,7 +23,11 @@
 
 ## Overview
 
-The Aphasia-Broca Model is a neurobiologically-inspired component for detecting and correcting speech pathologies in Large Language Model (LLM) outputs. It models the characteristics of Broca's aphasia to identify when an LLM generates telegraphic, fragmented responses that lack proper grammatical structure.
+The Aphasia-Broca Model is a neurobiologically-inspired component for detecting and correcting LLM-output phenotypes. It models characteristics reported for Broca's aphasia to identify when an LLM generates telegraphic, fragmented responses that lack proper grammatical structure [@asha_aphasia; @fedorenko2023_agrammatic].
+
+## Non-Clinical Boundary
+
+The Aphasia-Broca Model is an **LLM-output phenotype detector** inspired by clinical descriptions. It is **not** a clinical aphasia model, does **not** perform diagnosis, and must not be used for medical or therapeutic decisions.
 
 ### Key Features
 
@@ -41,7 +45,7 @@ The Aphasia-Broca Model is a neurobiologically-inspired component for detecting 
 
 **Clinical Characteristics:**
 
-Broca's aphasia (also called expressive or non-fluent aphasia) is a well-documented language disorder resulting from damage to Broca's area (left inferior frontal gyrus, BA44/45). The condition is characterized by:
+Broca's aphasia (also called expressive or non-fluent aphasia) is a language disorder associated with damage to the left inferior frontal gyrus (Broca's area, BA44/45) [@asha_aphasia; @friederici2011_brain]. The condition is characterized by [@asha_aphasia; @fedorenko2023_agrammatic]:
 
 1. **Telegraphic Speech**: Short, simple sentences lacking grammatical complexity
 2. **Preserved Comprehension**: Understanding remains largely intact
@@ -51,7 +55,7 @@ Broca's aphasia (also called expressive or non-fluent aphasia) is a well-documen
 
 **Neural Basis:**
 
-Broca's area serves critical functions in:
+Broca's area serves critical functions in [@friederici2011_brain; @hickok2007_cortical]:
 - Speech production motor planning
 - Grammar processing and syntactic structure
 - Phonological working memory
@@ -59,7 +63,7 @@ Broca's area serves critical functions in:
 
 For detailed neuroscience foundations, see [docs/NEURO_FOUNDATIONS.md](docs/NEURO_FOUNDATIONS.md#4-language-processing-and-aphasia).
 
-**Note on References:** The linguistic characteristics of Broca's aphasia are established in standard clinical neuroscience and neurolinguistics literature. MLSDM's detection metrics are based on these well-documented clinical assessment criteria. Future revisions of this document may include specific peer-reviewed neurolinguistics citations.
+**Evidence Note:** All neuroscience claims in this section are supported by canonical citations in `docs/bibliography/REFERENCES.bib`. Any uncited analogies are explicitly marked as `UNPROVEN (engineering analogy)`.
 
 ### Mapping to LLM Behavior
 
@@ -808,12 +812,10 @@ For detailed neuroscience foundations and complete bibliography:
 
 ### Clinical Neuroscience
 
-**Note:** The linguistic characteristics of Broca's aphasia (telegraphic speech, agrammatism, function word omission) are well-established in clinical neuroscience literature. MLSDM's detection metrics are based on standard clinical assessment criteria for expressive aphasia. Future revisions may include specific peer-reviewed neurolinguistics citations.
+**Note:** The linguistic characteristics referenced here (telegraphic speech, agrammatism, function word omission) are drawn from clinical literature [@asha_aphasia; @fedorenko2023_agrammatic]. MLSDM applies them as non-clinical heuristics for LLM output quality and does not claim diagnostic validity.
 
-Canonical references:
-- Broca, P. (1861). Remarks on the Seat of the Faculty of Articulated Language (Historical foundation)
-- Goodglass, H. (1993). Understanding Aphasia (Clinical assessment methods)
-- Dronkers, N. F. (1996). A new brain region for coordinating speech articulation (Neural basis)
+Canonical references (tracked in `docs/bibliography/REFERENCES.bib`):
+- [@asha_aphasia; @fedorenko2023_agrammatic; @friederici2011_brain; @hickok2007_cortical]
 
 ### Empirical Validation
 

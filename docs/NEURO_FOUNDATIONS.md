@@ -25,6 +25,10 @@ MLSDM architecture draws inspiration from well-established neuroscience and cogn
 
 **Key Principle:** MLSDM does not claim to simulate biological neurons. Instead, it adopts computational principles derived from neuroscience to achieve engineering goals (bounded resources, stable behavior, interpretability).
 
+**Evidence Status:** Neuroscience statements in this document include inline citations to
+`docs/bibliography/REFERENCES.bib`. Any uncited analogies are explicitly labeled as
+`UNPROVEN (engineering analogy)` or `UNPROVEN (engineering heuristic)`.
+
 ---
 
 ## 2. Memory Systems
@@ -34,7 +38,7 @@ MLSDM architecture draws inspiration from well-established neuroscience and cogn
 #### Biological Background
 
 **Synaptic Plasticity Timescales:**
-Biological synapses exhibit plasticity across multiple timescales [Benna & Fusi, 2016]:
+Biological synapses exhibit plasticity across multiple timescales [@benna2016_synaptic]:
 
 1. **Short-term plasticity** (milliseconds to minutes):
    - Calcium-dependent facilitation and depression
@@ -52,7 +56,7 @@ Biological synapses exhibit plasticity across multiple timescales [Benna & Fusi,
    - Late-phase long-term potentiation (L-LTP)
 
 **Cascade Models:**
-Fusi et al. (2005) demonstrated that synaptic complexity through cascade models enables memory lifetimes far exceeding single-state synapses. Key insights:
+Fusi et al. demonstrated that synaptic complexity through cascade models enables memory lifetimes far exceeding single-state synapses [@fusi2005_cascade]. Key insights:
 - Multiple metastable states buffer against noise
 - Slow transitions between states provide long-term stability
 - Fast initial transitions allow rapid learning
@@ -70,19 +74,19 @@ Multi-timescale memory consolidation balances:
 **L1 - Short-term Buffer:**
 - **Decay timescale**: Hours (τ₁ ≈ 2-4 hours)
 - **Capacity**: High turnover, ~100-500 entries
-- **Biological analog**: Working memory, prefrontal cortex maintenance
+- **UNPROVEN (engineering analogy)**: Working memory, prefrontal cortex maintenance
 - **Function**: Immediate conversational context, recent events
 
 **L2 - Intermediate Consolidation:**
 - **Decay timescale**: Days (τ₂ ≈ 1-7 days)
 - **Capacity**: Moderate, ~50-200 entries
-- **Biological analog**: Episodic memory, hippocampal-dependent consolidation
+- **UNPROVEN (engineering analogy)**: Episodic memory, hippocampal-dependent consolidation
 - **Function**: Recent interaction history, episodic recall
 
 **L3 - Long-term Storage:**
 - **Decay timescale**: Weeks to months (τ₃ ≈ 7-30 days)
 - **Capacity**: Limited, ~20-100 critical entries
-- **Biological analog**: Semantic memory, cortical consolidation
+- **UNPROVEN (engineering analogy)**: Semantic memory, cortical consolidation
 - **Function**: Core agent identity, stable knowledge, critical events
 
 **Consolidation Mechanisms:**
@@ -91,23 +95,23 @@ Multi-timescale memory consolidation balances:
 - Priority-based eviction when capacity reached
 
 **Scientific Grounding:**
-- Architecture directly implements cascade model principles [Fusi et al., 2005]
+- Architecture directly implements cascade model principles [@fusi2005_cascade]
 - Timescales calibrated to agent interaction patterns (hours to weeks) rather than biological timescales (milliseconds to years)
-- Consolidation logic inspired by systems consolidation theory [Benna & Fusi, 2016]
+- Consolidation logic inspired by systems consolidation theory [@benna2016_synaptic]
 
 ### 2.2 Hippocampal Replay and Memory Consolidation
 
 #### Biological Background
 
 **Hippocampal Replay:**
-The hippocampus exhibits spontaneous reactivation of neural sequences during rest and sleep [Foster & Wilson, 2006]:
+The hippocampus exhibits spontaneous reactivation of neural sequences during rest and sleep [@foster2006_reverse]:
 
 1. **Forward replay**: Recapitulation of recent experiences
 2. **Reverse replay**: Backward reactivation linking outcomes to preceding states
-3. **Preplay**: Anticipatory sequences for future planning [Olafsdottir et al., 2018]
+3. **Preplay**: Anticipatory sequences for future planning [@olafsdottir2018_replay]
 
 **Functional Significance:**
-- **Memory consolidation**: Transfer from hippocampus to neocortex [Carr et al., 2011]
+- **Memory consolidation**: Transfer from hippocampus to neocortex [@carr2011_replay]
 - **Credit assignment**: Linking actions to delayed outcomes through reverse replay
 - **Planning and simulation**: Evaluating potential future trajectories
 - **Memory stabilization**: Protecting recent memories from interference
@@ -138,16 +142,16 @@ The hippocampus exhibits spontaneous reactivation of neural sequences during res
 - **Phase-dependent gating**: Different replay strategies per phase
 
 **Scientific Grounding:**
-- Replay-based consolidation mirrors hippocampal-cortical transfer [Foster & Wilson, 2006]
+- Replay-based consolidation mirrors hippocampal-cortical transfer [@foster2006_reverse]
 - Priority-based replay consistent with salience-modulated consolidation
-- Phase-dependent replay inspired by sleep-dependent memory consolidation [Carr et al., 2011]
+- Phase-dependent replay inspired by sleep-dependent memory consolidation [@carr2011_replay]
 
 ### 2.3 Phase-Entangled Lattice Memory (PELM)
 
 #### Biological Background
 
 **Associative Memory in Neural Systems:**
-Biological memory exhibits:
+Biological memory exhibits [@hebb1949_organization; @hopfield1982_neural]:
 - Content-addressable retrieval (partial cues activate full memories)
 - Pattern completion and pattern separation
 - Distributed representations across neural populations
@@ -161,16 +165,16 @@ Biological memory exhibits:
 #### Engineering Analog: Quantum-Inspired Memory
 
 **Mathematical Framework:**
-Masuyama et al. (2014, 2018) developed quantum-inspired associative memory models:
+Masuyama et al. developed quantum-inspired associative memory models [@masuyama2014_qibam; @masuyama2018_qmam]:
 - Phase-based encoding for bidirectional associations
 - Self-convergent iterative retrieval
 - Bounded capacity with graceful degradation
 - Multi-directional mappings beyond simple key-value pairs
 
 **Note on "Quantum-Inspired":**
-MLSDM uses the term "quantum-inspired" following Masuyama et al. (2014) to indicate mathematical structures (phases, superposition-like representations) that are analogous to quantum mechanics but implemented on classical hardware. The term "phase-entangled" in PELM similarly references phase-based associations, not quantum entanglement.
+MLSDM uses the term "quantum-inspired" following Masuyama et al. to indicate mathematical structures (phases, superposition-like representations) that are analogous to quantum mechanics but implemented on classical hardware [@masuyama2014_qibam]. The term "phase-entangled" in PELM similarly references phase-based associations, not quantum entanglement.
 
-Recent work by Vallverdú & Rius (2025) further explores quantum-inspired frameworks for brain emulation, supporting the conceptual framing of phase-based cognitive memory.
+Recent work by Vallverdú & Rius further explores quantum-inspired frameworks for brain emulation, supporting the conceptual framing of phase-based cognitive memory [@vallverdu2025_neuroq].
 
 #### MLSDM Implementation
 
@@ -189,10 +193,10 @@ Recent work by Vallverdú & Rius (2025) further explores quantum-inspired framew
 - Context-dependent filtering
 
 **Scientific Grounding:**
-- Inspired by quantum-inspired associative memory models [Masuyama et al., 2014; Masuyama et al., 2018]
+- Inspired by quantum-inspired associative memory models [@masuyama2014_qibam; @masuyama2018_qmam]
 - Content-addressable retrieval consistent with hippocampal CA3 function
 - Phase-based organization enables efficient context-dependent access
-- Mathematical framework from quantum-inspired multidirectional associative memory [Masuyama et al., 2018]
+- Mathematical framework from quantum-inspired multidirectional associative memory [@masuyama2018_qmam]
 
 ---
 
@@ -203,7 +207,7 @@ Recent work by Vallverdú & Rius (2025) further explores quantum-inspired framew
 #### Biological Background
 
 **SCN as Master Clock:**
-The suprachiasmatic nucleus (SCN) generates robust ~24-hour rhythms [Hastings et al., 2018]:
+The suprachiasmatic nucleus (SCN) generates robust ~24-hour rhythms [@hastings2018_circadian]:
 
 1. **Cellular oscillators**: Individual SCN neurons exhibit ~24h transcriptional-translational feedback loops
 2. **Network synchronization**: Gap junctions and neuropeptides (VIP, AVP) synchronize cellular clocks
@@ -214,7 +218,7 @@ The suprachiasmatic nucleus (SCN) generates robust ~24-hour rhythms [Hastings et
 - **Robustness**: Rhythm persists in constant darkness (free-running period)
 - **Precision**: Network synchronization reduces period variability
 - **Adaptability**: Phase-shifts in response to environmental changes
-- **Hierarchical control**: SCN coordinates distributed brain clocks [Mendoza & Challet, 2009]
+- **Hierarchical control**: SCN coordinates distributed brain clocks [@mendoza2009_clocks]
 
 #### MLSDM Implementation
 
@@ -244,8 +248,8 @@ The suprachiasmatic nucleus (SCN) generates robust ~24-hour rhythms [Hastings et
 - State preservation across transitions
 
 **Scientific Grounding:**
-- Binary wake/sleep inspired by mammalian sleep-wake cycles [Hastings et al., 2018]
-- Hierarchical control mirrors SCN coordination of distributed clocks [Mendoza & Challet, 2009]
+- Binary wake/sleep inspired by mammalian sleep-wake cycles [@hastings2018_circadian]
+- Hierarchical control mirrors SCN coordination of distributed clocks [@mendoza2009_clocks]
 - Period and phase-shifting mechanisms analogous to circadian entrainment
 
 ### 3.2 Sleep-Dependent Memory Consolidation
@@ -253,17 +257,17 @@ The suprachiasmatic nucleus (SCN) generates robust ~24-hour rhythms [Hastings et
 #### Biological Background
 
 **Functions of Sleep:**
-Sleep serves critical cognitive functions [Carr et al., 2011]:
+Sleep serves critical cognitive functions [@carr2011_replay; @tononi2014_sleep]:
 
-1. **Memory consolidation**: Transfer from hippocampus to neocortex during NREM sleep
-2. **Synaptic homeostasis**: Downscaling of synaptic weights (synaptic homeostasis hypothesis)
-3. **Metabolic restoration**: Clearance of metabolic waste via glymphatic system
+1. **Memory consolidation**: Transfer from hippocampus to neocortex during NREM sleep [@carr2011_replay; @tononi2014_sleep]
+2. **Synaptic homeostasis**: Downscaling of synaptic weights (synaptic homeostasis hypothesis) [@tononi2014_sleep]
+3. **Metabolic restoration**: Clearance of metabolic waste via glymphatic system [@xie2013_glymphatic]
 4. **Offline learning**: Replay-based credit assignment and model updating
 
 **Replay During Sleep:**
 - **Sharp-wave ripples**: High-frequency oscillations during NREM sleep associated with replay
 - **Temporal compression**: Replayed sequences occur faster than original experience
-- **Selectivity**: High-salience memories preferentially replayed [Foster & Wilson, 2006]
+- **Selectivity**: High-salience memories preferentially replayed [@foster2006_reverse]
 
 **Computational Benefits:**
 - Reduced interference during consolidation (offline processing)
@@ -291,7 +295,7 @@ Sleep serves critical cognitive functions [Carr et al., 2011]:
 - Integrity verification
 
 **Scientific Grounding:**
-- Offline consolidation reduces interference [Carr et al., 2011]
+- Offline consolidation reduces interference [@carr2011_replay]
 - Priority-based replay consistent with salience-modulated sleep consolidation
 - Resource efficiency mirrors metabolic restoration function of biological sleep
 
@@ -309,7 +313,7 @@ Sleep serves critical cognitive functions [Carr et al., 2011]:
 #### Biological Background
 
 **Broca's Area (BA44/45):**
-Located in the left inferior frontal gyrus, Broca's area is critical for:
+Located in the left inferior frontal gyrus, Broca's area is critical for [@friederici2011_brain; @hickok2007_cortical]:
 
 1. **Speech production**: Motor planning for articulation
 2. **Grammar processing**: Syntax and morphology
@@ -317,7 +321,7 @@ Located in the left inferior frontal gyrus, Broca's area is critical for:
 4. **Sequence processing**: Hierarchical structure building
 
 **Classic Lesion Studies:**
-Damage to Broca's area produces characteristic aphasia:
+Damage to Broca's area produces characteristic aphasia [@asha_aphasia; @fedorenko2023_agrammatic]:
 - **Telegraphic speech**: Short, simple sentences
 - **Agrammatism**: Omission of function words and inflections
 - **Preserved comprehension**: Understanding remains relatively intact
@@ -328,12 +332,13 @@ Damage to Broca's area produces characteristic aphasia:
 - Dorsal stream: Broca's area → motor cortex for speech production
 - Ventral stream: Inferior temporal → Broca's area for semantic processing
 - Working memory: Broca's area as articulatory rehearsal component
+[@hickok2007_cortical]
 
 ### 4.2 Broca's Aphasia: Clinical Characteristics
 
 #### Linguistic Features
 
-**Primary Symptoms:**
+**Primary Symptoms:** [@asha_aphasia; @fedorenko2023_agrammatic]
 
 1. **Reduced phrase length**: Mean length of utterance (MLU) < 4 words
 2. **Low grammatical complexity**: Simple subject-verb-object structures
@@ -341,26 +346,26 @@ Damage to Broca's area produces characteristic aphasia:
 4. **Telegraphic quality**: "Want coffee" instead of "I want a coffee"
 5. **Preserved content words**: Nouns and verbs largely intact
 
-**Quantitative Markers:**
+**Quantitative Markers (UNPROVEN — engineering heuristic):**
 - Function word density: < 30% of total words (vs. ~50% in healthy speech)
 - Average sentence length: < 5 words
 - Grammatical complexity: Reduced subordinate clauses, conjunctions
 
-**Comprehension Profile:**
+**Comprehension Profile:** [@asha_aphasia]
 - Single-word comprehension: Intact
 - Simple sentence comprehension: Mostly preserved
 - Complex syntax comprehension: Some deficits (e.g., passive sentences)
 
 #### MLSDM Analogy
 
-**LLM "Aphasic" Outputs:**
+**LLM "Aphasic" Outputs (UNPROVEN — engineering analogy):**
 Large language models occasionally produce degraded outputs resembling telegraphic speech:
 - Very short responses (< 3 sentences)
 - Fragmented sentence structure
 - Minimal elaboration or detail
 - Preserved semantic content but poor expression
 
-**Triggers for Degraded Output:**
+**Triggers for Degraded Output (UNPROVEN — engineering heuristic):**
 - Context window overflow
 - Adversarial prompts
 - Model uncertainty/low confidence
@@ -376,17 +381,17 @@ Large language models occasionally produce degraded outputs resembling telegraph
 1. **Token-to-Sentence Ratio**:
    - Formula: total_tokens / sentence_count
    - Threshold: < 10 tokens/sentence → suspect
-   - Biological analog: Mean length of utterance (MLU)
+   - UNPROVEN (engineering analogy): Mean length of utterance (MLU)
 
 2. **Function Word Density**:
    - Formula: function_words / total_words
    - Threshold: < 0.20 (20%) → suspect
-   - Biological analog: Function word omission in agrammatism
+   - UNPROVEN (engineering analogy): Function word omission in agrammatism
 
 3. **Average Sentence Length**:
    - Formula: mean(tokens per sentence)
    - Threshold: < 6 tokens → suspect
-   - Biological analog: Phrase length reduction
+   - UNPROVEN (engineering analogy): Phrase length reduction
 
 4. **Response Length**:
    - Total word count
@@ -405,9 +410,9 @@ Large language models occasionally produce degraded outputs resembling telegraph
 - Increased token budget to avoid premature truncation
 
 **Scientific Grounding:**
-- Metrics based on clinical assessment of Broca's aphasia
-- Quantitative thresholds calibrated to detect telegraphic patterns
-- Self-repair mechanism analogous to error monitoring in biological speech systems
+- Metrics inspired by clinical assessment summaries of Broca's aphasia [@asha_aphasia; @fedorenko2023_agrammatic]
+- Quantitative thresholds are UNPROVEN (engineering heuristic)
+- Self-repair mechanism is UNPROVEN (engineering analogy) to biological speech monitoring
 
 **Limitations and Future Work:**
 - Current metrics are heuristic, not linguistically sophisticated
@@ -424,14 +429,14 @@ Large language models occasionally produce degraded outputs resembling telegraph
 #### Biological Background
 
 **Neural Homeostasis:**
-Nervous systems maintain stability through multiple homeostatic mechanisms:
+Nervous systems maintain stability through multiple homeostatic mechanisms [@turrigiano2012_homeostatic]:
 
-1. **Synaptic scaling**: Global adjustment of synaptic strengths to maintain target firing rates
-2. **Intrinsic plasticity**: Regulation of neuronal excitability
-3. **Metabolic homeostasis**: Balance of energy supply and demand
-4. **Neuromodulatory control**: Dopamine, serotonin, norepinephrine regulate global state
+1. **Synaptic scaling**: Global adjustment of synaptic strengths to maintain target firing rates [@turrigiano2012_homeostatic]
+2. **Intrinsic plasticity**: Regulation of neuronal excitability [@turrigiano2012_homeostatic]
+3. **UNPROVEN (engineering analogy)**: Metabolic homeostasis balances energy supply and demand
+4. **UNPROVEN (engineering analogy)**: Neuromodulatory control regulates global state
 
-**Constraint Enforcement:**
+**Constraint Enforcement (UNPROVEN — engineering analogy):**
 - **Metabolic limits**: Brain operates within ~20% of body's energy budget
 - **Firing rate bounds**: Neurons maintain activity within functional ranges
 - **Population homeostasis**: Excitation/inhibition balance prevents runaway activity
@@ -469,7 +474,7 @@ Nervous systems maintain stability through multiple homeostatic mechanisms:
 
 #### Biological Background
 
-**Brain Resource Constraints:**
+**Brain Resource Constraints (UNPROVEN — engineering estimate):**
 - **Energy**: ~20W power consumption, ~20% of basal metabolic rate
 - **Space**: ~1350 cm³ volume, ~86 billion neurons
 - **Wiring**: Physical constraints on axonal connectivity
@@ -501,9 +506,9 @@ Nervous systems maintain stability through multiple homeostatic mechanisms:
 - Least-recently-used (LRU) with salience weighting
 
 **Scientific Grounding:**
-- Bounded resources mirror biological metabolic constraints
-- Efficient memory management inspired by neural sparse coding
-- Phase-dependent resource allocation mirrors sleep-wake metabolic cycles
+- UNPROVEN (engineering analogy): Bounded resources mirror biological metabolic constraints
+- UNPROVEN (engineering analogy): Efficient memory management inspired by neural sparse coding
+- UNPROVEN (engineering analogy): Phase-dependent resource allocation mirrors sleep-wake metabolic cycles
 
 **Empirical Validation:**
 - Fixed 29.37 MB memory footprint maintained under load
@@ -516,7 +521,7 @@ Nervous systems maintain stability through multiple homeostatic mechanisms:
 
 ### 6.1 CognitiveController: Executive Function
 
-#### Biological Analog
+#### Biological Analog (UNPROVEN — engineering analogy)
 Prefrontal cortex as executive controller:
 - Coordinates distributed cognitive processes
 - Maintains goal states and task representations
@@ -531,12 +536,12 @@ Thread-safe orchestrator coordinating:
 - Event processing
 
 **Scientific Grounding:**
-- Centralized coordination inspired by prefrontal executive control
-- Modular architecture consistent with functional specialization in brain
+- UNPROVEN (engineering analogy): Centralized coordination inspired by prefrontal executive control
+- UNPROVEN (engineering analogy): Modular architecture consistent with functional specialization in brain
 
 ### 6.2 MoralFilterV2: Value Alignment
 
-#### Biological Analog
+#### Biological Analog (UNPROVEN — engineering analogy)
 Emotion and value systems:
 - Amygdala for salience and threat detection
 - Orbitofrontal cortex for value representation
@@ -550,13 +555,13 @@ Adaptive moral threshold enforcement:
 - Observable state for auditing
 
 **Scientific Grounding:**
-- Homeostatic control from neural regulation
-- Adaptive thresholds inspired by reward prediction and learning
-- Value alignment theory from AI safety research [Gabriel, 2020]
+- UNPROVEN (engineering analogy): Homeostatic control from neural regulation
+- UNPROVEN (engineering analogy): Adaptive thresholds inspired by reward prediction and learning
+- Value alignment theory from AI safety research [@gabriel2020_alignment]
 
 ### 6.3 Memory System: PELM + MultiLevel
 
-#### Biological Analog
+#### Biological Analog (UNPROVEN — engineering analogy)
 Hippocampal-cortical memory system:
 - Hippocampus for rapid, episodic encoding
 - Cortex for slow, semantic consolidation
@@ -568,13 +573,13 @@ Two-component system:
 - MultiLevel for temporal, consolidation-based memory
 
 **Scientific Grounding:**
-- Multi-timescale consolidation [Benna & Fusi, 2016; Fusi et al., 2005]
-- Hippocampal replay [Foster & Wilson, 2006; Carr et al., 2011]
-- Quantum-inspired associative memory [Masuyama et al., 2014, 2018]
+- Multi-timescale consolidation [@benna2016_synaptic; @fusi2005_cascade]
+- Hippocampal replay [@foster2006_reverse; @carr2011_replay]
+- Quantum-inspired associative memory [@masuyama2014_qibam; @masuyama2018_qmam]
 
 ### 6.4 CognitiveRhythm: Circadian Control
 
-#### Biological Analog
+#### Biological Analog (UNPROVEN — engineering analogy)
 SCN-driven circadian system:
 - Master clock synchronization
 - Phase-dependent cognitive performance
@@ -587,13 +592,13 @@ Wake/sleep cycle with phase-dependent processing:
 - Resource optimization
 
 **Scientific Grounding:**
-- SCN rhythm generation [Hastings et al., 2018]
-- Distributed brain clocks [Mendoza & Challet, 2009]
-- Sleep-dependent consolidation [Carr et al., 2011]
+- SCN rhythm generation [@hastings2018_circadian]
+- Distributed brain clocks [@mendoza2009_clocks]
+- Sleep-dependent consolidation [@carr2011_replay]
 
 ### 6.5 AphasiaSpeechGovernor: Language Quality Control
 
-#### Biological Analog
+#### Biological Analog (UNPROVEN — engineering analogy)
 Broca's area and speech production:
 - Grammar processing
 - Motor planning
@@ -606,9 +611,9 @@ Pattern detection for telegraphic speech:
 - Regeneration with corrective prompts
 
 **Scientific Grounding:**
-- Clinical characteristics of Broca's aphasia
-- Speech error monitoring in biological systems
-- Self-repair mechanisms
+- Clinical characteristics of Broca's aphasia [@asha_aphasia; @fedorenko2023_agrammatic]
+- UNPROVEN (engineering analogy): Speech error monitoring in biological systems
+- UNPROVEN (engineering analogy): Self-repair mechanisms
 
 ---
 
@@ -616,26 +621,28 @@ Pattern detection for telegraphic speech:
 
 ### Neuroscience - Memory
 
-- Benna, M. K., & Fusi, S. (2016). Computational Principles of Synaptic Memory Consolidation. *Nature Neuroscience*, 19(12), 1697-1706. https://doi.org/10.1038/nn.4401
-- Fusi, S., Drew, P. J., & Abbott, L. F. (2005). Cascade Models of Synaptically Stored Memories. *Neuron*, 45(4), 599-611. https://doi.org/10.1016/j.neuron.2005.02.001
-- Foster, D. J., & Wilson, M. A. (2006). Reverse Replay of Behavioural Sequences in Hippocampal Place Cells During the Awake State. *Nature*, 440(7084), 680-683. https://doi.org/10.1038/nature04587
-- Carr, M. F., Jadhav, S. P., & Frank, L. M. (2011). Hippocampal Replay in the Awake State: A Potential Substrate for Memory Consolidation and Retrieval. *Nature Neuroscience*, 14(2), 147-153. https://doi.org/10.1038/nn.2732
-- Olafsdottir, H. F., Bush, D., & Barry, C. (2018). The Role of Hippocampal Replay in Memory and Planning. *Current Biology*, 28(1), R37-R50. https://doi.org/10.1016/j.cub.2017.10.073
+- [@benna2016_synaptic]
+- [@fusi2005_cascade]
+- [@foster2006_reverse]
+- [@carr2011_replay]
+- [@olafsdottir2018_replay]
+- [@tononi2014_sleep]
+- [@xie2013_glymphatic]
 
 ### Neuroscience - Circadian Rhythms
 
-- Hastings, M. H., Maywood, E. S., & Brancaccio, M. (2018). Generation of Circadian Rhythms in the Suprachiasmatic Nucleus. *Nature Reviews Neuroscience*, 19(8), 453-469. https://doi.org/10.1038/s41583-018-0026-z
-- Mendoza, J., & Challet, E. (2009). Brain Clocks: From the Suprachiasmatic Nuclei to a Cerebral Network. *The Neuroscientist*, 15(5), 477-488. https://doi.org/10.1177/1073858408327808
+- [@hastings2018_circadian]
+- [@mendoza2009_clocks]
 
 ### Quantum-Inspired Associative Memory
 
-- Masuyama, N., Loo, C. K., & Kubota, N. (2014). Quantum-Inspired Bidirectional Associative Memory for Human-Robot Communication. *International Journal of Humanoid Robotics*, 11(2), 1450006. https://doi.org/10.1142/S0219843614500066
-- Masuyama, N., Loo, C. K., Seera, M., & Kubota, N. (2018). Quantum-Inspired Multidirectional Associative Memory with a Self-Convergent Iterative Learning. *IEEE Transactions on Neural Networks and Learning Systems*, 29(4), 1058-1068. https://doi.org/10.1109/TNNLS.2017.2653114
-- Vallverdú, J., & Rius, G. (2025). NeuroQ: Quantum-Inspired Brain Emulation. *Biomimetics*, 10(8), 516. https://doi.org/10.3390/biomimetics10080516
+- [@masuyama2014_qibam]
+- [@masuyama2018_qmam]
+- [@vallverdu2025_neuroq]
 
 ### AI Safety and Value Alignment
 
-- Gabriel, I. (2020). Artificial Intelligence, Values, and Alignment. *Minds and Machines*, 30(3), 411-437. https://doi.org/10.1007/s11023-020-09539-2
+- [@gabriel2020_alignment]
 
 ---
 

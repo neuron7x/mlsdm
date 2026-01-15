@@ -28,6 +28,15 @@ Mendoza, J., & Challet, E. (2009). Brain clocks: From the suprachiasmatic nuclei
 <!-- key: olafsdottir2018_replay -->
 Olafsdottir, H. F., Bush, D., & Barry, C. (2018). The role of hippocampal replay in memory and planning. *Current Biology, 28*(1), R37-R50. https://doi.org/10.1016/j.cub.2017.10.073
 
+<!-- key: tononi2014_sleep -->
+Tononi, G., & Cirelli, C. (2014). Sleep and the price of plasticity: From synaptic and cellular homeostasis to memory consolidation and integration. *Neuron, 81*(1), 12-34. https://doi.org/10.1016/j.neuron.2013.12.025
+
+<!-- key: turrigiano2012_homeostatic -->
+Turrigiano, G. (2012). Homeostatic synaptic plasticity: Local and global mechanisms for stabilizing neuronal function. *Cold Spring Harbor Perspectives in Biology, 4*(1), a005736. https://doi.org/10.1101/cshperspect.a005736
+
+<!-- key: xie2013_glymphatic -->
+Xie, L., Kang, H., Xu, Q., Chen, M. J., Liao, Y., Thiyagarajan, M., O'Donnell, J., Christensen, D. J., Nicholson, C., Iliff, J. J., Takano, T., Deane, R., & Nedergaard, M. (2013). Sleep drives metabolite clearance from the adult brain. *Science, 342*(6156), 373-377. https://doi.org/10.1126/science.1241224
+
 <!-- key: bassett2017_network -->
 Bassett, D. S., & Sporns, O. (2017). Network neuroscience. *Nature Neuroscience, 20*(3), 353-364. https://doi.org/10.1038/nn.4502
 
@@ -146,6 +155,12 @@ Brady, M. C., Kelly, H., Godwin, J., Enderby, P., & Campbell, P. (2016). Speech 
 
 <!-- key: fedorenko2023_agrammatic -->
 Fedorenko, E., Ryskin, R., & Gibson, E. (2023). Agrammatic output in non-fluent, including Broca's, aphasia as a rational behavior. *Aphasiology, 37*(12), 1981-2000. https://doi.org/10.1080/02687038.2022.2143233
+
+<!-- key: friederici2011_brain -->
+Friederici, A. D. (2011). The brain basis of language processing: From structure to function. *Physiological Reviews, 91*(4), 1357-1392. https://doi.org/10.1152/physrev.00006.2011
+
+<!-- key: hickok2007_cortical -->
+Hickok, G., & Poeppel, D. (2007). The cortical organization of speech processing. *Nature Reviews Neuroscience, 8*(5), 393-402. https://doi.org/10.1038/nrn2113
 
 <!-- key: asha_aphasia -->
 American Speech-Language-Hearing Association. (n.d.). Aphasia (Practice Portal). https://www.asha.org/practice-portal/clinical-topics/aphasia/
