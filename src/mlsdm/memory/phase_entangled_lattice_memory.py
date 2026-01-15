@@ -72,6 +72,14 @@ class PhaseEntangledLatticeMemory:
     stores vectors with associated phase values and enables retrieval
     based on phase proximity and cosine similarity.
 
+    AI Safety Features:
+    - Dual-threshold confidence enforcement:
+      1) Generic threshold: _confidence_threshold (default 0.5, configurable)
+      2) Source-specific filter (immutable):
+         - LLM_GENERATION requires confidence >= 0.7
+         - RETRIEVED_CONTEXT requires confidence >= 0.7
+    - Prevents low-confidence LLM content from reinforcing memory.
+
     Not related to quantum hardware - the design is mathematically inspired
     by quantum concepts but operates entirely in classical embedding space.
     """

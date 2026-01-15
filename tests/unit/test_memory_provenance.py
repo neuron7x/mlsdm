@@ -149,7 +149,7 @@ class TestPELMProvenanceRetrieval:
             vector_low,
             phase=0.5,
             provenance=MemoryProvenance(
-                source=MemorySource.LLM_GENERATION, confidence=0.4, timestamp=datetime.now()
+                source=MemorySource.USER_INPUT, confidence=0.4, timestamp=datetime.now()
             ),
         )
 
@@ -162,6 +162,57 @@ class TestPELMProvenanceRetrieval:
         # Only high-confidence memory should be returned
         assert len(results) == 1
         assert results[0].provenance.confidence >= 0.5
+
+    def test_llm_generation_enforces_higher_confidence_threshold(self):
+        """LLM-generated memories must satisfy the higher confidence threshold."""
+        pelm = PhaseEntangledLatticeMemory(dimension=16, capacity=10)
+        pelm._confidence_threshold = 0.3
+
+        vector_low = np.random.randn(16).astype(np.float32).tolist()
+        idx_rejected = pelm.entangle(
+            vector_low,
+            phase=0.5,
+            provenance=MemoryProvenance(
+                source=MemorySource.LLM_GENERATION,
+                confidence=0.6,
+                timestamp=datetime.now(),
+            ),
+        )
+
+        assert idx_rejected == -1
+        assert pelm.size == 0
+
+        vector_high = np.random.randn(16).astype(np.float32).tolist()
+        idx_accepted = pelm.entangle(
+            vector_high,
+            phase=0.5,
+            provenance=MemoryProvenance(
+                source=MemorySource.LLM_GENERATION,
+                confidence=0.7,
+                timestamp=datetime.now(),
+            ),
+        )
+
+        assert idx_accepted >= 0
+        assert pelm.size == 1
+
+    def test_retrieved_context_enforces_higher_confidence_threshold(self):
+        """Retrieved context memories must satisfy the higher confidence threshold."""
+        pelm = PhaseEntangledLatticeMemory(dimension=16, capacity=10)
+
+        vector = np.random.randn(16).astype(np.float32).tolist()
+        idx_rejected = pelm.entangle(
+            vector,
+            phase=0.5,
+            provenance=MemoryProvenance(
+                source=MemorySource.RETRIEVED_CONTEXT,
+                confidence=0.65,
+                timestamp=datetime.now(),
+            ),
+        )
+
+        assert idx_rejected == -1
+        assert pelm.size == 0
 
     def test_retrieve_returns_provenance(self):
         """Retrieved memories should include provenance metadata."""
