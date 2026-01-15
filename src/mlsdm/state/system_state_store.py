@@ -116,7 +116,12 @@ def _read_state_data(
                         f"Expected {stored_checksum}, got {computed_checksum}"
                     )
 
-        return json.loads(data.decode("utf-8"))
+        parsed = json.loads(data.decode("utf-8"))
+        if not isinstance(parsed, dict):
+            raise StateLoadError(
+                f"Expected JSON object in {filepath}, got {type(parsed).__name__}"
+            )
+        return parsed
 
     if file_format == ".npz":
         arrs = np.load(filepath, allow_pickle=True)
