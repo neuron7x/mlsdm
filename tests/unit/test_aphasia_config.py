@@ -5,6 +5,8 @@ Tests the configurable detection/repair gates and severity threshold.
 Ensures backward compatibility and default behavior.
 """
 
+import hashlib
+
 import numpy as np
 import pytest
 
@@ -27,7 +29,10 @@ def mock_llm_healthy(prompt: str, max_tokens: int) -> str:
 
 def mock_embedding(text: str) -> np.ndarray:
     """Mock embedding function."""
-    return np.random.randn(384).astype(np.float32)
+    hash_bytes = hashlib.sha256(text.encode("utf-8")).digest()
+    seed = int.from_bytes(hash_bytes[:4], "big") % (2**31)
+    rng = np.random.RandomState(seed)
+    return rng.randn(384).astype(np.float32)
 
 
 class TestAphasiaDetectionDisable:
