@@ -17,9 +17,10 @@ from mlsdm.policy.loader import (
 class PolicyValidator:
     """Validates policy configuration files against repository reality."""
 
-    def __init__(self, repo_root: Path, policy_dir: Path) -> None:
+    def __init__(self, repo_root: Path, policy_dir: Path, *, enforce_registry: bool = True) -> None:
         self.repo_root = repo_root
         self.policy_dir = policy_dir
+        self.enforce_registry = enforce_registry
         self.errors: list[str] = []
         self.warnings: list[str] = []
 
@@ -32,7 +33,7 @@ class PolicyValidator:
 
         # Load policy files
         try:
-            bundle = load_policy_bundle(self.policy_dir)
+            bundle = load_policy_bundle(self.policy_dir, enforce_registry=self.enforce_registry)
         except PolicyLoadError as exc:
             self.errors.append(str(exc))
             print(f"\n❌ FAILED: {exc}")
