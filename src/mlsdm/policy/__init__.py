@@ -15,17 +15,31 @@ from mlsdm.policy.opa import (
     export_opa_policy_data,
     validate_opa_export_contract,
 )
+from mlsdm.policy.registry import (
+    PolicyRegistry,
+    PolicyRegistryError,
+    build_policy_registry,
+    load_policy_registry,
+    verify_policy_registry,
+    write_policy_registry,
+)
 
 __all__ = [
     "DEFAULT_POLICY_DIR",
+    "OPA_EXPORT_MAPPINGS",
     "POLICY_CONTRACT_VERSION",
     "PolicyBundle",
     "PolicyExportError",
     "PolicyLoadError",
-    "OPA_EXPORT_MAPPINGS",
+    "PolicyRegistry",
+    "PolicyRegistryError",
+    "build_policy_registry",
     "canonical_hash",
     "export_opa_policy_data",
     "load_policy_bundle",
+    "load_policy_registry",
     "serialize_canonical_json",
     "validate_opa_export_contract",
+    "verify_policy_registry",
+    "write_policy_registry",
 ]

@@ -196,7 +196,7 @@ def test_validate_policy_config_success(tmp_path: Path):
     write_yaml(policy_dir / "security-baseline.yaml", security_policy)
     write_yaml(policy_dir / "observability-slo.yaml", slo_policy)
 
-    validator = PolicyValidator(repo_root, policy_dir)
+    validator = PolicyValidator(repo_root, policy_dir, enforce_registry=False)
 
     assert validator.validate_all()
 
@@ -212,6 +212,6 @@ def test_validate_policy_config_missing_workflow(tmp_path: Path):
     write_yaml(policy_dir / "security-baseline.yaml", security_policy)
     write_yaml(policy_dir / "observability-slo.yaml", slo_policy)
 
-    validator = PolicyValidator(repo_root, policy_dir)
+    validator = PolicyValidator(repo_root, policy_dir, enforce_registry=False)
 
     assert not validator.validate_all()

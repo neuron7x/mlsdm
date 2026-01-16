@@ -10,6 +10,8 @@ from typing import TYPE_CHECKING, Any
 import yaml
 from pydantic import BaseModel, ConfigDict, ValidationError, field_validator, model_validator
 
+from mlsdm.policy.registry import PolicyRegistryError, load_policy_registry, verify_policy_registry
+
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
@@ -567,7 +569,12 @@ def _format_validation_error(path: Path, exc: ValidationError) -> str:
     return f"Policy schema validation failed for {path}: {detail}. {hint}"
 
 
-def load_policy_bundle(policy_dir: Path | None = None) -> PolicyBundle:
+def load_policy_bundle(
+    policy_dir: Path | None = None,
+    *,
+    enforce_registry: bool = True,
+    registry_path: Path | None = None,
+) -> PolicyBundle:
     policy_dir = policy_dir or DEFAULT_POLICY_DIR
 
     security_path = policy_dir / "security-baseline.yaml"
@@ -594,13 +601,27 @@ def load_policy_bundle(policy_dir: Path | None = None) -> PolicyBundle:
     canonical_json = serialize_canonical_json(canonical_data)
     policy_hash = canonical_hash(canonical_data)
 
-    return PolicyBundle(
+    bundle = PolicyBundle(
         security_baseline=security_policy,
         observability_slo=observability_policy,
         policy_hash=policy_hash,
         canonical_json=canonical_json,
         canonical_data=canonical_data,
     )
+
+    if enforce_registry:
+        registry_file = registry_path or (policy_dir / "registry.json")
+        try:
+            registry = load_policy_registry(registry_file)
+            verify_policy_registry(
+                policy_hash=bundle.policy_hash,
+                policy_contract_version=bundle.security_baseline.policy_contract_version,
+                registry=registry,
+            )
+        except PolicyRegistryError as exc:
+            raise PolicyLoadError(str(exc)) from exc
+
+    return bundle
 
 
 def policy_required_checks(bundle: PolicyBundle) -> Iterable[RequiredCheck]:

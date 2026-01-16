@@ -128,16 +128,6 @@ class ResponseQualityGate:
             else self._hallucination_signal(confidence)
         )
 
-        if response_is_empty:
-            triggered_modes = tuple(name for name, sig in signals.items() if sig.triggered)
-            return QualityGateDecision(
-                allow_response=True,
-                suppress_memory=True,
-                action="degrade",
-                triggered_modes=triggered_modes,
-                signals=signals,
-            )
-
         triggered_modes = tuple(name for name, sig in signals.items() if sig.triggered)
 
         reject_modes = {"collapse", "looping", "incoherence"}
