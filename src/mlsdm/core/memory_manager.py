@@ -16,6 +16,7 @@ from mlsdm.memory.multi_level_memory import MultiLevelSynapticMemory
 from mlsdm.memory.provenance import MemoryProvenance, MemorySource
 from mlsdm.memory.qilm_module import QILM
 from mlsdm.memory.store import MemoryItem, MemoryStore, compute_content_hash
+from mlsdm.policy.drift import get_policy_snapshot
 from mlsdm.rhythm.cognitive_rhythm import CognitiveRhythm
 from mlsdm.utils.data_serializer import DataSerializer
 from mlsdm.utils.errors import (
@@ -164,10 +165,12 @@ class MemoryManager:
         self.qilm = QILM()
         self.metrics_collector = MetricsCollector()
         self.strict_mode = bool(config.get("strict_mode", False))
+        self._policy_snapshot = get_policy_snapshot()
 
         # LTM (Long-Term Memory) store - optional, disabled by default
         self._ltm_store: MemoryStore | None = None
         self._ltm_strict: bool = False
+        self._ltm_default_ttl_s: float | None = None
         self._init_ltm_store(config)
 
     def _init_ltm_store(self, config: dict[str, Any]) -> None:
@@ -225,6 +228,7 @@ class MemoryManager:
 
         # Strict mode for LTM errors
         self._ltm_strict = memory_cfg.get("ltm_strict", False)
+        self._ltm_default_ttl_s = memory_cfg.get("ltm_ttl_s")
 
         # Initialize SQLite store
         try:
@@ -264,12 +268,38 @@ class MemoryManager:
             return
 
         try:
+            policy_hash = self._policy_snapshot.policy_hash
+            policy_contract_version = self._policy_snapshot.policy_contract_version
+            ttl_s = self._ltm_default_ttl_s
+            content_hash = compute_content_hash(content)
+            item_ts = time.time()
+            retention_expires_at = (
+                datetime.fromtimestamp(item_ts + ttl_s) if ttl_s is not None else None
+            )
             item = MemoryItem(
                 id=str(uuid.uuid4()),
-                ts=time.time(),
+                ts=item_ts,
                 content=content,
-                content_hash=compute_content_hash(content),
-                provenance=provenance,
+                content_hash=content_hash,
+                ttl_s=ttl_s,
+                provenance=(
+                    provenance.with_integrity(
+                        content_hash=content_hash,
+                        policy_hash=policy_hash,
+                        policy_contract_version=policy_contract_version,
+                        retention_expires_at=retention_expires_at,
+                    )
+                    if provenance is not None
+                    else MemoryProvenance(
+                        source=MemorySource.SYSTEM_PROMPT,
+                        confidence=1.0,
+                        timestamp=datetime.now(),
+                        content_hash=content_hash,
+                        policy_hash=policy_hash,
+                        policy_contract_version=policy_contract_version,
+                        retention_expires_at=retention_expires_at,
+                    )
+                ),
             )
             self._ltm_store.put(item)
             logger.debug("Persisted memory to LTM: %s", item.id)

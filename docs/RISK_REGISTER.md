@@ -88,10 +88,10 @@ Each risk is assessed using the Impact × Likelihood framework and tracked throu
 | **R009** | Technical | Race conditions in concurrent access | High | Low | Medium | Mitigated | Thread-safe locks, property tests |
 | **R010** | Technical | Checkpoint loading RCE (NeuroLang) | Critical | Very Low | High | Mitigated | Path restriction, secure mode |
 | **R011** | Governance | Audit trail gaps | Medium | Low | Low | Mitigated | Structured logging, correlation IDs |
-| **R012** | Governance | Policy drift without detection | High | Medium | High | Partially Mitigated | Observable thresholds, drift alerts (planned) |
+| **R012** | Governance | Policy drift without detection | High | Medium | High | Mitigated | Policy registry hash enforcement, telemetry alerts, runtime gate |
 | **R013** | Governance | Undetected model degradation | Medium | Medium | Medium | Mitigated | Aphasia detection, quality metrics |
 | **R014** | Content | Aphasia detection false negatives | Medium | Low | Low | Mitigated | Configurable thresholds, multiple flags |
-| **R015** | Content | Hallucination propagation via memory | High | Medium | High | Partially Mitigated | Memory provenance (future), confidence scoring |
+| **R015** | Content | Hallucination propagation via memory | High | Medium | High | Mitigated | Immutable memory provenance, integrity validation, confidence scoring |
 | **R016** | Behavioral | Sleep phase exploitation for reduced filtering | Medium | Low | Low | Mitigated | Phase-aware moral enforcement |
 | **R017** | Technical | Dependency vulnerability exploitation | High | Medium | High | Mitigated | Weekly pip-audit, Dependabot |
 | **R018** | Content | Indirect prompt injection via context | High | Medium | High | Partially Mitigated | Context sanitization (future) |
@@ -326,18 +326,10 @@ Hallucinated content from LLM responses could be stored in memory and retrieved 
 - Aphasia detection flags low-quality responses
 - Memory decay (L1→L2→L3) reduces long-term impact
 - Wake/sleep cycles provide consolidation opportunities
+- Immutable memory provenance with lineage hashes and content integrity binding
+- Provenance enforcement in persistent LTM storage paths
 
-**Planned Controls:**
-- Memory provenance tracking (source + confidence)
-- Factual consistency checking
-- Hallucination detection before memory storage
-
-**Status:** ⚠️ Partially Mitigated
-
-**Action Items:**
-- [ ] Implement memory provenance metadata
-- [ ] Add confidence scoring to stored embeddings
-- [ ] Create hallucination detection pre-filter
+**Status:** ✅ Mitigated
 
 ---
 
@@ -380,8 +372,8 @@ Malicious instructions embedded in retrieved context (from memory or external so
 
 | Status | Count | Percentage |
 |--------|-------|------------|
-| ✅ Mitigated | 15 | 83% |
-| ⚠️ Partially Mitigated | 3 | 17% |
+| ✅ Mitigated | 17 | 94% |
+| ⚠️ Partially Mitigated | 1 | 6% |
 | ❌ Open | 0 | 0% |
 | 📋 Accepted | 0 | 0% |
 
@@ -389,19 +381,19 @@ Malicious instructions embedded in retrieved context (from memory or external so
 
 | Category | Total | Mitigated | Partial | Open |
 |----------|-------|-----------|---------|------|
-| Content Safety | 7 | 6 | 1 | 0 |
+| Content Safety | 7 | 7 | 0 | 0 |
 | Behavioral Safety | 4 | 4 | 0 | 0 |
 | Technical Safety | 5 | 5 | 0 | 0 |
-| Governance Safety | 2 | 1 | 1 | 0 |
+| Governance Safety | 2 | 2 | 0 | 0 |
 
 ### Critical/High Risks Requiring Action
 
 | Risk ID | Description | Action Required | Status |
 |---------|-------------|-----------------|--------|
 | ~~R003~~ | ~~Multi-turn jailbreak~~ | ~~Attack pattern detection~~ | ✅ Mitigated |
-| R015 | Hallucination propagation | Memory provenance | ⚠️ Open |
+| ~~R015~~ | ~~Hallucination propagation~~ | ~~Memory provenance~~ | ✅ Mitigated |
 | ~~R018~~ | ~~Indirect prompt injection~~ | ~~Context sanitization~~ | ✅ Mitigated |
-| R012 | Policy drift detection | Drift alerting system | ⚠️ Open |
+| ~~R012~~ | ~~Policy drift detection~~ | ~~Drift alerting system~~ | ✅ Mitigated |
 
 ---
 

@@ -18,9 +18,12 @@ Resolves: TD-003 (HIGH priority - AI Safety critical)
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from enum import Enum
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
+
+import hashlib
+import json
 
 if TYPE_CHECKING:
     from datetime import datetime
@@ -42,7 +45,45 @@ class MemorySource(Enum):
     SYSTEM_PROMPT = "system"
 
 
-@dataclass
+class MemoryProvenanceError(ValueError):
+    """Raised when memory provenance integrity validation fails."""
+
+
+def _serialize_payload(payload: dict[str, Any]) -> str:
+    return json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+
+
+def _lineage_payload(
+    *,
+    source: MemorySource,
+    confidence: float,
+    timestamp: datetime,
+    llm_model: str | None,
+    parent_id: str | None,
+    content_hash: str | None,
+    policy_hash: str | None,
+    policy_contract_version: str | None,
+    retention_expires_at: datetime | None,
+) -> dict[str, Any]:
+    return {
+        "source": source.value,
+        "confidence": confidence,
+        "timestamp": timestamp.isoformat(),
+        "llm_model": llm_model,
+        "parent_id": parent_id,
+        "content_hash": content_hash,
+        "policy_hash": policy_hash,
+        "policy_contract_version": policy_contract_version,
+        "retention_expires_at": retention_expires_at.isoformat() if retention_expires_at else None,
+    }
+
+
+def compute_lineage_hash(payload: dict[str, Any]) -> str:
+    canonical = _serialize_payload(payload)
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+@dataclass(frozen=True)
 class MemoryProvenance:
     """Metadata tracking the origin and reliability of a memory.
 
@@ -52,6 +93,11 @@ class MemoryProvenance:
         timestamp: When this memory was created
         llm_model: Name of the LLM model if source is LLM_GENERATION
         parent_id: Optional ID of parent memory (for lineage tracking)
+        policy_hash: Policy hash active at time of memory creation
+        policy_contract_version: Policy contract version for governance traceability
+        content_hash: SHA256 hash of the stored content (integrity binding)
+        lineage_hash: Immutable hash of provenance payload for tamper detection
+        retention_expires_at: Optional retention expiry for lifecycle control
 
     Raises:
         ValueError: If confidence is not in [0.0, 1.0] range
@@ -72,6 +118,11 @@ class MemoryProvenance:
     timestamp: datetime
     llm_model: str | None = None
     parent_id: str | None = None
+    policy_hash: str | None = None
+    policy_contract_version: str | None = None
+    content_hash: str | None = None
+    lineage_hash: str | None = None
+    retention_expires_at: datetime | None = None
 
     def __post_init__(self) -> None:
         """Validate confidence is in valid range [0.0, 1.0]."""
@@ -79,6 +130,26 @@ class MemoryProvenance:
             raise ValueError(
                 f"Confidence must be in range [0.0, 1.0], got {self.confidence}. "
                 "Use 1.0 for highest confidence, 0.0 for lowest."
+            )
+
+        expected_payload = _lineage_payload(
+            source=self.source,
+            confidence=self.confidence,
+            timestamp=self.timestamp,
+            llm_model=self.llm_model,
+            parent_id=self.parent_id,
+            content_hash=self.content_hash,
+            policy_hash=self.policy_hash,
+            policy_contract_version=self.policy_contract_version,
+            retention_expires_at=self.retention_expires_at,
+        )
+        expected_hash = compute_lineage_hash(expected_payload)
+        if self.lineage_hash is None:
+            object.__setattr__(self, "lineage_hash", expected_hash)
+        elif self.lineage_hash != expected_hash:
+            raise MemoryProvenanceError(
+                "Memory provenance lineage hash mismatch. "
+                "Remediation: regenerate provenance with correct integrity fields."
             )
 
     @property
@@ -98,3 +169,93 @@ class MemoryProvenance:
             True if source is LLM_GENERATION, False otherwise
         """
         return self.source == MemorySource.LLM_GENERATION
+
+    def with_integrity(
+        self,
+        *,
+        content_hash: str | None = None,
+        policy_hash: str | None = None,
+        policy_contract_version: str | None = None,
+        retention_expires_at: datetime | None = None,
+    ) -> MemoryProvenance:
+        """Return a copy with integrity fields updated and lineage hash recomputed."""
+        return replace(
+            self,
+            content_hash=content_hash or self.content_hash,
+            policy_hash=policy_hash or self.policy_hash,
+            policy_contract_version=policy_contract_version or self.policy_contract_version,
+            retention_expires_at=retention_expires_at or self.retention_expires_at,
+            lineage_hash=None,
+        )
+
+    def verify_integrity(self) -> None:
+        """Verify lineage hash integrity against current fields."""
+        payload = _lineage_payload(
+            source=self.source,
+            confidence=self.confidence,
+            timestamp=self.timestamp,
+            llm_model=self.llm_model,
+            parent_id=self.parent_id,
+            content_hash=self.content_hash,
+            policy_hash=self.policy_hash,
+            policy_contract_version=self.policy_contract_version,
+            retention_expires_at=self.retention_expires_at,
+        )
+        expected_hash = compute_lineage_hash(payload)
+        if self.lineage_hash != expected_hash:
+            raise MemoryProvenanceError(
+                "Memory provenance integrity check failed. "
+                "Remediation: regenerate provenance with canonical lineage hash."
+            )
+
+
+def enforce_provenance_integrity(
+    provenance: MemoryProvenance | None,
+    *,
+    content_hash: str,
+    policy_hash: str | None = None,
+    policy_contract_version: str | None = None,
+    retention_expires_at: datetime | None = None,
+) -> MemoryProvenance:
+    """Ensure provenance is present, bound to content hash, and integrity-checked."""
+    if provenance is None:
+        raise MemoryProvenanceError(
+            "Memory provenance is required for persistent storage. "
+            "Remediation: attach provenance metadata before storing."
+        )
+
+    if provenance.content_hash is not None and provenance.content_hash != content_hash:
+        raise MemoryProvenanceError(
+            "Memory provenance content hash mismatch. "
+            "Remediation: ensure provenance.content_hash matches item.content_hash."
+        )
+
+    if (
+        policy_hash is not None
+        and provenance.policy_hash is not None
+        and provenance.policy_hash != policy_hash
+    ):
+        raise MemoryProvenanceError(
+            "Memory provenance policy hash mismatch. "
+            "Remediation: ensure provenance.policy_hash matches runtime policy."
+        )
+
+    if (
+        policy_contract_version is not None
+        and provenance.policy_contract_version is not None
+        and provenance.policy_contract_version != policy_contract_version
+    ):
+        raise MemoryProvenanceError(
+            "Memory provenance policy contract version mismatch. "
+            "Remediation: ensure provenance.policy_contract_version matches runtime policy."
+        )
+
+    enriched = provenance.with_integrity(
+        content_hash=content_hash,
+        policy_hash=policy_hash,
+        policy_contract_version=policy_contract_version,
+        retention_expires_at=retention_expires_at,
+    )
+
+    enriched.verify_integrity()
+    return enriched

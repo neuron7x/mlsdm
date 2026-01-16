@@ -13,6 +13,7 @@ if TYPE_CHECKING:
 from ..cognition.moral_filter_v2 import MoralFilterV2
 from ..memory.multi_level_memory import MultiLevelSynapticMemory
 from ..memory.phase_entangled_lattice_memory import PhaseEntangledLatticeMemory
+from ..policy.drift import check_policy_drift
 from ..rhythm.cognitive_rhythm import CognitiveRhythm
 
 
@@ -195,6 +196,7 @@ class GovernanceKernel:
         self._initialize_components()
 
     def _initialize_components(self) -> None:
+        check_policy_drift(enforce=True)
         self._moral = MoralFilterV2(initial_threshold=self._initial_moral_threshold)
         self._synaptic = MultiLevelSynapticMemory(dimension=self._dim, config=self._synaptic_config)
         self._pelm = PhaseEntangledLatticeMemory(dimension=self._dim, capacity=self._capacity)

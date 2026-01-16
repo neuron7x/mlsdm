@@ -32,6 +32,7 @@ from tenacity import (
 
 from ..memory.provenance import MemoryProvenance, MemorySource
 from ..observability.tracing import get_tracer_manager
+from ..policy.drift import get_policy_snapshot
 from ..speech.governance import (  # noqa: TC001 - used at runtime in function signatures
     SpeechGovernanceResult,
     SpeechGovernor,
@@ -239,6 +240,7 @@ class LLMWrapper:
         capacity, wake_duration, sleep_duration, llm_timeout, llm_retry_attempts = defaults
         # Store model name for provenance
         self.model_name = model_name
+        self._policy_snapshot = get_policy_snapshot()
         # Initialize core parameters
         self._init_core_params(dim, llm_timeout, llm_retry_attempts)
         # Initialize embedding cache (before core components so embed can use it)
@@ -736,6 +738,8 @@ class LLMWrapper:
                     confidence=confidence,
                     timestamp=datetime.now(),
                     llm_model=getattr(self, "model_name", None),
+                    policy_hash=self._policy_snapshot.policy_hash,
+                    policy_contract_version=self._policy_snapshot.policy_contract_version,
                 )
 
                 self._kernel.memory_commit(prompt_vector, phase_val, provenance=provenance)
@@ -804,6 +808,8 @@ class LLMWrapper:
             source=MemorySource.SYSTEM_PROMPT,
             confidence=0.8,  # Consolidated memories have good confidence
             timestamp=datetime.now(),
+            policy_hash=self._policy_snapshot.policy_hash,
+            policy_contract_version=self._policy_snapshot.policy_contract_version,
         )
 
         for vector in self.consolidation_buffer:

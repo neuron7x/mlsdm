@@ -57,6 +57,24 @@ moral_drift_events = Counter(
     ["filter_id", "severity"],
 )
 
+policy_hash_info = Gauge(
+    "mlsdm_policy_hash_info",
+    "Policy hash information for drift detection",
+    ["policy_name", "policy_hash", "policy_contract_version"],
+)
+
+policy_registry_signature_valid = Gauge(
+    "mlsdm_policy_registry_signature_valid",
+    "Whether the policy registry signature is valid (1=yes, 0=no)",
+    ["policy_name"],
+)
+
+policy_registry_mismatch = Counter(
+    "mlsdm_policy_registry_mismatch_total",
+    "Policy registry mismatch events detected",
+    ["policy_name", "reason"],
+)
+
 _metric_batch: list[dict[str, float | str]] = []
 _batch_lock = Lock()
 _BATCH_SIZE = 10
@@ -161,3 +179,27 @@ def _record_single_metric(
         moral_drift_events.labels(filter_id=filter_id, severity="critical").inc()
     elif drift > 0.05:  # WARNING: >0.05 absolute change
         moral_drift_events.labels(filter_id=filter_id, severity="warning").inc()
+
+
+def record_policy_registry_status(
+    *,
+    policy_name: str,
+    policy_hash: str,
+    policy_contract_version: str,
+    registry_hash: str | None,
+    registry_signature_valid: bool,
+    drift_detected: bool,
+    reason: str | None,
+) -> None:
+    """Record policy registry status for drift detection."""
+    policy_hash_info.labels(
+        policy_name=policy_name,
+        policy_hash=policy_hash,
+        policy_contract_version=policy_contract_version,
+    ).set(1.0)
+    policy_registry_signature_valid.labels(policy_name=policy_name).set(
+        1.0 if registry_signature_valid else 0.0
+    )
+    if drift_detected:
+        mismatch_reason = reason or "unknown"
+        policy_registry_mismatch.labels(policy_name=policy_name, reason=mismatch_reason).inc()

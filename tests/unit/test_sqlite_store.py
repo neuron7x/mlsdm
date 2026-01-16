@@ -11,13 +11,28 @@ Tests for the SQLiteMemoryStore implementation including:
 
 import os
 import time
+from datetime import datetime
 
 import pytest
 
-from mlsdm.memory.provenance import MemoryProvenance, MemorySource
+from mlsdm.memory.provenance import MemoryProvenance, MemoryProvenanceError, MemorySource
 from mlsdm.memory.sqlite_store import _CRYPTOGRAPHY_AVAILABLE, SQLiteMemoryStore
 from mlsdm.memory.store import MemoryItem, compute_content_hash
 from mlsdm.utils.errors import ConfigurationError
+
+
+def build_provenance(
+    content: str,
+    *,
+    source: MemorySource = MemorySource.USER_INPUT,
+    confidence: float = 0.95,
+) -> MemoryProvenance:
+    return MemoryProvenance(
+        source=source,
+        confidence=confidence,
+        timestamp=datetime.now(),
+        content_hash=compute_content_hash(content),
+    )
 
 
 class TestSQLiteMemoryStoreInit:
@@ -107,11 +122,13 @@ class TestSQLiteMemoryStorePut:
         db_path = str(tmp_path / "test.db")
         store = SQLiteMemoryStore(db_path=db_path)
 
+        content = "Hello world"
         item = MemoryItem(
             id="test_id_1",
             ts=time.time(),
-            content="Hello world",
-            content_hash=compute_content_hash("Hello world"),
+            content=content,
+            content_hash=compute_content_hash(content),
+            provenance=build_provenance(content),
         )
 
         result_id = store.put(item)
@@ -119,16 +136,36 @@ class TestSQLiteMemoryStorePut:
         assert result_id == "test_id_1"
         store.close()
 
+    def test_put_requires_provenance(self, tmp_path):
+        """Test that provenance is required for persistent storage."""
+        db_path = str(tmp_path / "test.db")
+        store = SQLiteMemoryStore(db_path=db_path)
+
+        content = "Missing provenance"
+        item = MemoryItem(
+            id="no_prov",
+            ts=time.time(),
+            content=content,
+            content_hash=compute_content_hash(content),
+        )
+
+        with pytest.raises(MemoryProvenanceError, match="provenance is required"):
+            store.put(item)
+
+        store.close()
+
     def test_put_with_pii_scrubbing(self, tmp_path):
         """Test PII is scrubbed when store_raw=False (default)."""
         db_path = str(tmp_path / "test.db")
         store = SQLiteMemoryStore(db_path=db_path, store_raw=False)
 
+        content = "Contact me at test@example.com for details"
         item = MemoryItem(
             id="test_pii",
             ts=time.time(),
-            content="Contact me at test@example.com for details",
-            content_hash=compute_content_hash("Contact me at test@example.com for details"),
+            content=content,
+            content_hash=compute_content_hash(content),
+            provenance=build_provenance(content),
         )
 
         store.put(item)
@@ -149,6 +186,7 @@ class TestSQLiteMemoryStorePut:
             ts=time.time(),
             content=original_content,
             content_hash=compute_content_hash(original_content),
+            provenance=build_provenance(original_content),
         )
 
         store.put(item)
@@ -160,8 +198,6 @@ class TestSQLiteMemoryStorePut:
 
     def test_put_with_provenance(self, tmp_path):
         """Test storing item with provenance metadata."""
-        from datetime import datetime
-
         db_path = str(tmp_path / "test.db")
         store = SQLiteMemoryStore(db_path=db_path)
 
@@ -171,6 +207,7 @@ class TestSQLiteMemoryStorePut:
             timestamp=datetime.now(),
             llm_model="gpt-4",
             parent_id="parent_123",
+            content_hash=compute_content_hash("Test content with provenance"),
         )
 
         item = MemoryItem(
@@ -196,11 +233,13 @@ class TestSQLiteMemoryStorePut:
         db_path = str(tmp_path / "test.db")
         store = SQLiteMemoryStore(db_path=db_path)
 
+        content = "Temporary content"
         item = MemoryItem(
             id="test_ttl",
             ts=time.time(),
-            content="Temporary content",
-            content_hash=compute_content_hash("Temporary content"),
+            content=content,
+            content_hash=compute_content_hash(content),
+            provenance=build_provenance(content),
             ttl_s=3600.0,  # 1 hour TTL
         )
 
@@ -216,11 +255,13 @@ class TestSQLiteMemoryStorePut:
         store = SQLiteMemoryStore(db_path=db_path)
 
         pii_flags = {"email": True, "phone": False}
+        content = "Content with PII flags"
         item = MemoryItem(
             id="test_flags",
             ts=time.time(),
-            content="Content with PII flags",
-            content_hash=compute_content_hash("Content with PII flags"),
+            content=content,
+            content_hash=compute_content_hash(content),
+            provenance=build_provenance(content),
             pii_flags=pii_flags,
         )
 
@@ -236,20 +277,24 @@ class TestSQLiteMemoryStorePut:
         store = SQLiteMemoryStore(db_path=db_path)
 
         # First insert
+        content = "Original content"
         item1 = MemoryItem(
             id="same_id",
             ts=time.time(),
-            content="Original content",
-            content_hash=compute_content_hash("Original content"),
+            content=content,
+            content_hash=compute_content_hash(content),
+            provenance=build_provenance(content),
         )
         store.put(item1)
 
         # Update
+        updated_content = "Updated content"
         item2 = MemoryItem(
             id="same_id",
             ts=time.time(),
-            content="Updated content",
-            content_hash=compute_content_hash("Updated content"),
+            content=updated_content,
+            content_hash=compute_content_hash(updated_content),
+            provenance=build_provenance(updated_content),
         )
         store.put(item2)
 
@@ -266,11 +311,13 @@ class TestSQLiteMemoryStoreGet:
         db_path = str(tmp_path / "test.db")
         store = SQLiteMemoryStore(db_path=db_path)
 
+        content = "Content to retrieve"
         item = MemoryItem(
             id="get_test",
             ts=1234567890.0,
-            content="Content to retrieve",
-            content_hash=compute_content_hash("Content to retrieve"),
+            content=content,
+            content_hash=compute_content_hash(content),
+            provenance=build_provenance(content),
         )
         store.put(item)
 
@@ -307,6 +354,7 @@ class TestSQLiteMemoryStoreQuery:
                 ts=time.time() + i,
                 content=content,
                 content_hash=compute_content_hash(content),
+                provenance=build_provenance(content),
             )
             store.put(item)
 
@@ -324,11 +372,13 @@ class TestSQLiteMemoryStoreQuery:
 
         # Insert 10 items
         for i in range(10):
+            content = f"Test content {i}"
             item = MemoryItem(
                 id=f"limit_{i}",
                 ts=time.time() + i,
-                content=f"Test content {i}",
-                content_hash=compute_content_hash(f"Test content {i}"),
+                content=content,
+                content_hash=compute_content_hash(content),
+                provenance=build_provenance(content),
             )
             store.put(item)
 
@@ -346,11 +396,13 @@ class TestSQLiteMemoryStoreQuery:
 
         # Insert items at different timestamps
         for i in range(5):
+            content = f"Content at time {i}"
             item = MemoryItem(
                 id=f"ts_{i}",
                 ts=base_ts + i * 100,
-                content=f"Content at time {i}",
-                content_hash=compute_content_hash(f"Content at time {i}"),
+                content=content,
+                content_hash=compute_content_hash(content),
+                provenance=build_provenance(content),
             )
             store.put(item)
 
@@ -367,11 +419,13 @@ class TestSQLiteMemoryStoreQuery:
 
         # Insert items with specific timestamps
         for i in range(3):
+            content = f"Search term {i}"
             item = MemoryItem(
                 id=f"order_{i}",
                 ts=1000 + i * 100,  # 1000, 1100, 1200
-                content="Search term",
-                content_hash=compute_content_hash(f"Search term {i}"),
+                content=content,
+                content_hash=compute_content_hash(content),
+                provenance=build_provenance(content),
             )
             store.put(item)
 
@@ -387,11 +441,13 @@ class TestSQLiteMemoryStoreQuery:
         db_path = str(tmp_path / "test.db")
         store = SQLiteMemoryStore(db_path=db_path)
 
+        content = "Hello world"
         item = MemoryItem(
             id="no_match",
             ts=time.time(),
-            content="Hello world",
-            content_hash=compute_content_hash("Hello world"),
+            content=content,
+            content_hash=compute_content_hash(content),
+            provenance=build_provenance(content),
         )
         store.put(item)
 
@@ -412,31 +468,37 @@ class TestSQLiteMemoryStoreEviction:
         now = time.time()
 
         # Insert expired item (TTL already passed)
+        expired_content = "Expired content"
         expired_item = MemoryItem(
             id="expired",
             ts=now - 100,  # 100 seconds ago
-            content="Expired content",
-            content_hash=compute_content_hash("Expired content"),
+            content=expired_content,
+            content_hash=compute_content_hash(expired_content),
+            provenance=build_provenance(expired_content),
             ttl_s=50.0,  # 50 second TTL (already expired)
         )
         store.put(expired_item)
 
         # Insert non-expired item
+        valid_content = "Valid content"
         valid_item = MemoryItem(
             id="valid",
             ts=now,
-            content="Valid content",
-            content_hash=compute_content_hash("Valid content"),
+            content=valid_content,
+            content_hash=compute_content_hash(valid_content),
+            provenance=build_provenance(valid_content),
             ttl_s=3600.0,  # 1 hour TTL
         )
         store.put(valid_item)
 
         # Insert item without TTL (never expires)
+        permanent_content = "Permanent content"
         permanent_item = MemoryItem(
             id="permanent",
             ts=now - 1000,
-            content="Permanent content",
-            content_hash=compute_content_hash("Permanent content"),
+            content=permanent_content,
+            content_hash=compute_content_hash(permanent_content),
+            provenance=build_provenance(permanent_content),
         )
         store.put(permanent_item)
 
@@ -457,11 +519,13 @@ class TestSQLiteMemoryStoreEviction:
         now = time.time()
 
         # Insert non-expired item
+        fresh_content = "Fresh content"
         item = MemoryItem(
             id="fresh",
             ts=now,
-            content="Fresh content",
-            content_hash=compute_content_hash("Fresh content"),
+            content=fresh_content,
+            content_hash=compute_content_hash(fresh_content),
+            provenance=build_provenance(fresh_content),
             ttl_s=3600.0,
         )
         store.put(item)
@@ -510,11 +574,13 @@ class TestSQLiteMemoryStoreStats:
 
         # Insert items
         for i in range(5):
+            content = f"Content {i}"
             item = MemoryItem(
                 id=f"stats_{i}",
                 ts=1000.0 + i * 10,
-                content=f"Content {i}",
-                content_hash=compute_content_hash(f"Content {i}"),
+                content=content,
+                content_hash=compute_content_hash(content),
+                provenance=build_provenance(content),
             )
             store.put(item)
 
@@ -537,11 +603,13 @@ class TestSQLiteMemoryStoreCompact:
 
         # Insert and delete some items
         for i in range(10):
+            content = f"Temporary content {i}"
             item = MemoryItem(
                 id=f"compact_{i}",
                 ts=time.time(),
-                content=f"Temporary content {i}",
-                content_hash=compute_content_hash(f"Temporary content {i}"),
+                content=content,
+                content_hash=compute_content_hash(content),
+                provenance=build_provenance(content),
             )
             store.put(item)
 
@@ -567,6 +635,7 @@ class TestSQLiteMemoryStoreEncryption:
             ts=time.time(),
             content=original_content,
             content_hash=compute_content_hash(original_content),
+            provenance=build_provenance(original_content),
         )
         store.put(item)
 
@@ -591,6 +660,7 @@ class TestSQLiteMemoryStoreEncryption:
             ts=time.time(),
             content=original_content,
             content_hash=compute_content_hash(original_content),
+            provenance=build_provenance(original_content),
         )
         store.put(item)
         store.close()
@@ -610,8 +680,6 @@ class TestSQLiteMemoryStoreEncryption:
     @pytest.mark.skipif(not _CRYPTOGRAPHY_AVAILABLE, reason="cryptography not installed")
     def test_encrypted_get_with_provenance(self, tmp_path):
         """Test get returns properly decrypted content with provenance."""
-        from datetime import datetime
-
         db_path = str(tmp_path / "encrypted.db")
         encryption_key = os.urandom(32)
 
@@ -621,6 +689,7 @@ class TestSQLiteMemoryStoreEncryption:
             source=MemorySource.USER_INPUT,
             confidence=0.8,
             timestamp=datetime.now(),
+            content_hash=compute_content_hash("Encrypted with provenance"),
         )
         item = MemoryItem(
             id="enc_prov",

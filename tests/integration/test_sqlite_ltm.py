@@ -59,6 +59,20 @@ def store_with_encryption(temp_db_path: Path) -> SQLiteMemoryStore:
     store.close()
 
 
+def build_provenance(
+    content: str,
+    *,
+    source: MemorySource = MemorySource.USER_INPUT,
+    confidence: float = 0.95,
+) -> MemoryProvenance:
+    return MemoryProvenance(
+        source=source,
+        confidence=confidence,
+        timestamp=datetime.now(),
+        content_hash=compute_content_hash(content),
+    )
+
+
 def test_put_get_roundtrip_scrubbed(store: SQLiteMemoryStore) -> None:
     """Test storing and retrieving memory with PII scrubbing.
 
@@ -78,6 +92,7 @@ def test_put_get_roundtrip_scrubbed(store: SQLiteMemoryStore) -> None:
         content=original_content,
         content_hash=compute_content_hash(original_content),
         ttl_s=3600.0,  # 1 hour
+        provenance=build_provenance(original_content),
     )
 
     # Store item
@@ -103,17 +118,19 @@ def test_put_get_roundtrip_scrubbed(store: SQLiteMemoryStore) -> None:
 
 def test_put_get_with_provenance(store: SQLiteMemoryStore) -> None:
     """Test storing and retrieving memory with provenance metadata."""
+    content = "Test content with provenance"
     provenance = MemoryProvenance(
         source=MemorySource.USER_INPUT,
         confidence=0.95,
         timestamp=datetime.now(),
+        content_hash=compute_content_hash(content),
     )
 
     item = MemoryItem(
         id="test-002",
         ts=time.time(),
-        content="Test content with provenance",
-        content_hash=compute_content_hash("Test content with provenance"),
+        content=content,
+        content_hash=compute_content_hash(content),
         provenance=provenance,
     )
 
@@ -135,28 +152,34 @@ def test_ttl_evict(store: SQLiteMemoryStore) -> None:
     now = time.time()
 
     # Create items with different TTLs
+    content1 = "This should expire soon"
     item1 = MemoryItem(
         id="expire-soon",
         ts=now - 100,  # Created 100 seconds ago
-        content="This should expire soon",
-        content_hash=compute_content_hash("This should expire soon"),
+        content=content1,
+        content_hash=compute_content_hash(content1),
         ttl_s=50.0,  # Expires at now - 100 + 50 = now - 50 (already expired)
+        provenance=build_provenance(content1),
     )
 
+    content2 = "This should not expire yet"
     item2 = MemoryItem(
         id="expire-later",
         ts=now,
-        content="This should not expire yet",
-        content_hash=compute_content_hash("This should not expire yet"),
+        content=content2,
+        content_hash=compute_content_hash(content2),
         ttl_s=3600.0,  # Expires at now + 3600 (not expired)
+        provenance=build_provenance(content2),
     )
 
+    content3 = "This has no TTL"
     item3 = MemoryItem(
         id="no-ttl",
         ts=now,
-        content="This has no TTL",
-        content_hash=compute_content_hash("This has no TTL"),
+        content=content3,
+        content_hash=compute_content_hash(content3),
         ttl_s=None,  # Never expires
+        provenance=build_provenance(content3),
     )
 
     # Store items
@@ -192,6 +215,7 @@ def test_query_text_search(store: SQLiteMemoryStore) -> None:
             ts=now + i,
             content=f"Memory about {topic}",
             content_hash=compute_content_hash(f"Memory about {topic}"),
+            provenance=build_provenance(f"Memory about {topic}"),
         )
         for i, topic in enumerate(["cats", "dogs", "cats and dogs", "birds"])
     ]
@@ -223,22 +247,26 @@ def test_compact_runs(store: SQLiteMemoryStore) -> None:
 
     # Add some items
     for i in range(10):
+        content = f"Content {i}"
         item = MemoryItem(
             id=f"item-{i}",
             ts=now,
-            content=f"Content {i}",
-            content_hash=compute_content_hash(f"Content {i}"),
+            content=content,
+            content_hash=compute_content_hash(content),
+            provenance=build_provenance(content),
         )
         store.put(item)
 
     # Delete some items to create fragmentation
     for i in range(5):
+        content = f"Content {i}"
         # Evict by setting TTL to 0 and running eviction
         item = MemoryItem(
             id=f"item-{i}",
             ts=now - 100,
-            content=f"Content {i}",
-            content_hash=compute_content_hash(f"Content {i}"),
+            content=content,
+            content_hash=compute_content_hash(content),
+            provenance=build_provenance(content),
             ttl_s=0.1,
         )
         store.put(item)
@@ -265,11 +293,13 @@ def test_stats(store: SQLiteMemoryStore) -> None:
 
     # Add items
     for i in range(5):
+        content = f"Content {i}"
         item = MemoryItem(
             id=f"item-{i}",
             ts=now + i,
-            content=f"Content {i}",
-            content_hash=compute_content_hash(f"Content {i}"),
+            content=content,
+            content_hash=compute_content_hash(content),
+            provenance=build_provenance(content),
         )
         store.put(item)
 
@@ -299,6 +329,7 @@ def test_encryption_at_rest_optional(
         ts=time.time(),
         content=original_content,
         content_hash=compute_content_hash(original_content),
+        provenance=build_provenance(original_content),
     )
 
     # Store encrypted
@@ -332,6 +363,7 @@ def test_encryption_disabled_by_default(temp_db_path: Path) -> None:
         ts=time.time(),
         content="Plain text content",
         content_hash=compute_content_hash("Plain text content"),
+        provenance=build_provenance("Plain text content"),
     )
 
     store.put(item)
@@ -371,6 +403,7 @@ def test_store_raw_option(temp_db_path: Path) -> None:
         ts=time.time(),
         content=original_content,
         content_hash=compute_content_hash(original_content),
+        provenance=build_provenance(original_content),
     )
 
     store.put(item)
