@@ -1,12 +1,14 @@
 from __future__ import annotations
 
-from pathlib import Path
 from types import SimpleNamespace
+from typing import TYPE_CHECKING
 
 import mlsdm.policy.validation as policy_validation
 from mlsdm.policy.loader import PolicyLoadError
 from mlsdm.policy.validation import PolicyValidator
 
+if TYPE_CHECKING:
+    from pathlib import Path
 
 def _bundle_for_validation(
     *,

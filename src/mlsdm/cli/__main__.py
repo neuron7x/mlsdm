@@ -2,7 +2,7 @@
 
 import sys
 
-from mlsdm.cli.main import main
+from mlsdm.cli import main
 
 if __name__ == "__main__":
     sys.exit(main())

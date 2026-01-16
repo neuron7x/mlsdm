@@ -1,12 +1,14 @@
 from __future__ import annotations
 
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
 from defusedxml.common import DefusedXmlException
 
 from scripts.test_hygiene.coverage_summary import _collect_coverage, _write_summary
 
+if TYPE_CHECKING:
+    from pathlib import Path
 
 def test_collect_coverage_parses_lines(tmp_path: Path) -> None:
     coverage_xml = tmp_path / "coverage.xml"

@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from pathlib import Path
+from typing import TYPE_CHECKING
+
 import mlsdm.policy.check as policy_check
 from mlsdm.policy.loader import PolicyLoadError
 
+if TYPE_CHECKING:
+    from pathlib import Path
 
 @dataclass
 class DummyResult:
@@ -23,6 +26,8 @@ class DummyValidator:
 
 
 def test_resolve_paths_and_workflow_files(tmp_path: Path, monkeypatch) -> None:
+    from pathlib import Path
+
     monkeypatch.setattr(policy_check, "REPO_ROOT", tmp_path)
 
     policy_dir = policy_check._resolve_policy_dir(Path("policy"))

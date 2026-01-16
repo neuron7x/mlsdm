@@ -1,19 +1,22 @@
 from __future__ import annotations
 
+import importlib
 import json
 import logging
 import runpy
 from types import SimpleNamespace
+from typing import TYPE_CHECKING
 
 import pytest
 
-import importlib
-
 import mlsdm.cli as cli_package
+
+if TYPE_CHECKING:
+    from types import ModuleType
 
 
 @pytest.fixture()
-def cli_main_module():
+def cli_main_module() -> ModuleType:
     package_main = cli_package.main
     module = importlib.import_module("mlsdm.cli.main")
     yield module
