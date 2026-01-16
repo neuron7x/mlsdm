@@ -12,7 +12,42 @@ import numpy as np
 import pytest
 
 from mlsdm.memory.phase_entangled_lattice_memory import PhaseEntangledLatticeMemory
-from mlsdm.memory.provenance import MemoryProvenance, MemorySource
+from mlsdm.memory.provenance import (
+    MemoryProvenance,
+    MemorySource,
+    compute_sha256_hex,
+    get_policy_hash,
+)
+
+
+def _vector_hash(vector: list[float]) -> str:
+    return compute_sha256_hex(np.array(vector, dtype=np.float32).tobytes())
+
+
+def _build_provenance(
+    *,
+    source: MemorySource,
+    confidence: float,
+    timestamp: datetime,
+    content_hash: str,
+    source_id: str = "test-source",
+    ingestion_path: str = "tests.unit.memory_provenance",
+    trust_tier: int = 3,
+    llm_model: str | None = None,
+    parent_id: str | None = None,
+) -> MemoryProvenance:
+    return MemoryProvenance(
+        source=source,
+        confidence=confidence,
+        timestamp=timestamp,
+        source_id=source_id,
+        ingestion_path=ingestion_path,
+        content_hash=content_hash,
+        policy_hash=get_policy_hash(),
+        trust_tier=trust_tier,
+        llm_model=llm_model,
+        parent_id=parent_id,
+    )
 
 
 class TestMemoryProvenanceDataModel:
@@ -20,8 +55,11 @@ class TestMemoryProvenanceDataModel:
 
     def test_provenance_creation(self):
         """Test creating a MemoryProvenance instance."""
-        prov = MemoryProvenance(
-            source=MemorySource.USER_INPUT, confidence=0.95, timestamp=datetime.now()
+        prov = _build_provenance(
+            source=MemorySource.USER_INPUT,
+            confidence=0.95,
+            timestamp=datetime.now(),
+            content_hash=compute_sha256_hex(b"memory"),
         )
 
         assert prov.source == MemorySource.USER_INPUT
@@ -32,44 +70,70 @@ class TestMemoryProvenanceDataModel:
     def test_provenance_confidence_validation(self):
         """Test confidence must be in [0.0, 1.0] range."""
         # Valid confidence values
-        MemoryProvenance(source=MemorySource.USER_INPUT, confidence=0.0, timestamp=datetime.now())
-        MemoryProvenance(source=MemorySource.USER_INPUT, confidence=1.0, timestamp=datetime.now())
+        _build_provenance(
+            source=MemorySource.USER_INPUT,
+            confidence=0.0,
+            timestamp=datetime.now(),
+            content_hash=compute_sha256_hex(b"low"),
+        )
+        _build_provenance(
+            source=MemorySource.USER_INPUT,
+            confidence=1.0,
+            timestamp=datetime.now(),
+            content_hash=compute_sha256_hex(b"high"),
+        )
 
         # Invalid confidence values
         with pytest.raises(ValueError, match="Confidence must be in range"):
-            MemoryProvenance(
-                source=MemorySource.USER_INPUT, confidence=1.5, timestamp=datetime.now()
+            _build_provenance(
+                source=MemorySource.USER_INPUT,
+                confidence=1.5,
+                timestamp=datetime.now(),
+                content_hash=compute_sha256_hex(b"bad1"),
             )
 
         with pytest.raises(ValueError, match="Confidence must be in range"):
-            MemoryProvenance(
-                source=MemorySource.USER_INPUT, confidence=-0.1, timestamp=datetime.now()
+            _build_provenance(
+                source=MemorySource.USER_INPUT,
+                confidence=-0.1,
+                timestamp=datetime.now(),
+                content_hash=compute_sha256_hex(b"bad2"),
             )
 
     def test_is_high_confidence_property(self):
         """Test is_high_confidence property."""
-        high_conf = MemoryProvenance(
-            source=MemorySource.USER_INPUT, confidence=0.8, timestamp=datetime.now()
+        high_conf = _build_provenance(
+            source=MemorySource.USER_INPUT,
+            confidence=0.8,
+            timestamp=datetime.now(),
+            content_hash=compute_sha256_hex(b"high-confidence"),
         )
         assert high_conf.is_high_confidence is True
 
-        low_conf = MemoryProvenance(
-            source=MemorySource.LLM_GENERATION, confidence=0.5, timestamp=datetime.now()
+        low_conf = _build_provenance(
+            source=MemorySource.LLM_GENERATION,
+            confidence=0.5,
+            timestamp=datetime.now(),
+            content_hash=compute_sha256_hex(b"low-confidence"),
         )
         assert low_conf.is_high_confidence is False
 
     def test_is_llm_generated_property(self):
         """Test is_llm_generated property."""
-        llm_prov = MemoryProvenance(
+        llm_prov = _build_provenance(
             source=MemorySource.LLM_GENERATION,
             confidence=0.6,
             timestamp=datetime.now(),
+            content_hash=compute_sha256_hex(b"llm"),
             llm_model="gpt-4",
         )
         assert llm_prov.is_llm_generated is True
 
-        user_prov = MemoryProvenance(
-            source=MemorySource.USER_INPUT, confidence=0.9, timestamp=datetime.now()
+        user_prov = _build_provenance(
+            source=MemorySource.USER_INPUT,
+            confidence=0.9,
+            timestamp=datetime.now(),
+            content_hash=compute_sha256_hex(b"user"),
         )
         assert user_prov.is_llm_generated is False
 
@@ -82,8 +146,11 @@ class TestPELMProvenanceStorage:
         pelm = PhaseEntangledLatticeMemory(dimension=16, capacity=10)
 
         vector = np.random.randn(16).astype(np.float32).tolist()
-        provenance = MemoryProvenance(
-            source=MemorySource.USER_INPUT, confidence=0.9, timestamp=datetime.now()
+        provenance = _build_provenance(
+            source=MemorySource.USER_INPUT,
+            confidence=0.9,
+            timestamp=datetime.now(),
+            content_hash=_vector_hash(vector),
         )
 
         idx = pelm.entangle(vector, phase=0.5, provenance=provenance)
@@ -99,10 +166,12 @@ class TestPELMProvenanceStorage:
         pelm._confidence_threshold = 0.5
 
         vector = np.random.randn(16).astype(np.float32).tolist()
-        provenance = MemoryProvenance(
+        provenance = _build_provenance(
             source=MemorySource.LLM_GENERATION,
             confidence=0.3,  # Below threshold
             timestamp=datetime.now(),
+            content_hash=_vector_hash(vector),
+            trust_tier=1,
         )
 
         idx = pelm.entangle(vector, phase=0.5, provenance=provenance)
@@ -110,18 +179,14 @@ class TestPELMProvenanceStorage:
         assert idx == -1  # Rejected
         assert pelm.size == 0
 
-    def test_default_provenance_when_none(self):
-        """When no provenance provided, should use system default."""
+    def test_reject_missing_provenance(self):
+        """Missing provenance should be rejected."""
         pelm = PhaseEntangledLatticeMemory(dimension=16, capacity=10)
 
         vector = np.random.randn(16).astype(np.float32).tolist()
-        idx = pelm.entangle(vector, phase=0.5)  # No provenance
 
-        assert idx >= 0
-        assert pelm.size == 1
-        assert len(pelm._provenance) == 1
-        assert pelm._provenance[0].source == MemorySource.SYSTEM_PROMPT
-        assert pelm._provenance[0].confidence == 1.0
+        with pytest.raises(ValueError, match="provenance is required"):
+            pelm.entangle(vector, phase=0.5)
 
 
 class TestPELMProvenanceRetrieval:
@@ -138,8 +203,11 @@ class TestPELMProvenanceRetrieval:
         pelm.entangle(
             vector_high,
             phase=0.5,
-            provenance=MemoryProvenance(
-                source=MemorySource.USER_INPUT, confidence=0.9, timestamp=datetime.now()
+            provenance=_build_provenance(
+                source=MemorySource.USER_INPUT,
+                confidence=0.9,
+                timestamp=datetime.now(),
+                content_hash=_vector_hash(vector_high),
             ),
         )
 
@@ -148,8 +216,12 @@ class TestPELMProvenanceRetrieval:
         pelm.entangle(
             vector_low,
             phase=0.5,
-            provenance=MemoryProvenance(
-                source=MemorySource.LLM_GENERATION, confidence=0.4, timestamp=datetime.now()
+            provenance=_build_provenance(
+                source=MemorySource.LLM_GENERATION,
+                confidence=0.4,
+                timestamp=datetime.now(),
+                content_hash=_vector_hash(vector_low),
+                trust_tier=1,
             ),
         )
 
@@ -168,11 +240,11 @@ class TestPELMProvenanceRetrieval:
         pelm = PhaseEntangledLatticeMemory(dimension=16, capacity=10)
 
         vector = np.random.randn(16).astype(np.float32).tolist()
-        provenance = MemoryProvenance(
+        provenance = _build_provenance(
             source=MemorySource.USER_INPUT,
             confidence=0.95,
             timestamp=datetime.now(),
-            llm_model=None,
+            content_hash=_vector_hash(vector),
         )
 
         pelm.entangle(vector, phase=0.5, provenance=provenance)
@@ -185,6 +257,11 @@ class TestPELMProvenanceRetrieval:
         assert hasattr(results[0], "memory_id")
         assert results[0].provenance.source == MemorySource.USER_INPUT
         assert results[0].provenance.confidence == 0.95
+        assert results[0].provenance.source_id
+        assert results[0].provenance.ingestion_path
+        assert results[0].provenance.content_hash
+        assert results[0].provenance.policy_hash
+        assert results[0].provenance.trust_tier >= 0
 
     def test_retrieve_with_zero_min_confidence(self):
         """With min_confidence=0.0, all memories should be retrieved."""
@@ -198,8 +275,11 @@ class TestPELMProvenanceRetrieval:
             pelm.entangle(
                 vector,
                 phase=0.5,
-                provenance=MemoryProvenance(
-                    source=MemorySource.USER_INPUT, confidence=conf, timestamp=datetime.now()
+                provenance=_build_provenance(
+                    source=MemorySource.USER_INPUT,
+                    confidence=conf,
+                    timestamp=datetime.now(),
+                    content_hash=_vector_hash(vector),
                 ),
             )
 
@@ -224,8 +304,11 @@ class TestPELMConfidenceBasedEviction:
             pelm.entangle(
                 vector,
                 phase=0.5,
-                provenance=MemoryProvenance(
-                    source=MemorySource.USER_INPUT, confidence=conf, timestamp=datetime.now()
+                provenance=_build_provenance(
+                    source=MemorySource.USER_INPUT,
+                    confidence=conf,
+                    timestamp=datetime.now(),
+                    content_hash=_vector_hash(vector),
                 ),
             )
 
@@ -236,8 +319,11 @@ class TestPELMConfidenceBasedEviction:
         pelm.entangle(
             vector_new,
             phase=0.5,
-            provenance=MemoryProvenance(
-                source=MemorySource.USER_INPUT, confidence=0.8, timestamp=datetime.now()
+            provenance=_build_provenance(
+                source=MemorySource.USER_INPUT,
+                confidence=0.8,
+                timestamp=datetime.now(),
+                content_hash=_vector_hash(vector_new),
             ),
         )
 
@@ -259,10 +345,11 @@ class TestPELMConfidenceBasedEviction:
             pelm.entangle(
                 vector,
                 phase=0.5,
-                provenance=MemoryProvenance(
+                provenance=_build_provenance(
                     source=MemorySource.USER_INPUT,
                     confidence=0.5 + i * 0.2,  # 0.5, 0.7
                     timestamp=datetime.now(),
+                    content_hash=_vector_hash(vector),
                 ),
             )
 
@@ -271,8 +358,11 @@ class TestPELMConfidenceBasedEviction:
         pelm.entangle(
             vector_new,
             phase=0.5,
-            provenance=MemoryProvenance(
-                source=MemorySource.USER_INPUT, confidence=0.9, timestamp=datetime.now()
+            provenance=_build_provenance(
+                source=MemorySource.USER_INPUT,
+                confidence=0.9,
+                timestamp=datetime.now(),
+                content_hash=_vector_hash(vector_new),
             ),
         )
 
@@ -297,10 +387,13 @@ class TestPELMBatchProvenance:
         vectors = [np.random.randn(16).astype(np.float32).tolist() for _ in range(3)]
         phases = [0.5, 0.5, 0.5]
         provenances = [
-            MemoryProvenance(
-                source=MemorySource.USER_INPUT, confidence=0.9, timestamp=datetime.now()
+            _build_provenance(
+                source=MemorySource.USER_INPUT,
+                confidence=0.9,
+                timestamp=datetime.now(),
+                content_hash=_vector_hash(vector),
             )
-            for _ in range(3)
+            for vector in vectors
         ]
 
         indices = pelm.entangle_batch(vectors, phases, provenances=provenances)
@@ -318,10 +411,13 @@ class TestPELMBatchProvenance:
         vectors = [np.random.randn(16).astype(np.float32).tolist() for _ in range(3)]
         phases = [0.5, 0.5, 0.5]
         provenances = [
-            MemoryProvenance(
-                source=MemorySource.USER_INPUT, confidence=conf, timestamp=datetime.now()
+            _build_provenance(
+                source=MemorySource.USER_INPUT,
+                confidence=conf,
+                timestamp=datetime.now(),
+                content_hash=_vector_hash(vector),
             )
-            for conf in [0.9, 0.3, 0.7]  # Middle one below threshold
+            for vector, conf in zip(vectors, [0.9, 0.3, 0.7], strict=True)
         ]
 
         indices = pelm.entangle_batch(vectors, phases, provenances=provenances)
@@ -333,40 +429,42 @@ class TestPELMBatchProvenance:
         assert pelm.size == 2  # Only 2 stored
 
     def test_entangle_batch_without_provenance(self):
-        """Batch entangle should work without provenance (backward compat)."""
+        """Batch entangle should reject missing provenance."""
         pelm = PhaseEntangledLatticeMemory(dimension=16, capacity=10)
 
         vectors = [np.random.randn(16).astype(np.float32).tolist() for _ in range(2)]
         phases = [0.5, 0.5]
 
-        indices = pelm.entangle_batch(vectors, phases)
-
-        assert len(indices) == 2
-        assert all(idx >= 0 for idx in indices)
-        assert pelm.size == 2
-        # Should have default system provenance
-        assert all(p.source == MemorySource.SYSTEM_PROMPT for p in pelm._provenance[: pelm.size])
+        with pytest.raises(ValueError, match="provenances are required"):
+            pelm.entangle_batch(vectors, phases)
 
 
 class TestBackwardCompatibility:
     """Test backward compatibility with existing PELM usage."""
 
-    def test_entangle_without_provenance_still_works(self):
-        """Existing code without provenance parameter should still work."""
+    def test_entangle_without_provenance_rejected(self):
+        """Existing code without provenance parameter should be rejected."""
         pelm = PhaseEntangledLatticeMemory(dimension=16, capacity=10)
 
         vector = np.random.randn(16).astype(np.float32).tolist()
-        idx = pelm.entangle(vector, phase=0.5)
-
-        assert idx >= 0
-        assert pelm.size == 1
+        with pytest.raises(ValueError, match="provenance is required"):
+            pelm.entangle(vector, phase=0.5)
 
     def test_retrieve_without_min_confidence_still_works(self):
         """Existing retrieval code should work with default min_confidence=0.0."""
         pelm = PhaseEntangledLatticeMemory(dimension=16, capacity=10)
 
         vector = np.random.randn(16).astype(np.float32).tolist()
-        pelm.entangle(vector, phase=0.5)
+        pelm.entangle(
+            vector,
+            phase=0.5,
+            provenance=_build_provenance(
+                source=MemorySource.USER_INPUT,
+                confidence=0.9,
+                timestamp=datetime.now(),
+                content_hash=_vector_hash(vector),
+            ),
+        )
 
         query = np.random.randn(16).astype(np.float32).tolist()
         results = pelm.retrieve(query, current_phase=0.5)

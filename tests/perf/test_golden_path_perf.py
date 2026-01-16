@@ -17,12 +17,20 @@ import os
 import platform
 import sys
 import time
+from datetime import datetime
 from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
 import psutil
 import pytest
+
+from mlsdm.memory.provenance import (
+    MemoryProvenance,
+    MemorySource,
+    compute_sha256_hex,
+    get_policy_hash,
+)
 
 # Add src to path for standalone execution
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
@@ -38,6 +46,20 @@ _IS_CI = os.environ.get("CI", "").lower() == "true" or os.environ.get(
 ).lower() == "true"
 
 PELM_MIN_OPS_SEC = 40 if _IS_CI else 100
+
+
+def _build_provenance(vector: list[float] | np.ndarray) -> MemoryProvenance:
+    vec_np = np.array(vector, dtype=np.float32)
+    return MemoryProvenance(
+        source=MemorySource.SYSTEM_PROMPT,
+        confidence=1.0,
+        timestamp=datetime.now(),
+        source_id="perf.golden_path",
+        ingestion_path="tests.perf.test_golden_path_perf",
+        content_hash=compute_sha256_hex(vec_np.tobytes()),
+        policy_hash=get_policy_hash(),
+        trust_tier=2,
+    )
 PELM_MAX_P95_MS = 120 if _IS_CI else 50
 MEMORY_MIN_OPS_SEC = 200 if _IS_CI else 500
 CONTROLLER_MIN_OPS_SEC = 50 if _IS_CI else 100
@@ -128,13 +150,17 @@ class TestPELMPerformance:
 
         # Warmup
         for i in range(min(50, PELM_N_OPS)):
-            pelm.entangle(vectors[i], phases[i])
+            pelm.entangle(
+                vectors[i],
+                phases[i],
+                provenance=_build_provenance(vectors[i]),
+            )
 
         # Benchmark
         start_total = time.perf_counter()
         for v, p in zip(vectors, phases, strict=True):
             start = time.perf_counter()
-            pelm.entangle(v, p)
+            pelm.entangle(v, p, provenance=_build_provenance(v))
             latencies.append((time.perf_counter() - start) * 1000)
         total_time = (time.perf_counter() - start_total) * 1000
 
@@ -170,7 +196,7 @@ class TestPELMPerformance:
         phases = [np.random.random() for _ in range(PELM_N_OPS)]
 
         for v, p in zip(vectors, phases, strict=True):
-            pelm.entangle(v, p)
+            pelm.entangle(v, p, provenance=_build_provenance(v))
 
         latencies: list[float] = []
 
@@ -316,7 +342,7 @@ def run_all_benchmarks() -> dict:
     start_total = time.perf_counter()
     for v, p in zip(vectors, phases, strict=True):
         start = time.perf_counter()
-        pelm.entangle(v, p)
+        pelm.entangle(v, p, provenance=_build_provenance(v))
         pelm_entangle_latencies.append((time.perf_counter() - start) * 1000)
     total_time = (time.perf_counter() - start_total) * 1000
     results["pelm_entangle"] = {

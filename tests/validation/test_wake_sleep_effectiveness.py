@@ -7,10 +7,31 @@ from wake/sleep cycles using rigorous statistical validation.
 Principal System Architect level validation.
 """
 
+from datetime import datetime
+
 import numpy as np
 
 from mlsdm.core.cognitive_controller import CognitiveController
+from mlsdm.memory.provenance import (
+    MemoryProvenance,
+    MemorySource,
+    compute_sha256_hex,
+    get_policy_hash,
+)
 from mlsdm.utils.coherence_safety_metrics import CoherenceSafetyAnalyzer
+
+
+def _build_provenance(vector: np.ndarray) -> MemoryProvenance:
+    return MemoryProvenance(
+        source=MemorySource.SYSTEM_PROMPT,
+        confidence=1.0,
+        timestamp=datetime.now(),
+        source_id="validation.wake_sleep",
+        ingestion_path="tests.validation.test_wake_sleep_effectiveness",
+        content_hash=compute_sha256_hex(vector.astype(np.float32).tobytes()),
+        policy_hash=get_policy_hash(),
+        trust_tier=2,
+    )
 
 
 def generate_test_vectors(n_vectors: int, dim: int = 384, n_clusters: int = 3) -> tuple:
@@ -65,7 +86,7 @@ class NoRhythmController(CognitiveController):
                 return self._build_state(rejected=True, note="morally rejected")
 
             # ALWAYS process (no rhythm check)
-            self.memory_commit(vector, 0.5)  # Fixed phase
+            self.memory_commit(vector, 0.5, provenance=_build_provenance(vector))  # Fixed phase
 
             return self._build_state(rejected=False, note="processed")
 

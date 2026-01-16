@@ -32,7 +32,7 @@ class MemoryItem:
         content_hash: SHA256 hash of original content for deduplication
         ttl_s: Time-to-live in seconds (None = no expiration)
         pii_flags: Dictionary of detected PII types and their status
-        provenance: Optional memory provenance metadata
+        provenance: Optional memory provenance metadata (required for storage)
     """
 
     id: str

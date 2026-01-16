@@ -7,12 +7,20 @@ Verifies that phase-entangled retrieval works as specified:
 - Phase tolerance controls cross-phase retrieval
 """
 
+from datetime import datetime
+
 import numpy as np
 import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
 from mlsdm.memory.phase_entangled_lattice_memory import PhaseEntangledLatticeMemory
+from mlsdm.memory.provenance import (
+    MemoryProvenance,
+    MemorySource,
+    compute_sha256_hex,
+    get_policy_hash,
+)
 
 # Phase constants matching those used in cognitive_controller
 # These values (0.1 for wake, 0.9 for sleep) create maximum separation
@@ -21,6 +29,20 @@ from mlsdm.memory.phase_entangled_lattice_memory import PhaseEntangledLatticeMem
 # effectively isolate wake from sleep memories.
 WAKE_PHASE = 0.1
 SLEEP_PHASE = 0.9
+
+
+def _build_provenance(vector: np.ndarray | list[float]) -> MemoryProvenance:
+    vec_np = np.array(vector, dtype=np.float32)
+    return MemoryProvenance(
+        source=MemorySource.SYSTEM_PROMPT,
+        confidence=1.0,
+        timestamp=datetime.now(),
+        source_id="property.pelm_phase_behavior",
+        ingestion_path="tests.property.test_pelm_phase_behavior",
+        content_hash=compute_sha256_hex(vec_np.tobytes()),
+        policy_hash=get_policy_hash(),
+        trust_tier=2,
+    )
 
 
 def test_pelm_phase_isolation_wake_only():
@@ -32,7 +54,8 @@ def test_pelm_phase_isolation_wake_only():
     for i in range(5):
         vec = np.random.randn(10).astype(np.float32)
         wake_vectors.append(vec)
-        pelm.entangle(vec.tolist(), phase=WAKE_PHASE)
+        vector = vec.tolist()
+        pelm.entangle(vector, phase=WAKE_PHASE, provenance=_build_provenance(vector))
 
     # Query during wake phase with tight tolerance
     query = wake_vectors[0]  # Use stored vector as query
@@ -69,7 +92,8 @@ def test_pelm_phase_isolation_sleep_only():
     for i in range(5):
         vec = np.random.randn(10).astype(np.float32)
         sleep_vectors.append(vec)
-        pelm.entangle(vec.tolist(), phase=SLEEP_PHASE)
+        vector = vec.tolist()
+        pelm.entangle(vector, phase=SLEEP_PHASE, provenance=_build_provenance(vector))
 
     # Query during sleep phase with tight tolerance
     query = sleep_vectors[0]
@@ -97,7 +121,8 @@ def test_pelm_phase_tolerance_controls_retrieval():
 
     # Store vector during wake phase
     vec = np.random.randn(10).astype(np.float32)
-    pelm.entangle(vec.tolist(), phase=WAKE_PHASE)
+    vector = vec.tolist()
+    pelm.entangle(vector, phase=WAKE_PHASE, provenance=_build_provenance(vector))
 
     # Query during sleep with TIGHT tolerance - should find nothing
     results_tight = pelm.retrieve(
@@ -124,14 +149,16 @@ def test_pelm_phase_mixed_storage():
     for i in range(5):
         vec = np.random.randn(10).astype(np.float32)
         wake_vectors.append(vec)
-        pelm.entangle(vec.tolist(), phase=WAKE_PHASE)
+        vector = vec.tolist()
+        pelm.entangle(vector, phase=WAKE_PHASE, provenance=_build_provenance(vector))
 
     # Store 5 sleep vectors
     sleep_vectors = []
     for i in range(5):
         vec = np.random.randn(10).astype(np.float32)
         sleep_vectors.append(vec)
-        pelm.entangle(vec.tolist(), phase=SLEEP_PHASE)
+        vector = vec.tolist()
+        pelm.entangle(vector, phase=SLEEP_PHASE, provenance=_build_provenance(vector))
 
     # Query wake vector during wake phase with moderate tolerance
     query_wake = wake_vectors[0]
@@ -164,7 +191,8 @@ def test_pelm_phase_values_stored_correctly():
     # Store with specific phase
     vec = np.random.randn(10).astype(np.float32)
     stored_phase = 0.42
-    pelm.entangle(vec.tolist(), phase=stored_phase)
+    vector = vec.tolist()
+    pelm.entangle(vector, phase=stored_phase, provenance=_build_provenance(vector))
 
     # Retrieve with loose tolerance
     results = pelm.retrieve(vec.tolist(), current_phase=stored_phase, phase_tolerance=1.0, top_k=1)
@@ -192,7 +220,8 @@ def test_pelm_property_phase_filtering(num_vectors, query_phase):
     phases = np.random.uniform(0.0, 1.0, num_vectors)
     for i in range(num_vectors):
         vec = np.random.randn(10).astype(np.float32)
-        pelm.entangle(vec.tolist(), phase=float(phases[i]))
+        vector = vec.tolist()
+        pelm.entangle(vector, phase=float(phases[i]), provenance=_build_provenance(vector))
 
     # Query with specific tolerance
     tolerance = 0.2
@@ -225,14 +254,16 @@ def test_pelm_property_phase_separation(wake_count, sleep_count):
     for _ in range(wake_count):
         vec = np.random.randn(10).astype(np.float32)
         wake_vectors.append(vec)
-        pelm.entangle(vec.tolist(), phase=WAKE_PHASE)
+        vector = vec.tolist()
+        pelm.entangle(vector, phase=WAKE_PHASE, provenance=_build_provenance(vector))
 
     # Store sleep vectors
     sleep_vectors = []
     for _ in range(sleep_count):
         vec = np.random.randn(10).astype(np.float32)
         sleep_vectors.append(vec)
-        pelm.entangle(vec.tolist(), phase=SLEEP_PHASE)
+        vector = vec.tolist()
+        pelm.entangle(vector, phase=SLEEP_PHASE, provenance=_build_provenance(vector))
 
     # Query wake vector during sleep with tight tolerance
     if wake_vectors:
@@ -257,7 +288,8 @@ def test_pelm_resonance_with_phase():
     # Store a known vector
     vec = np.ones(10, dtype=np.float32)
     vec = vec / np.linalg.norm(vec)  # Normalize
-    pelm.entangle(vec.tolist(), phase=0.5)
+    vector = vec.tolist()
+    pelm.entangle(vector, phase=0.5, provenance=_build_provenance(vector))
 
     # Query with same vector (should have high similarity)
     results = pelm.retrieve(vec.tolist(), current_phase=0.5, phase_tolerance=0.1, top_k=1)
@@ -276,7 +308,8 @@ def test_pelm_empty_results_outside_phase():
     # Store vectors all at phase 0.5
     for _ in range(5):
         vec = np.random.randn(10).astype(np.float32)
-        pelm.entangle(vec.tolist(), phase=0.5)
+        vector = vec.tolist()
+        pelm.entangle(vector, phase=0.5, provenance=_build_provenance(vector))
 
     # Query at phase 0.0 with very tight tolerance
     query = np.random.randn(10).astype(np.float32)

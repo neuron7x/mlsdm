@@ -4,10 +4,43 @@ Unit Tests for Phase-Entangled Lattice Memory (PELM, formerly QILM_v2)
 Tests corruption detection, auto-recovery, and boundary checks.
 """
 
+from datetime import datetime
+
 import numpy as np
 import pytest
 
 from mlsdm.memory.phase_entangled_lattice_memory import MemoryRetrieval, PhaseEntangledLatticeMemory
+from mlsdm.memory.provenance import (
+    MemoryProvenance,
+    MemorySource,
+    compute_sha256_hex,
+    get_policy_hash,
+)
+
+
+def _vector_hash(vector: list[float]) -> str:
+    return compute_sha256_hex(np.array(vector, dtype=np.float32).tobytes())
+
+
+def _build_provenance(
+    vector: list[float],
+    *,
+    source: MemorySource = MemorySource.USER_INPUT,
+    confidence: float = 0.9,
+    trust_tier: int = 3,
+    source_id: str = "test-source",
+    ingestion_path: str = "tests.unit.pelm",
+) -> MemoryProvenance:
+    return MemoryProvenance(
+        source=source,
+        confidence=confidence,
+        timestamp=datetime.now(),
+        source_id=source_id,
+        ingestion_path=ingestion_path,
+        content_hash=_vector_hash(vector),
+        policy_hash=get_policy_hash(),
+        trust_tier=trust_tier,
+    )
 
 
 class TestBackwardCompatibility:
@@ -101,7 +134,7 @@ class TestPELMEntangle:
         vector = [1.0, 2.0, 3.0]
         phase = 0.5
 
-        idx = pelm.entangle(vector, phase)
+        idx = pelm.entangle(vector, phase, provenance=_build_provenance(vector))
 
         assert idx == 0
         assert pelm.size == 1
@@ -117,7 +150,7 @@ class TestPELMEntangle:
         phases = [0.1, 0.5, 0.9]
 
         for i, (vec, phase) in enumerate(zip(vectors, phases, strict=True)):
-            idx = pelm.entangle(vec, phase)
+            idx = pelm.entangle(vec, phase, provenance=_build_provenance(vec))
             assert idx == i
 
         assert pelm.size == 3
@@ -129,13 +162,15 @@ class TestPELMEntangle:
 
         # Fill to capacity
         for i in range(3):
-            pelm.entangle([float(i), float(i + 1)], 0.1 * i)
+            vector = [float(i), float(i + 1)]
+            pelm.entangle(vector, 0.1 * i, provenance=_build_provenance(vector))
 
         assert pelm.pointer == 0  # Should wrap around
         assert pelm.size == 3
 
         # Add one more to test wraparound
-        pelm.entangle([10.0, 11.0], 0.5)
+        vector = [10.0, 11.0]
+        pelm.entangle(vector, 0.5, provenance=_build_provenance(vector))
         assert pelm.pointer == 1
         assert pelm.size == 3  # Size stays at capacity
 
@@ -149,7 +184,7 @@ class TestPELMv2Retrieve:
 
         vector = [1.0, 2.0, 3.0]
         phase = 0.5
-        pelm.entangle(vector, phase)
+        pelm.entangle(vector, phase, provenance=_build_provenance(vector))
 
         results = pelm.retrieve([1.0, 2.0, 3.0], 0.5, phase_tolerance=0.1, top_k=1)
 
@@ -168,9 +203,12 @@ class TestPELMv2Retrieve:
         """Test retrieve with phase tolerance."""
         pelm = PhaseEntangledLatticeMemory(dimension=2, capacity=10)
 
-        pelm.entangle([1.0, 2.0], 0.1)
-        pelm.entangle([3.0, 4.0], 0.15)
-        pelm.entangle([5.0, 6.0], 0.5)
+        vector_a = [1.0, 2.0]
+        vector_b = [3.0, 4.0]
+        vector_c = [5.0, 6.0]
+        pelm.entangle(vector_a, 0.1, provenance=_build_provenance(vector_a))
+        pelm.entangle(vector_b, 0.15, provenance=_build_provenance(vector_b))
+        pelm.entangle(vector_c, 0.5, provenance=_build_provenance(vector_c))
 
         results = pelm.retrieve([1.0, 2.0], 0.1, phase_tolerance=0.1, top_k=5)
 
@@ -181,7 +219,8 @@ class TestPELMv2Retrieve:
         """Test retrieve with no matching phases."""
         pelm = PhaseEntangledLatticeMemory(dimension=2, capacity=10)
 
-        pelm.entangle([1.0, 2.0], 0.1)
+        vector = [1.0, 2.0]
+        pelm.entangle(vector, 0.1, provenance=_build_provenance(vector))
 
         results = pelm.retrieve([1.0, 2.0], 0.9, phase_tolerance=0.05)
 
@@ -194,14 +233,16 @@ class TestPELMv2CorruptionDetection:
     def test_detect_no_corruption(self):
         """Test detect_corruption returns False for valid state."""
         pelm = PhaseEntangledLatticeMemory(dimension=3, capacity=10)
-        pelm.entangle([1.0, 2.0, 3.0], 0.5)
+        vector = [1.0, 2.0, 3.0]
+        pelm.entangle(vector, 0.5, provenance=_build_provenance(vector))
 
         assert not pelm.detect_corruption()
 
     def test_detect_pointer_out_of_bounds(self):
         """Test corruption detection for pointer out of bounds."""
         pelm = PhaseEntangledLatticeMemory(dimension=3, capacity=10)
-        pelm.entangle([1.0, 2.0, 3.0], 0.5)
+        vector = [1.0, 2.0, 3.0]
+        pelm.entangle(vector, 0.5, provenance=_build_provenance(vector))
 
         # Corrupt pointer
         pelm.pointer = 100
@@ -211,7 +252,8 @@ class TestPELMv2CorruptionDetection:
     def test_detect_negative_pointer(self):
         """Test corruption detection for negative pointer."""
         pelm = PhaseEntangledLatticeMemory(dimension=3, capacity=10)
-        pelm.entangle([1.0, 2.0, 3.0], 0.5)
+        vector = [1.0, 2.0, 3.0]
+        pelm.entangle(vector, 0.5, provenance=_build_provenance(vector))
 
         # Corrupt pointer
         pelm.pointer = -1
@@ -221,7 +263,8 @@ class TestPELMv2CorruptionDetection:
     def test_detect_size_corruption(self):
         """Test corruption detection for invalid size."""
         pelm = PhaseEntangledLatticeMemory(dimension=3, capacity=10)
-        pelm.entangle([1.0, 2.0, 3.0], 0.5)
+        vector = [1.0, 2.0, 3.0]
+        pelm.entangle(vector, 0.5, provenance=_build_provenance(vector))
 
         # Corrupt size
         pelm.size = 100
@@ -231,7 +274,8 @@ class TestPELMv2CorruptionDetection:
     def test_detect_checksum_mismatch(self):
         """Test corruption detection for checksum mismatch."""
         pelm = PhaseEntangledLatticeMemory(dimension=3, capacity=10)
-        pelm.entangle([1.0, 2.0, 3.0], 0.5)
+        vector = [1.0, 2.0, 3.0]
+        pelm.entangle(vector, 0.5, provenance=_build_provenance(vector))
 
         # Directly corrupt memory without updating checksum
         pelm.memory_bank[0] = np.array([99.0, 99.0, 99.0], dtype=np.float32)
@@ -245,8 +289,10 @@ class TestPELMv2AutoRecovery:
     def test_auto_recover_pointer_corruption(self):
         """Test auto-recovery fixes pointer corruption."""
         pelm = PhaseEntangledLatticeMemory(dimension=3, capacity=10)
-        pelm.entangle([1.0, 2.0, 3.0], 0.5)
-        pelm.entangle([4.0, 5.0, 6.0], 0.6)
+        vector_a = [1.0, 2.0, 3.0]
+        vector_b = [4.0, 5.0, 6.0]
+        pelm.entangle(vector_a, 0.5, provenance=_build_provenance(vector_a))
+        pelm.entangle(vector_b, 0.6, provenance=_build_provenance(vector_b))
 
         # Corrupt pointer
         pelm.pointer = 100
@@ -264,7 +310,8 @@ class TestPELMv2AutoRecovery:
     def test_auto_recover_negative_pointer(self):
         """Test auto-recovery fixes negative pointer."""
         pelm = PhaseEntangledLatticeMemory(dimension=3, capacity=10)
-        pelm.entangle([1.0, 2.0, 3.0], 0.5)
+        vector = [1.0, 2.0, 3.0]
+        pelm.entangle(vector, 0.5, provenance=_build_provenance(vector))
 
         # Corrupt pointer
         pelm.pointer = -5
@@ -278,7 +325,8 @@ class TestPELMv2AutoRecovery:
     def test_auto_recover_size_corruption(self):
         """Test auto-recovery fixes size corruption."""
         pelm = PhaseEntangledLatticeMemory(dimension=3, capacity=10)
-        pelm.entangle([1.0, 2.0, 3.0], 0.5)
+        vector = [1.0, 2.0, 3.0]
+        pelm.entangle(vector, 0.5, provenance=_build_provenance(vector))
 
         # Corrupt size
         pelm.size = -1
@@ -292,7 +340,8 @@ class TestPELMv2AutoRecovery:
     def test_auto_recover_rebuilds_norms(self):
         """Test auto-recovery rebuilds norms."""
         pelm = PhaseEntangledLatticeMemory(dimension=3, capacity=10)
-        pelm.entangle([1.0, 2.0, 3.0], 0.5)
+        vector = [1.0, 2.0, 3.0]
+        pelm.entangle(vector, 0.5, provenance=_build_provenance(vector))
 
         original_norm = pelm.norms[0]
 
@@ -318,7 +367,7 @@ class TestPELMv2IntegrationWithCorruption:
         phases = [0.1 * i for i in range(5)]
 
         for vec, phase in zip(vectors, phases, strict=True):
-            pelm.entangle(vec, phase)
+            pelm.entangle(vec, phase, provenance=_build_provenance(vec))
 
         # Verify no corruption initially
         assert not pelm.detect_corruption()
@@ -343,8 +392,10 @@ class TestPELMv2IntegrationWithCorruption:
         """Test that retrieve triggers auto-recovery on corruption."""
         pelm = PhaseEntangledLatticeMemory(dimension=3, capacity=10)
 
-        pelm.entangle([1.0, 2.0, 3.0], 0.5)
-        pelm.entangle([4.0, 5.0, 6.0], 0.5)
+        vector_a = [1.0, 2.0, 3.0]
+        vector_b = [4.0, 5.0, 6.0]
+        pelm.entangle(vector_a, 0.5, provenance=_build_provenance(vector_a))
+        pelm.entangle(vector_b, 0.5, provenance=_build_provenance(vector_b))
 
         # Corrupt pointer
         pelm.pointer = -1
@@ -360,13 +411,15 @@ class TestPELMv2IntegrationWithCorruption:
         """Test that entangle triggers auto-recovery on corruption."""
         pelm = PhaseEntangledLatticeMemory(dimension=3, capacity=10)
 
-        pelm.entangle([1.0, 2.0, 3.0], 0.5)
+        vector = [1.0, 2.0, 3.0]
+        pelm.entangle(vector, 0.5, provenance=_build_provenance(vector))
 
         # Corrupt pointer
         pelm.pointer = 100
 
         # Entangle should trigger auto-recovery
-        idx = pelm.entangle([4.0, 5.0, 6.0], 0.6)
+        vector_new = [4.0, 5.0, 6.0]
+        idx = pelm.entangle(vector_new, 0.6, provenance=_build_provenance(vector_new))
 
         # Should succeed after recovery
         assert idx >= 0
@@ -376,7 +429,8 @@ class TestPELMv2IntegrationWithCorruption:
         """Test that unrecoverable corruption raises error."""
         pelm = PhaseEntangledLatticeMemory(dimension=3, capacity=10)
 
-        pelm.entangle([1.0, 2.0, 3.0], 0.5)
+        vector = [1.0, 2.0, 3.0]
+        pelm.entangle(vector, 0.5, provenance=_build_provenance(vector))
 
         # Create severe corruption that might not be recoverable
         # by setting invalid pointer
@@ -387,7 +441,8 @@ class TestPELMv2IntegrationWithCorruption:
         # But we test the error path exists
         try:
             # Normal operations should attempt recovery
-            pelm.entangle([4.0, 5.0, 6.0], 0.6)
+            vector_new = [4.0, 5.0, 6.0]
+            pelm.entangle(vector_new, 0.6, provenance=_build_provenance(vector_new))
         except RuntimeError as e:
             # If recovery fails, should raise RuntimeError
             assert "Memory corruption" in str(e)
@@ -402,14 +457,16 @@ class TestPELMv2BoundaryChecks:
 
         # Fill to capacity
         for i in range(5):
-            idx = pelm.entangle([float(i), float(i + 1)], 0.1)
+            vector = [float(i), float(i + 1)]
+            idx = pelm.entangle(vector, 0.1, provenance=_build_provenance(vector))
             assert idx == i
 
         # Pointer should wrap to 0
         assert pelm.pointer == 0
 
         # Next entangle should use index 0
-        idx = pelm.entangle([99.0, 99.0], 0.9)
+        vector = [99.0, 99.0]
+        idx = pelm.entangle(vector, 0.9, provenance=_build_provenance(vector))
         assert idx == 0
         assert pelm.pointer == 1
 
@@ -419,7 +476,8 @@ class TestPELMv2BoundaryChecks:
 
         # Add more than capacity
         for i in range(10):
-            pelm.entangle([float(i), float(i + 1)], 0.1 * i)
+            vector = [float(i), float(i + 1)]
+            pelm.entangle(vector, 0.1 * i, provenance=_build_provenance(vector))
 
         # Size should be capped at capacity
         assert pelm.size == 3
@@ -452,7 +510,8 @@ class TestPELMv2StateStats:
         """Test get_state_stats returns correct information."""
         pelm = PhaseEntangledLatticeMemory(dimension=10, capacity=100)
 
-        pelm.entangle([1.0] * 10, 0.5)
+        vector = [1.0] * 10
+        pelm.entangle(vector, 0.5, provenance=_build_provenance(vector))
 
         stats = pelm.get_state_stats()
 
@@ -470,48 +529,75 @@ class TestPELMInputValidation:
         pelm = PhaseEntangledLatticeMemory(dimension=3, capacity=10)
 
         with pytest.raises(TypeError, match="vector must be a list"):
-            pelm.entangle(np.array([1.0, 2.0, 3.0]), 0.5)  # numpy array instead of list
+            pelm.entangle(
+                np.array([1.0, 2.0, 3.0]),
+                0.5,
+                provenance=_build_provenance([1.0, 2.0, 3.0]),
+            )  # numpy array instead of list
 
     def test_entangle_validates_vector_dimension(self):
         """Test that entangle validates vector dimension matches."""
         pelm = PhaseEntangledLatticeMemory(dimension=3, capacity=10)
 
         with pytest.raises(ValueError, match="vector dimension mismatch"):
-            pelm.entangle([1.0, 2.0], 0.5)  # Wrong dimension
+            pelm.entangle(
+                [1.0, 2.0],
+                0.5,
+                provenance=_build_provenance([1.0, 2.0]),
+            )  # Wrong dimension
 
         with pytest.raises(ValueError, match="vector dimension mismatch"):
-            pelm.entangle([1.0, 2.0, 3.0, 4.0], 0.5)  # Wrong dimension
+            pelm.entangle(
+                [1.0, 2.0, 3.0, 4.0],
+                0.5,
+                provenance=_build_provenance([1.0, 2.0, 3.0, 4.0]),
+            )  # Wrong dimension
 
     def test_entangle_validates_phase_type(self):
         """Test that entangle validates phase is numeric."""
         pelm = PhaseEntangledLatticeMemory(dimension=3, capacity=10)
 
         with pytest.raises(TypeError, match="phase must be numeric"):
-            pelm.entangle([1.0, 2.0, 3.0], "0.5")  # String instead of number
+            pelm.entangle(
+                [1.0, 2.0, 3.0],
+                "0.5",
+                provenance=_build_provenance([1.0, 2.0, 3.0]),
+            )  # String instead of number
 
     def test_entangle_validates_phase_range(self):
         """Test that entangle validates phase is in [0.0, 1.0]."""
         pelm = PhaseEntangledLatticeMemory(dimension=3, capacity=10)
 
         with pytest.raises(ValueError, match="phase must be in"):
-            pelm.entangle([1.0, 2.0, 3.0], -0.1)  # Below 0.0
+            pelm.entangle(
+                [1.0, 2.0, 3.0],
+                -0.1,
+                provenance=_build_provenance([1.0, 2.0, 3.0]),
+            )  # Below 0.0
 
         with pytest.raises(ValueError, match="phase must be in"):
-            pelm.entangle([1.0, 2.0, 3.0], 1.5)  # Above 1.0
+            pelm.entangle(
+                [1.0, 2.0, 3.0],
+                1.5,
+                provenance=_build_provenance([1.0, 2.0, 3.0]),
+            )  # Above 1.0
 
     def test_entangle_accepts_valid_inputs(self):
         """Test that entangle accepts valid inputs."""
         pelm = PhaseEntangledLatticeMemory(dimension=3, capacity=10)
 
         # Should work with correct inputs
-        idx = pelm.entangle([1.0, 2.0, 3.0], 0.5)
+        vector = [1.0, 2.0, 3.0]
+        idx = pelm.entangle(vector, 0.5, provenance=_build_provenance(vector))
         assert idx == 0
 
         # Phase at boundaries should work
-        idx = pelm.entangle([1.0, 2.0, 3.0], 0.0)
+        vector = [1.0, 2.0, 3.0]
+        idx = pelm.entangle(vector, 0.0, provenance=_build_provenance(vector))
         assert idx == 1
 
-        idx = pelm.entangle([1.0, 2.0, 3.0], 1.0)
+        vector = [1.0, 2.0, 3.0]
+        idx = pelm.entangle(vector, 1.0, provenance=_build_provenance(vector))
         assert idx == 2
 
     def test_init_error_messages_are_descriptive(self):
@@ -533,31 +619,36 @@ class TestPELMInputValidation:
         pelm = PhaseEntangledLatticeMemory(dimension=3, capacity=10)
 
         with pytest.raises(ValueError, match="invalid value"):
-            pelm.entangle([1.0, float("nan"), 3.0], 0.5)
+            vector = [1.0, float("nan"), 3.0]
+            pelm.entangle(vector, 0.5, provenance=_build_provenance(vector))
 
     def test_entangle_rejects_inf_in_vector(self):
         """Test that entangle rejects vectors containing infinity."""
         pelm = PhaseEntangledLatticeMemory(dimension=3, capacity=10)
 
         with pytest.raises(ValueError, match="invalid value"):
-            pelm.entangle([1.0, float("inf"), 3.0], 0.5)
+            vector = [1.0, float("inf"), 3.0]
+            pelm.entangle(vector, 0.5, provenance=_build_provenance(vector))
 
         with pytest.raises(ValueError, match="invalid value"):
-            pelm.entangle([float("-inf"), 2.0, 3.0], 0.5)
+            vector = [float("-inf"), 2.0, 3.0]
+            pelm.entangle(vector, 0.5, provenance=_build_provenance(vector))
 
     def test_entangle_rejects_nan_phase(self):
         """Test that entangle rejects NaN phase."""
         pelm = PhaseEntangledLatticeMemory(dimension=3, capacity=10)
 
         with pytest.raises(ValueError, match="finite number"):
-            pelm.entangle([1.0, 2.0, 3.0], float("nan"))
+            vector = [1.0, 2.0, 3.0]
+            pelm.entangle(vector, float("nan"), provenance=_build_provenance(vector))
 
     def test_entangle_rejects_inf_phase(self):
         """Test that entangle rejects infinite phase."""
         pelm = PhaseEntangledLatticeMemory(dimension=3, capacity=10)
 
         with pytest.raises(ValueError, match="finite number"):
-            pelm.entangle([1.0, 2.0, 3.0], float("inf"))
+            vector = [1.0, 2.0, 3.0]
+            pelm.entangle(vector, float("inf"), provenance=_build_provenance(vector))
 
 
 class TestPELMObservability:
@@ -574,7 +665,8 @@ class TestPELMObservability:
             # Make recovery fail by patching auto_recover to return False
             with patch.object(pelm, '_auto_recover_unsafe', return_value=False), \
                  pytest.raises(RuntimeError, match="Memory corruption detected"):
-                pelm.entangle([1.0, 2.0, 3.0, 4.0], phase=0.5)
+                vector = [1.0, 2.0, 3.0, 4.0]
+                pelm.entangle(vector, phase=0.5, provenance=_build_provenance(vector))
             mock_record.assert_called_once()
             call_args = mock_record.call_args[1]
             assert call_args['detected'] is True
@@ -582,22 +674,20 @@ class TestPELMObservability:
 
     def test_low_confidence_rejection_with_observability(self):
         """Test low confidence rejection with observability logging."""
-        from datetime import datetime
         from unittest.mock import patch
-
-        from mlsdm.memory.provenance import MemoryProvenance, MemorySource
 
         with patch('mlsdm.memory.phase_entangled_lattice_memory._OBSERVABILITY_AVAILABLE', True), \
              patch('mlsdm.memory.phase_entangled_lattice_memory.record_pelm_store') as mock_record:
             pelm = PhaseEntangledLatticeMemory(dimension=4, capacity=10)
             pelm._confidence_threshold = 0.8
-            low_conf_prov = MemoryProvenance(
-                source=MemorySource.USER_INPUT,
+            vector = [1.0, 2.0, 3.0, 4.0]
+            low_conf_prov = _build_provenance(
+                vector,
                 confidence=0.3,
-                timestamp=datetime.now()
+                trust_tier=1,
             )
             result = pelm.entangle(
-                [1.0, 2.0, 3.0, 4.0],
+                vector,
                 phase=0.5,
                 provenance=low_conf_prov,
                 correlation_id="test-rejection"
@@ -615,7 +705,13 @@ class TestPELMObservability:
         with patch('mlsdm.memory.phase_entangled_lattice_memory._OBSERVABILITY_AVAILABLE', True), \
              patch('mlsdm.memory.phase_entangled_lattice_memory.record_pelm_store') as mock_record:
             pelm = PhaseEntangledLatticeMemory(dimension=4, capacity=10)
-            pelm.entangle([1.0, 2.0, 3.0, 4.0], phase=0.5, correlation_id="test-store")
+            vector = [1.0, 2.0, 3.0, 4.0]
+            pelm.entangle(
+                vector,
+                phase=0.5,
+                provenance=_build_provenance(vector),
+                correlation_id="test-store",
+            )
             mock_record.assert_called_once()
             call_args = mock_record.call_args[1]
             assert call_args['index'] == 0
@@ -632,7 +728,8 @@ class TestPELMObservability:
             pelm = PhaseEntangledLatticeMemory(dimension=4, capacity=10)
             vectors = [[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]]
             phases = [0.3, 0.7]
-            pelm.entangle_batch(vectors, phases, correlation_id="batch-test")
+            provenances = [_build_provenance(vector) for vector in vectors]
+            pelm.entangle_batch(vectors, phases, provenances=provenances, correlation_id="batch-test")
             mock_record.assert_called_once()
             call_args = mock_record.call_args[1]
             assert call_args['correlation_id'] == "batch-test"
@@ -662,7 +759,8 @@ class TestPELMObservability:
         with patch('mlsdm.memory.phase_entangled_lattice_memory._OBSERVABILITY_AVAILABLE', True), \
              patch('mlsdm.memory.phase_entangled_lattice_memory.record_pelm_retrieve') as mock_record:
             pelm = PhaseEntangledLatticeMemory(dimension=4, capacity=10)
-            pelm.entangle([1.0, 2.0, 3.0, 4.0], phase=0.1)
+            vector = [1.0, 2.0, 3.0, 4.0]
+            pelm.entangle(vector, phase=0.1, provenance=_build_provenance(vector))
             results = pelm.retrieve(
                 [1.0, 2.0, 3.0, 4.0],
                 current_phase=0.9,
@@ -682,7 +780,8 @@ class TestPELMObservability:
         with patch('mlsdm.memory.phase_entangled_lattice_memory._OBSERVABILITY_AVAILABLE', True), \
              patch('mlsdm.memory.phase_entangled_lattice_memory.record_pelm_retrieve') as mock_record:
             pelm = PhaseEntangledLatticeMemory(dimension=4, capacity=10)
-            pelm.entangle([1.0, 2.0, 3.0, 4.0], phase=0.5)
+            vector = [1.0, 2.0, 3.0, 4.0]
+            pelm.entangle(vector, phase=0.5, provenance=_build_provenance(vector))
             results = pelm.retrieve(
                 [1.0, 2.0, 3.0, 4.0],
                 current_phase=0.5,
@@ -700,10 +799,7 @@ class TestPELMObservability:
 
     def test_batch_entangle_all_rejected_with_observability(self):
         """Test batch entangle where ALL vectors are rejected due to low confidence."""
-        from datetime import datetime
         from unittest.mock import patch
-
-        from mlsdm.memory.provenance import MemoryProvenance, MemorySource
 
         with patch('mlsdm.memory.phase_entangled_lattice_memory._OBSERVABILITY_AVAILABLE', True), \
              patch('mlsdm.memory.phase_entangled_lattice_memory.record_pelm_store') as mock_record:
@@ -711,17 +807,12 @@ class TestPELMObservability:
             pelm._confidence_threshold = 0.9  # High threshold
 
             # All provenances have low confidence - ALL will be rejected
-            low_conf_provenances = [
-                MemoryProvenance(
-                    source=MemorySource.USER_INPUT,
-                    confidence=0.1,  # Below 0.9 threshold
-                    timestamp=datetime.now()
-                )
-                for _ in range(3)
-            ]
-
             vectors = [[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0], [9.0, 10.0, 11.0, 12.0]]
             phases = [0.3, 0.5, 0.7]
+            low_conf_provenances = [
+                _build_provenance(vector, confidence=0.1, trust_tier=1)
+                for vector in vectors
+            ]
 
             indices = pelm.entangle_batch(vectors, phases, provenances=low_conf_provenances)
 
@@ -744,13 +835,15 @@ class TestPELMObservability:
         with patch('mlsdm.memory.phase_entangled_lattice_memory._OBSERVABILITY_AVAILABLE', True), \
              patch('mlsdm.memory.phase_entangled_lattice_memory.record_pelm_corruption') as mock_record:
             pelm = PhaseEntangledLatticeMemory(dimension=4, capacity=10)
-            pelm.entangle([1.0, 2.0, 3.0, 4.0], phase=0.5)
+            vector = [1.0, 2.0, 3.0, 4.0]
+            pelm.entangle(vector, phase=0.5, provenance=_build_provenance(vector))
 
             # Corrupt pointer (recoverable)
             pelm.pointer = -1
 
             # Entangle should trigger recovery and succeed
-            idx = pelm.entangle([5.0, 6.0, 7.0, 8.0], phase=0.6)
+            vector_new = [5.0, 6.0, 7.0, 8.0]
+            idx = pelm.entangle(vector_new, phase=0.6, provenance=_build_provenance(vector_new))
 
             assert idx >= 0  # Recovery succeeded
             mock_record.assert_called_once()
@@ -780,7 +873,8 @@ class TestPELMReturnIndices:
             assert indices == []
 
             # Add memory
-            pelm.entangle([1.0, 2.0, 3.0, 4.0], phase=0.5)
+            vector = [1.0, 2.0, 3.0, 4.0]
+            pelm.entangle(vector, phase=0.5, provenance=_build_provenance(vector))
 
             # No phase match
             results, indices = pelm.retrieve(
@@ -810,26 +904,19 @@ class TestPELMValidation:
     def test_retrieve_dimension_mismatch(self):
         """Test retrieve with dimension mismatch."""
         pelm = PhaseEntangledLatticeMemory(dimension=4, capacity=10)
-        pelm.entangle([1.0, 2.0, 3.0, 4.0], phase=0.5)
+        vector = [1.0, 2.0, 3.0, 4.0]
+        pelm.entangle(vector, phase=0.5, provenance=_build_provenance(vector))
 
         with pytest.raises(ValueError, match="query_vector dimension mismatch"):
             pelm.retrieve([1.0, 2.0], current_phase=0.5)
 
     def test_batch_provenances_length_mismatch(self):
         """Test batch entangle with provenances length mismatch."""
-        from datetime import datetime
-
-        from mlsdm.memory.provenance import MemoryProvenance, MemorySource
-
         pelm = PhaseEntangledLatticeMemory(dimension=4, capacity=10)
 
         vectors = [[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]]
         phases = [0.3, 0.7]
-        provenances = [MemoryProvenance(
-            source=MemorySource.SYSTEM_PROMPT,
-            confidence=1.0,
-            timestamp=datetime.now()
-        )]
+        provenances = [_build_provenance(vectors[0], source=MemorySource.SYSTEM_PROMPT)]
 
         with pytest.raises(ValueError, match="provenances must match vectors length"):
             pelm.entangle_batch(vectors, phases, provenances=provenances)
@@ -844,8 +931,10 @@ class TestPELMFallbackAndEdgeCases:
 
         pelm = PhaseEntangledLatticeMemory(dimension=4, capacity=10)
         # Add two memories
-        pelm.entangle([1.0, 2.0, 3.0, 4.0], phase=0.5)
-        pelm.entangle([2.0, 3.0, 4.0, 5.0], phase=0.5)
+        vector_a = [1.0, 2.0, 3.0, 4.0]
+        vector_b = [2.0, 3.0, 4.0, 5.0]
+        pelm.entangle(vector_a, phase=0.5, provenance=_build_provenance(vector_a))
+        pelm.entangle(vector_b, phase=0.5, provenance=_build_provenance(vector_b))
 
         # Simulate legacy data - remove provenance for second memory
         # by truncating the provenance list (but keep memory_ids aligned)
@@ -898,7 +987,8 @@ class TestPELMFallbackAndEdgeCases:
     def test_auto_recover_returns_true_when_no_corruption(self):
         """Test auto_recover returns True when no corruption is detected."""
         pelm = PhaseEntangledLatticeMemory(dimension=4, capacity=10)
-        pelm.entangle([1.0, 2.0, 3.0, 4.0], phase=0.5)
+        vector = [1.0, 2.0, 3.0, 4.0]
+        pelm.entangle(vector, phase=0.5, provenance=_build_provenance(vector))
 
         # No corruption - should return True immediately
         result = pelm.auto_recover()
@@ -909,12 +999,14 @@ class TestPELMFallbackAndEdgeCases:
         pelm = PhaseEntangledLatticeMemory(dimension=4, capacity=10)
 
         with pytest.raises(TypeError, match="must be numeric"):
-            pelm.entangle([1.0, 2.0, "not a number", 4.0], phase=0.5)
+            vector = [1.0, 2.0, "not a number", 4.0]
+            pelm.entangle(vector, phase=0.5, provenance=_build_provenance([1.0, 2.0, 3.0, 4.0]))
 
     def test_retrieve_with_near_zero_query_clamps_norm(self):
         """Test retrieve clamps q_norm to MIN_NORM_THRESHOLD on near-zero query."""
         pelm = PhaseEntangledLatticeMemory(dimension=4, capacity=10)
-        pelm.entangle([1.0, 0.0, 0.0, 0.0], phase=0.5)
+        vector = [1.0, 0.0, 0.0, 0.0]
+        pelm.entangle(vector, phase=0.5, provenance=_build_provenance(vector))
 
         # Near-zero query vector - should not fail due to division by zero
         tiny_query = [1e-20, 0.0, 0.0, 0.0]  # Very small norm
@@ -925,22 +1017,13 @@ class TestPELMFallbackAndEdgeCases:
 
     def test_retrieve_argpartition_branch_with_many_candidates(self):
         """Test retrieve uses argpartition when num_candidates > top_k * 2."""
-        from datetime import datetime
-
-        from mlsdm.memory.provenance import MemoryProvenance, MemorySource
-
         pelm = PhaseEntangledLatticeMemory(dimension=4, capacity=100)
 
         # Add enough memories to trigger argpartition branch
         # We need more than top_k * 2 candidates after phase filtering
         for i in range(30):
             vector = [float(i + 1), float(i + 2), float(i + 3), float(i + 4)]
-            provenance = MemoryProvenance(
-                source=MemorySource.USER_INPUT,
-                confidence=0.9,
-                timestamp=datetime.now(),
-            )
-            pelm.entangle(vector, phase=0.5, provenance=provenance)
+            pelm.entangle(vector, phase=0.5, provenance=_build_provenance(vector))
 
         # Retrieve with top_k=5, so we need > 10 candidates to trigger argpartition
         results = pelm.retrieve(

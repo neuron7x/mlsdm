@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import hashlib
 import math
 import time
 import uuid
@@ -11,7 +10,13 @@ from typing import TYPE_CHECKING, Literal, overload
 
 import numpy as np
 
-from mlsdm.memory.provenance import MemoryProvenance, MemorySource
+from mlsdm.memory.provenance import (
+    MemoryProvenance,
+    MemorySource,
+    compute_json_hash,
+    compute_sha256_hex,
+    get_policy_hash,
+)
 from mlsdm.utils.math_constants import safe_norm
 
 if TYPE_CHECKING:
@@ -117,6 +122,8 @@ class PhaseEntangledLatticeMemory:
         # Provenance tracking for AI safety (TD-003)
         self._provenance: list[MemoryProvenance] = []
         self._memory_ids: list[str] = []
+        self._provenance_log: list[dict[str, object]] = []
+        self._provenance_log_tail: str | None = None
         self._confidence_threshold = 0.5  # Minimum confidence for storage
 
     def _ensure_integrity(self) -> None:
@@ -177,11 +184,8 @@ class PhaseEntangledLatticeMemory:
             # Generate unique memory ID
             memory_id = str(uuid.uuid4())
 
-            # Create default provenance if not provided
             if provenance is None:
-                provenance = MemoryProvenance(
-                    source=MemorySource.SYSTEM_PROMPT, confidence=1.0, timestamp=datetime.now()
-                )
+                raise ValueError("provenance is required for memory entanglement.")
 
             # Check confidence threshold - reject low-confidence memories
             if provenance.confidence < self._confidence_threshold:
@@ -234,6 +238,13 @@ class PhaseEntangledLatticeMemory:
                 )
 
             vec_np = np.array(vector, dtype=np.float32)
+            content_hash = compute_sha256_hex(vec_np.tobytes())
+            if provenance.content_hash != content_hash:
+                raise ValueError(
+                    "provenance content_hash does not match vector content hash."
+                )
+            if provenance.policy_hash != get_policy_hash():
+                raise ValueError("provenance policy_hash does not match active policy hash.")
             norm = max(safe_norm(vec_np), self.MIN_NORM_THRESHOLD)
 
             # Check capacity and evict if necessary
@@ -252,6 +263,7 @@ class PhaseEntangledLatticeMemory:
             else:
                 self._provenance.append(provenance)
                 self._memory_ids.append(memory_id)
+            self._append_provenance_log(memory_id, provenance)
 
             # Update pointer with wraparound check
             new_pointer = self.pointer + 1
@@ -320,14 +332,15 @@ class PhaseEntangledLatticeMemory:
                 f"{len(vectors)} vectors, {len(phases)} phases"
             )
 
+        if len(vectors) == 0:
+            return []
         if provenances is not None and len(provenances) != len(vectors):
             raise ValueError(
                 f"provenances must match vectors length: "
                 f"{len(vectors)} vectors, {len(provenances)} provenances"
             )
-
-        if len(vectors) == 0:
-            return []
+        if provenances is None:
+            raise ValueError("provenances are required for batch entanglement.")
 
         with self._lock:
             # Ensure integrity before operation (only once for batch)
@@ -337,13 +350,7 @@ class PhaseEntangledLatticeMemory:
             last_accepted: tuple[int, float, float] | None = None
 
             for i, (vector, phase) in enumerate(zip(vectors, phases, strict=True)):
-                # Get or create provenance for this vector
-                if provenances is not None:
-                    provenance = provenances[i]
-                else:
-                    provenance = MemoryProvenance(
-                        source=MemorySource.SYSTEM_PROMPT, confidence=1.0, timestamp=datetime.now()
-                    )
+                provenance = provenances[i]
 
                 # Check confidence threshold
                 if provenance.confidence < self._confidence_threshold:
@@ -378,6 +385,14 @@ class PhaseEntangledLatticeMemory:
                 if not np.all(np.isfinite(vec_np)):
                     raise ValueError(f"vector at index {i} contains NaN or infinity values")
 
+                content_hash = compute_sha256_hex(vec_np.tobytes())
+                if provenance.content_hash != content_hash:
+                    raise ValueError(
+                        f"provenance content_hash does not match vector at index {i}."
+                    )
+                if provenance.policy_hash != get_policy_hash():
+                    raise ValueError("provenance policy_hash does not match active policy hash.")
+
                 norm = max(safe_norm(vec_np), self.MIN_NORM_THRESHOLD)
 
                 # Check capacity and evict if necessary
@@ -396,6 +411,7 @@ class PhaseEntangledLatticeMemory:
                 else:
                     self._provenance.append(provenance)
                     self._memory_ids.append(memory_id)
+                self._append_provenance_log(memory_id, provenance)
 
                 indices.append(idx)
                 last_accepted = (idx, float(phase), float(norm))
@@ -578,8 +594,16 @@ class PhaseEntangledLatticeMemory:
                     mem_id = self._memory_ids[glob]
                 else:
                     # Fallback for memories created before provenance was added
+                    vector_hash = compute_sha256_hex(self.memory_bank[glob].tobytes())
                     prov = MemoryProvenance(
-                        source=MemorySource.SYSTEM_PROMPT, confidence=1.0, timestamp=datetime.now()
+                        source=MemorySource.SYSTEM_PROMPT,
+                        confidence=1.0,
+                        timestamp=datetime.now(),
+                        source_id="legacy",
+                        ingestion_path="legacy.pelm",
+                        content_hash=vector_hash,
+                        policy_hash=get_policy_hash(),
+                        trust_tier=3,
                     )
                     mem_id = str(uuid.uuid4())
 
@@ -619,6 +643,18 @@ class PhaseEntangledLatticeMemory:
             "used": self.size,
             "memory_mb": round((self.memory_bank.nbytes + self.phase_bank.nbytes) / 1024**2, 2),
         }
+
+    def _append_provenance_log(self, memory_id: str, provenance: MemoryProvenance) -> None:
+        entry = {
+            "memory_id": memory_id,
+            "timestamp": provenance.timestamp.isoformat(),
+            "provenance": provenance.to_dict(),
+            "prev_hash": self._provenance_log_tail,
+        }
+        entry_hash = compute_json_hash(entry)
+        entry["entry_hash"] = entry_hash
+        self._provenance_log.append(entry)
+        self._provenance_log_tail = entry_hash
 
     def memory_usage_bytes(self) -> int:
         """Calculate conservative memory usage estimate in bytes.

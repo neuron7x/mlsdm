@@ -15,7 +15,7 @@ from pathlib import Path
 
 import pytest
 
-from mlsdm.memory.provenance import MemoryProvenance, MemorySource
+from mlsdm.memory.provenance import MemoryProvenance, MemorySource, get_policy_hash
 from mlsdm.memory.sqlite_store import SQLiteMemoryStore
 from mlsdm.memory.store import MemoryItem, compute_content_hash
 
@@ -59,6 +59,27 @@ def store_with_encryption(temp_db_path: Path) -> SQLiteMemoryStore:
     store.close()
 
 
+def _build_provenance(
+    content: str,
+    *,
+    source: MemorySource = MemorySource.USER_INPUT,
+    confidence: float = 0.95,
+    trust_tier: int = 3,
+    source_id: str = "integration-test",
+    ingestion_path: str = "tests.integration.sqlite_ltm",
+) -> MemoryProvenance:
+    return MemoryProvenance(
+        source=source,
+        confidence=confidence,
+        timestamp=datetime.now(),
+        source_id=source_id,
+        ingestion_path=ingestion_path,
+        content_hash=compute_content_hash(content),
+        policy_hash=get_policy_hash(),
+        trust_tier=trust_tier,
+    )
+
+
 def test_put_get_roundtrip_scrubbed(store: SQLiteMemoryStore) -> None:
     """Test storing and retrieving memory with PII scrubbing.
 
@@ -78,6 +99,7 @@ def test_put_get_roundtrip_scrubbed(store: SQLiteMemoryStore) -> None:
         content=original_content,
         content_hash=compute_content_hash(original_content),
         ttl_s=3600.0,  # 1 hour
+        provenance=_build_provenance(original_content),
     )
 
     # Store item
@@ -103,11 +125,7 @@ def test_put_get_roundtrip_scrubbed(store: SQLiteMemoryStore) -> None:
 
 def test_put_get_with_provenance(store: SQLiteMemoryStore) -> None:
     """Test storing and retrieving memory with provenance metadata."""
-    provenance = MemoryProvenance(
-        source=MemorySource.USER_INPUT,
-        confidence=0.95,
-        timestamp=datetime.now(),
-    )
+    provenance = _build_provenance("Test content with provenance")
 
     item = MemoryItem(
         id="test-002",
@@ -125,6 +143,11 @@ def test_put_get_with_provenance(store: SQLiteMemoryStore) -> None:
     assert retrieved.provenance is not None
     assert retrieved.provenance.source == MemorySource.USER_INPUT
     assert retrieved.provenance.confidence == 0.95
+    assert retrieved.provenance.source_id
+    assert retrieved.provenance.ingestion_path
+    assert retrieved.provenance.content_hash
+    assert retrieved.provenance.policy_hash
+    assert retrieved.provenance.trust_tier >= 0
 
 
 def test_ttl_evict(store: SQLiteMemoryStore) -> None:
@@ -141,6 +164,7 @@ def test_ttl_evict(store: SQLiteMemoryStore) -> None:
         content="This should expire soon",
         content_hash=compute_content_hash("This should expire soon"),
         ttl_s=50.0,  # Expires at now - 100 + 50 = now - 50 (already expired)
+        provenance=_build_provenance("This should expire soon"),
     )
 
     item2 = MemoryItem(
@@ -149,6 +173,7 @@ def test_ttl_evict(store: SQLiteMemoryStore) -> None:
         content="This should not expire yet",
         content_hash=compute_content_hash("This should not expire yet"),
         ttl_s=3600.0,  # Expires at now + 3600 (not expired)
+        provenance=_build_provenance("This should not expire yet"),
     )
 
     item3 = MemoryItem(
@@ -157,6 +182,7 @@ def test_ttl_evict(store: SQLiteMemoryStore) -> None:
         content="This has no TTL",
         content_hash=compute_content_hash("This has no TTL"),
         ttl_s=None,  # Never expires
+        provenance=_build_provenance("This has no TTL"),
     )
 
     # Store items
@@ -192,6 +218,7 @@ def test_query_text_search(store: SQLiteMemoryStore) -> None:
             ts=now + i,
             content=f"Memory about {topic}",
             content_hash=compute_content_hash(f"Memory about {topic}"),
+            provenance=_build_provenance(f"Memory about {topic}"),
         )
         for i, topic in enumerate(["cats", "dogs", "cats and dogs", "birds"])
     ]
@@ -228,6 +255,7 @@ def test_compact_runs(store: SQLiteMemoryStore) -> None:
             ts=now,
             content=f"Content {i}",
             content_hash=compute_content_hash(f"Content {i}"),
+            provenance=_build_provenance(f"Content {i}"),
         )
         store.put(item)
 
@@ -240,6 +268,7 @@ def test_compact_runs(store: SQLiteMemoryStore) -> None:
             content=f"Content {i}",
             content_hash=compute_content_hash(f"Content {i}"),
             ttl_s=0.1,
+            provenance=_build_provenance(f"Content {i}"),
         )
         store.put(item)
 
@@ -270,6 +299,7 @@ def test_stats(store: SQLiteMemoryStore) -> None:
             ts=now + i,
             content=f"Content {i}",
             content_hash=compute_content_hash(f"Content {i}"),
+            provenance=_build_provenance(f"Content {i}"),
         )
         store.put(item)
 
@@ -299,6 +329,7 @@ def test_encryption_at_rest_optional(
         ts=time.time(),
         content=original_content,
         content_hash=compute_content_hash(original_content),
+        provenance=_build_provenance(original_content),
     )
 
     # Store encrypted
@@ -332,6 +363,7 @@ def test_encryption_disabled_by_default(temp_db_path: Path) -> None:
         ts=time.time(),
         content="Plain text content",
         content_hash=compute_content_hash("Plain text content"),
+        provenance=_build_provenance("Plain text content"),
     )
 
     store.put(item)
@@ -371,6 +403,7 @@ def test_store_raw_option(temp_db_path: Path) -> None:
         ts=time.time(),
         content=original_content,
         content_hash=compute_content_hash(original_content),
+        provenance=_build_provenance(original_content),
     )
 
     store.put(item)

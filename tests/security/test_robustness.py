@@ -11,11 +11,33 @@ This test suite validates the system's behavior under adverse conditions:
 
 import os
 import tempfile
+from datetime import datetime
 
+import numpy as np
 import pytest
 
 from mlsdm.cognition.moral_filter import MoralFilter
 from mlsdm.cognition.moral_filter_v2 import MoralFilterV2
+from mlsdm.memory.provenance import (
+    MemoryProvenance,
+    MemorySource,
+    compute_sha256_hex,
+    get_policy_hash,
+)
+
+
+def _build_provenance(vector: list[float] | np.ndarray) -> MemoryProvenance:
+    vec_np = np.array(vector, dtype=np.float32)
+    return MemoryProvenance(
+        source=MemorySource.SYSTEM_PROMPT,
+        confidence=1.0,
+        timestamp=datetime.now(),
+        source_id="security.robustness",
+        ingestion_path="tests.security.test_robustness",
+        content_hash=compute_sha256_hex(vec_np.tobytes()),
+        policy_hash=get_policy_hash(),
+        trust_tier=2,
+    )
 
 
 class TestMoralFilterThresholdStability:
@@ -219,8 +241,10 @@ class TestStatelessFallback:
         pelm = PhaseEntangledLatticeMemory(dimension=10, capacity=100)
 
         # Add some data
-        pelm.entangle([1.0] * 10, 0.5)
-        pelm.entangle([2.0] * 10, 0.6)
+        vector_a = [1.0] * 10
+        vector_b = [2.0] * 10
+        pelm.entangle(vector_a, 0.5, provenance=_build_provenance(vector_a))
+        pelm.entangle(vector_b, 0.6, provenance=_build_provenance(vector_b))
 
         # Corrupt pointer
         pelm.pointer = 9999
@@ -249,11 +273,13 @@ class TestStatelessFallback:
 
         # NaN in vector should be rejected
         with pytest.raises(ValueError, match="invalid"):
-            pelm.entangle([1.0, float("nan"), 3.0], 0.5)
+            vector = [1.0, float("nan"), 3.0]
+            pelm.entangle(vector, 0.5, provenance=_build_provenance(vector))
 
         # Inf in vector should be rejected
         with pytest.raises(ValueError, match="invalid"):
-            pelm.entangle([float("inf"), 2.0, 3.0], 0.5)
+            vector = [float("inf"), 2.0, 3.0]
+            pelm.entangle(vector, 0.5, provenance=_build_provenance(vector))
 
     @pytest.mark.security
     def test_pelm_handles_extreme_dimensions(self):
@@ -295,7 +321,11 @@ class TestConcurrencyRobustness:
             try:
                 for i in range(count):
                     vector = [float(thread_id * 1000 + i)] * 10
-                    pelm.entangle(vector, (thread_id + i) / 100.0 % 1.0)
+                    pelm.entangle(
+                        vector,
+                        (thread_id + i) / 100.0 % 1.0,
+                        provenance=_build_provenance(vector),
+                    )
             except Exception as e:
                 errors.put((thread_id, str(e)))
 

@@ -20,10 +20,15 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import TYPE_CHECKING
+from functools import lru_cache
+import hashlib
+import json
+from pathlib import Path
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from datetime import datetime
+    from mlsdm.policy.loader import PolicyBundle
 
 
 class MemorySource(Enum):
@@ -50,6 +55,11 @@ class MemoryProvenance:
         source: The origin of this memory (user, LLM, system, etc.)
         confidence: Reliability score in [0.0, 1.0], where 1.0 = highest confidence
         timestamp: When this memory was created
+        source_id: Identifier for the originating source (user id, service id, model id)
+        ingestion_path: Pipeline or subsystem path that ingested this memory
+        content_hash: SHA256 hash of the memory content at ingestion
+        policy_hash: SHA256 hash of the active policy bundle at ingestion
+        trust_tier: Trust tier integer (0 = untrusted, 3 = highest trust)
         llm_model: Name of the LLM model if source is LLM_GENERATION
         parent_id: Optional ID of parent memory (for lineage tracking)
 
@@ -61,7 +71,12 @@ class MemoryProvenance:
         >>> prov = MemoryProvenance(
         ...     source=MemorySource.USER_INPUT,
         ...     confidence=0.95,
-        ...     timestamp=datetime.now()
+        ...     timestamp=datetime.now(),
+        ...     source_id="user-123",
+        ...     ingestion_path="api.ingest",
+        ...     content_hash="...",
+        ...     policy_hash="...",
+        ...     trust_tier=3,
         ... )
         >>> prov.is_high_confidence
         True
@@ -70,16 +85,33 @@ class MemoryProvenance:
     source: MemorySource
     confidence: float
     timestamp: datetime
+    source_id: str
+    ingestion_path: str
+    content_hash: str
+    policy_hash: str
+    trust_tier: int
     llm_model: str | None = None
     parent_id: str | None = None
 
     def __post_init__(self) -> None:
-        """Validate confidence is in valid range [0.0, 1.0]."""
+        """Validate provenance fields."""
         if not 0.0 <= self.confidence <= 1.0:
             raise ValueError(
                 f"Confidence must be in range [0.0, 1.0], got {self.confidence}. "
                 "Use 1.0 for highest confidence, 0.0 for lowest."
             )
+        if not isinstance(self.source_id, str) or not self.source_id.strip():
+            raise ValueError("source_id must be a non-empty string.")
+        if not isinstance(self.ingestion_path, str) or not self.ingestion_path.strip():
+            raise ValueError("ingestion_path must be a non-empty string.")
+        if not _is_sha256_hex(self.content_hash):
+            raise ValueError("content_hash must be a 64-character lowercase SHA256 hex digest.")
+        if not _is_sha256_hex(self.policy_hash):
+            raise ValueError("policy_hash must be a 64-character lowercase SHA256 hex digest.")
+        if isinstance(self.trust_tier, bool) or not isinstance(self.trust_tier, int):
+            raise ValueError("trust_tier must be an integer in [0, 3].")
+        if not 0 <= self.trust_tier <= 3:
+            raise ValueError("trust_tier must be in [0, 3].")
 
     @property
     def is_high_confidence(self) -> bool:
@@ -98,3 +130,57 @@ class MemoryProvenance:
             True if source is LLM_GENERATION, False otherwise
         """
         return self.source == MemorySource.LLM_GENERATION
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "source": self.source.value,
+            "confidence": self.confidence,
+            "timestamp": self.timestamp.isoformat(),
+            "source_id": self.source_id,
+            "ingestion_path": self.ingestion_path,
+            "content_hash": self.content_hash,
+            "policy_hash": self.policy_hash,
+            "trust_tier": self.trust_tier,
+            "llm_model": self.llm_model,
+            "parent_id": self.parent_id,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "MemoryProvenance":
+        from datetime import datetime as _dt
+
+        return cls(
+            source=MemorySource(data["source"]),
+            confidence=float(data["confidence"]),
+            timestamp=_dt.fromisoformat(data["timestamp"]),
+            source_id=str(data["source_id"]),
+            ingestion_path=str(data["ingestion_path"]),
+            content_hash=str(data["content_hash"]),
+            policy_hash=str(data["policy_hash"]),
+            trust_tier=int(data["trust_tier"]),
+            llm_model=data.get("llm_model"),
+            parent_id=data.get("parent_id"),
+        )
+
+
+def compute_sha256_hex(data: bytes) -> str:
+    return hashlib.sha256(data).hexdigest()
+
+
+def compute_json_hash(data: dict[str, Any]) -> str:
+    canonical = json.dumps(data, sort_keys=True, separators=(",", ":"))
+    return compute_sha256_hex(canonical.encode("utf-8"))
+
+
+def _is_sha256_hex(value: str) -> bool:
+    if not isinstance(value, str) or len(value) != 64:
+        return False
+    return all(ch in "0123456789abcdef" for ch in value)
+
+
+@lru_cache(maxsize=1)
+def get_policy_hash(policy_dir: Path | None = None) -> str:
+    from mlsdm.policy.loader import DEFAULT_POLICY_DIR, load_policy_bundle
+
+    bundle: "PolicyBundle" = load_policy_bundle(policy_dir or DEFAULT_POLICY_DIR)
+    return bundle.policy_hash

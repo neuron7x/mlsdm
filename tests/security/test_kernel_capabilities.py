@@ -6,11 +6,32 @@ access control for mutating operations, ensuring that only authorized internal
 modules can modify kernel state.
 """
 
+from datetime import datetime
+
 import numpy as np
 import pytest
 
 from mlsdm.core.cognitive_controller import CognitiveController
 from mlsdm.core.governance_kernel import Capability, GovernanceKernel
+from mlsdm.memory.provenance import (
+    MemoryProvenance,
+    MemorySource,
+    compute_sha256_hex,
+    get_policy_hash,
+)
+
+
+def _build_provenance(vector: np.ndarray) -> MemoryProvenance:
+    return MemoryProvenance(
+        source=MemorySource.SYSTEM_PROMPT,
+        confidence=1.0,
+        timestamp=datetime.now(),
+        source_id="security.kernel_capabilities",
+        ingestion_path="tests.security.test_kernel_capabilities",
+        content_hash=compute_sha256_hex(vector.astype(np.float32).tobytes()),
+        policy_hash=get_policy_hash(),
+        trust_tier=2,
+    )
 
 
 def test_direct_kernel_moral_adapt_is_blocked_without_cap():
@@ -44,7 +65,7 @@ def test_direct_kernel_memory_commit_is_blocked_without_cap():
 
     # Direct call from test module should be blocked
     with pytest.raises(PermissionError) as exc_info:
-        kernel.memory_commit(vector, phase=0.5)
+        kernel.memory_commit(vector, phase=0.5, provenance=_build_provenance(vector))
 
     assert "Kernel mutation blocked" in str(exc_info.value)
 
@@ -105,7 +126,12 @@ def test_forged_capability_is_rejected():
     )
 
     with pytest.raises(PermissionError) as exc_info:
-        kernel.memory_commit(vector, phase=0.5, cap=forged_cap_memory)
+        kernel.memory_commit(
+            vector,
+            phase=0.5,
+            provenance=_build_provenance(vector),
+            cap=forged_cap_memory,
+        )
 
     assert "Invalid capability: nonce mismatch" in str(exc_info.value)
 

@@ -4,10 +4,32 @@ Unit Tests for QILM_v2 (Quantum-Inspired Long-term Memory v2)
 Tests corruption detection, auto-recovery, and boundary checks.
 """
 
+from datetime import datetime
+
 import numpy as np
 import pytest
 
+from mlsdm.memory.provenance import (
+    MemoryProvenance,
+    MemorySource,
+    compute_sha256_hex,
+    get_policy_hash,
+)
 from mlsdm.memory.qilm_v2 import MemoryRetrieval, QILM_v2
+
+
+def _build_provenance(vector: list[float] | np.ndarray) -> MemoryProvenance:
+    vec_np = np.array(vector, dtype=np.float32)
+    return MemoryProvenance(
+        source=MemorySource.SYSTEM_PROMPT,
+        confidence=1.0,
+        timestamp=datetime.now(),
+        source_id="unit.qilm_v2",
+        ingestion_path="tests.unit.test_qilm_v2",
+        content_hash=compute_sha256_hex(vec_np.tobytes()),
+        policy_hash=get_policy_hash(),
+        trust_tier=2,
+    )
 
 
 class TestQILMv2Initialization:
@@ -54,7 +76,7 @@ class TestQILMv2Entangle:
         vector = [1.0, 2.0, 3.0]
         phase = 0.5
 
-        idx = qilm.entangle(vector, phase)
+        idx = qilm.entangle(vector, phase, provenance=_build_provenance(vector))
 
         assert idx == 0
         assert qilm.size == 1
@@ -70,7 +92,7 @@ class TestQILMv2Entangle:
         phases = [0.1, 0.5, 0.9]
 
         for i, (vec, phase) in enumerate(zip(vectors, phases, strict=True)):
-            idx = qilm.entangle(vec, phase)
+            idx = qilm.entangle(vec, phase, provenance=_build_provenance(vec))
             assert idx == i
 
         assert qilm.size == 3
@@ -82,13 +104,15 @@ class TestQILMv2Entangle:
 
         # Fill to capacity
         for i in range(3):
-            qilm.entangle([float(i), float(i + 1)], 0.1 * i)
+            vector = [float(i), float(i + 1)]
+            qilm.entangle(vector, 0.1 * i, provenance=_build_provenance(vector))
 
         assert qilm.pointer == 0  # Should wrap around
         assert qilm.size == 3
 
         # Add one more to test wraparound
-        qilm.entangle([10.0, 11.0], 0.5)
+        vector = [10.0, 11.0]
+        qilm.entangle(vector, 0.5, provenance=_build_provenance(vector))
         assert qilm.pointer == 1
         assert qilm.size == 3  # Size stays at capacity
 
@@ -102,7 +126,7 @@ class TestQILMv2Retrieve:
 
         vector = [1.0, 2.0, 3.0]
         phase = 0.5
-        qilm.entangle(vector, phase)
+        qilm.entangle(vector, phase, provenance=_build_provenance(vector))
 
         results = qilm.retrieve([1.0, 2.0, 3.0], 0.5, phase_tolerance=0.1, top_k=1)
 
@@ -121,9 +145,12 @@ class TestQILMv2Retrieve:
         """Test retrieve with phase tolerance."""
         qilm = QILM_v2(dimension=2, capacity=10)
 
-        qilm.entangle([1.0, 2.0], 0.1)
-        qilm.entangle([3.0, 4.0], 0.15)
-        qilm.entangle([5.0, 6.0], 0.5)
+        vector_a = [1.0, 2.0]
+        vector_b = [3.0, 4.0]
+        vector_c = [5.0, 6.0]
+        qilm.entangle(vector_a, 0.1, provenance=_build_provenance(vector_a))
+        qilm.entangle(vector_b, 0.15, provenance=_build_provenance(vector_b))
+        qilm.entangle(vector_c, 0.5, provenance=_build_provenance(vector_c))
 
         results = qilm.retrieve([1.0, 2.0], 0.1, phase_tolerance=0.1, top_k=5)
 
@@ -134,7 +161,8 @@ class TestQILMv2Retrieve:
         """Test retrieve with no matching phases."""
         qilm = QILM_v2(dimension=2, capacity=10)
 
-        qilm.entangle([1.0, 2.0], 0.1)
+        vector = [1.0, 2.0]
+        qilm.entangle(vector, 0.1, provenance=_build_provenance(vector))
 
         results = qilm.retrieve([1.0, 2.0], 0.9, phase_tolerance=0.05)
 
@@ -147,14 +175,16 @@ class TestQILMv2CorruptionDetection:
     def test_detect_no_corruption(self):
         """Test detect_corruption returns False for valid state."""
         qilm = QILM_v2(dimension=3, capacity=10)
-        qilm.entangle([1.0, 2.0, 3.0], 0.5)
+        vector = [1.0, 2.0, 3.0]
+        qilm.entangle(vector, 0.5, provenance=_build_provenance(vector))
 
         assert not qilm.detect_corruption()
 
     def test_detect_pointer_out_of_bounds(self):
         """Test corruption detection for pointer out of bounds."""
         qilm = QILM_v2(dimension=3, capacity=10)
-        qilm.entangle([1.0, 2.0, 3.0], 0.5)
+        vector = [1.0, 2.0, 3.0]
+        qilm.entangle(vector, 0.5, provenance=_build_provenance(vector))
 
         # Corrupt pointer
         qilm.pointer = 100
@@ -164,7 +194,8 @@ class TestQILMv2CorruptionDetection:
     def test_detect_negative_pointer(self):
         """Test corruption detection for negative pointer."""
         qilm = QILM_v2(dimension=3, capacity=10)
-        qilm.entangle([1.0, 2.0, 3.0], 0.5)
+        vector = [1.0, 2.0, 3.0]
+        qilm.entangle(vector, 0.5, provenance=_build_provenance(vector))
 
         # Corrupt pointer
         qilm.pointer = -1
@@ -174,7 +205,8 @@ class TestQILMv2CorruptionDetection:
     def test_detect_size_corruption(self):
         """Test corruption detection for invalid size."""
         qilm = QILM_v2(dimension=3, capacity=10)
-        qilm.entangle([1.0, 2.0, 3.0], 0.5)
+        vector = [1.0, 2.0, 3.0]
+        qilm.entangle(vector, 0.5, provenance=_build_provenance(vector))
 
         # Corrupt size
         qilm.size = 100
@@ -184,7 +216,8 @@ class TestQILMv2CorruptionDetection:
     def test_detect_checksum_mismatch(self):
         """Test corruption detection for checksum mismatch."""
         qilm = QILM_v2(dimension=3, capacity=10)
-        qilm.entangle([1.0, 2.0, 3.0], 0.5)
+        vector = [1.0, 2.0, 3.0]
+        qilm.entangle(vector, 0.5, provenance=_build_provenance(vector))
 
         # Directly corrupt memory without updating checksum
         qilm.memory_bank[0] = np.array([99.0, 99.0, 99.0], dtype=np.float32)
@@ -198,8 +231,10 @@ class TestQILMv2AutoRecovery:
     def test_auto_recover_pointer_corruption(self):
         """Test auto-recovery fixes pointer corruption."""
         qilm = QILM_v2(dimension=3, capacity=10)
-        qilm.entangle([1.0, 2.0, 3.0], 0.5)
-        qilm.entangle([4.0, 5.0, 6.0], 0.6)
+        vector_a = [1.0, 2.0, 3.0]
+        vector_b = [4.0, 5.0, 6.0]
+        qilm.entangle(vector_a, 0.5, provenance=_build_provenance(vector_a))
+        qilm.entangle(vector_b, 0.6, provenance=_build_provenance(vector_b))
 
         # Corrupt pointer
         qilm.pointer = 100
@@ -217,7 +252,8 @@ class TestQILMv2AutoRecovery:
     def test_auto_recover_negative_pointer(self):
         """Test auto-recovery fixes negative pointer."""
         qilm = QILM_v2(dimension=3, capacity=10)
-        qilm.entangle([1.0, 2.0, 3.0], 0.5)
+        vector = [1.0, 2.0, 3.0]
+        qilm.entangle(vector, 0.5, provenance=_build_provenance(vector))
 
         # Corrupt pointer
         qilm.pointer = -5
@@ -231,7 +267,8 @@ class TestQILMv2AutoRecovery:
     def test_auto_recover_size_corruption(self):
         """Test auto-recovery fixes size corruption."""
         qilm = QILM_v2(dimension=3, capacity=10)
-        qilm.entangle([1.0, 2.0, 3.0], 0.5)
+        vector = [1.0, 2.0, 3.0]
+        qilm.entangle(vector, 0.5, provenance=_build_provenance(vector))
 
         # Corrupt size
         qilm.size = -1
@@ -245,7 +282,8 @@ class TestQILMv2AutoRecovery:
     def test_auto_recover_rebuilds_norms(self):
         """Test auto-recovery rebuilds norms."""
         qilm = QILM_v2(dimension=3, capacity=10)
-        qilm.entangle([1.0, 2.0, 3.0], 0.5)
+        vector = [1.0, 2.0, 3.0]
+        qilm.entangle(vector, 0.5, provenance=_build_provenance(vector))
 
         original_norm = qilm.norms[0]
 
@@ -271,7 +309,7 @@ class TestQILMv2IntegrationWithCorruption:
         phases = [0.1 * i for i in range(5)]
 
         for vec, phase in zip(vectors, phases, strict=True):
-            qilm.entangle(vec, phase)
+            qilm.entangle(vec, phase, provenance=_build_provenance(vec))
 
         # Verify no corruption initially
         assert not qilm.detect_corruption()
@@ -296,8 +334,10 @@ class TestQILMv2IntegrationWithCorruption:
         """Test that retrieve triggers auto-recovery on corruption."""
         qilm = QILM_v2(dimension=3, capacity=10)
 
-        qilm.entangle([1.0, 2.0, 3.0], 0.5)
-        qilm.entangle([4.0, 5.0, 6.0], 0.5)
+        vector_a = [1.0, 2.0, 3.0]
+        vector_b = [4.0, 5.0, 6.0]
+        qilm.entangle(vector_a, 0.5, provenance=_build_provenance(vector_a))
+        qilm.entangle(vector_b, 0.5, provenance=_build_provenance(vector_b))
 
         # Corrupt pointer
         qilm.pointer = -1
@@ -313,13 +353,15 @@ class TestQILMv2IntegrationWithCorruption:
         """Test that entangle triggers auto-recovery on corruption."""
         qilm = QILM_v2(dimension=3, capacity=10)
 
-        qilm.entangle([1.0, 2.0, 3.0], 0.5)
+        vector = [1.0, 2.0, 3.0]
+        qilm.entangle(vector, 0.5, provenance=_build_provenance(vector))
 
         # Corrupt pointer
         qilm.pointer = 100
 
         # Entangle should trigger auto-recovery
-        idx = qilm.entangle([4.0, 5.0, 6.0], 0.6)
+        vector_new = [4.0, 5.0, 6.0]
+        idx = qilm.entangle(vector_new, 0.6, provenance=_build_provenance(vector_new))
 
         # Should succeed after recovery
         assert idx >= 0
@@ -329,7 +371,8 @@ class TestQILMv2IntegrationWithCorruption:
         """Test that unrecoverable corruption raises error."""
         qilm = QILM_v2(dimension=3, capacity=10)
 
-        qilm.entangle([1.0, 2.0, 3.0], 0.5)
+        vector = [1.0, 2.0, 3.0]
+        qilm.entangle(vector, 0.5, provenance=_build_provenance(vector))
 
         # Create severe corruption that might not be recoverable
         # by setting invalid pointer
@@ -340,7 +383,8 @@ class TestQILMv2IntegrationWithCorruption:
         # But we test the error path exists
         try:
             # Normal operations should attempt recovery
-            qilm.entangle([4.0, 5.0, 6.0], 0.6)
+            vector_new = [4.0, 5.0, 6.0]
+            qilm.entangle(vector_new, 0.6, provenance=_build_provenance(vector_new))
         except RuntimeError as e:
             # If recovery fails, should raise RuntimeError
             assert "Memory corruption" in str(e)
@@ -355,14 +399,16 @@ class TestQILMv2BoundaryChecks:
 
         # Fill to capacity
         for i in range(5):
-            idx = qilm.entangle([float(i), float(i + 1)], 0.1)
+            vector = [float(i), float(i + 1)]
+            idx = qilm.entangle(vector, 0.1, provenance=_build_provenance(vector))
             assert idx == i
 
         # Pointer should wrap to 0
         assert qilm.pointer == 0
 
         # Next entangle should use index 0
-        idx = qilm.entangle([99.0, 99.0], 0.9)
+        vector = [99.0, 99.0]
+        idx = qilm.entangle(vector, 0.9, provenance=_build_provenance(vector))
         assert idx == 0
         assert qilm.pointer == 1
 
@@ -372,7 +418,8 @@ class TestQILMv2BoundaryChecks:
 
         # Add more than capacity
         for i in range(10):
-            qilm.entangle([float(i), float(i + 1)], 0.1 * i)
+            vector = [float(i), float(i + 1)]
+            qilm.entangle(vector, 0.1 * i, provenance=_build_provenance(vector))
 
         # Size should be capped at capacity
         assert qilm.size == 3
@@ -405,7 +452,8 @@ class TestQILMv2StateStats:
         """Test get_state_stats returns correct information."""
         qilm = QILM_v2(dimension=10, capacity=100)
 
-        qilm.entangle([1.0] * 10, 0.5)
+        vector = [1.0] * 10
+        qilm.entangle(vector, 0.5, provenance=_build_provenance(vector))
 
         stats = qilm.get_state_stats()
 

@@ -7,10 +7,31 @@ from moral filtering using rigorous statistical validation.
 Principal System Architect level validation.
 """
 
+from datetime import datetime
+
 import numpy as np
 
 from mlsdm.core.cognitive_controller import CognitiveController
+from mlsdm.memory.provenance import (
+    MemoryProvenance,
+    MemorySource,
+    compute_sha256_hex,
+    get_policy_hash,
+)
 from mlsdm.utils.coherence_safety_metrics import CoherenceSafetyAnalyzer
+
+
+def _build_provenance(vector: np.ndarray) -> MemoryProvenance:
+    return MemoryProvenance(
+        source=MemorySource.SYSTEM_PROMPT,
+        confidence=1.0,
+        timestamp=datetime.now(),
+        source_id="validation.moral_filter",
+        ingestion_path="tests.validation.test_moral_filter_effectiveness",
+        content_hash=compute_sha256_hex(vector.astype(np.float32).tobytes()),
+        policy_hash=get_policy_hash(),
+        trust_tier=2,
+    )
 
 
 class NoFilterController(CognitiveController):
@@ -27,7 +48,7 @@ class NoFilterController(CognitiveController):
                 return self._build_state(rejected=True, note="sleep phase")
 
             phase_val = 0.1 if self.rhythm.phase == "wake" else 0.9
-            self.memory_commit(vector, phase_val)
+            self.memory_commit(vector, phase_val, provenance=_build_provenance(vector))
             self.rhythm_step()
 
             return self._build_state(rejected=False, note="processed")

@@ -9,6 +9,7 @@ INVARIANT: Tests verify that no raw vector data is logged (only metadata).
 """
 
 import time
+from datetime import datetime
 
 import numpy as np
 import pytest
@@ -16,6 +17,12 @@ from prometheus_client import CollectorRegistry
 
 from mlsdm.memory import PELM
 from mlsdm.memory.multi_level_memory import MultiLevelSynapticMemory
+from mlsdm.memory.provenance import (
+    MemoryProvenance,
+    MemorySource,
+    compute_sha256_hex,
+    get_policy_hash,
+)
 from mlsdm.observability.memory_telemetry import (
     MemoryMetricsExporter,
     MemoryOperationTimer,
@@ -31,6 +38,19 @@ from mlsdm.observability.memory_telemetry import (
     record_synaptic_update,
     reset_memory_metrics_exporter,
 )
+
+
+def _build_provenance(vector: list[float]) -> MemoryProvenance:
+    return MemoryProvenance(
+        source=MemorySource.SYSTEM_PROMPT,
+        confidence=1.0,
+        timestamp=datetime.now(),
+        source_id="observability.tests",
+        ingestion_path="tests.observability.test_memory_observability",
+        content_hash=compute_sha256_hex(np.array(vector, dtype=np.float32).tobytes()),
+        policy_hash=get_policy_hash(),
+        trust_tier=2,
+    )
 
 
 class TestMemoryMetricsExporter:
@@ -331,7 +351,13 @@ class TestPELMIntegration:
         pelm = PELM(dimension=64, capacity=100)
 
         # Store a vector
-        pelm.entangle([0.1] * 64, 0.5, correlation_id="test-entangle")
+        vector = [0.1] * 64
+        pelm.entangle(
+            vector,
+            0.5,
+            provenance=_build_provenance(vector),
+            correlation_id="test-entangle",
+        )
 
         # Verify metrics were recorded
         exporter = get_memory_metrics_exporter()
@@ -342,7 +368,8 @@ class TestPELMIntegration:
         pelm = PELM(dimension=64, capacity=100)
 
         # Store and retrieve
-        pelm.entangle([0.1] * 64, 0.5)
+        vector = [0.1] * 64
+        pelm.entangle(vector, 0.5, provenance=_build_provenance(vector))
         pelm.retrieve([0.1] * 64, 0.5, correlation_id="test-retrieve")
 
         # Verify retrieve metrics
@@ -367,7 +394,8 @@ class TestPELMIntegration:
 
         # Store multiple vectors
         for i in range(5):
-            pelm.entangle([0.1 * i] * 64, 0.5)
+            vector = [0.1 * i] * 64
+            pelm.entangle(vector, 0.5, provenance=_build_provenance(vector))
 
         exporter = get_memory_metrics_exporter()
         # Capacity should reflect 5 items
@@ -416,7 +444,7 @@ class TestObservabilityNoVectorDataLeakage:
         unique_vector = [0.12345] * 64
 
         pelm = PELM(dimension=64, capacity=100)
-        pelm.entangle(unique_vector, 0.5)
+        pelm.entangle(unique_vector, 0.5, provenance=_build_provenance(unique_vector))
 
         # Check that the unique value doesn't appear in metrics export
         exporter = get_memory_metrics_exporter()

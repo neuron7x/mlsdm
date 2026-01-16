@@ -6,10 +6,32 @@ in the core memory components (PELM, QILM, MultiLevelSynapticMemory).
 """
 
 import threading
+from datetime import datetime
 from queue import Queue
 
 import numpy as np
 import pytest
+
+from mlsdm.memory.provenance import (
+    MemoryProvenance,
+    MemorySource,
+    compute_sha256_hex,
+    get_policy_hash,
+)
+
+
+def _build_provenance(vector: list[float] | np.ndarray) -> MemoryProvenance:
+    vec_np = np.array(vector, dtype=np.float32)
+    return MemoryProvenance(
+        source=MemorySource.SYSTEM_PROMPT,
+        confidence=1.0,
+        timestamp=datetime.now(),
+        source_id="property.concurrency_safety",
+        ingestion_path="tests.property.test_concurrency_safety",
+        content_hash=compute_sha256_hex(vec_np.tobytes()),
+        policy_hash=get_policy_hash(),
+        trust_tier=2,
+    )
 
 
 class TestPELMConcurrency:
@@ -31,7 +53,7 @@ class TestPELMConcurrency:
                 for i in range(iterations):
                     vector = [float(worker_id * 1000 + i)] * 10
                     phase = (worker_id * 10 + i) % 100 / 100.0
-                    pelm.entangle(vector, phase)
+                    pelm.entangle(vector, phase, provenance=_build_provenance(vector))
             except Exception as e:
                 errors.put(("entangle", worker_id, str(e)))
 
@@ -81,7 +103,7 @@ class TestPELMConcurrency:
             try:
                 for i in range(count):
                     vector = [float(worker_id), float(i)] + [0.0] * 3
-                    pelm.entangle(vector, 0.5)
+                    pelm.entangle(vector, 0.5, provenance=_build_provenance(vector))
             except Exception as e:
                 errors.put((worker_id, str(e)))
 
@@ -123,7 +145,7 @@ class TestPELMConcurrency:
             for i in range(count):
                 try:
                     vector = [float(worker_id + i)] * 5
-                    pelm.entangle(vector, 0.5)
+                    pelm.entangle(vector, 0.5, provenance=_build_provenance(vector))
                     with progress:
                         operations_done += 1
                         progress.notify_all()
@@ -340,7 +362,7 @@ class TestStressConditions:
                     if op == "entangle":
                         vec = np.random.randn(10).tolist()
                         phase = np.random.random()
-                        pelm.entangle(vec, phase)
+                        pelm.entangle(vec, phase, provenance=_build_provenance(vec))
                     else:
                         query = np.random.randn(10).tolist()
                         phase = np.random.random()

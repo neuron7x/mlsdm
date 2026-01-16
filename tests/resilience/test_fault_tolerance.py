@@ -13,6 +13,7 @@ These tests address the production readiness requirements for fault tolerance.
 
 import threading
 import time
+from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor
 from queue import Queue
 
@@ -24,10 +25,30 @@ from mlsdm.core.cognitive_controller import CognitiveController
 from mlsdm.core.llm_wrapper import LLMWrapper
 from mlsdm.engine.neuro_cognitive_engine import NeuroCognitiveEngine, NeuroEngineConfig
 from mlsdm.memory import PhaseEntangledLatticeMemory
+from mlsdm.memory.provenance import (
+    MemoryProvenance,
+    MemorySource,
+    compute_sha256_hex,
+    get_policy_hash,
+)
 
 # ============================================================================
 # Test Fixtures
 # ============================================================================
+
+
+def _build_provenance(vector: list[float] | np.ndarray) -> MemoryProvenance:
+    vec_np = np.array(vector, dtype=np.float32)
+    return MemoryProvenance(
+        source=MemorySource.SYSTEM_PROMPT,
+        confidence=1.0,
+        timestamp=datetime.now(),
+        source_id="resilience.fault_tolerance",
+        ingestion_path="tests.resilience.test_fault_tolerance",
+        content_hash=compute_sha256_hex(vec_np.tobytes()),
+        policy_hash=get_policy_hash(),
+        trust_tier=2,
+    )
 
 
 def create_stub_llm():
@@ -211,7 +232,7 @@ class TestMemoryPressureResilience:
         for i in range(500):
             vec = np.random.randn(384).astype(np.float32).tolist()
             phase = (i % 10) / 10.0
-            pelm.entangle(vec, phase=phase)
+            pelm.entangle(vec, phase=phase, provenance=_build_provenance(vec))
 
             if i % 10 == 0 and pelm.size > 0:
                 query = np.random.randn(384).astype(np.float32).tolist()
@@ -231,7 +252,7 @@ class TestMemoryPressureResilience:
         # Add some data
         for i in range(50):
             vec = [float(i)] * 10
-            pelm.entangle(vec, phase=0.5)
+            pelm.entangle(vec, phase=0.5, provenance=_build_provenance(vec))
 
         # Simulate corruption (manually corrupt pointer)
         pelm.pointer = 9999  # Invalid pointer
@@ -593,7 +614,7 @@ class TestRecoveryMechanisms:
         # Add data
         for i in range(50):
             vec = [float(i)] * 10
-            pelm.entangle(vec, phase=0.5)
+            pelm.entangle(vec, phase=0.5, provenance=_build_provenance(vec))
 
         # Corrupt state
         pelm.pointer = 99999
