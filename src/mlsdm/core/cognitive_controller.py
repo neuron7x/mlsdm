@@ -1,5 +1,6 @@
 import logging
 import time
+from datetime import datetime
 from collections.abc import Callable
 from threading import Lock
 from typing import TYPE_CHECKING, Any, cast
@@ -8,6 +9,7 @@ import numpy as np
 import psutil
 
 from ..memory.phase_entangled_lattice_memory import MemoryRetrieval
+from ..memory.provenance import MemoryProvenance, MemorySource, compute_sha256_hex, get_policy_hash
 from ..observability.metrics import get_metrics_exporter
 from ..observability.tracing import get_tracer_manager
 from .governance_kernel import GovernanceKernel, PelmRO
@@ -339,7 +341,17 @@ class CognitiveController:
                 ) as memory_span:
                     # Optimization: use cached phase value
                     phase_val = self._phase_cache[self.rhythm.phase]
-                    self.memory_commit(vector, phase_val)
+                    provenance = MemoryProvenance(
+                        source=MemorySource.SYSTEM_PROMPT,
+                        confidence=1.0,
+                        timestamp=datetime.now(),
+                        source_id="cognitive_controller",
+                        ingestion_path="core.cognitive_controller.process_event",
+                        content_hash=compute_sha256_hex(vector.astype(np.float32).tobytes()),
+                        policy_hash=get_policy_hash(),
+                        trust_tier=2,
+                    )
+                    self.memory_commit(vector, phase_val, provenance=provenance)
                     memory_span.set_attribute(
                         "mlsdm.pelm_used", self.pelm.get_state_stats()["used"]
                     )

@@ -17,14 +17,14 @@ Security properties:
 
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 import os
 import sqlite3
-from datetime import datetime as dt
 from typing import Any, cast
 
-from mlsdm.memory.provenance import MemoryProvenance, MemorySource
+from mlsdm.memory.provenance import MemoryProvenance, get_policy_hash
 from mlsdm.memory.store import MemoryItem
 from mlsdm.security.payload_scrubber import scrub_text
 from mlsdm.utils.errors import ConfigurationError
@@ -130,6 +130,17 @@ class SQLiteMemoryStore:
             )
         """)
 
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS provenance_log (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                memory_id TEXT NOT NULL,
+                ts REAL NOT NULL,
+                provenance_json TEXT NOT NULL,
+                prev_hash TEXT,
+                entry_hash TEXT NOT NULL
+            )
+        """)
+
         # Create indexes for efficient queries
         cursor.execute("""
             CREATE INDEX IF NOT EXISTS idx_memories_ts
@@ -197,6 +208,13 @@ class SQLiteMemoryStore:
         conn = self._get_connection()
         cursor = conn.cursor()
 
+        if item.provenance is None:
+            raise ValueError("provenance is required for memory persistence.")
+        if item.provenance.content_hash != item.content_hash:
+            raise ValueError("provenance content_hash does not match item content_hash.")
+        if item.provenance.policy_hash != get_policy_hash():
+            raise ValueError("provenance policy_hash does not match active policy hash.")
+
         # Prepare content
         content_to_store = item.content
         if not self.store_raw:
@@ -218,15 +236,7 @@ class SQLiteMemoryStore:
 
         # Serialize JSON fields
         pii_flags_json = json.dumps(item.pii_flags) if item.pii_flags else None
-        provenance_json: str | None = None
-        if item.provenance is not None:
-            provenance_json = json.dumps({
-                "source": item.provenance.source.value,
-                "confidence": item.provenance.confidence,
-                "timestamp": item.provenance.timestamp.isoformat(),
-                "llm_model": item.provenance.llm_model,
-                "parent_id": item.provenance.parent_id,
-            })
+        provenance_json = json.dumps(item.provenance.to_dict(), sort_keys=True)
 
         # Insert or replace
         cursor.execute("""
@@ -249,6 +259,9 @@ class SQLiteMemoryStore:
 
         conn.commit()
         logger.debug("Stored memory item %s (encrypted=%s)", item.id, alg is not None)
+
+        self._append_provenance_log(cursor, item.id, item.ts, provenance_json)
+        conn.commit()
 
         return item.id
 
@@ -290,13 +303,10 @@ class SQLiteMemoryStore:
         provenance: MemoryProvenance | None = None
         if row["provenance_json"]:
             prov_data = json.loads(row["provenance_json"])
-            provenance = MemoryProvenance(
-                source=MemorySource(prov_data["source"]),
-                confidence=prov_data["confidence"],
-                timestamp=dt.fromisoformat(prov_data["timestamp"]),
-                llm_model=prov_data.get("llm_model"),
-                parent_id=prov_data.get("parent_id"),
-            )
+            try:
+                provenance = MemoryProvenance.from_dict(prov_data)
+            except Exception as exc:
+                logger.warning("Invalid provenance for memory %s: %s", row["id"], exc)
 
         return MemoryItem(
             id=row["id"],
@@ -372,13 +382,10 @@ class SQLiteMemoryStore:
             provenance: MemoryProvenance | None = None
             if row["provenance_json"]:
                 prov_data = json.loads(row["provenance_json"])
-                provenance = MemoryProvenance(
-                    source=MemorySource(prov_data["source"]),
-                    confidence=prov_data["confidence"],
-                    timestamp=dt.fromisoformat(prov_data["timestamp"]),
-                    llm_model=prov_data.get("llm_model"),
-                    parent_id=prov_data.get("parent_id"),
-                )
+                try:
+                    provenance = MemoryProvenance.from_dict(prov_data)
+                except Exception as exc:
+                    logger.warning("Invalid provenance for memory %s: %s", row["id"], exc)
 
             items.append(MemoryItem(
                 id=row["id"],
@@ -483,6 +490,26 @@ class SQLiteMemoryStore:
             self._conn.close()
             self._conn = None
             logger.debug("Closed LTM database connection")
+
+    def _append_provenance_log(
+        self,
+        cursor: sqlite3.Cursor,
+        memory_id: str,
+        ts: float,
+        provenance_json: str,
+    ) -> None:
+        cursor.execute("SELECT entry_hash FROM provenance_log ORDER BY id DESC LIMIT 1")
+        row = cursor.fetchone()
+        prev_hash = row[0] if row is not None else None
+        hash_payload = f"{prev_hash or ''}|{memory_id}|{ts}|{provenance_json}".encode("utf-8")
+        entry_hash = hashlib.sha256(hash_payload).hexdigest()
+        cursor.execute(
+            """
+            INSERT INTO provenance_log (memory_id, ts, provenance_json, prev_hash, entry_hash)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (memory_id, ts, provenance_json, prev_hash, entry_hash),
+        )
 
     def __del__(self) -> None:
         """Ensure connection is closed on cleanup."""

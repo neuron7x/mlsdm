@@ -9,12 +9,19 @@ Loads counterexamples from JSON files and verifies that:
 
 import json
 import os
+from datetime import datetime
 
 import numpy as np
 import pytest
 
 from mlsdm.memory.multi_level_memory import MultiLevelSynapticMemory
 from mlsdm.memory.phase_entangled_lattice_memory import PhaseEntangledLatticeMemory
+from mlsdm.memory.provenance import (
+    MemoryProvenance,
+    MemorySource,
+    compute_sha256_hex,
+    get_policy_hash,
+)
 
 # Test tolerances
 REGRESSION_TOLERANCE = 0.40  # Tolerance for known failure variance in heuristic estimates
@@ -23,6 +30,20 @@ REGRESSION_TOLERANCE = 0.40  # Tolerance for known failure variance in heuristic
 # ============================================================================
 # Helper Functions
 # ============================================================================
+
+
+def _build_provenance(vector: np.ndarray | list[float]) -> MemoryProvenance:
+    vec_np = np.array(vector, dtype=np.float32)
+    return MemoryProvenance(
+        source=MemorySource.SYSTEM_PROMPT,
+        confidence=1.0,
+        timestamp=datetime.now(),
+        source_id="property.counterexamples",
+        ingestion_path="tests.property.test_counterexamples_regression",
+        content_hash=compute_sha256_hex(vec_np.tobytes()),
+        policy_hash=get_policy_hash(),
+        trust_tier=2,
+    )
 
 
 def load_counterexamples(filename):
@@ -298,7 +319,8 @@ class TestMemoryCounterexamples:
                 phase = 0.5
                 for i in range(case["vectors_inserted"]):
                     vec = np.random.randn(384).astype(np.float32)
-                    pelm.entangle(vec.tolist(), phase=phase)
+                    vector = vec.tolist()
+                    pelm.entangle(vector, phase=phase, provenance=_build_provenance(vector))
 
                 actual_size = pelm.size
 

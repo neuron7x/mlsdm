@@ -13,7 +13,7 @@ import numpy as np
 from mlsdm.cognition.moral_filter import MoralFilter
 from mlsdm.cognition.ontology_matcher import OntologyMatcher
 from mlsdm.memory.multi_level_memory import MultiLevelSynapticMemory
-from mlsdm.memory.provenance import MemoryProvenance, MemorySource
+from mlsdm.memory.provenance import MemoryProvenance, MemorySource, get_policy_hash
 from mlsdm.memory.qilm_module import QILM
 from mlsdm.memory.store import MemoryItem, MemoryStore, compute_content_hash
 from mlsdm.rhythm.cognitive_rhythm import CognitiveRhythm
@@ -262,6 +262,8 @@ class MemoryManager:
         """
         if self._ltm_store is None:
             return
+        if provenance is None:
+            raise ValueError("provenance is required for LTM persistence.")
 
         try:
             item = MemoryItem(
@@ -322,6 +324,11 @@ class MemoryManager:
                 source=MemorySource.SYSTEM_PROMPT,
                 confidence=moral_value,
                 timestamp=datetime.now(),
+                source_id="memory_manager",
+                ingestion_path="core.memory_manager.process_event",
+                content_hash=compute_content_hash(content),
+                policy_hash=get_policy_hash(),
+                trust_tier=2,
             )
             self._persist_to_ltm(content, provenance)
 

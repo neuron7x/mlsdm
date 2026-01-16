@@ -11,13 +11,39 @@ Tests for the SQLiteMemoryStore implementation including:
 
 import os
 import time
+from datetime import datetime
 
 import pytest
 
-from mlsdm.memory.provenance import MemoryProvenance, MemorySource
+from mlsdm.memory.provenance import MemoryProvenance, MemorySource, get_policy_hash
 from mlsdm.memory.sqlite_store import _CRYPTOGRAPHY_AVAILABLE, SQLiteMemoryStore
 from mlsdm.memory.store import MemoryItem, compute_content_hash
 from mlsdm.utils.errors import ConfigurationError
+
+
+def _build_provenance(
+    content: str,
+    *,
+    source: MemorySource = MemorySource.SYSTEM_PROMPT,
+    confidence: float = 0.95,
+    trust_tier: int = 3,
+    source_id: str = "test-source",
+    ingestion_path: str = "tests.unit.sqlite_store",
+    llm_model: str | None = None,
+    parent_id: str | None = None,
+) -> MemoryProvenance:
+    return MemoryProvenance(
+        source=source,
+        confidence=confidence,
+        timestamp=datetime.now(),
+        source_id=source_id,
+        ingestion_path=ingestion_path,
+        content_hash=compute_content_hash(content),
+        policy_hash=get_policy_hash(),
+        trust_tier=trust_tier,
+        llm_model=llm_model,
+        parent_id=parent_id,
+    )
 
 
 class TestSQLiteMemoryStoreInit:
@@ -112,11 +138,28 @@ class TestSQLiteMemoryStorePut:
             ts=time.time(),
             content="Hello world",
             content_hash=compute_content_hash("Hello world"),
+            provenance=_build_provenance("Hello world"),
         )
 
         result_id = store.put(item)
 
         assert result_id == "test_id_1"
+        store.close()
+
+    def test_put_rejects_missing_provenance(self, tmp_path):
+        """Test that store rejects items without provenance."""
+        db_path = str(tmp_path / "test.db")
+        store = SQLiteMemoryStore(db_path=db_path)
+
+        item = MemoryItem(
+            id="no_prov",
+            ts=time.time(),
+            content="Missing provenance",
+            content_hash=compute_content_hash("Missing provenance"),
+        )
+
+        with pytest.raises(ValueError, match="provenance is required"):
+            store.put(item)
         store.close()
 
     def test_put_with_pii_scrubbing(self, tmp_path):
@@ -129,6 +172,7 @@ class TestSQLiteMemoryStorePut:
             ts=time.time(),
             content="Contact me at test@example.com for details",
             content_hash=compute_content_hash("Contact me at test@example.com for details"),
+            provenance=_build_provenance("Contact me at test@example.com for details"),
         )
 
         store.put(item)
@@ -149,6 +193,7 @@ class TestSQLiteMemoryStorePut:
             ts=time.time(),
             content=original_content,
             content_hash=compute_content_hash(original_content),
+            provenance=_build_provenance(original_content),
         )
 
         store.put(item)
@@ -160,15 +205,11 @@ class TestSQLiteMemoryStorePut:
 
     def test_put_with_provenance(self, tmp_path):
         """Test storing item with provenance metadata."""
-        from datetime import datetime
-
         db_path = str(tmp_path / "test.db")
         store = SQLiteMemoryStore(db_path=db_path)
 
-        provenance = MemoryProvenance(
-            source=MemorySource.SYSTEM_PROMPT,
-            confidence=0.95,
-            timestamp=datetime.now(),
+        provenance = _build_provenance(
+            "Test content with provenance",
             llm_model="gpt-4",
             parent_id="parent_123",
         )
@@ -202,6 +243,7 @@ class TestSQLiteMemoryStorePut:
             content="Temporary content",
             content_hash=compute_content_hash("Temporary content"),
             ttl_s=3600.0,  # 1 hour TTL
+            provenance=_build_provenance("Temporary content"),
         )
 
         store.put(item)
@@ -222,6 +264,7 @@ class TestSQLiteMemoryStorePut:
             content="Content with PII flags",
             content_hash=compute_content_hash("Content with PII flags"),
             pii_flags=pii_flags,
+            provenance=_build_provenance("Content with PII flags"),
         )
 
         store.put(item)
@@ -241,6 +284,7 @@ class TestSQLiteMemoryStorePut:
             ts=time.time(),
             content="Original content",
             content_hash=compute_content_hash("Original content"),
+            provenance=_build_provenance("Original content"),
         )
         store.put(item1)
 
@@ -250,6 +294,7 @@ class TestSQLiteMemoryStorePut:
             ts=time.time(),
             content="Updated content",
             content_hash=compute_content_hash("Updated content"),
+            provenance=_build_provenance("Updated content"),
         )
         store.put(item2)
 
@@ -271,6 +316,7 @@ class TestSQLiteMemoryStoreGet:
             ts=1234567890.0,
             content="Content to retrieve",
             content_hash=compute_content_hash("Content to retrieve"),
+            provenance=_build_provenance("Content to retrieve"),
         )
         store.put(item)
 
@@ -307,6 +353,7 @@ class TestSQLiteMemoryStoreQuery:
                 ts=time.time() + i,
                 content=content,
                 content_hash=compute_content_hash(content),
+                provenance=_build_provenance(content),
             )
             store.put(item)
 
@@ -329,6 +376,7 @@ class TestSQLiteMemoryStoreQuery:
                 ts=time.time() + i,
                 content=f"Test content {i}",
                 content_hash=compute_content_hash(f"Test content {i}"),
+                provenance=_build_provenance(f"Test content {i}"),
             )
             store.put(item)
 
@@ -351,6 +399,7 @@ class TestSQLiteMemoryStoreQuery:
                 ts=base_ts + i * 100,
                 content=f"Content at time {i}",
                 content_hash=compute_content_hash(f"Content at time {i}"),
+                provenance=_build_provenance(f"Content at time {i}"),
             )
             store.put(item)
 
@@ -372,6 +421,7 @@ class TestSQLiteMemoryStoreQuery:
                 ts=1000 + i * 100,  # 1000, 1100, 1200
                 content="Search term",
                 content_hash=compute_content_hash(f"Search term {i}"),
+                provenance=_build_provenance("Search term"),
             )
             store.put(item)
 
@@ -392,6 +442,7 @@ class TestSQLiteMemoryStoreQuery:
             ts=time.time(),
             content="Hello world",
             content_hash=compute_content_hash("Hello world"),
+            provenance=_build_provenance("Hello world"),
         )
         store.put(item)
 
@@ -418,6 +469,7 @@ class TestSQLiteMemoryStoreEviction:
             content="Expired content",
             content_hash=compute_content_hash("Expired content"),
             ttl_s=50.0,  # 50 second TTL (already expired)
+            provenance=_build_provenance("Expired content"),
         )
         store.put(expired_item)
 
@@ -428,6 +480,7 @@ class TestSQLiteMemoryStoreEviction:
             content="Valid content",
             content_hash=compute_content_hash("Valid content"),
             ttl_s=3600.0,  # 1 hour TTL
+            provenance=_build_provenance("Valid content"),
         )
         store.put(valid_item)
 
@@ -437,6 +490,7 @@ class TestSQLiteMemoryStoreEviction:
             ts=now - 1000,
             content="Permanent content",
             content_hash=compute_content_hash("Permanent content"),
+            provenance=_build_provenance("Permanent content"),
         )
         store.put(permanent_item)
 
@@ -463,6 +517,7 @@ class TestSQLiteMemoryStoreEviction:
             content="Fresh content",
             content_hash=compute_content_hash("Fresh content"),
             ttl_s=3600.0,
+            provenance=_build_provenance("Fresh content"),
         )
         store.put(item)
 
@@ -515,6 +570,7 @@ class TestSQLiteMemoryStoreStats:
                 ts=1000.0 + i * 10,
                 content=f"Content {i}",
                 content_hash=compute_content_hash(f"Content {i}"),
+                provenance=_build_provenance(f"Content {i}"),
             )
             store.put(item)
 
@@ -542,6 +598,7 @@ class TestSQLiteMemoryStoreCompact:
                 ts=time.time(),
                 content=f"Temporary content {i}",
                 content_hash=compute_content_hash(f"Temporary content {i}"),
+                provenance=_build_provenance(f"Temporary content {i}"),
             )
             store.put(item)
 
@@ -567,6 +624,7 @@ class TestSQLiteMemoryStoreEncryption:
             ts=time.time(),
             content=original_content,
             content_hash=compute_content_hash(original_content),
+            provenance=_build_provenance(original_content),
         )
         store.put(item)
 
@@ -591,6 +649,7 @@ class TestSQLiteMemoryStoreEncryption:
             ts=time.time(),
             content=original_content,
             content_hash=compute_content_hash(original_content),
+            provenance=_build_provenance(original_content),
         )
         store.put(item)
         store.close()
@@ -610,17 +669,16 @@ class TestSQLiteMemoryStoreEncryption:
     @pytest.mark.skipif(not _CRYPTOGRAPHY_AVAILABLE, reason="cryptography not installed")
     def test_encrypted_get_with_provenance(self, tmp_path):
         """Test get returns properly decrypted content with provenance."""
-        from datetime import datetime
-
         db_path = str(tmp_path / "encrypted.db")
         encryption_key = os.urandom(32)
 
         store = SQLiteMemoryStore(db_path=db_path, encryption_key=encryption_key)
 
-        provenance = MemoryProvenance(
+        provenance = _build_provenance(
+            "Encrypted with provenance",
             source=MemorySource.USER_INPUT,
             confidence=0.8,
-            timestamp=datetime.now(),
+            trust_tier=2,
         )
         item = MemoryItem(
             id="enc_prov",
@@ -697,6 +755,10 @@ class TestSQLiteMemoryStoreSchemaInit:
         # Check table exists
         cursor.execute(
             "SELECT name FROM sqlite_master WHERE type='table' AND name='memories'"
+        )
+        assert cursor.fetchone() is not None
+        cursor.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='provenance_log'"
         )
         assert cursor.fetchone() is not None
 

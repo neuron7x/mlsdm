@@ -30,7 +30,12 @@ from tenacity import (
     wait_exponential,
 )
 
-from ..memory.provenance import MemoryProvenance, MemorySource
+from ..memory.provenance import (
+    MemoryProvenance,
+    MemorySource,
+    compute_sha256_hex,
+    get_policy_hash,
+)
 from ..observability.tracing import get_tracer_manager
 from ..speech.governance import (  # noqa: TC001 - used at runtime in function signatures
     SpeechGovernanceResult,
@@ -730,11 +735,17 @@ class LLMWrapper:
                 if confidence is None:
                     confidence = self._estimate_confidence(response_text)
 
+                vector_hash = compute_sha256_hex(prompt_vector.astype(np.float32).tobytes())
                 # Create provenance metadata
                 provenance = MemoryProvenance(
                     source=MemorySource.LLM_GENERATION,
                     confidence=confidence,
                     timestamp=datetime.now(),
+                    source_id=getattr(self, "model_name", "llm_generation"),
+                    ingestion_path="core.llm_wrapper._update_memory_after_generate",
+                    content_hash=vector_hash,
+                    policy_hash=get_policy_hash(),
+                    trust_tier=1,
                     llm_model=getattr(self, "model_name", None),
                 )
 
@@ -798,17 +809,19 @@ class LLMWrapper:
         if len(self.consolidation_buffer) == 0:
             return
 
-        # During sleep, re-encode memories with sleep phase
-        # Use higher confidence for consolidated memories
-        consolidation_provenance = MemoryProvenance(
-            source=MemorySource.SYSTEM_PROMPT,
-            confidence=0.8,  # Consolidated memories have good confidence
-            timestamp=datetime.now(),
-        )
-
         for vector in self.consolidation_buffer:
             # Re-entangle with sleep phase for long-term storage
             try:
+                consolidation_provenance = MemoryProvenance(
+                    source=MemorySource.SYSTEM_PROMPT,
+                    confidence=0.8,  # Consolidated memories have good confidence
+                    timestamp=datetime.now(),
+                    source_id="system_consolidation",
+                    ingestion_path="core.llm_wrapper._consolidate_memories",
+                    content_hash=compute_sha256_hex(vector.astype(np.float32).tobytes()),
+                    policy_hash=get_policy_hash(),
+                    trust_tier=2,
+                )
                 self._kernel.memory_commit(
                     vector, self.SLEEP_PHASE, provenance=consolidation_provenance
                 )

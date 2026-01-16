@@ -10,6 +10,7 @@ Principal AI Safety Engineer level validation.
 
 import threading
 from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime
 
 import numpy as np
 import pytest
@@ -17,6 +18,26 @@ import pytest
 from mlsdm.core.cognitive_controller import CognitiveController
 from mlsdm.memory.multi_level_memory import MultiLevelSynapticMemory
 from mlsdm.memory.phase_entangled_lattice_memory import PhaseEntangledLatticeMemory
+from mlsdm.memory.provenance import (
+    MemoryProvenance,
+    MemorySource,
+    compute_sha256_hex,
+    get_policy_hash,
+)
+
+
+def _build_provenance(vector: np.ndarray | list[float]) -> MemoryProvenance:
+    vec_np = np.array(vector, dtype=np.float32)
+    return MemoryProvenance(
+        source=MemorySource.SYSTEM_PROMPT,
+        confidence=1.0,
+        timestamp=datetime.now(),
+        source_id="safety.memory_leakage",
+        ingestion_path="tests.safety.test_memory_leakage",
+        content_hash=compute_sha256_hex(vec_np.tobytes()),
+        policy_hash=get_policy_hash(),
+        trust_tier=2,
+    )
 
 
 class TestMemoryIsolation:
@@ -38,7 +59,8 @@ class TestMemoryIsolation:
             vec = np.random.randn(dim).astype(np.float32)
             vec = vec / np.linalg.norm(vec) * 1.0  # Normalized to 1.0
             old_vectors.append(vec)
-            pelm.entangle(vec.tolist(), phase=0.5)
+            vector = vec.tolist()
+            pelm.entangle(vector, phase=0.5, provenance=_build_provenance(vector))
 
         assert pelm.size == capacity
 
@@ -49,7 +71,8 @@ class TestMemoryIsolation:
             vec = np.random.randn(dim).astype(np.float32)
             vec = vec / np.linalg.norm(vec) * 2.0  # Different magnitude
             new_vectors.append(vec)
-            pelm.entangle(vec.tolist(), phase=0.5)
+            vector = vec.tolist()
+            pelm.entangle(vector, phase=0.5, provenance=_build_provenance(vector))
 
         # Verify capacity still bounded
         assert pelm.size == capacity
@@ -152,7 +175,7 @@ class TestMemoryContentSafety:
 
         # Should raise ValueError for NaN
         with pytest.raises(ValueError, match="invalid value"):
-            pelm.entangle(nan_vec, phase=0.5)
+            pelm.entangle(nan_vec, phase=0.5, provenance=_build_provenance(nan_vec))
 
     def test_inf_vectors_rejected(self):
         """Verify infinite vectors are properly rejected."""
@@ -164,7 +187,7 @@ class TestMemoryContentSafety:
 
         # Should raise ValueError for infinity
         with pytest.raises(ValueError, match="invalid value"):
-            pelm.entangle(inf_vec, phase=0.5)
+            pelm.entangle(inf_vec, phase=0.5, provenance=_build_provenance(inf_vec))
 
     def test_extreme_magnitude_vectors(self):
         """Verify extremely large/small vectors are handled."""
@@ -178,8 +201,8 @@ class TestMemoryContentSafety:
         small_vec = (np.ones(dim) * 1e-30).tolist()
 
         # Should handle without crashing
-        pelm.entangle(large_vec, phase=0.5)
-        pelm.entangle(small_vec, phase=0.5)
+        pelm.entangle(large_vec, phase=0.5, provenance=_build_provenance(large_vec))
+        pelm.entangle(small_vec, phase=0.5, provenance=_build_provenance(small_vec))
 
         # Retrieval should still work
         query = np.random.randn(dim).astype(np.float32).tolist()
@@ -205,7 +228,8 @@ class TestConcurrentMemorySafety:
             try:
                 for i in range(num_ops):
                     vec = np.random.randn(dim).astype(np.float32)
-                    pelm.entangle(vec.tolist(), phase=0.5)
+                    vector = vec.tolist()
+                    pelm.entangle(vector, phase=0.5, provenance=_build_provenance(vector))
 
                     if i % 10 == 0:
                         query = np.random.randn(dim).astype(np.float32)
@@ -289,7 +313,8 @@ class TestMemoryBoundsEnforcement:
         # Insert 10x capacity
         for _ in range(capacity * 10):
             vec = np.random.randn(dim).astype(np.float32)
-            pelm.entangle(vec.tolist(), phase=0.5)
+            vector = vec.tolist()
+            pelm.entangle(vector, phase=0.5, provenance=_build_provenance(vector))
             assert pelm.size <= capacity, f"Capacity exceeded: {pelm.size} > {capacity}"
 
     def test_memory_footprint_bounded(self):
@@ -303,7 +328,8 @@ class TestMemoryBoundsEnforcement:
         # Fill to capacity
         for _ in range(capacity):
             vec = np.random.randn(dim).astype(np.float32)
-            pelm.entangle(vec.tolist(), phase=0.5)
+            vector = vec.tolist()
+            pelm.entangle(vector, phase=0.5, provenance=_build_provenance(vector))
 
         # Estimate memory usage
         # Each vector: 384 * 4 bytes = 1536 bytes
@@ -356,14 +382,16 @@ class TestSafetyInvariantsUnderStress:
         # Store old data
         for _ in range(capacity):
             vec = np.random.randn(dim).astype(np.float32)
-            pelm.entangle(vec.tolist(), phase=0.5)
+            vector = vec.tolist()
+            pelm.entangle(vector, phase=0.5, provenance=_build_provenance(vector))
 
         # Store new data with distinctive pattern
         recent_vectors = []
         for _ in range(10):
             vec = np.ones(dim).astype(np.float32) + np.random.randn(dim).astype(np.float32) * 0.1
             recent_vectors.append(vec)
-            pelm.entangle(vec.tolist(), phase=0.5)
+            vector = vec.tolist()
+            pelm.entangle(vector, phase=0.5, provenance=_build_provenance(vector))
 
         # Query for recent vectors
         query = np.ones(dim).astype(np.float32).tolist()

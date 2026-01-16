@@ -1,11 +1,33 @@
 """Tests for PELM batch entangle optimization."""
 
+from datetime import datetime
+
 import numpy as np
 import pytest
 
 from mlsdm.memory.phase_entangled_lattice_memory import (
     PhaseEntangledLatticeMemory,
 )
+from mlsdm.memory.provenance import (
+    MemoryProvenance,
+    MemorySource,
+    compute_sha256_hex,
+    get_policy_hash,
+)
+
+
+def _build_provenance(vector: list[float] | np.ndarray) -> MemoryProvenance:
+    vec_np = np.array(vector, dtype=np.float32)
+    return MemoryProvenance(
+        source=MemorySource.SYSTEM_PROMPT,
+        confidence=1.0,
+        timestamp=datetime.now(),
+        source_id="unit.pelm_batch",
+        ingestion_path="tests.unit.test_pelm_batch",
+        content_hash=compute_sha256_hex(vec_np.tobytes()),
+        policy_hash=get_policy_hash(),
+        trust_tier=2,
+    )
 
 
 class TestPELMBatchEntangle:
@@ -22,7 +44,8 @@ class TestPELMBatchEntangle:
         ]
         phases = [0.1, 0.5, 0.9]
 
-        indices = pelm.entangle_batch(vectors, phases)
+        provenances = [_build_provenance(vector) for vector in vectors]
+        indices = pelm.entangle_batch(vectors, phases, provenances=provenances)
 
         assert len(indices) == 3
         assert indices == [0, 1, 2]
@@ -44,7 +67,8 @@ class TestPELMBatchEntangle:
         vectors = [[1.0, 2.0, 3.0, 4.0]]
         phases = [0.5]
 
-        indices = pelm.entangle_batch(vectors, phases)
+        provenances = [_build_provenance(vector) for vector in vectors]
+        indices = pelm.entangle_batch(vectors, phases, provenances=provenances)
 
         assert len(indices) == 1
         assert indices[0] == 0
@@ -62,7 +86,8 @@ class TestPELMBatchEntangle:
         ]
         phases = [0.1, 0.2, 0.3, 0.4]
 
-        pelm.entangle_batch(vectors, phases)
+        provenances = [_build_provenance(vector) for vector in vectors]
+        pelm.entangle_batch(vectors, phases, provenances=provenances)
 
         # Verify each vector is at expected index
         for i, (vec, phase) in enumerate(zip(vectors, phases, strict=True)):
@@ -79,7 +104,8 @@ class TestPELMBatchEntangle:
         ]
         phases = [0.1, 0.1]
 
-        pelm.entangle_batch(vectors, phases)
+        provenances = [_build_provenance(vector) for vector in vectors]
+        pelm.entangle_batch(vectors, phases, provenances=provenances)
 
         # Retrieve with query matching first vector
         results = pelm.retrieve([1.0, 0.0, 0.0, 0.0], current_phase=0.1, top_k=1)
@@ -103,9 +129,13 @@ class TestPELMBatchEntangle:
 
         vectors = ["not a list", [0.0, 1.0, 0.0, 0.0]]  # First is string
         phases = [0.1, 0.5]
+        provenances = [
+            _build_provenance([0.0, 0.0, 0.0, 0.0]),
+            _build_provenance([0.0, 1.0, 0.0, 0.0]),
+        ]
 
         with pytest.raises(TypeError, match="vector at index 0 must be a list"):
-            pelm.entangle_batch(vectors, phases)
+            pelm.entangle_batch(vectors, phases, provenances=provenances)
 
     def test_batch_entangle_invalid_dimension(self) -> None:
         """Test batch entangle rejects wrong dimension."""
@@ -113,9 +143,10 @@ class TestPELMBatchEntangle:
 
         vectors = [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0]]  # First is 3D
         phases = [0.1, 0.5]
+        provenances = [_build_provenance(vector) for vector in vectors]
 
         with pytest.raises(ValueError, match="dimension mismatch"):
-            pelm.entangle_batch(vectors, phases)
+            pelm.entangle_batch(vectors, phases, provenances=provenances)
 
     def test_batch_entangle_invalid_phase_type(self) -> None:
         """Test batch entangle rejects invalid phase types."""
@@ -123,9 +154,10 @@ class TestPELMBatchEntangle:
 
         vectors = [[1.0, 0.0, 0.0, 0.0]]
         phases = ["not a number"]
+        provenances = [_build_provenance(vectors[0])]
 
         with pytest.raises(TypeError, match="phase at index 0 must be numeric"):
-            pelm.entangle_batch(vectors, phases)
+            pelm.entangle_batch(vectors, phases, provenances=provenances)
 
     def test_batch_entangle_phase_out_of_range(self) -> None:
         """Test batch entangle rejects phases out of range."""
@@ -133,9 +165,10 @@ class TestPELMBatchEntangle:
 
         vectors = [[1.0, 0.0, 0.0, 0.0]]
         phases = [1.5]  # Out of range
+        provenances = [_build_provenance(vectors[0])]
 
         with pytest.raises(ValueError, match="must be in"):
-            pelm.entangle_batch(vectors, phases)
+            pelm.entangle_batch(vectors, phases, provenances=provenances)
 
     def test_batch_entangle_nan_in_vector(self) -> None:
         """Test batch entangle rejects NaN in vectors."""
@@ -143,9 +176,10 @@ class TestPELMBatchEntangle:
 
         vectors = [[float("nan"), 0.0, 0.0, 0.0]]
         phases = [0.1]
+        provenances = [_build_provenance(vectors[0])]
 
         with pytest.raises(ValueError, match="NaN or infinity"):
-            pelm.entangle_batch(vectors, phases)
+            pelm.entangle_batch(vectors, phases, provenances=provenances)
 
     def test_batch_entangle_inf_in_vector(self) -> None:
         """Test batch entangle rejects infinity in vectors."""
@@ -153,9 +187,10 @@ class TestPELMBatchEntangle:
 
         vectors = [[float("inf"), 0.0, 0.0, 0.0]]
         phases = [0.1]
+        provenances = [_build_provenance(vectors[0])]
 
         with pytest.raises(ValueError, match="NaN or infinity"):
-            pelm.entangle_batch(vectors, phases)
+            pelm.entangle_batch(vectors, phases, provenances=provenances)
 
     def test_batch_entangle_nan_phase(self) -> None:
         """Test batch entangle rejects NaN phase."""
@@ -163,9 +198,10 @@ class TestPELMBatchEntangle:
 
         vectors = [[1.0, 0.0, 0.0, 0.0]]
         phases = [float("nan")]
+        provenances = [_build_provenance(vectors[0])]
 
         with pytest.raises(ValueError, match="finite number"):
-            pelm.entangle_batch(vectors, phases)
+            pelm.entangle_batch(vectors, phases, provenances=provenances)
 
     def test_batch_entangle_wraparound(self) -> None:
         """Test batch entangle handles capacity wraparound."""
@@ -174,13 +210,15 @@ class TestPELMBatchEntangle:
         # Fill to capacity
         vectors1 = [[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0]]
         phases1 = [0.1, 0.2, 0.3]
-        pelm.entangle_batch(vectors1, phases1)
+        provenances1 = [_build_provenance(vector) for vector in vectors1]
+        pelm.entangle_batch(vectors1, phases1, provenances=provenances1)
         assert pelm.size == 3
 
         # Add more (should wrap around)
         vectors2 = [[0.0, 0.0, 0.0, 1.0]]
         phases2 = [0.4]
-        indices = pelm.entangle_batch(vectors2, phases2)
+        provenances2 = [_build_provenance(vector) for vector in vectors2]
+        indices = pelm.entangle_batch(vectors2, phases2, provenances=provenances2)
 
         assert indices[0] == 0  # Wrapped to position 0
         assert pelm.size == 3  # Still at capacity
@@ -212,14 +250,15 @@ class TestPELMBatchEntanglePerformance:
         # Time batch operation
         pelm_batch = PhaseEntangledLatticeMemory(dimension=dim, capacity=1000)
         start = time.perf_counter()
-        pelm_batch.entangle_batch(vectors, phases)
+        provenances = [_build_provenance(vector) for vector in vectors]
+        pelm_batch.entangle_batch(vectors, phases, provenances=provenances)
         batch_time = time.perf_counter() - start
 
         # Time individual operations
         pelm_individual = PhaseEntangledLatticeMemory(dimension=dim, capacity=1000)
         start = time.perf_counter()
         for vec, phase in zip(vectors, phases, strict=True):
-            pelm_individual.entangle(vec, phase)
+            pelm_individual.entangle(vec, phase, provenance=_build_provenance(vec))
         individual_time = time.perf_counter() - start
 
         # Batch should be at least as fast (usually faster due to single lock acquisition)
@@ -234,7 +273,8 @@ class TestPELMBatchEntanglePerformance:
         phases = [0.5] * 10
 
         # Batch should update checksum once at the end
-        pelm.entangle_batch(vectors, phases)
+        provenances = [_build_provenance(vector) for vector in vectors]
+        pelm.entangle_batch(vectors, phases, provenances=provenances)
 
         # Verify memory is not corrupted
         assert not pelm.detect_corruption()
