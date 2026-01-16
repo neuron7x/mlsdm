@@ -9,6 +9,14 @@ from mlsdm.policy.loader import (
     load_policy_bundle,
     serialize_canonical_json,
 )
+from mlsdm.policy.registry import (
+    PolicyRegistry,
+    PolicyRegistryError,
+    build_policy_registry,
+    load_policy_registry,
+    verify_policy_registry,
+    write_policy_registry,
+)
 from mlsdm.policy.opa import (
     OPA_EXPORT_MAPPINGS,
     PolicyExportError,
@@ -22,10 +30,16 @@ __all__ = [
     "PolicyBundle",
     "PolicyExportError",
     "PolicyLoadError",
+    "PolicyRegistry",
+    "PolicyRegistryError",
     "OPA_EXPORT_MAPPINGS",
+    "build_policy_registry",
     "canonical_hash",
     "export_opa_policy_data",
+    "load_policy_registry",
     "load_policy_bundle",
     "serialize_canonical_json",
     "validate_opa_export_contract",
+    "verify_policy_registry",
+    "write_policy_registry",
 ]
