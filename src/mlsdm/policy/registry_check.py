@@ -4,7 +4,6 @@ import argparse
 import sys
 from pathlib import Path
 
-from mlsdm.policy.loader import PolicyLoadError, load_policy_bundle
 from mlsdm.policy.catalog import (
     CATALOG_FILENAME,
     PolicyCatalogError,
@@ -14,6 +13,7 @@ from mlsdm.policy.catalog import (
     verify_policy_catalog,
     write_policy_catalog,
 )
+from mlsdm.policy.loader import PolicyLoadError, load_policy_bundle
 from mlsdm.policy.registry import (
     REGISTRY_FILENAME,
     PolicyRegistryError,

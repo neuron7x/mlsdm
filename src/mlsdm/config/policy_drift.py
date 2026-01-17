@@ -7,13 +7,13 @@ from datetime import datetime
 from functools import lru_cache
 from pathlib import Path
 
-from mlsdm.policy.loader import DEFAULT_POLICY_DIR, PolicyLoadError, load_policy_bundle
 from mlsdm.policy.catalog import (
     CATALOG_FILENAME,
     PolicyCatalogError,
     load_policy_catalog,
     verify_policy_catalog,
 )
+from mlsdm.policy.loader import DEFAULT_POLICY_DIR, PolicyLoadError, load_policy_bundle
 from mlsdm.policy.registry import (
     REGISTRY_FILENAME,
     PolicyRegistryError,

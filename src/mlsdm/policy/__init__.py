@@ -1,5 +1,14 @@
 """Policy loading and enforcement helpers."""
 
+from mlsdm.policy.catalog import (
+    CATALOG_FILENAME,
+    PolicyCatalog,
+    PolicyCatalogError,
+    build_policy_catalog,
+    load_policy_catalog,
+    verify_policy_catalog,
+    write_policy_catalog,
+)
 from mlsdm.policy.loader import (
     DEFAULT_POLICY_DIR,
     POLICY_CONTRACT_VERSION,
@@ -14,15 +23,6 @@ from mlsdm.policy.opa import (
     PolicyExportError,
     export_opa_policy_data,
     validate_opa_export_contract,
-)
-from mlsdm.policy.catalog import (
-    CATALOG_FILENAME,
-    PolicyCatalog,
-    PolicyCatalogError,
-    build_policy_catalog,
-    load_policy_catalog,
-    verify_policy_catalog,
-    write_policy_catalog,
 )
 from mlsdm.policy.registry import (
     PolicyRegistry,

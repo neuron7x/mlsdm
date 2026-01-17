@@ -3,7 +3,6 @@ from __future__ import annotations
 from pathlib import Path
 
 from mlsdm.policy.catalog import (
-    PolicyCatalog,
     PolicyAsset,
     build_policy_catalog,
     collect_policy_assets,
