@@ -61,7 +61,7 @@ from typing import TYPE_CHECKING, Any
 from fastapi import HTTPException, Request, status
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from mlsdm.security.path_utils import DEFAULT_PUBLIC_PATHS, is_path_skipped
+from mlsdm.security.path_utils import DEFAULT_PUBLIC_PATHS, is_path_match, is_path_skipped
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
@@ -359,7 +359,7 @@ class SigningMiddleware(BaseHTTPMiddleware):
 
         # Check if this path requires signature
         if self.require_signature_paths:
-            if not any(path.startswith(p) for p in self.require_signature_paths):
+            if not is_path_match(path, self.require_signature_paths):
                 return await call_next(request)
 
         # Get signature header

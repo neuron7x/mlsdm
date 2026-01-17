@@ -492,6 +492,52 @@ class TestSigningMiddlewareDispatch:
         await middleware.dispatch(mock_request, mock_call_next)
         mock_call_next.assert_called_once()
 
+    @pytest.mark.asyncio
+    async def test_dispatch_require_signature_boundary_safe(self) -> None:
+        """Test require_signature_paths uses boundary-safe matching."""
+        mock_app = MagicMock()
+        config = SigningConfig(enabled=True, secret_key="test-secret")
+        middleware = SigningMiddleware(
+            mock_app,
+            config=config,
+            require_signature_paths=["/api/secure/"],
+        )
+
+        mock_request = MagicMock(spec=Request)
+        mock_request.url.path = "/api/secure"
+        mock_headers = MagicMock()
+        mock_headers.get = MagicMock(return_value=None)
+        mock_request.headers = mock_headers
+
+        mock_call_next = AsyncMock(return_value=MagicMock())
+
+        with pytest.raises(HTTPException) as exc_info:
+            await middleware.dispatch(mock_request, mock_call_next)
+        assert exc_info.value.status_code == 401
+        mock_call_next.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_dispatch_require_signature_no_prefix_collision(self) -> None:
+        """Test require_signature_paths does not overmatch prefix collisions."""
+        mock_app = MagicMock()
+        config = SigningConfig(enabled=True, secret_key="test-secret")
+        middleware = SigningMiddleware(
+            mock_app,
+            config=config,
+            require_signature_paths=["/api/secure/"],
+        )
+
+        mock_request = MagicMock(spec=Request)
+        mock_request.url.path = "/api/securex"
+        mock_headers = MagicMock()
+        mock_headers.get = MagicMock(return_value=None)
+        mock_request.headers = mock_headers
+
+        mock_call_next = AsyncMock(return_value=MagicMock())
+
+        await middleware.dispatch(mock_request, mock_call_next)
+        mock_call_next.assert_called_once_with(mock_request)
+
 
 class TestSigningMiddlewareGetSecretKey:
     """Tests for SigningMiddleware._get_secret_key."""

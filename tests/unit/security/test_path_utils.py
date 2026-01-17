@@ -6,7 +6,7 @@ from unittest.mock import MagicMock
 
 from mlsdm.security.mtls import MTLSMiddleware
 from mlsdm.security.oidc import OIDCAuthenticator, OIDCAuthMiddleware, OIDCConfig
-from mlsdm.security.path_utils import DEFAULT_PUBLIC_PATHS, is_path_skipped
+from mlsdm.security.path_utils import DEFAULT_PUBLIC_PATHS, is_path_match, is_path_skipped
 from mlsdm.security.rbac import RBACMiddleware, RoleValidator
 from mlsdm.security.signing import SigningMiddleware
 
@@ -46,6 +46,12 @@ class TestPathSkipMatching:
         """Test explicit root skip only matches root."""
         assert is_path_skipped("/", ["/"]) is True
         assert is_path_skipped("/health", ["/"]) is False
+
+    def test_boundary_safe_match_paths(self) -> None:
+        """Test boundary-safe matching for required paths."""
+        assert is_path_match("/admin", ["/admin/"]) is True
+        assert is_path_match("/admin/settings", ["/admin/"]) is True
+        assert is_path_match("/adminx", ["/admin/"]) is False
 
 
 class TestMiddlewareDefaultParity:

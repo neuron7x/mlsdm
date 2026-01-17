@@ -409,6 +409,54 @@ class TestOIDCAuthMiddlewareDispatch:
         await middleware.dispatch(mock_request, mock_call_next)
         assert mock_request.state.user_info is None
 
+    @pytest.mark.asyncio
+    async def test_dispatch_require_auth_paths_boundary_safe(self) -> None:
+        """Test require_auth_paths uses boundary-safe matching."""
+        mock_auth = MagicMock()
+        mock_auth.enabled = True
+        mock_auth.authenticate = AsyncMock(return_value=None)
+
+        mock_app = MagicMock()
+        middleware = OIDCAuthMiddleware(
+            mock_app,
+            authenticator=mock_auth,
+            require_auth_paths=["/admin/"],
+        )
+
+        mock_request = MagicMock(spec=Request)
+        mock_request.url.path = "/admin"
+        mock_request.state = MagicMock()
+
+        mock_call_next = AsyncMock(return_value=MagicMock())
+
+        with pytest.raises(HTTPException) as exc_info:
+            await middleware.dispatch(mock_request, mock_call_next)
+        assert exc_info.value.status_code == 401
+        mock_call_next.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_dispatch_require_auth_paths_no_prefix_collision(self) -> None:
+        """Test require_auth_paths does not overmatch prefix collisions."""
+        mock_auth = MagicMock()
+        mock_auth.enabled = True
+        mock_auth.authenticate = AsyncMock(return_value=None)
+
+        mock_app = MagicMock()
+        middleware = OIDCAuthMiddleware(
+            mock_app,
+            authenticator=mock_auth,
+            require_auth_paths=["/admin/"],
+        )
+
+        mock_request = MagicMock(spec=Request)
+        mock_request.url.path = "/adminx"
+        mock_request.state = MagicMock()
+
+        mock_call_next = AsyncMock(return_value=MagicMock())
+
+        await middleware.dispatch(mock_request, mock_call_next)
+        mock_call_next.assert_called_once_with(mock_request)
+
 
 class TestRequireOIDCAuthDecorator:
     """Tests for require_oidc_auth decorator."""

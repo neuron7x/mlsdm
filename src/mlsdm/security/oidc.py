@@ -52,7 +52,7 @@ from typing import TYPE_CHECKING, Any
 from fastapi import HTTPException, Request, Response, status
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from mlsdm.security.path_utils import DEFAULT_PUBLIC_PATHS, is_path_skipped
+from mlsdm.security.path_utils import DEFAULT_PUBLIC_PATHS, is_path_match, is_path_skipped
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
@@ -450,13 +450,12 @@ class OIDCAuthMiddleware(BaseHTTPMiddleware):
 
             # If require_auth_paths is set, check if path matches
             if self.require_auth_paths:
-                if any(path.startswith(p) for p in self.require_auth_paths):
-                    if not user_info:
-                        raise HTTPException(
-                            status_code=status.HTTP_401_UNAUTHORIZED,
-                            detail="Authentication required",
-                            headers={"WWW-Authenticate": "Bearer"},
-                        )
+                if is_path_match(path, self.require_auth_paths) and not user_info:
+                    raise HTTPException(
+                        status_code=status.HTTP_401_UNAUTHORIZED,
+                        detail="Authentication required",
+                        headers={"WWW-Authenticate": "Bearer"},
+                    )
 
         except HTTPException:
             raise
