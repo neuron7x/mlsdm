@@ -14,7 +14,10 @@ from ..cognition.moral_filter_v2 import MoralFilterV2
 from ..config.policy_drift import check_policy_drift
 from ..memory.multi_level_memory import MultiLevelSynapticMemory
 from ..memory.phase_entangled_lattice_memory import PhaseEntangledLatticeMemory
-from ..observability.policy_drift_telemetry import record_policy_registry_status
+from ..observability.policy_drift_telemetry import (
+    record_policy_catalog_status,
+    record_policy_registry_status,
+)
 from ..rhythm.cognitive_rhythm import CognitiveRhythm
 
 
@@ -204,6 +207,14 @@ class GovernanceKernel:
             policy_contract_version=status.policy_contract_version,
             registry_hash=status.registry_hash,
             registry_signature_valid=status.registry_signature_valid,
+            drift_detected=status.drift_detected,
+            reason=";".join(status.errors) if status.errors else None,
+        )
+        record_policy_catalog_status(
+            policy_name=status.policy_name,
+            policy_contract_version=status.policy_contract_version,
+            catalog_hash=status.catalog_hash,
+            catalog_signature_valid=status.catalog_signature_valid,
             drift_detected=status.drift_detected,
             reason=";".join(status.errors) if status.errors else None,
         )
