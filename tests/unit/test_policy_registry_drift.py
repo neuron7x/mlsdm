@@ -19,6 +19,8 @@ def test_policy_drift_check_passes_for_repo_policy() -> None:
     status = check_policy_drift(enforce=False)
     assert status.drift_detected is False
     assert status.registry_signature_valid is True
+    assert status.catalog_signature_valid is True
+    assert status.catalog_hash is not None
 
 
 def test_policy_drift_check_raises_on_mismatch(tmp_path: Path) -> None:

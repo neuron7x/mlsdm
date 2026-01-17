@@ -7,6 +7,12 @@ from datetime import datetime
 from functools import lru_cache
 from pathlib import Path
 
+from mlsdm.policy.catalog import (
+    CATALOG_FILENAME,
+    PolicyCatalogError,
+    load_policy_catalog,
+    verify_policy_catalog,
+)
 from mlsdm.policy.loader import DEFAULT_POLICY_DIR, PolicyLoadError, load_policy_bundle
 from mlsdm.policy.registry import (
     REGISTRY_FILENAME,
@@ -29,6 +35,8 @@ class PolicyDriftStatus:
     policy_contract_version: str
     registry_hash: str | None
     registry_signature_valid: bool
+    catalog_hash: str | None
+    catalog_signature_valid: bool
     drift_detected: bool
     errors: tuple[str, ...]
 
@@ -55,17 +63,37 @@ def _resolve_registry_path(policy_dir: Path, registry_path: Path | None) -> Path
     return (registry_path or (policy_dir / REGISTRY_FILENAME)).resolve()
 
 
+def _resolve_catalog_path(policy_dir: Path, catalog_path: Path | None) -> Path:
+    env_path = os.getenv("MLSDM_POLICY_CATALOG_PATH")
+    if env_path:
+        return Path(env_path).expanduser().resolve()
+    return (catalog_path or (policy_dir / CATALOG_FILENAME)).resolve()
+
+
+def _resolve_policies_dir(policy_dir: Path, policies_dir: Path | None) -> Path:
+    env_path = os.getenv("MLSDM_POLICIES_DIR")
+    if env_path:
+        return Path(env_path).expanduser().resolve()
+    return (policies_dir or (policy_dir.parent / "policies")).resolve()
+
+
 def check_policy_drift(
     *,
     policy_dir: Path | None = None,
     registry_path: Path | None = None,
+    catalog_path: Path | None = None,
+    policies_dir: Path | None = None,
     enforce: bool = True,
 ) -> PolicyDriftStatus:
     resolved_policy_dir = _resolve_policy_dir(policy_dir)
     resolved_registry_path = _resolve_registry_path(resolved_policy_dir, registry_path)
+    resolved_catalog_path = _resolve_catalog_path(resolved_policy_dir, catalog_path)
+    resolved_policies_dir = _resolve_policies_dir(resolved_policy_dir, policies_dir)
     errors: list[str] = []
     registry_hash: str | None = None
     registry_signature_valid = False
+    catalog_hash: str | None = None
+    catalog_signature_valid = False
 
     try:
         bundle = load_policy_bundle(resolved_policy_dir, enforce_registry=False)
@@ -77,6 +105,8 @@ def check_policy_drift(
             policy_contract_version="unknown",
             registry_hash=None,
             registry_signature_valid=False,
+            catalog_hash=None,
+            catalog_signature_valid=False,
             drift_detected=True,
             errors=tuple(errors),
         )
@@ -103,6 +133,30 @@ def check_policy_drift(
     except PolicyRegistryError as exc:
         errors.append(str(exc))
 
+    try:
+        catalog = load_policy_catalog(resolved_catalog_path)
+        catalog_hash = catalog.signature
+        catalog_signature_valid = True
+        if catalog.policy_contract_version != policy_contract_version:
+            errors.append(
+                "policy contract version mismatch between policy bundle and catalog "
+                f"({policy_contract_version} != {catalog.policy_contract_version})"
+            )
+        if catalog.policy_bundle_hash != policy_hash:
+            errors.append(
+                "policy bundle hash mismatch between policy bundle and catalog "
+                f"({policy_hash} != {catalog.policy_bundle_hash})"
+            )
+        catalog_errors = verify_policy_catalog(
+            catalog=catalog,
+            repo_root=resolved_policy_dir.parent,
+            policy_dir=resolved_policy_dir,
+            policies_dir=resolved_policies_dir,
+        )
+        errors.extend(catalog_errors)
+    except PolicyCatalogError as exc:
+        errors.append(str(exc))
+
     drift_detected = bool(errors)
     if drift_detected:
         logger.error("Policy drift detected: %s", "; ".join(errors))
@@ -115,6 +169,8 @@ def check_policy_drift(
         policy_contract_version=policy_contract_version,
         registry_hash=registry_hash,
         registry_signature_valid=registry_signature_valid,
+        catalog_hash=catalog_hash,
+        catalog_signature_valid=catalog_signature_valid,
         drift_detected=drift_detected,
         errors=tuple(errors),
     )

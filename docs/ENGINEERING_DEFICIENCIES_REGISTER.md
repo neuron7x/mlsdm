@@ -91,6 +91,7 @@ Based on comprehensive analysis, no critical issues requiring immediate resoluti
 - Both functions exported via `mlsdm.security` module
 - 15 new tests added covering both functions
 - Policy registry drift detection now validates canonical policy hash + signature, emits metrics, and blocks runtime on mismatch
+- Policy catalog drift detection now validates all policy sources across `policy/` and `policies/` with catalog hash enforcement
 - Memory provenance now includes lineage hashes, policy hash binding, and content integrity enforcement for LTM storage
 
 **Recommended Actions:**

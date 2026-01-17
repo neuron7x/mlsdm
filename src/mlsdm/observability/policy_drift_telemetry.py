@@ -75,6 +75,24 @@ policy_registry_mismatch = Counter(
     ["policy_name", "reason"],
 )
 
+policy_catalog_hash_info = Gauge(
+    "mlsdm_policy_catalog_hash_info",
+    "Policy catalog hash information for drift detection",
+    ["policy_name", "catalog_hash", "policy_contract_version"],
+)
+
+policy_catalog_signature_valid = Gauge(
+    "mlsdm_policy_catalog_signature_valid",
+    "Whether the policy catalog signature is valid (1=yes, 0=no)",
+    ["policy_name"],
+)
+
+policy_catalog_mismatch = Counter(
+    "mlsdm_policy_catalog_mismatch_total",
+    "Policy catalog mismatch events detected",
+    ["policy_name", "reason"],
+)
+
 _metric_batch: list[dict[str, float | str]] = []
 _batch_lock = Lock()
 _BATCH_SIZE = 10
@@ -203,3 +221,27 @@ def record_policy_registry_status(
     if drift_detected:
         mismatch_reason = reason or "unknown"
         policy_registry_mismatch.labels(policy_name=policy_name, reason=mismatch_reason).inc()
+
+
+def record_policy_catalog_status(
+    *,
+    policy_name: str,
+    policy_contract_version: str,
+    catalog_hash: str | None,
+    catalog_signature_valid: bool,
+    drift_detected: bool,
+    reason: str | None,
+) -> None:
+    """Record policy catalog status for drift detection."""
+    if catalog_hash:
+        policy_catalog_hash_info.labels(
+            policy_name=policy_name,
+            catalog_hash=catalog_hash,
+            policy_contract_version=policy_contract_version,
+        ).set(1.0)
+    policy_catalog_signature_valid.labels(policy_name=policy_name).set(
+        1.0 if catalog_signature_valid else 0.0
+    )
+    if drift_detected:
+        mismatch_reason = reason or "unknown"
+        policy_catalog_mismatch.labels(policy_name=policy_name, reason=mismatch_reason).inc()

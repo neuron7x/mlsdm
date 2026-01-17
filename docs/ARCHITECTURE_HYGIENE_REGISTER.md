@@ -24,6 +24,6 @@ This register tracks architectural hygiene gaps, their impact, and ownership. It
 
 | ID | Gap | Evidence / Location | Impact | Owner | Status | Target Review |
 | --- | --- | --- | --- | --- | --- | --- |
-| AH-POL-001 | Policy sources split between `policy/` and `policies/` without a canonical index | Repository root contains both directories | Risk of drift and duplicated policy updates | Architecture Owner | Open | 2026-Q1 |
+| AH-POL-001 | Policy sources split between `policy/` and `policies/` without a canonical index | Policy catalog introduced at `policy/catalog.json` with hash enforcement across both directories | Risk of drift and duplicated policy updates | Architecture Owner | Resolved (2026-01-17) | 2026-Q1 |
 | AH-AUD-001 | No import-audit gate in quality checks | Quality gates list `pip-audit` and `deptry` but no import-audit step | Undetected unused or forbidden imports in runtime paths | Platform Maintainer | Open | 2026-Q1 |
 | AH-GOV-001 | Architecture hygiene gaps tracked across multiple docs without a dedicated registry | No single register previously existed | Harder to triage architectural hygiene work consistently | Architecture Owner | Resolved (2026-01-10) | 2026-Q1 |
