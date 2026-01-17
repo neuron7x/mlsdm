@@ -77,7 +77,7 @@ else:
 ### Testing
 
 ```bash
-python -m pytest src/tests/unit/test_security.py::TestRateLimiter -v
+python -m pytest tests/unit/test_rate_limiter.py -v
 ```
 
 ## Input Validation
@@ -161,7 +161,7 @@ MAX_MORAL_VALUE = 1.0          # Maximum moral value
 ### Testing
 
 ```bash
-python -m pytest src/tests/unit/test_security.py::TestInputValidator -v
+python -m pytest tests/unit/test_input_validator.py -v
 ```
 
 ## Security Logging
@@ -243,7 +243,7 @@ Client identifiers are **pseudonymized** using SHA256 hashing.
 ### Testing
 
 ```bash
-python -m pytest src/tests/unit/test_security.py::TestSecurityLogger -v
+python -m pytest tests/unit/test_security_logger.py -v
 ```
 
 ## Authentication
@@ -252,7 +252,7 @@ python -m pytest src/tests/unit/test_security.py::TestSecurityLogger -v
 
 OAuth2 Bearer token authentication with enhanced security logging.
 
-**Location**: `src/api/app.py`
+**Location**: `src/mlsdm/api/app.py`
 
 ### Configuration
 
@@ -381,15 +381,15 @@ When vulnerabilities are found:
 
 ```bash
 # All security tests
-python -m pytest src/tests/unit/test_security.py -v
+python -m pytest tests/security -v
 
 # Specific test classes
-python -m pytest src/tests/unit/test_security.py::TestRateLimiter -v
-python -m pytest src/tests/unit/test_security.py::TestInputValidator -v
-python -m pytest src/tests/unit/test_security.py::TestSecurityLogger -v
+python -m pytest tests/unit/test_rate_limiter.py -v
+python -m pytest tests/unit/test_input_validator.py -v
+python -m pytest tests/unit/test_security_logger.py -v
 
 # Integration tests
-python -m pytest src/tests/unit/test_security.py::TestSecurityIntegration -v
+python -m pytest tests/security/test_security_invariants.py -v
 ```
 
 ### Test Coverage

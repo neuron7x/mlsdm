@@ -55,6 +55,8 @@ from typing import TYPE_CHECKING, Any
 from fastapi import HTTPException, Request, status
 from starlette.middleware.base import BaseHTTPMiddleware
 
+from mlsdm.security.path_utils import DEFAULT_PUBLIC_PATHS, is_path_skipped
+
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
 
@@ -235,7 +237,7 @@ class MTLSMiddleware(BaseHTTPMiddleware):
         >>> app.add_middleware(
         ...     MTLSMiddleware,
         ...     require_cert=True,
-        ...     skip_paths=["/health", "/docs"]
+        ...     skip_paths=["/health", "/docs", "/redoc", "/openapi.json"]
         ... )
     """
 
@@ -254,7 +256,7 @@ class MTLSMiddleware(BaseHTTPMiddleware):
         """
         super().__init__(app)
         self.require_cert = require_cert
-        self.skip_paths = skip_paths or ["/health", "/health/", "/docs", "/openapi.json"]
+        self.skip_paths = skip_paths or list(DEFAULT_PUBLIC_PATHS)
         self.config = MTLSConfig.from_env()
 
     async def dispatch(
@@ -274,7 +276,7 @@ class MTLSMiddleware(BaseHTTPMiddleware):
         path = request.url.path
 
         # Skip certain paths
-        if any(path.startswith(skip) for skip in self.skip_paths):
+        if is_path_skipped(path, self.skip_paths):
             request.state.client_cert = None
             return await call_next(request)
 

@@ -335,6 +335,27 @@ class TestOIDCAuthMiddlewareDispatch:
         mock_auth.authenticate.assert_called_once_with(mock_request)
 
     @pytest.mark.asyncio
+    async def test_dispatch_authenticator_exception_fails_closed(self) -> None:
+        """Test middleware fails closed on authenticator exceptions."""
+        mock_auth = MagicMock()
+        mock_auth.enabled = True
+        mock_auth.authenticate = AsyncMock(side_effect=RuntimeError("auth failure"))
+
+        mock_app = MagicMock()
+        middleware = OIDCAuthMiddleware(mock_app, authenticator=mock_auth)
+
+        mock_request = MagicMock(spec=Request)
+        mock_request.url.path = "/api/endpoint"
+        mock_request.state = MagicMock()
+
+        mock_call_next = AsyncMock(return_value=MagicMock())
+
+        with pytest.raises(HTTPException) as exc_info:
+            await middleware.dispatch(mock_request, mock_call_next)
+        assert exc_info.value.status_code == 503
+        mock_call_next.assert_not_called()
+
+    @pytest.mark.asyncio
     async def test_dispatch_oidc_disabled(self) -> None:
         """Test middleware passes through when OIDC disabled."""
         config = OIDCConfig(enabled=False)

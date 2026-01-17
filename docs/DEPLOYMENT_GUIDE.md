@@ -958,7 +958,7 @@ authenticator = OIDCAuthenticator.from_env()
 app.add_middleware(
     OIDCAuthMiddleware,
     authenticator=authenticator,
-    skip_paths=["/health", "/docs", "/openapi.json"],
+    skip_paths=["/health", "/docs", "/redoc", "/openapi.json"],
 )
 
 # Use dependency injection for protected endpoints

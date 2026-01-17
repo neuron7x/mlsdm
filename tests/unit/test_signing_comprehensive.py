@@ -232,6 +232,46 @@ class TestSigningMiddlewareDispatch:
         mock_call_next.assert_called_once()
 
     @pytest.mark.asyncio
+    async def test_dispatch_healthcheck_not_skipped(self) -> None:
+        """Test middleware does not skip /healthcheck prefix collisions."""
+        mock_app = MagicMock()
+        config = SigningConfig(enabled=True, secret_key="test-secret")
+        middleware = SigningMiddleware(mock_app, config=config)
+
+        mock_headers = MagicMock()
+        mock_headers.get = MagicMock(return_value=None)
+
+        mock_request = MagicMock(spec=Request)
+        mock_request.url.path = "/healthcheck"
+        mock_request.headers = mock_headers
+
+        mock_call_next = AsyncMock()
+
+        with pytest.raises(HTTPException) as exc_info:
+            await middleware.dispatch(mock_request, mock_call_next)
+        assert exc_info.value.status_code == 401
+
+    @pytest.mark.asyncio
+    async def test_dispatch_docs2_not_skipped(self) -> None:
+        """Test middleware does not skip /docs2 prefix collisions."""
+        mock_app = MagicMock()
+        config = SigningConfig(enabled=True, secret_key="test-secret")
+        middleware = SigningMiddleware(mock_app, config=config)
+
+        mock_headers = MagicMock()
+        mock_headers.get = MagicMock(return_value=None)
+
+        mock_request = MagicMock(spec=Request)
+        mock_request.url.path = "/docs2"
+        mock_request.headers = mock_headers
+
+        mock_call_next = AsyncMock()
+
+        with pytest.raises(HTTPException) as exc_info:
+            await middleware.dispatch(mock_request, mock_call_next)
+        assert exc_info.value.status_code == 401
+
+    @pytest.mark.asyncio
     async def test_dispatch_signing_disabled(self) -> None:
         """Test middleware passes through when signing disabled."""
         mock_app = MagicMock()

@@ -249,6 +249,46 @@ class TestMTLSMiddlewareDispatch:
         assert mock_request.state.client_cert is None
 
     @pytest.mark.asyncio
+    async def test_dispatch_healthcheck_not_skipped(self) -> None:
+        """Test middleware does not skip /healthcheck prefix collisions."""
+        mock_app = MagicMock()
+
+        with patch.dict(os.environ, {"MLSDM_MTLS_ENABLED": "true"}):
+            middleware = MTLSMiddleware(mock_app, require_cert=True)
+            middleware.config.enabled = True
+
+        mock_request = MagicMock(spec=Request)
+        mock_request.url.path = "/healthcheck"
+        mock_request.state = MagicMock()
+        mock_request.scope = {}
+
+        mock_call_next = AsyncMock()
+
+        with pytest.raises(HTTPException) as exc_info:
+            await middleware.dispatch(mock_request, mock_call_next)
+        assert exc_info.value.status_code == 401
+
+    @pytest.mark.asyncio
+    async def test_dispatch_docs2_not_skipped(self) -> None:
+        """Test middleware does not skip /docs2 prefix collisions."""
+        mock_app = MagicMock()
+
+        with patch.dict(os.environ, {"MLSDM_MTLS_ENABLED": "true"}):
+            middleware = MTLSMiddleware(mock_app, require_cert=True)
+            middleware.config.enabled = True
+
+        mock_request = MagicMock(spec=Request)
+        mock_request.url.path = "/docs2"
+        mock_request.state = MagicMock()
+        mock_request.scope = {}
+
+        mock_call_next = AsyncMock()
+
+        with pytest.raises(HTTPException) as exc_info:
+            await middleware.dispatch(mock_request, mock_call_next)
+        assert exc_info.value.status_code == 401
+
+    @pytest.mark.asyncio
     async def test_dispatch_mtls_disabled(self) -> None:
         """Test middleware passes through when mTLS disabled."""
         mock_app = MagicMock()
@@ -382,6 +422,7 @@ class TestMTLSMiddlewareInit:
         middleware = MTLSMiddleware(mock_app)
         assert "/health" in middleware.skip_paths
         assert "/docs" in middleware.skip_paths
+        assert "/redoc" in middleware.skip_paths
         assert "/openapi.json" in middleware.skip_paths
 
     def test_init_custom_skip_paths(self) -> None:
