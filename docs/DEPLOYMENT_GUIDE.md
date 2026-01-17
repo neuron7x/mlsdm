@@ -960,6 +960,7 @@ app.add_middleware(
     authenticator=authenticator,
     skip_paths=["/health", "/docs", "/redoc", "/openapi.json"],
 )
+# To protect /redoc or other docs endpoints, override skip_paths accordingly.
 
 # Use dependency injection for protected endpoints
 @app.get("/me")

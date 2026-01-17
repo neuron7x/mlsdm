@@ -232,6 +232,20 @@ class TestSigningMiddlewareDispatch:
         mock_call_next.assert_called_once()
 
     @pytest.mark.asyncio
+    async def test_dispatch_skip_redoc_path(self) -> None:
+        """Test middleware skips redoc paths."""
+        mock_app = MagicMock()
+        config = SigningConfig(enabled=True, secret_key="test-secret")
+        middleware = SigningMiddleware(mock_app, config=config)
+
+        mock_request = MagicMock(spec=Request)
+        mock_request.url.path = "/redoc"
+
+        mock_call_next = AsyncMock(return_value=MagicMock())
+        await middleware.dispatch(mock_request, mock_call_next)
+        mock_call_next.assert_called_once()
+
+    @pytest.mark.asyncio
     async def test_dispatch_healthcheck_not_skipped(self) -> None:
         """Test middleware does not skip /healthcheck prefix collisions."""
         mock_app = MagicMock()
@@ -270,6 +284,29 @@ class TestSigningMiddlewareDispatch:
         with pytest.raises(HTTPException) as exc_info:
             await middleware.dispatch(mock_request, mock_call_next)
         assert exc_info.value.status_code == 401
+
+    @pytest.mark.asyncio
+    async def test_dispatch_verify_exception_fails_closed(self) -> None:
+        """Test middleware fails closed on signature verification exceptions."""
+        mock_app = MagicMock()
+        config = SigningConfig(enabled=True, secret_key="test-secret")
+        middleware = SigningMiddleware(mock_app, config=config)
+
+        mock_headers = MagicMock()
+        mock_headers.get = MagicMock(return_value="timestamp=123456,signature=abc123")
+
+        mock_request = MagicMock(spec=Request)
+        mock_request.url.path = "/private"
+        mock_request.headers = mock_headers
+        mock_request.method = "GET"
+        mock_request.body = AsyncMock(return_value=b"")
+
+        mock_call_next = AsyncMock()
+
+        with patch("mlsdm.security.signing.verify_signature", side_effect=RuntimeError("boom")):
+            with pytest.raises(RuntimeError):
+                await middleware.dispatch(mock_request, mock_call_next)
+        mock_call_next.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_dispatch_signing_disabled(self) -> None:
