@@ -98,7 +98,7 @@ class CoherenceSafetyAnalyzer:
                     v1 = safe_normalize(window[j][0])
                     v2 = safe_normalize(window[j + 1][0])
                     sim = np.dot(v1, v2)
-                    sims.append(sim)
+                    sims.append(max(0.0, float(sim)))
             if sims:
                 consistencies.append(np.mean(sims))
 
@@ -136,7 +136,7 @@ class CoherenceSafetyAnalyzer:
             for ret_vec in retrieved:
                 r_norm = safe_normalize(ret_vec)
                 sim = np.dot(q_norm, r_norm)
-                sims.append(sim)
+                sims.append(max(0.0, float(sim)))
 
             if sims:
                 coherence_scores.append(np.mean(sims))

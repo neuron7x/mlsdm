@@ -410,7 +410,13 @@ class OIDCAuthMiddleware(BaseHTTPMiddleware):
         super().__init__(app)
         self.authenticator = authenticator
         self.require_auth_paths = require_auth_paths
-        self.skip_paths = skip_paths or ["/health", "/health/", "/docs", "/openapi.json"]
+        self.skip_paths = skip_paths or ["/health", "/docs", "/redoc", "/openapi.json"]
+
+    def _should_skip_path(self, path: str) -> bool:
+        """Check if a path should skip OIDC authentication."""
+        if path in self.skip_paths:
+            return True
+        return any(path.startswith(f"{skip}/") for skip in self.skip_paths)
 
     async def dispatch(
         self,
@@ -428,7 +434,7 @@ class OIDCAuthMiddleware(BaseHTTPMiddleware):
         """
         # Skip authentication for certain paths
         path = request.url.path
-        if any(path.startswith(skip) for skip in self.skip_paths):
+        if self._should_skip_path(path):
             request.state.user_info = None
             return await call_next(request)
 
