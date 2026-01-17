@@ -441,6 +441,11 @@ class OIDCAuthMiddleware(BaseHTTPMiddleware):
         # Skip if OIDC not enabled
         if not self.authenticator.enabled:
             request.state.user_info = None
+            if self.require_auth_paths and is_path_match(path, self.require_auth_paths):
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail="OIDC authentication unavailable",
+                )
             return await call_next(request)
 
         # Authenticate

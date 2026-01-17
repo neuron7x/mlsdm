@@ -55,14 +55,26 @@ Boundary-safe matching is enforced: exact paths and subpaths (e.g., `/health/liv
 - NEVER skip with raw `path.startswith(skip)` alone
 - The `/` skip path only matches `/`
 
-**Override example — protect `/docs` and `/redoc`:**
+**Public docs endpoints by default**
 
 ```python
-# Limit public endpoints to health and OpenAPI schema only.
 app.add_middleware(
     OIDCAuthMiddleware,
     authenticator=authenticator,
-    skip_paths=["/health", "/openapi.json"],
+    skip_paths=["/health", "/docs", "/redoc", "/openapi.json"],
+)
+```
+
+**How to protect `/docs` and `/redoc` (override `skip_paths`):**
+
+```python
+# Limit public endpoints to health and OpenAPI schema only.
+from mlsdm.security.path_utils import DEFAULT_PUBLIC_PATHS
+
+app.add_middleware(
+    OIDCAuthMiddleware,
+    authenticator=authenticator,
+    skip_paths=[path for path in DEFAULT_PUBLIC_PATHS if path not in ("/docs", "/redoc")],
 )
 ```
 
