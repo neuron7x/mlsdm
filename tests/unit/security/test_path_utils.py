@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
+import pytest
+
 from mlsdm.security.mtls import MTLSMiddleware
 from mlsdm.security.oidc import OIDCAuthenticator, OIDCAuthMiddleware, OIDCConfig
 from mlsdm.security.path_utils import DEFAULT_PUBLIC_PATHS, is_path_match, is_path_skipped
@@ -52,6 +54,28 @@ class TestPathSkipMatching:
         assert is_path_match("/admin", ["/admin/"]) is True
         assert is_path_match("/admin/settings", ["/admin/"]) is True
         assert is_path_match("/adminx", ["/admin/"]) is False
+
+    @pytest.mark.parametrize(
+        ("path", "skip_paths", "expected"),
+        [
+            ("/docs", ["/docs/"], True),
+            ("/docs/", ["/docs"], True),
+            ("/docs/x", ["/docs/"], True),
+            ("/docs2", ["/docs/"], False),
+            ("/", ["/"], True),
+            ("/health", ["/"], False),
+            ("/docs", [], False),
+            ("/docs", [""], False),
+        ],
+    )
+    def test_skip_path_normalization_matrix(
+        self,
+        path: str,
+        skip_paths: list[str],
+        expected: bool,
+    ) -> None:
+        """Test skip path normalization and edge-case handling."""
+        assert is_path_skipped(path, skip_paths) is expected
 
 
 class TestMiddlewareDefaultParity:
