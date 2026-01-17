@@ -30,9 +30,9 @@ from tenacity import (
     wait_exponential,
 )
 
+from ..config.policy_drift import get_policy_snapshot
 from ..memory.provenance import MemoryProvenance, MemorySource
 from ..observability.tracing import get_tracer_manager
-from ..policy.drift import get_policy_snapshot
 from ..speech.governance import (  # noqa: TC001 - used at runtime in function signatures
     SpeechGovernanceResult,
     SpeechGovernor,

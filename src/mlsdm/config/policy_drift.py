@@ -7,7 +7,6 @@ from datetime import datetime
 from functools import lru_cache
 from pathlib import Path
 
-from mlsdm.observability.policy_drift_telemetry import record_policy_registry_status
 from mlsdm.policy.loader import DEFAULT_POLICY_DIR, PolicyLoadError, load_policy_bundle
 from mlsdm.policy.registry import (
     REGISTRY_FILENAME,
@@ -81,15 +80,6 @@ def check_policy_drift(
             drift_detected=True,
             errors=tuple(errors),
         )
-        record_policy_registry_status(
-            policy_name=status.policy_name,
-            policy_hash=status.policy_hash,
-            policy_contract_version=status.policy_contract_version,
-            registry_hash=None,
-            registry_signature_valid=False,
-            drift_detected=True,
-            reason="policy_load_error",
-        )
         if enforce:
             raise PolicyDriftError(str(exc)) from exc
         return status
@@ -114,16 +104,6 @@ def check_policy_drift(
         errors.append(str(exc))
 
     drift_detected = bool(errors)
-    record_policy_registry_status(
-        policy_name=policy_name,
-        policy_hash=policy_hash,
-        policy_contract_version=policy_contract_version,
-        registry_hash=registry_hash,
-        registry_signature_valid=registry_signature_valid,
-        drift_detected=drift_detected,
-        reason=";".join(errors) if errors else None,
-    )
-
     if drift_detected:
         logger.error("Policy drift detected: %s", "; ".join(errors))
         if enforce:

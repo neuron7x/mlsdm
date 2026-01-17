@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from mlsdm.policy.drift import PolicyDriftError, check_policy_drift
+from mlsdm.config.policy_drift import PolicyDriftError, check_policy_drift
 from mlsdm.policy.loader import load_policy_bundle
 from mlsdm.policy.registry import build_policy_registry, write_policy_registry
 

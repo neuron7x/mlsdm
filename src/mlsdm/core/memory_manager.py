@@ -12,11 +12,11 @@ import numpy as np
 
 from mlsdm.cognition.moral_filter import MoralFilter
 from mlsdm.cognition.ontology_matcher import OntologyMatcher
+from mlsdm.config.policy_drift import get_policy_snapshot
 from mlsdm.memory.multi_level_memory import MultiLevelSynapticMemory
 from mlsdm.memory.provenance import MemoryProvenance, MemorySource
 from mlsdm.memory.qilm_module import QILM
 from mlsdm.memory.store import MemoryItem, MemoryStore, compute_content_hash
-from mlsdm.policy.drift import get_policy_snapshot
 from mlsdm.rhythm.cognitive_rhythm import CognitiveRhythm
 from mlsdm.utils.data_serializer import DataSerializer
 from mlsdm.utils.errors import (

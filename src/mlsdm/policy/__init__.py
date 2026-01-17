@@ -1,12 +1,5 @@
 """Policy loading and enforcement helpers."""
 
-from mlsdm.policy.drift import (
-    PolicyDriftError,
-    PolicyDriftStatus,
-    PolicySnapshot,
-    check_policy_drift,
-    get_policy_snapshot,
-)
 from mlsdm.policy.loader import (
     DEFAULT_POLICY_DIR,
     POLICY_CONTRACT_VERSION,
@@ -36,18 +29,13 @@ __all__ = [
     "OPA_EXPORT_MAPPINGS",
     "POLICY_CONTRACT_VERSION",
     "PolicyBundle",
-    "PolicyDriftError",
-    "PolicyDriftStatus",
-    "PolicySnapshot",
     "PolicyExportError",
     "PolicyLoadError",
     "PolicyRegistry",
     "PolicyRegistryError",
     "build_policy_registry",
     "canonical_hash",
-    "check_policy_drift",
     "export_opa_policy_data",
-    "get_policy_snapshot",
     "load_policy_bundle",
     "load_policy_registry",
     "serialize_canonical_json",
