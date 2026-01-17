@@ -18,12 +18,11 @@ Resolves: TD-003 (HIGH priority - AI Safety critical)
 
 from __future__ import annotations
 
+import hashlib
+import json
 from dataclasses import dataclass, replace
 from enum import Enum
 from typing import TYPE_CHECKING, Any
-
-import hashlib
-import json
 
 if TYPE_CHECKING:
     from datetime import datetime

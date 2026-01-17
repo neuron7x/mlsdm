@@ -37,3 +37,26 @@ def test_policy_drift_check_raises_on_mismatch(tmp_path: Path) -> None:
 
     with pytest.raises(PolicyDriftError):
         check_policy_drift(policy_dir=policy_dir, enforce=True)
+
+
+def test_policy_drift_detects_missing_registry(tmp_path: Path) -> None:
+    policy_dir = tmp_path / "policy"
+    _copy_policy_files(Path("policy"), policy_dir)
+
+    status = check_policy_drift(policy_dir=policy_dir, enforce=False)
+    assert status.drift_detected is True
+    assert status.registry_signature_valid is False
+
+    with pytest.raises(PolicyDriftError):
+        check_policy_drift(policy_dir=policy_dir, enforce=True)
+
+
+def test_policy_drift_detects_missing_policy_files(tmp_path: Path) -> None:
+    policy_dir = tmp_path / "policy"
+    policy_dir.mkdir(parents=True, exist_ok=True)
+
+    status = check_policy_drift(policy_dir=policy_dir, enforce=False)
+    assert status.drift_detected is True
+
+    with pytest.raises(PolicyDriftError):
+        check_policy_drift(policy_dir=policy_dir, enforce=True)

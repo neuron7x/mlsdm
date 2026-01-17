@@ -12,7 +12,12 @@ import numpy as np
 import pytest
 
 from mlsdm.memory.phase_entangled_lattice_memory import PhaseEntangledLatticeMemory
-from mlsdm.memory.provenance import MemoryProvenance, MemoryProvenanceError, MemorySource
+from mlsdm.memory.provenance import (
+    MemoryProvenance,
+    MemoryProvenanceError,
+    MemorySource,
+    enforce_provenance_integrity,
+)
 from mlsdm.memory.store import compute_content_hash
 
 
@@ -116,6 +121,72 @@ class TestMemoryProvenanceDataModel:
                 timestamp=datetime.now(),
                 content_hash=compute_content_hash("tamper"),
                 lineage_hash="deadbeef",
+            )
+
+    def test_verify_integrity_detects_tampering(self):
+        """verify_integrity should fail if fields are mutated."""
+        prov = MemoryProvenance(
+            source=MemorySource.USER_INPUT,
+            confidence=0.9,
+            timestamp=datetime.now(),
+            content_hash=compute_content_hash("safe"),
+        )
+
+        object.__setattr__(prov, "content_hash", compute_content_hash("tampered"))
+
+        with pytest.raises(MemoryProvenanceError, match="integrity check failed"):
+            prov.verify_integrity()
+
+    def test_enforce_provenance_rejects_content_hash_mismatch(self):
+        """enforce_provenance_integrity rejects mismatched content hashes."""
+        content = "content mismatch"
+        prov = MemoryProvenance(
+            source=MemorySource.USER_INPUT,
+            confidence=0.9,
+            timestamp=datetime.now(),
+            content_hash=compute_content_hash(content),
+        )
+
+        with pytest.raises(MemoryProvenanceError, match="content hash mismatch"):
+            enforce_provenance_integrity(
+                prov,
+                content_hash=compute_content_hash("other"),
+            )
+
+    def test_enforce_provenance_rejects_policy_hash_mismatch(self):
+        """enforce_provenance_integrity rejects mismatched policy hashes."""
+        content = "policy mismatch"
+        prov = MemoryProvenance(
+            source=MemorySource.USER_INPUT,
+            confidence=0.9,
+            timestamp=datetime.now(),
+            content_hash=compute_content_hash(content),
+            policy_hash="policy-a",
+        )
+
+        with pytest.raises(MemoryProvenanceError, match="policy hash mismatch"):
+            enforce_provenance_integrity(
+                prov,
+                content_hash=compute_content_hash(content),
+                policy_hash="policy-b",
+            )
+
+    def test_enforce_provenance_rejects_contract_version_mismatch(self):
+        """enforce_provenance_integrity rejects mismatched contract versions."""
+        content = "contract mismatch"
+        prov = MemoryProvenance(
+            source=MemorySource.USER_INPUT,
+            confidence=0.9,
+            timestamp=datetime.now(),
+            content_hash=compute_content_hash(content),
+            policy_contract_version="1.0",
+        )
+
+        with pytest.raises(MemoryProvenanceError, match="policy contract version mismatch"):
+            enforce_provenance_integrity(
+                prov,
+                content_hash=compute_content_hash(content),
+                policy_contract_version="2.0",
             )
 
 
