@@ -410,6 +410,30 @@ class TestOIDCAuthMiddlewareDispatch:
         assert mock_request.state.user_info is None
 
     @pytest.mark.asyncio
+    async def test_dispatch_oidc_disabled_blocks_required_paths(self) -> None:
+        """Test middleware fails closed on protected paths when OIDC disabled."""
+        config = OIDCConfig(enabled=False)
+        auth = OIDCAuthenticator(config)
+
+        mock_app = MagicMock()
+        middleware = OIDCAuthMiddleware(
+            mock_app,
+            authenticator=auth,
+            require_auth_paths=["/admin/"],
+        )
+
+        mock_request = MagicMock(spec=Request)
+        mock_request.url.path = "/admin"
+        mock_request.state = MagicMock()
+
+        mock_call_next = AsyncMock(return_value=MagicMock())
+
+        with pytest.raises(HTTPException) as exc_info:
+            await middleware.dispatch(mock_request, mock_call_next)
+        assert exc_info.value.status_code == 503
+        mock_call_next.assert_not_called()
+
+    @pytest.mark.asyncio
     async def test_dispatch_require_auth_paths_boundary_safe(self) -> None:
         """Test require_auth_paths uses boundary-safe matching."""
         mock_auth = MagicMock()
