@@ -77,6 +77,9 @@ jobs:
           echo "Running ruff linter with detailed output..."
           ruff check src tests --output-format=github --show-fixes
 
+      - name: Verify security skip invariants
+        run: make verify-security-skip
+
       - name: Check for hidden Unicode characters
         run: |
           echo "Checking for hidden/bidirectional Unicode characters (Trojan Source protection)..."

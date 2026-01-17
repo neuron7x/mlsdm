@@ -48,6 +48,9 @@ jobs:
       - name: Verify test dependencies
         run: python -c "import hypothesis, pytest, pytest_benchmark"
 
+      - name: Verify security skip invariants
+        run: make verify-security-skip
+
       - name: Run smoke tests (fast unit tests only)
         run: |
           mkdir -p artifacts
