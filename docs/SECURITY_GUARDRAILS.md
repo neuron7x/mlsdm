@@ -39,7 +39,7 @@ MLSDM's Runtime Guardrails Layer provides comprehensive, STRIDE-aligned security
 - ✅ **Output Filtering**: Secret and configuration leak prevention
 - ✅ **Audit Logging**: Structured logs with correlation IDs and STRIDE categories
 
-### Default Public Endpoints
+### Public endpoints & skip_paths defaults
 
 By default, security middleware treats the following endpoints as public:
 
@@ -48,7 +48,23 @@ By default, security middleware treats the following endpoints as public:
 - `/redoc`
 - `/openapi.json`
 
-Boundary-safe matching is enforced: exact paths and subpaths (e.g., `/health/live`) are skipped, while prefix collisions (e.g., `/healthcheck`, `/docs2`) are not. To protect documentation endpoints, override `skip_paths` in middleware configuration.
+Boundary-safe matching is enforced: exact paths and subpaths (e.g., `/health/live`) are skipped, while prefix collisions (e.g., `/healthcheck`, `/docs2`) are not. Skip evaluation follows:
+
+- skip if `path == skip`
+- OR skip if `path.startswith(skip + "/")`
+- NEVER skip with raw `path.startswith(skip)` alone
+- The `/` skip path only matches `/`
+
+**Override example — protect `/docs` and `/redoc`:**
+
+```python
+# Limit public endpoints to health and OpenAPI schema only.
+app.add_middleware(
+    OIDCAuthMiddleware,
+    authenticator=authenticator,
+    skip_paths=["/health", "/openapi.json"],
+)
+```
 
 ---
 
