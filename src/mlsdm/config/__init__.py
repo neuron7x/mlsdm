@@ -74,6 +74,13 @@ from .calibration import (
     get_calibration_summary,
     get_synaptic_memory_config,
 )
+from .policy_drift import (
+    PolicyDriftError,
+    PolicyDriftStatus,
+    PolicySnapshot,
+    check_policy_drift,
+    get_policy_snapshot,
+)
 
 __all__ = [
     # Dataclasses
@@ -103,4 +110,9 @@ __all__ = [
     "get_calibration_config",
     "get_calibration_summary",
     "get_synaptic_memory_config",
+    "PolicyDriftError",
+    "PolicyDriftStatus",
+    "PolicySnapshot",
+    "check_policy_drift",
+    "get_policy_snapshot",
 ]

@@ -69,9 +69,9 @@ Based on comprehensive analysis, no critical issues requiring immediate resoluti
 
 ## STRATEGIC (Affecting Scalability and Stability)
 
-### SEC-S001: Partially Mitigated AI Security Risks [PARTIALLY RESOLVED]
+### SEC-S001: Partially Mitigated AI Security Risks [RESOLVED]
 
-**Priority:** HIGH → MEDIUM (2 of 4 items resolved)
+**Priority:** HIGH → LOW (4 of 4 items resolved)
 **Category:** Security
 **Source:** `RISK_REGISTER.md`
 
@@ -81,21 +81,24 @@ Based on comprehensive analysis, no critical issues requiring immediate resoluti
 - ✅ R003: Multi-turn jailbreak → **Implemented** `analyze_conversation_patterns()` in `llm_safety.py`
 - ✅ R018: Indirect prompt injection → **Implemented** `sanitize_context()` in `llm_safety.py`
 
-**Still Open:**
-- R012: Policy drift detection (drift alerting system required)
-- R015: Hallucination propagation (memory provenance required)
+**Resolved (March 2026):**
+- ✅ R012: Policy drift detection → **Implemented** policy registry hash enforcement + telemetry alerting
+- ✅ R015: Hallucination propagation → **Implemented** immutable memory provenance + integrity enforcement
 
 **Implementation Details:**
 - `analyze_conversation_patterns()`: Detects gradual manipulation across turns, persistence after refusal, hypothetical framing attacks
 - `sanitize_context()`: Removes embedded instructions, hidden unicode, markdown comment injections
 - Both functions exported via `mlsdm.security` module
 - 15 new tests added covering both functions
+- Policy registry drift detection now validates canonical policy hash + signature, emits metrics, and blocks runtime on mismatch
+- Memory provenance now includes lineage hashes, policy hash binding, and content integrity enforcement for LTM storage
 
 **Recommended Actions:**
 - [x] Implement attack pattern detection in PELM memory
 - [x] Add anomaly detection for conversation patterns
-- [ ] Implement memory provenance tracking (R015)
+- [x] Implement memory provenance tracking (R015)
 - [x] Add context sanitization layer
+- [x] Enforce policy drift detection (R012) with hash comparison + alerting
 
 ---
 

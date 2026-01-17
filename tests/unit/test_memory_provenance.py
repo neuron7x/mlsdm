@@ -12,7 +12,13 @@ import numpy as np
 import pytest
 
 from mlsdm.memory.phase_entangled_lattice_memory import PhaseEntangledLatticeMemory
-from mlsdm.memory.provenance import MemoryProvenance, MemorySource
+from mlsdm.memory.provenance import (
+    MemoryProvenance,
+    MemoryProvenanceError,
+    MemorySource,
+    enforce_provenance_integrity,
+)
+from mlsdm.memory.store import compute_content_hash
 
 
 class TestMemoryProvenanceDataModel:
@@ -21,40 +27,67 @@ class TestMemoryProvenanceDataModel:
     def test_provenance_creation(self):
         """Test creating a MemoryProvenance instance."""
         prov = MemoryProvenance(
-            source=MemorySource.USER_INPUT, confidence=0.95, timestamp=datetime.now()
+            source=MemorySource.USER_INPUT,
+            confidence=0.95,
+            timestamp=datetime.now(),
+            content_hash=compute_content_hash("test"),
         )
 
         assert prov.source == MemorySource.USER_INPUT
         assert prov.confidence == 0.95
         assert prov.llm_model is None
         assert prov.parent_id is None
+        assert prov.content_hash is not None
+        assert prov.lineage_hash is not None
 
     def test_provenance_confidence_validation(self):
         """Test confidence must be in [0.0, 1.0] range."""
         # Valid confidence values
-        MemoryProvenance(source=MemorySource.USER_INPUT, confidence=0.0, timestamp=datetime.now())
-        MemoryProvenance(source=MemorySource.USER_INPUT, confidence=1.0, timestamp=datetime.now())
+        MemoryProvenance(
+            source=MemorySource.USER_INPUT,
+            confidence=0.0,
+            timestamp=datetime.now(),
+            content_hash=compute_content_hash("zero"),
+        )
+        MemoryProvenance(
+            source=MemorySource.USER_INPUT,
+            confidence=1.0,
+            timestamp=datetime.now(),
+            content_hash=compute_content_hash("one"),
+        )
 
         # Invalid confidence values
         with pytest.raises(ValueError, match="Confidence must be in range"):
             MemoryProvenance(
-                source=MemorySource.USER_INPUT, confidence=1.5, timestamp=datetime.now()
+                source=MemorySource.USER_INPUT,
+                confidence=1.5,
+                timestamp=datetime.now(),
+                content_hash=compute_content_hash("bad"),
             )
 
         with pytest.raises(ValueError, match="Confidence must be in range"):
             MemoryProvenance(
-                source=MemorySource.USER_INPUT, confidence=-0.1, timestamp=datetime.now()
+                source=MemorySource.USER_INPUT,
+                confidence=-0.1,
+                timestamp=datetime.now(),
+                content_hash=compute_content_hash("bad"),
             )
 
     def test_is_high_confidence_property(self):
         """Test is_high_confidence property."""
         high_conf = MemoryProvenance(
-            source=MemorySource.USER_INPUT, confidence=0.8, timestamp=datetime.now()
+            source=MemorySource.USER_INPUT,
+            confidence=0.8,
+            timestamp=datetime.now(),
+            content_hash=compute_content_hash("high"),
         )
         assert high_conf.is_high_confidence is True
 
         low_conf = MemoryProvenance(
-            source=MemorySource.LLM_GENERATION, confidence=0.5, timestamp=datetime.now()
+            source=MemorySource.LLM_GENERATION,
+            confidence=0.5,
+            timestamp=datetime.now(),
+            content_hash=compute_content_hash("low"),
         )
         assert low_conf.is_high_confidence is False
 
@@ -65,13 +98,96 @@ class TestMemoryProvenanceDataModel:
             confidence=0.6,
             timestamp=datetime.now(),
             llm_model="gpt-4",
+            content_hash=compute_content_hash("llm"),
         )
         assert llm_prov.is_llm_generated is True
 
         user_prov = MemoryProvenance(
-            source=MemorySource.USER_INPUT, confidence=0.9, timestamp=datetime.now()
+            source=MemorySource.USER_INPUT,
+            confidence=0.9,
+            timestamp=datetime.now(),
+            content_hash=compute_content_hash("user"),
         )
         assert user_prov.is_llm_generated is False
+        assert user_prov.lineage_hash is not None
+        user_prov.verify_integrity()
+
+    def test_lineage_hash_mismatch_raises(self):
+        """Lineage hash mismatch should raise an error."""
+        with pytest.raises(MemoryProvenanceError, match="lineage hash mismatch"):
+            MemoryProvenance(
+                source=MemorySource.USER_INPUT,
+                confidence=0.9,
+                timestamp=datetime.now(),
+                content_hash=compute_content_hash("tamper"),
+                lineage_hash="deadbeef",
+            )
+
+    def test_verify_integrity_detects_tampering(self):
+        """verify_integrity should fail if fields are mutated."""
+        prov = MemoryProvenance(
+            source=MemorySource.USER_INPUT,
+            confidence=0.9,
+            timestamp=datetime.now(),
+            content_hash=compute_content_hash("safe"),
+        )
+
+        object.__setattr__(prov, "content_hash", compute_content_hash("tampered"))
+
+        with pytest.raises(MemoryProvenanceError, match="integrity check failed"):
+            prov.verify_integrity()
+
+    def test_enforce_provenance_rejects_content_hash_mismatch(self):
+        """enforce_provenance_integrity rejects mismatched content hashes."""
+        content = "content mismatch"
+        prov = MemoryProvenance(
+            source=MemorySource.USER_INPUT,
+            confidence=0.9,
+            timestamp=datetime.now(),
+            content_hash=compute_content_hash(content),
+        )
+
+        with pytest.raises(MemoryProvenanceError, match="content hash mismatch"):
+            enforce_provenance_integrity(
+                prov,
+                content_hash=compute_content_hash("other"),
+            )
+
+    def test_enforce_provenance_rejects_policy_hash_mismatch(self):
+        """enforce_provenance_integrity rejects mismatched policy hashes."""
+        content = "policy mismatch"
+        prov = MemoryProvenance(
+            source=MemorySource.USER_INPUT,
+            confidence=0.9,
+            timestamp=datetime.now(),
+            content_hash=compute_content_hash(content),
+            policy_hash="policy-a",
+        )
+
+        with pytest.raises(MemoryProvenanceError, match="policy hash mismatch"):
+            enforce_provenance_integrity(
+                prov,
+                content_hash=compute_content_hash(content),
+                policy_hash="policy-b",
+            )
+
+    def test_enforce_provenance_rejects_contract_version_mismatch(self):
+        """enforce_provenance_integrity rejects mismatched contract versions."""
+        content = "contract mismatch"
+        prov = MemoryProvenance(
+            source=MemorySource.USER_INPUT,
+            confidence=0.9,
+            timestamp=datetime.now(),
+            content_hash=compute_content_hash(content),
+            policy_contract_version="1.0",
+        )
+
+        with pytest.raises(MemoryProvenanceError, match="policy contract version mismatch"):
+            enforce_provenance_integrity(
+                prov,
+                content_hash=compute_content_hash(content),
+                policy_contract_version="2.0",
+            )
 
 
 class TestPELMProvenanceStorage:

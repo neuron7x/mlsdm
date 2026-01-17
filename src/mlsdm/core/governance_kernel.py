@@ -11,8 +11,10 @@ if TYPE_CHECKING:
     import numpy as np
 
 from ..cognition.moral_filter_v2 import MoralFilterV2
+from ..config.policy_drift import check_policy_drift
 from ..memory.multi_level_memory import MultiLevelSynapticMemory
 from ..memory.phase_entangled_lattice_memory import PhaseEntangledLatticeMemory
+from ..observability.policy_drift_telemetry import record_policy_registry_status
 from ..rhythm.cognitive_rhythm import CognitiveRhythm
 
 
@@ -195,6 +197,16 @@ class GovernanceKernel:
         self._initialize_components()
 
     def _initialize_components(self) -> None:
+        status = check_policy_drift(enforce=True)
+        record_policy_registry_status(
+            policy_name=status.policy_name,
+            policy_hash=status.policy_hash,
+            policy_contract_version=status.policy_contract_version,
+            registry_hash=status.registry_hash,
+            registry_signature_valid=status.registry_signature_valid,
+            drift_detected=status.drift_detected,
+            reason=";".join(status.errors) if status.errors else None,
+        )
         self._moral = MoralFilterV2(initial_threshold=self._initial_moral_threshold)
         self._synaptic = MultiLevelSynapticMemory(dimension=self._dim, config=self._synaptic_config)
         self._pelm = PhaseEntangledLatticeMemory(dimension=self._dim, capacity=self._capacity)

@@ -24,7 +24,12 @@ import sqlite3
 from datetime import datetime as dt
 from typing import Any, cast
 
-from mlsdm.memory.provenance import MemoryProvenance, MemorySource
+from mlsdm.memory.provenance import (
+    MemoryProvenance,
+    MemoryProvenanceError,
+    MemorySource,
+    enforce_provenance_integrity,
+)
 from mlsdm.memory.store import MemoryItem
 from mlsdm.security.payload_scrubber import scrub_text
 from mlsdm.utils.errors import ConfigurationError
@@ -216,16 +221,38 @@ class SQLiteMemoryStore:
             # Store encrypted version in content field too for consistency
             stored_content = "<encrypted>"
 
+        # Validate provenance integrity for persistent storage
+        retention_expires_at: dt | None = None
+        if item.ttl_s is not None:
+            retention_expires_at = dt.fromtimestamp(item.ts + item.ttl_s)
+
+        try:
+            provenance = enforce_provenance_integrity(
+                item.provenance,
+                content_hash=item.content_hash,
+                retention_expires_at=retention_expires_at,
+            )
+        except MemoryProvenanceError:
+            logger.error("Provenance integrity check failed for item %s", item.id)
+            raise
+
         # Serialize JSON fields
         pii_flags_json = json.dumps(item.pii_flags) if item.pii_flags else None
         provenance_json: str | None = None
-        if item.provenance is not None:
+        if provenance is not None:
             provenance_json = json.dumps({
-                "source": item.provenance.source.value,
-                "confidence": item.provenance.confidence,
-                "timestamp": item.provenance.timestamp.isoformat(),
-                "llm_model": item.provenance.llm_model,
-                "parent_id": item.provenance.parent_id,
+                "source": provenance.source.value,
+                "confidence": provenance.confidence,
+                "timestamp": provenance.timestamp.isoformat(),
+                "llm_model": provenance.llm_model,
+                "parent_id": provenance.parent_id,
+                "policy_hash": provenance.policy_hash,
+                "policy_contract_version": provenance.policy_contract_version,
+                "content_hash": provenance.content_hash,
+                "lineage_hash": provenance.lineage_hash,
+                "retention_expires_at": provenance.retention_expires_at.isoformat()
+                if provenance.retention_expires_at
+                else None,
             })
 
         # Insert or replace
@@ -296,6 +323,13 @@ class SQLiteMemoryStore:
                 timestamp=dt.fromisoformat(prov_data["timestamp"]),
                 llm_model=prov_data.get("llm_model"),
                 parent_id=prov_data.get("parent_id"),
+                policy_hash=prov_data.get("policy_hash"),
+                policy_contract_version=prov_data.get("policy_contract_version"),
+                content_hash=prov_data.get("content_hash"),
+                lineage_hash=prov_data.get("lineage_hash"),
+                retention_expires_at=dt.fromisoformat(prov_data["retention_expires_at"])
+                if prov_data.get("retention_expires_at")
+                else None,
             )
 
         return MemoryItem(
@@ -378,6 +412,13 @@ class SQLiteMemoryStore:
                     timestamp=dt.fromisoformat(prov_data["timestamp"]),
                     llm_model=prov_data.get("llm_model"),
                     parent_id=prov_data.get("parent_id"),
+                    policy_hash=prov_data.get("policy_hash"),
+                    policy_contract_version=prov_data.get("policy_contract_version"),
+                    content_hash=prov_data.get("content_hash"),
+                    lineage_hash=prov_data.get("lineage_hash"),
+                    retention_expires_at=dt.fromisoformat(prov_data["retention_expires_at"])
+                    if prov_data.get("retention_expires_at")
+                    else None,
                 )
 
             items.append(MemoryItem(
