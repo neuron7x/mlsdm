@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable
 
 DEFAULT_PUBLIC_PATHS: tuple[str, ...] = (
     "/health",
@@ -18,7 +21,7 @@ def _normalize_skip_path(path: str) -> str:
     return path
 
 
-def is_path_skipped(path: str, skip_paths: Iterable[str]) -> bool:
+def is_path_skipped(path: str, skip_paths: "Iterable[str]") -> bool:
     """Return True if path should be skipped using boundary-safe matching."""
     for skip in skip_paths:
         normalized = _normalize_skip_path(skip)
