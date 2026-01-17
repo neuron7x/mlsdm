@@ -5,7 +5,7 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 from mlsdm.security.mtls import MTLSMiddleware
-from mlsdm.security.oidc import OIDCAuthMiddleware, OIDCAuthenticator, OIDCConfig
+from mlsdm.security.oidc import OIDCAuthenticator, OIDCAuthMiddleware, OIDCConfig
 from mlsdm.security.path_utils import DEFAULT_PUBLIC_PATHS, is_path_skipped
 from mlsdm.security.rbac import RBACMiddleware, RoleValidator
 from mlsdm.security.signing import SigningMiddleware
