@@ -284,7 +284,7 @@ class ConfigLoader:
                 raise ValueError(
                     f"Configuration validation failed for '{path}':\n{str(e)}\n\n"
                     f"Please check your configuration file against the schema "
-                    f"documentation in src/utils/config_schema.py"
+                    f"documentation in mlsdm.utils.config_schema"
                 ) from e
 
         # Optimization: Cache the result (only for validated configs without env override)

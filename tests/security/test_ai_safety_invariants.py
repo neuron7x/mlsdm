@@ -255,8 +255,7 @@ class TestCoherenceMetricsBounds:
         """
         Test that semantic coherence returns finite values.
 
-        Note: The implementation uses cosine similarity which can range [-1, 1]
-        for arbitrary vectors, despite the docstring claiming [0, 1].
+        Note: The implementation clamps cosine similarity to [0, 1].
         This test verifies the metric remains finite and bounded.
         """
         analyzer = CoherenceSafetyAnalyzer()
@@ -268,10 +267,9 @@ class TestCoherenceMetricsBounds:
 
         coherence = analyzer.measure_semantic_coherence(query_vectors, retrieved_vectors)
 
-        # Cosine similarity can be [-1, 1], so we validate that range
-        assert (
-            -1.0 <= coherence <= 1.0
-        ), f"Semantic coherence {coherence} out of expected bounds [-1, 1]"
+        assert 0.0 <= coherence <= 1.0, (
+            f"Semantic coherence {coherence} out of expected bounds [0, 1]"
+        )
 
 
 # ============================================================================
