@@ -35,6 +35,8 @@ from typing import TYPE_CHECKING, Any, cast
 from fastapi import HTTPException, Request, Response, status
 from starlette.middleware.base import BaseHTTPMiddleware
 
+from mlsdm.security.path_utils import DEFAULT_PUBLIC_PATHS, is_path_skipped
+
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable, Sequence
 
@@ -386,7 +388,7 @@ class RBACMiddleware(BaseHTTPMiddleware):
         super().__init__(app)
         self.validator = role_validator or get_role_validator()
         self.permissions = endpoint_permissions or DEFAULT_ENDPOINT_PERMISSIONS
-        self.skip_paths = set(skip_paths or ["/", "/health", "/docs", "/redoc", "/openapi.json"])
+        self.skip_paths = set(skip_paths or DEFAULT_PUBLIC_PATHS)
 
     def _should_skip_path(self, path: str) -> bool:
         """Check if a path should skip RBAC checks.
@@ -399,13 +401,7 @@ class RBACMiddleware(BaseHTTPMiddleware):
         Returns:
             True if path should skip RBAC checks
         """
-        # Exact match
-        if path in self.skip_paths:
-            return True
-
-        # Prefix match: /health matches /health/live but not /healthy
-        # The path must start with skip_path followed by '/' to be a sub-path
-        return any(path.startswith(skip_path + "/") for skip_path in self.skip_paths)
+        return is_path_skipped(path, self.skip_paths)
 
     def _get_required_roles(self, path: str) -> set[Role] | None:
         """Get required roles for a path.

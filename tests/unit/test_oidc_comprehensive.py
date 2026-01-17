@@ -298,6 +298,25 @@ class TestOIDCAuthMiddlewareDispatch:
         mock_auth.authenticate.assert_not_called()
 
     @pytest.mark.asyncio
+    async def test_dispatch_skip_openapi_path(self) -> None:
+        """Test middleware skips openapi.json path."""
+        mock_auth = MagicMock()
+        mock_auth.enabled = True
+        mock_auth.authenticate = AsyncMock()
+
+        mock_app = MagicMock()
+        middleware = OIDCAuthMiddleware(mock_app, authenticator=mock_auth)
+
+        mock_request = MagicMock(spec=Request)
+        mock_request.url.path = "/openapi.json"
+        mock_request.state = MagicMock()
+
+        mock_call_next = AsyncMock(return_value=MagicMock())
+        await middleware.dispatch(mock_request, mock_call_next)
+        assert mock_request.state.user_info is None
+        mock_auth.authenticate.assert_not_called()
+
+    @pytest.mark.asyncio
     async def test_dispatch_skip_health_subpath(self) -> None:
         """Test middleware skips health subpaths."""
         mock_auth = MagicMock()
@@ -333,6 +352,45 @@ class TestOIDCAuthMiddlewareDispatch:
         mock_call_next = AsyncMock(return_value=MagicMock())
         await middleware.dispatch(mock_request, mock_call_next)
         mock_auth.authenticate.assert_called_once_with(mock_request)
+
+    @pytest.mark.asyncio
+    async def test_dispatch_redoc2_not_skipped(self) -> None:
+        """Test middleware does not skip similar redoc paths."""
+        mock_auth = MagicMock()
+        mock_auth.enabled = True
+        mock_auth.authenticate = AsyncMock(return_value=None)
+
+        mock_app = MagicMock()
+        middleware = OIDCAuthMiddleware(mock_app, authenticator=mock_auth)
+
+        mock_request = MagicMock(spec=Request)
+        mock_request.url.path = "/redoc2"
+        mock_request.state = MagicMock()
+
+        mock_call_next = AsyncMock(return_value=MagicMock())
+        await middleware.dispatch(mock_request, mock_call_next)
+        mock_auth.authenticate.assert_called_once_with(mock_request)
+
+    @pytest.mark.asyncio
+    async def test_dispatch_authenticator_exception_fails_closed(self) -> None:
+        """Test middleware fails closed on authenticator exceptions."""
+        mock_auth = MagicMock()
+        mock_auth.enabled = True
+        mock_auth.authenticate = AsyncMock(side_effect=RuntimeError("auth failure"))
+
+        mock_app = MagicMock()
+        middleware = OIDCAuthMiddleware(mock_app, authenticator=mock_auth)
+
+        mock_request = MagicMock(spec=Request)
+        mock_request.url.path = "/api/endpoint"
+        mock_request.state = MagicMock()
+
+        mock_call_next = AsyncMock(return_value=MagicMock())
+
+        with pytest.raises(HTTPException) as exc_info:
+            await middleware.dispatch(mock_request, mock_call_next)
+        assert exc_info.value.status_code == 503
+        mock_call_next.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_dispatch_oidc_disabled(self) -> None:

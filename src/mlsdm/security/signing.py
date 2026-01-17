@@ -61,6 +61,8 @@ from typing import TYPE_CHECKING, Any
 from fastapi import HTTPException, Request, status
 from starlette.middleware.base import BaseHTTPMiddleware
 
+from mlsdm.security.path_utils import DEFAULT_PUBLIC_PATHS, is_path_skipped
+
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
 
@@ -291,7 +293,7 @@ class SigningMiddleware(BaseHTTPMiddleware):
     Example:
         >>> app.add_middleware(
         ...     SigningMiddleware,
-        ...     skip_paths=["/health", "/docs"],
+        ...     skip_paths=["/health", "/docs", "/redoc", "/openapi.json"],
         ... )
     """
 
@@ -312,13 +314,7 @@ class SigningMiddleware(BaseHTTPMiddleware):
         """
         super().__init__(app)
         self.config = config or SigningConfig.from_env()
-        self.skip_paths = skip_paths or [
-            "/health",
-            "/health/",
-            "/docs",
-            "/openapi.json",
-            "/redoc",
-        ]
+        self.skip_paths = skip_paths or list(DEFAULT_PUBLIC_PATHS)
         self.require_signature_paths = require_signature_paths
 
     def _get_secret_key(self, key_id: str | None) -> str | None:
@@ -354,7 +350,7 @@ class SigningMiddleware(BaseHTTPMiddleware):
         path = request.url.path
 
         # Skip certain paths
-        if any(path.startswith(skip) for skip in self.skip_paths):
+        if is_path_skipped(path, self.skip_paths):
             return await call_next(request)
 
         # Skip if signing not enabled

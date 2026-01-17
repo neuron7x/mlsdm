@@ -313,6 +313,18 @@ class TestRBACMiddleware:
         response = client.get("/public")
         assert response.status_code == 200
 
+    def test_default_skip_paths_boundary_safe(self) -> None:
+        """Test default skip paths use boundary-safe matching."""
+        app = FastAPI()
+        middleware = RBACMiddleware(app, role_validator=self.validator)
+
+        assert middleware._should_skip_path("/docs") is True
+        assert middleware._should_skip_path("/docs/") is True
+        assert middleware._should_skip_path("/docs2") is False
+        assert middleware._should_skip_path("/health") is True
+        assert middleware._should_skip_path("/health/live") is True
+        assert middleware._should_skip_path("/healthcheck") is False
+
     def test_protected_endpoint_requires_auth(self) -> None:
         """Test that protected endpoints require auth."""
         app = self._create_test_app()
