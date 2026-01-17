@@ -958,8 +958,8 @@ Content-Security-Policy: default-src 'self'
 - Security contexts in Kubernetes manifests
 
 **Health Checks:**
-- Liveness probe: `/healthz` endpoint
-- Readiness probe: `/healthz` endpoint
+- Liveness probe: `/health/live` endpoint
+- Readiness probe: `/health/ready` endpoint
 - Startup probe recommended for slow-starting instances
 
 ### Kubernetes Security

@@ -39,6 +39,17 @@ MLSDM's Runtime Guardrails Layer provides comprehensive, STRIDE-aligned security
 - ✅ **Output Filtering**: Secret and configuration leak prevention
 - ✅ **Audit Logging**: Structured logs with correlation IDs and STRIDE categories
 
+### Default Public Endpoints
+
+By default, security middleware treats the following endpoints as public:
+
+- `/health`
+- `/docs`
+- `/redoc`
+- `/openapi.json`
+
+Boundary-safe matching is enforced: exact paths and subpaths (e.g., `/health/live`) are skipped, while prefix collisions (e.g., `/healthcheck`, `/docs2`) are not. To protect documentation endpoints, override `skip_paths` in middleware configuration.
+
 ---
 
 ## Architecture

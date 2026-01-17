@@ -52,6 +52,8 @@ from typing import TYPE_CHECKING, Any
 from fastapi import HTTPException, Request, Response, status
 from starlette.middleware.base import BaseHTTPMiddleware
 
+from mlsdm.security.path_utils import DEFAULT_PUBLIC_PATHS, is_path_skipped
+
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
 
@@ -405,18 +407,16 @@ class OIDCAuthMiddleware(BaseHTTPMiddleware):
             app: FastAPI application
             authenticator: OIDC authenticator instance
             require_auth_paths: Paths that require authentication (default: all)
-            skip_paths: Paths to skip authentication (default: /health, /health/*)
+            skip_paths: Paths to skip authentication (default: /health, /docs, /redoc, /openapi.json)
         """
         super().__init__(app)
         self.authenticator = authenticator
         self.require_auth_paths = require_auth_paths
-        self.skip_paths = skip_paths or ["/health", "/docs", "/redoc", "/openapi.json"]
+        self.skip_paths = skip_paths or list(DEFAULT_PUBLIC_PATHS)
 
     def _should_skip_path(self, path: str) -> bool:
         """Check if a path should skip OIDC authentication."""
-        if path in self.skip_paths:
-            return True
-        return any(path.startswith(f"{skip}/") for skip in self.skip_paths)
+        return is_path_skipped(path, self.skip_paths)
 
     async def dispatch(
         self,
@@ -463,6 +463,10 @@ class OIDCAuthMiddleware(BaseHTTPMiddleware):
         except Exception as e:
             logger.error("OIDC authentication error: %s", e)
             request.state.user_info = None
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="OIDC authentication unavailable",
+            ) from e
 
         return await call_next(request)
 
