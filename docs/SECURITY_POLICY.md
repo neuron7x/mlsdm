@@ -813,16 +813,14 @@ HEALTHCHECK --interval=30s --timeout=3s \
 
 ### v1.0 (Current)
 - ✅ Input validation
-- ✅ Authentication (API key)
+- ✅ Authentication (API key, OIDC, mTLS, request signing)
+- ✅ Role-based access control (RBAC)
 - ✅ Rate limiting
 - ✅ Memory protection
 - ✅ Dependency scanning
 - ✅ Security logging
 
 ### v1.1 (Planned)
-- ⚠️ OAuth 2.0 / OpenID Connect
-- ⚠️ mTLS support
-- ⚠️ RBAC (role-based access control)
 - ⚠️ SBOM generation
 - ⚠️ Penetration testing
 - ⚠️ Security audit

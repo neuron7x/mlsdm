@@ -21,10 +21,10 @@ def _normalize_skip_path(path: str) -> str:
     return path
 
 
-def is_path_skipped(path: str, skip_paths: Iterable[str]) -> bool:
-    """Return True if path should be skipped using boundary-safe matching."""
-    for skip in skip_paths:
-        normalized = _normalize_skip_path(skip)
+def is_path_match(path: str, match_paths: Iterable[str]) -> bool:
+    """Return True if path matches using boundary-safe matching."""
+    for match in match_paths:
+        normalized = _normalize_skip_path(match)
         if not normalized:
             continue
         if path == normalized:
@@ -32,3 +32,8 @@ def is_path_skipped(path: str, skip_paths: Iterable[str]) -> bool:
         if normalized != "/" and path.startswith(f"{normalized}/"):
             return True
     return False
+
+
+def is_path_skipped(path: str, skip_paths: Iterable[str]) -> bool:
+    """Return True if path should be skipped using boundary-safe matching."""
+    return is_path_match(path, skip_paths)

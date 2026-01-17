@@ -212,8 +212,8 @@ This threat model identifies security threats to MLSDM Governed Cognitive Memory
 - ✅ Read-only filesystem where possible
 - ✅ Least-privilege runtime (no unnecessary capabilities)
 - ✅ Dependency vulnerability scanning (pip-audit)
-- ✅ Single authentication level (no RBAC yet)
-- ⚠️ Role-based access control (RBAC) not implemented (v1.1 planned)
+- ✅ Multi-layer authentication (API key, OIDC, mTLS, signing)
+- ✅ Role-based access control (RBAC) implemented with role hierarchy
 - ⚠️ Network policies not enforced (depends on deployment)
 
 ---
