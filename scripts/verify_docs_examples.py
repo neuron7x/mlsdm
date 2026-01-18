@@ -12,7 +12,7 @@ sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from mlsdm.security.path_utils import DEFAULT_PUBLIC_PATHS  # noqa: E402
 
-SKIP_PATHS_PATTERN = re.compile(r"skip_paths\s*=\s*\[([^\]]*)\]")
+SKIP_PATHS_PATTERN = re.compile(r"\bskip_paths\b\s*=\s*(\[[^\]]*\]|\([^\)]*\))")
 PATH_PATTERN = re.compile(r"['\"](/[^'\"]+)['\"]")
 
 

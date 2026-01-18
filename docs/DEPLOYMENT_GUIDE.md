@@ -955,12 +955,14 @@ from mlsdm.security import (
 authenticator = OIDCAuthenticator.from_env()
 
 # Add middleware for automatic authentication
+skip_paths = ["/health", "/docs", "/redoc", "/openapi.json"]
+# To protect /docs and /redoc, remove them explicitly (intentional override).
+# Example: filtered_skip_paths = [path for path in skip_paths if path not in {"/docs", "/redoc"}]
 app.add_middleware(
     OIDCAuthMiddleware,
     authenticator=authenticator,
-    skip_paths=["/health", "/docs", "/redoc", "/openapi.json"],
+    skip_paths=skip_paths,
 )
-# To protect /docs and /redoc, override skip_paths accordingly.
 
 # Use dependency injection for protected endpoints
 @app.get("/me")
