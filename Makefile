@@ -1,4 +1,4 @@
-.PHONY: test test-fast coverage-gate verify-metrics verify-security-skip lint type cov bench bench-drift help run-dev run-cloud-local run-agent health-check eval-moral_filter test-memory-obs \
+.PHONY: test test-fast coverage-gate verify-metrics verify-security-skip verify-docs lint type cov bench bench-drift help run-dev run-cloud-local run-agent health-check eval-moral_filter test-memory-obs \
         readiness-preview readiness-apply \
         build-package test-package docker-build-neuro-engine docker-run-neuro-engine docker-smoke-neuro-engine \
         docker-compose-up docker-compose-down lock sync evidence iteration-metrics
@@ -16,6 +16,7 @@ help:
 	@echo "  make coverage-gate - Run coverage gate with threshold check"
 	@echo "  make verify-metrics - Validate latest evidence snapshot integrity"
 	@echo "  make verify-security-skip - Verify security skip path invariants and docs examples"
+	@echo "  make verify-docs    - Verify documentation contracts against code defaults"
 	@echo "  make lint          - Run ruff linter on src and tests"
 	@echo "  make type          - Run mypy type checker on src/mlsdm"
 	@echo "  make cov           - Run tests with coverage report"
@@ -83,6 +84,10 @@ verify-metrics:
 
 verify-security-skip:
 	@python scripts/verify_security_skip_invariants.py
+	@python scripts/verify_docs_skip_paths_examples.py
+
+verify-docs:
+	@python scripts/verify_docs_contracts.py
 	@python scripts/verify_docs_skip_paths_examples.py
 
 lint:
