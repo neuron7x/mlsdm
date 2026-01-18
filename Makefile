@@ -84,11 +84,12 @@ verify-metrics:
 
 verify-security-skip:
 	@python scripts/verify_security_skip_invariants.py
-	@python scripts/verify_docs_skip_paths_examples.py
+	@python scripts/verify_docs_examples.py
 
 verify-docs:
 	@python scripts/verify_docs_contracts.py
-	@python scripts/verify_docs_skip_paths_examples.py
+	@python scripts/verify_docs_examples.py
+	@python scripts/verify_docs_claims_against_code.py
 
 lint:
 	@echo "Running ruff linter (src + tests)..."

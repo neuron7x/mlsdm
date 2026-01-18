@@ -80,7 +80,7 @@ jobs:
       - name: Verify security skip invariants
         run: make verify-security-skip
 
-      - name: Verify documentation contracts
+      - name: Verify documentation truth
         run: make verify-docs
 
       - name: Check for hidden Unicode characters
