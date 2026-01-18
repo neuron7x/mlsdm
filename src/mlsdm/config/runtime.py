@@ -29,6 +29,9 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
 
+from mlsdm.config.calibration import RATE_LIMIT_DEFAULTS
+from mlsdm.config.defaults import DEFAULT_CONFIG_PATH, PRODUCTION_CONFIG_PATH
+
 
 class RuntimeMode(str, Enum):
     """Supported runtime modes for MLSDM."""
@@ -57,8 +60,8 @@ class SecurityConfig:
 
     api_key: str | None = None
     rate_limit_enabled: bool = True
-    rate_limit_requests: int = 100
-    rate_limit_window: int = 60
+    rate_limit_requests: int = RATE_LIMIT_DEFAULTS.requests_per_window
+    rate_limit_window: int = RATE_LIMIT_DEFAULTS.window_seconds
     secure_mode: bool = False
     cors_origins: list[str] = field(default_factory=list)
 
@@ -83,7 +86,7 @@ class EngineConfig:
     embedding_dim: int = 384
     enable_fslgs: bool = True
     enable_metrics: bool = True
-    config_path: str = "config/default_config.yaml"
+    config_path: str = DEFAULT_CONFIG_PATH
 
 
 @dataclass
@@ -187,8 +190,8 @@ def _get_mode_defaults(mode: RuntimeMode) -> dict[str, Any]:
         "security": {
             "api_key": None,
             "rate_limit_enabled": True,
-            "rate_limit_requests": 100,
-            "rate_limit_window": 60,
+            "rate_limit_requests": RATE_LIMIT_DEFAULTS.requests_per_window,
+            "rate_limit_window": RATE_LIMIT_DEFAULTS.window_seconds,
             "secure_mode": False,
             "cors_origins": [],
         },
@@ -205,7 +208,7 @@ def _get_mode_defaults(mode: RuntimeMode) -> dict[str, Any]:
             "embedding_dim": 384,
             "enable_fslgs": True,
             "enable_metrics": True,
-            "config_path": "config/default_config.yaml",
+            "config_path": DEFAULT_CONFIG_PATH,
         },
         "debug": False,
     }
@@ -219,7 +222,7 @@ def _get_mode_defaults(mode: RuntimeMode) -> dict[str, Any]:
         base["observability"]["log_level"] = "DEBUG"
         base["observability"]["json_logging"] = False
         base["debug"] = True
-        base["engine"]["config_path"] = "config/default_config.yaml"
+        base["engine"]["config_path"] = DEFAULT_CONFIG_PATH
 
     elif mode == RuntimeMode.LOCAL_PROD:
         base["server"]["workers"] = 2
@@ -229,7 +232,7 @@ def _get_mode_defaults(mode: RuntimeMode) -> dict[str, Any]:
         base["observability"]["log_level"] = "INFO"
         base["observability"]["json_logging"] = True
         base["observability"]["metrics_enabled"] = True
-        base["engine"]["config_path"] = "config/production.yaml"
+        base["engine"]["config_path"] = PRODUCTION_CONFIG_PATH
 
     elif mode == RuntimeMode.CLOUD_PROD:
         base["server"]["workers"] = 4
@@ -242,7 +245,7 @@ def _get_mode_defaults(mode: RuntimeMode) -> dict[str, Any]:
         base["observability"]["metrics_enabled"] = True
         base["observability"]["tracing_enabled"] = True
         base["observability"]["otel_exporter_type"] = "otlp"
-        base["engine"]["config_path"] = "config/production.yaml"
+        base["engine"]["config_path"] = PRODUCTION_CONFIG_PATH
 
     elif mode == RuntimeMode.AGENT_API:
         base["server"]["workers"] = 2
@@ -253,7 +256,7 @@ def _get_mode_defaults(mode: RuntimeMode) -> dict[str, Any]:
         base["observability"]["json_logging"] = True
         base["observability"]["metrics_enabled"] = True
         base["engine"]["enable_fslgs"] = True
-        base["engine"]["config_path"] = "config/production.yaml"
+        base["engine"]["config_path"] = PRODUCTION_CONFIG_PATH
 
     return base
 

@@ -2,6 +2,7 @@ import argparse
 import json
 import logging
 
+from mlsdm.config.defaults import DEFAULT_CONFIG_PATH
 from mlsdm.core.memory_manager import MemoryManager
 from mlsdm.utils.config_loader import ConfigLoader
 
@@ -26,7 +27,7 @@ logger = logging.getLogger(__name__)
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="mlsdm-governed-cognitive-memory CLI")
-    parser.add_argument("--config", type=str, default="config/default_config.yaml")
+    parser.add_argument("--config", type=str, default=DEFAULT_CONFIG_PATH)
     parser.add_argument("--steps", type=int, default=100)
     args = parser.parse_args()
 

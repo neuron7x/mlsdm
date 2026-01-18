@@ -76,6 +76,30 @@ Configuration is resolved in the following priority order (highest first):
 3. **YAML Config Files**: `config/*.yaml`
 4. **Hardcoded Defaults**: `mlsdm.config.calibration` dataclasses
 
+## System Flow (Startup + Request)
+
+**Startup (deterministic order):**
+1. **Runtime defaults** are resolved via `mlsdm.config.runtime` using shared constants from
+   `mlsdm.config.defaults` and calibration defaults (e.g., `RATE_LIMIT_DEFAULTS`).【F:src/mlsdm/config/runtime.py†L24-L372】
+2. **Environment overrides** are applied by entrypoints and `apply_runtime_config`, ensuring
+   `CONFIG_PATH`, rate-limiting flags, and observability toggles are consistent across modules.【F:src/mlsdm/config/runtime.py†L101-L372】
+3. **Validated config** is loaded on API startup via `ConfigLoader.load_config`, which validates
+   against the schema before constructing `MemoryManager` and `NeuroCognitiveEngine`.【F:src/mlsdm/api/app.py†L116-L168】【F:src/mlsdm/utils/config_loader.py†L205-L296】
+
+**Request path (middleware → handlers):**
+1. **Security headers** → **request ID** → **timeouts** → **priority** → **bulkhead** middleware
+   execute in a deterministic stack order (outer → inner).【F:src/mlsdm/api/app.py†L176-L208】
+2. **Request state contract** ensures `request.state` carries stable, typed fields across
+   middleware and security layers (`request_id`, `priority`, `user_info`, etc.).【F:src/mlsdm/contracts/request_state.py†L1-L132】
+
+## Module Contracts (Integration Boundaries)
+
+| Boundary | Contract Owner | Invariants |
+| --- | --- | --- |
+| Runtime defaults | `mlsdm.config.defaults` | Single source of truth for `DEFAULT_CONFIG_PATH` and `PRODUCTION_CONFIG_PATH`.【F:src/mlsdm/config/defaults.py†L1-L14】 |
+| Rate limiting defaults | `mlsdm.config.calibration.RATE_LIMIT_DEFAULTS` | Requests/window and window seconds shared across runtime + API startup code.【F:src/mlsdm/config/calibration.py†L320-L349】【F:src/mlsdm/api/app.py†L80-L109】 |
+| Request state | `mlsdm.contracts.request_state` | `request.state` fields are explicit and set/cleared by middleware and security layers.【F:src/mlsdm/contracts/request_state.py†L1-L132】 |
+
 ## Public API
 
 ### Importing Configuration

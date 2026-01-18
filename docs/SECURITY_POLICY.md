@@ -886,8 +886,8 @@ HEALTHCHECK --interval=30s --timeout=3s \
 
 **Supported Secrets:**
 - `OPENAI_API_KEY`: OpenAI API key (when using OpenAI backend)
-- `RATE_LIMIT_REQUESTS`: Maximum requests per window (default: 100)
-- `RATE_LIMIT_WINDOW`: Time window in seconds (default: 60)
+- `RATE_LIMIT_REQUESTS`: Maximum requests per window (default: 5)
+- `RATE_LIMIT_WINDOW`: Time window in seconds (default: 1)
 - `LOG_PAYLOADS`: Enable payload logging (default: false, see below)
 
 ### Payload Logging Control
@@ -915,7 +915,7 @@ HEALTHCHECK --interval=30s --timeout=3s \
 
 **In-Memory Rate Limiter**
 - Simple token bucket implementation per client IP
-- Default: 100 requests per 60-second window
+- Default: 5 requests per 1-second window
 - Configurable via `RATE_LIMIT_REQUESTS` and `RATE_LIMIT_WINDOW`
 
 **Limitations (Known, Documented):**

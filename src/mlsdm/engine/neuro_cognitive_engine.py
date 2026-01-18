@@ -1672,7 +1672,8 @@ class NeuroCognitiveEngine:
             ValueError: If config validation fails.
 
         Example:
-            >>> engine = NeuroCognitiveEngine.from_config("config/production.yaml")
+            >>> from mlsdm.config.defaults import PRODUCTION_CONFIG_PATH
+            >>> engine = NeuroCognitiveEngine.from_config(PRODUCTION_CONFIG_PATH)
             >>> result = engine.generate(prompt="Hello, world!", max_tokens=128)
         """
         from mlsdm.adapters import build_local_stub_llm_adapter

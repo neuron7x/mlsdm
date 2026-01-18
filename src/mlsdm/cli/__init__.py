@@ -15,6 +15,8 @@ import os
 import sys
 from typing import Any
 
+from mlsdm.config.defaults import DEFAULT_CONFIG_PATH
+
 
 def cmd_info(args: argparse.Namespace) -> int:
     """Show version, status, and basic configuration."""
@@ -36,7 +38,7 @@ def cmd_info(args: argparse.Namespace) -> int:
 
     # Configuration
     print("Configuration:")
-    config_path = os.environ.get("CONFIG_PATH", "config/default_config.yaml")
+    config_path = os.environ.get("CONFIG_PATH", DEFAULT_CONFIG_PATH)
     llm_backend = os.environ.get("LLM_BACKEND", "local_stub")
     print(f"  Config:    {config_path}")
     print(f"  Backend:   {llm_backend}")
@@ -207,7 +209,7 @@ def cmd_serve(args: argparse.Namespace) -> int:
     if mode != "default":
         print(f"Mode: {mode}")
     print(f"Backend: {os.environ.get('LLM_BACKEND', 'local_stub')}")
-    print(f"Config: {os.environ.get('CONFIG_PATH', 'config/default_config.yaml')}")
+    print(f"Config: {os.environ.get('CONFIG_PATH', DEFAULT_CONFIG_PATH)}")
     print()
 
     return serve(
@@ -295,7 +297,7 @@ def cmd_check(args: argparse.Namespace) -> int:
 
     # Check configuration
     print("\nConfiguration:")
-    config_path = os.environ.get("CONFIG_PATH", "config/default_config.yaml")
+    config_path = os.environ.get("CONFIG_PATH", DEFAULT_CONFIG_PATH)
     if os.path.exists(config_path):
         print(f"  ✓ Config file exists: {config_path}")
         status["checks"]["config"] = True

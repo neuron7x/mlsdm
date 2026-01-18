@@ -22,6 +22,8 @@ import os
 import time
 from typing import Any
 
+from mlsdm.config.defaults import DEFAULT_CONFIG_PATH
+
 logger = logging.getLogger(__name__)
 
 
@@ -31,7 +33,7 @@ def _check_config_valid() -> tuple[bool, str]:
     Returns:
         Tuple of (is_valid, details)
     """
-    config_path = os.environ.get("CONFIG_PATH", "config/default_config.yaml")
+    config_path = os.environ.get("CONFIG_PATH", DEFAULT_CONFIG_PATH)
 
     # Check if config file exists (if it's a path)
     if not config_path.startswith("{") and config_path.endswith(".yaml"):

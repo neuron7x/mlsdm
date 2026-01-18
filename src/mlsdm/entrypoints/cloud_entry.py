@@ -27,7 +27,7 @@ Environment Variables:
     MLSDM_WORKERS: Number of workers (default: 4)
     LLM_BACKEND: LLM backend to use (default: local_stub)
     OPENAI_API_KEY: OpenAI API key (required if LLM_BACKEND=openai)
-    CONFIG_PATH: Config file path (default: config/production.yaml)
+    CONFIG_PATH: Config file path (default: PRODUCTION_CONFIG_PATH)
     API_KEY: API authentication key
     OTEL_EXPORTER_TYPE: OpenTelemetry exporter (default: otlp)
 

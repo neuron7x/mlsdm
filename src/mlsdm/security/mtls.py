@@ -55,6 +55,7 @@ from typing import TYPE_CHECKING, Any
 from fastapi import HTTPException, Request, status
 from starlette.middleware.base import BaseHTTPMiddleware
 
+from mlsdm.contracts.request_state import set_request_client_cert
 from mlsdm.security.path_utils import DEFAULT_PUBLIC_PATHS, is_path_skipped
 
 if TYPE_CHECKING:
@@ -277,17 +278,17 @@ class MTLSMiddleware(BaseHTTPMiddleware):
 
         # Skip certain paths
         if is_path_skipped(path, self.skip_paths):
-            request.state.client_cert = None
+            set_request_client_cert(request, None)
             return await call_next(request)
 
         # Skip if mTLS not enabled
         if not self.config.enabled:
-            request.state.client_cert = None
+            set_request_client_cert(request, None)
             return await call_next(request)
 
         # Get client certificate
         cert_info = get_client_cert_info(request)
-        request.state.client_cert = cert_info
+        set_request_client_cert(request, cert_info)
 
         # Require certificate if configured
         if self.require_cert and cert_info is None:

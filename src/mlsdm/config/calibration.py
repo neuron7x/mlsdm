@@ -327,11 +327,11 @@ class RateLimitCalibration:
 
     # Default requests per window
     # Direction: ↑ more permissive, ↓ stricter
-    requests_per_window: int = 100
+    requests_per_window: int = 5
 
     # Default window duration in seconds
     # Direction: ↑ longer window, ↓ shorter window
-    window_seconds: int = 60
+    window_seconds: int = 1
 
     # Storage cleanup interval in seconds
     # Direction: ↑ less frequent cleanup, ↓ more frequent

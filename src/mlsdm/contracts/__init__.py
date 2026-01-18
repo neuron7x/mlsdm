@@ -30,6 +30,7 @@ from mlsdm.contracts.neuro_signals import (
     RiskSignal,
     StabilityMetrics,
 )
+from mlsdm.contracts.request_state import RequestStateSnapshot
 from mlsdm.contracts.speech_models import (
     AphasiaMetadata,
     AphasiaReport,
@@ -56,4 +57,5 @@ __all__ = [
     "AphasiaMetadata",
     "PipelineMetadata",
     "PipelineStepResult",
+    "RequestStateSnapshot",
 ]

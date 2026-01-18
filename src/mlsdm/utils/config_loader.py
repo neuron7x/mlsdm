@@ -20,6 +20,7 @@ from typing import Any
 
 import yaml
 
+from mlsdm.config.defaults import DEFAULT_CONFIG_PATH
 from mlsdm.utils.config_schema import SystemConfig, validate_config_dict
 
 
@@ -237,7 +238,7 @@ class ConfigLoader:
         resource_config: dict[str, Any] | None = None
         resource_loaded = False
 
-        if path == "config/default_config.yaml" and not Path(path).is_file():
+        if path == DEFAULT_CONFIG_PATH and not Path(path).is_file():
             resource_config = ConfigLoader._load_yaml_resource(
                 package="mlsdm.config", resource="default_config.yaml"
             )
@@ -456,7 +457,8 @@ class ConfigLoader:
             - aphasia_severity_threshold: float
 
         Example:
-            >>> config = ConfigLoader.load_config("config/production.yaml")
+            >>> from mlsdm.config.defaults import PRODUCTION_CONFIG_PATH
+            >>> config = ConfigLoader.load_config(PRODUCTION_CONFIG_PATH)
             >>> aphasia_params = ConfigLoader.get_aphasia_config_from_dict(config)
             >>> wrapper = NeuroLangWrapper(
             ...     llm_generate_fn=my_llm,
@@ -488,7 +490,8 @@ class ConfigLoader:
             - neurolang_checkpoint_path: str | None
 
         Example:
-            >>> config = ConfigLoader.load_config("config/production.yaml")
+            >>> from mlsdm.config.defaults import PRODUCTION_CONFIG_PATH
+            >>> config = ConfigLoader.load_config(PRODUCTION_CONFIG_PATH)
             >>> neu_params = ConfigLoader.get_neurolang_config_from_dict(config)
             >>> aphasia_params = ConfigLoader.get_aphasia_config_from_dict(config)
             >>> wrapper = NeuroLangWrapper(

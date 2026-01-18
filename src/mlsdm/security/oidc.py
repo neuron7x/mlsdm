@@ -52,6 +52,7 @@ from typing import TYPE_CHECKING, Any
 from fastapi import HTTPException, Request, Response, status
 from starlette.middleware.base import BaseHTTPMiddleware
 
+from mlsdm.contracts.request_state import get_request_user_info, set_request_user_info
 from mlsdm.security.path_utils import DEFAULT_PUBLIC_PATHS, is_path_match, is_path_skipped
 
 if TYPE_CHECKING:
@@ -435,18 +436,18 @@ class OIDCAuthMiddleware(BaseHTTPMiddleware):
         # Skip authentication for certain paths
         path = request.url.path
         if self._should_skip_path(path):
-            request.state.user_info = None
+            set_request_user_info(request, None)
             return await call_next(request)
 
         # Skip if OIDC not enabled
         if not self.authenticator.enabled:
-            request.state.user_info = None
+            set_request_user_info(request, None)
             return await call_next(request)
 
         # Authenticate
         try:
             user_info = await self.authenticator.authenticate(request)
-            request.state.user_info = user_info
+            set_request_user_info(request, user_info)
 
             # If require_auth_paths is set, check if path matches
             if self.require_auth_paths:
@@ -461,7 +462,7 @@ class OIDCAuthMiddleware(BaseHTTPMiddleware):
             raise
         except Exception as e:
             logger.error("OIDC authentication error: %s", e)
-            request.state.user_info = None
+            set_request_user_info(request, None)
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="OIDC authentication unavailable",
@@ -506,7 +507,7 @@ def require_oidc_auth(
                 )
 
             # Check authentication
-            user_info = getattr(request.state, "user_info", None)
+            user_info = get_request_user_info(request)
             if not user_info:
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
@@ -549,7 +550,7 @@ async def get_current_user(request: Request) -> UserInfo:
         >>> async def get_me(user: UserInfo = Depends(get_current_user)):
         ...     return {"subject": user.subject, "roles": user.roles}
     """
-    user_info: UserInfo | None = getattr(request.state, "user_info", None)
+    user_info: UserInfo | None = get_request_user_info(request)
     if not user_info:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -575,4 +576,4 @@ async def get_optional_user(request: Request) -> UserInfo | None:
         ...         return {"greeting": f"Hello, {user.name}"}
         ...     return {"greeting": "Hello, anonymous"}
     """
-    return getattr(request.state, "user_info", None)
+    return get_request_user_info(request)

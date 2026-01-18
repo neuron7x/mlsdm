@@ -22,7 +22,7 @@ Environment Variables:
     HOST: Server host (default: 0.0.0.0)
     PORT: Server port (default: 8000)
     LLM_BACKEND: LLM backend to use (default: local_stub)
-    CONFIG_PATH: Config file path (default: config/default_config.yaml)
+    CONFIG_PATH: Config file path (default: DEFAULT_CONFIG_PATH)
 """
 
 from __future__ import annotations

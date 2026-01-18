@@ -48,6 +48,9 @@ jobs:
       - name: Verify test dependencies
         run: python -c "import hypothesis, pytest, pytest_benchmark"
 
+      - name: Verify integration defaults
+        run: python scripts/verify_integration_defaults.py
+
       - name: Run smoke tests (fast unit tests only)
         run: |
           mkdir -p artifacts

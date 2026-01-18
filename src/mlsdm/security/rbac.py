@@ -35,6 +35,7 @@ from typing import TYPE_CHECKING, Any, cast
 from fastapi import HTTPException, Request, Response, status
 from starlette.middleware.base import BaseHTTPMiddleware
 
+from mlsdm.contracts.request_state import get_request_user_context, set_request_user_context
 from mlsdm.security.path_utils import DEFAULT_PUBLIC_PATHS, is_path_skipped
 
 if TYPE_CHECKING:
@@ -510,7 +511,7 @@ class RBACMiddleware(BaseHTTPMiddleware):
             )
 
         # Store user context in request state for downstream use
-        request.state.user_context = user_context
+        set_request_user_context(request, user_context)
 
         # Log successful authorization
         logger.debug(
@@ -566,7 +567,7 @@ def require_role(
                 )
 
             # Check if user context exists (set by middleware)
-            user_context: UserContext | None = getattr(request.state, "user_context", None)
+            user_context: UserContext | None = get_request_user_context(request)
 
             if user_context is None:
                 # Try to validate from request
@@ -608,7 +609,7 @@ def get_current_user(request: Request) -> UserContext:
     Raises:
         HTTPException: If user context not found
     """
-    user_context = getattr(request.state, "user_context", None)
+    user_context = get_request_user_context(request)
     if user_context is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

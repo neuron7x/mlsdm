@@ -74,6 +74,7 @@ from .calibration import (
     get_calibration_summary,
     get_synaptic_memory_config,
 )
+from .defaults import DEFAULT_CONFIG_PATH, PRODUCTION_CONFIG_PATH
 from .policy_drift import (
     PolicyDriftError,
     PolicyDriftStatus,
@@ -106,6 +107,8 @@ __all__ = [
     "RATE_LIMIT_DEFAULTS",
     "SYNERGY_EXPERIENCE_DEFAULTS",
     "SECURE_MODE_DEFAULTS",
+    "DEFAULT_CONFIG_PATH",
+    "PRODUCTION_CONFIG_PATH",
     # Functions
     "get_calibration_config",
     "get_calibration_summary",

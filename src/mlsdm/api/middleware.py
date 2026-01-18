@@ -24,6 +24,14 @@ from typing import TYPE_CHECKING, Any
 from fastapi import Request, Response, status
 from starlette.middleware.base import BaseHTTPMiddleware
 
+from mlsdm.contracts.request_state import (
+    get_request_id as get_request_id_from_state,
+)
+from mlsdm.contracts.request_state import (
+    set_request_id,
+    set_request_priority,
+)
+
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
 
@@ -472,8 +480,8 @@ class PriorityMiddleware(BaseHTTPMiddleware):
             priority = RequestPriority.from_header(header_value, self._default_priority)
 
             # Store priority in request state for downstream middleware/handlers
-            request.state.priority = priority
-            request.state.priority_weight = RequestPriority.WEIGHTS.get(priority, 2)
+            priority_weight = RequestPriority.WEIGHTS.get(priority, 2)
+            set_request_priority(request, priority, priority_weight)
 
             # Log high priority requests
             if priority == RequestPriority.HIGH:
@@ -483,7 +491,7 @@ class PriorityMiddleware(BaseHTTPMiddleware):
                         "path": request.url.path,
                         "method": request.method,
                         "priority": priority,
-                        "request_id": getattr(request.state, "request_id", "unknown"),
+                        "request_id": get_request_id_from_state(request),
                     },
                 )
 
@@ -519,7 +527,7 @@ class RequestIDMiddleware(BaseHTTPMiddleware):
         request_id = request.headers.get("X-Request-ID") or str(uuid.uuid4())
 
         # Store in request state for access by handlers
-        request.state.request_id = request_id
+        set_request_id(request, request_id)
 
         # Log request start
         logger.info(
@@ -609,4 +617,4 @@ def get_request_id(request: Request) -> str:
     Returns:
         Request ID string, or "unknown" if not set
     """
-    return getattr(request.state, "request_id", "unknown")
+    return get_request_id_from_state(request)
