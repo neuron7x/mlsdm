@@ -65,18 +65,9 @@ app.add_middleware(
 )
 ```
 
-**How to protect `/docs` and `/redoc` (override `skip_paths`):**
+**Protecting `/docs` and `/redoc`:**
 
-```python
-# Limit public endpoints to health and OpenAPI schema only.
-from mlsdm.security.path_utils import DEFAULT_PUBLIC_PATHS
-
-app.add_middleware(
-    OIDCAuthMiddleware,
-    authenticator=authenticator,
-    skip_paths=[path for path in DEFAULT_PUBLIC_PATHS if path not in ("/docs", "/redoc")],
-)
-```
+Removing `/docs` or `/redoc` from `skip_paths` is an intentional override that changes default public endpoints. This repository does not ship a default example for that override; start from `DEFAULT_PUBLIC_PATHS` and remove entries explicitly as part of your deployment policy.
 
 ---
 

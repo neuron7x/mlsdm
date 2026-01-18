@@ -10,6 +10,7 @@ Complete documentation guide for MLSDM Governed Cognitive Memory v1.2.0. Readine
 ## Quick Links
 
 - 🚀 **New Users**: Start with [README.md](../README.md) and [USAGE_GUIDE.md](USAGE_GUIDE.md)
+- ✅ **Verified Contracts**: See [CONTRACTS_CRITICAL_SUBSYSTEMS.md](CONTRACTS_CRITICAL_SUBSYSTEMS.md) and [CLAIM_EVIDENCE_LEDGER.md](CLAIM_EVIDENCE_LEDGER.md)
 - **Readiness Status**: See [status/READINESS.md](status/READINESS.md)
 - **Core Developers**: See [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md)
 - 📚 **API Reference**: See [API_REFERENCE.md](API_REFERENCE.md)
@@ -40,6 +41,7 @@ Complete documentation guide for MLSDM Governed Cognitive Memory v1.2.0. Readine
 1. [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) - Production deployment
 2. [SECURITY_POLICY.md](SECURITY_POLICY.md) - Security guidelines
 3. [SLO_SPEC.md](SLO_SPEC.md) - Service level objectives
+4. [CONTRACTS_CRITICAL_SUBSYSTEMS.md](CONTRACTS_CRITICAL_SUBSYSTEMS.md) - Verified contracts and defaults
 
 ---
 

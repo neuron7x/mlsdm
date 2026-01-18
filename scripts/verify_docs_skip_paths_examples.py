@@ -7,6 +7,11 @@ import re
 import sys
 from pathlib import Path
 
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(PROJECT_ROOT / "src"))
+
+from mlsdm.security.path_utils import DEFAULT_PUBLIC_PATHS  # noqa: E402
+
 SKIP_PATHS_PATTERN = re.compile(r"skip_paths\s*=\s*\[([^\]]*)\]")
 PATH_PATTERN = re.compile(r"['\"](/[^'\"]+)['\"]")
 
@@ -24,10 +29,11 @@ def _check_file(path: Path) -> tuple[list[str], bool]:
     for match in matches:
         content = match.group(1)
         paths = set(PATH_PATTERN.findall(content))
-        if "/docs" in paths and "/redoc" not in paths:
+        missing_defaults = sorted(set(DEFAULT_PUBLIC_PATHS) - paths)
+        if missing_defaults:
             line_number = text.count("\n", 0, match.start()) + 1
             errors.append(
-                f"{path}:{line_number}: skip_paths includes /docs without /redoc",
+                f"{path}:{line_number}: skip_paths missing defaults: {missing_defaults}",
             )
     return errors, bool(matches)
 
