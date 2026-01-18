@@ -33,6 +33,11 @@ from mlsdm.api.middleware import (
     SecurityHeadersMiddleware,
     TimeoutMiddleware,
 )
+from mlsdm.config.defaults import (
+    DEFAULT_CONFIG_PATH,
+    RATE_LIMIT_REQUESTS_DEFAULT,
+    RATE_LIMIT_WINDOW_DEFAULT,
+)
 from mlsdm.contracts import AphasiaMetadata
 from mlsdm.core.memory_manager import MemoryManager
 from mlsdm.engine import NeuroCognitiveEngine, NeuroEngineConfig, build_neuro_engine_from_env
@@ -89,17 +94,18 @@ _secure_mode_enabled = _get_env_bool("MLSDM_SECURE_MODE", False)
 # Note: DISABLE_RATE_LIMIT is part of RuntimeConfig (not SystemConfig)
 # Using MLSDM_ prefix is reserved for SystemConfig environment overrides
 _rate_limiting_enabled = not _get_env_bool("DISABLE_RATE_LIMIT", False)
-_rate_limit_requests = _get_env_int("RATE_LIMIT_REQUESTS", 5)
-_rate_limit_window = _get_env_int("RATE_LIMIT_WINDOW", 1)
+_rate_limit_requests = _get_env_int("RATE_LIMIT_REQUESTS", RATE_LIMIT_REQUESTS_DEFAULT)
+_rate_limit_window = _get_env_int("RATE_LIMIT_WINDOW", RATE_LIMIT_WINDOW_DEFAULT)
 
 if _rate_limit_requests <= 0 or _rate_limit_window <= 0:
     security_logger.log_security_config_error(
         "invalid_rate_limit",
         "RATE_LIMIT_REQUESTS and RATE_LIMIT_WINDOW must be positive integers; "
-        "falling back to 5 requests per second.",
+        f"falling back to {RATE_LIMIT_REQUESTS_DEFAULT} requests "
+        f"per {RATE_LIMIT_WINDOW_DEFAULT} seconds.",
     )
-    _rate_limit_requests = 5
-    _rate_limit_window = 1
+    _rate_limit_requests = RATE_LIMIT_REQUESTS_DEFAULT
+    _rate_limit_window = RATE_LIMIT_WINDOW_DEFAULT
 
 _rate_limit_rate = _rate_limit_requests / _rate_limit_window
 _rate_limit_capacity = max(1, _rate_limit_requests)
@@ -118,7 +124,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     lifecycle = get_lifecycle_manager()
     await lifecycle.startup()
 
-    config_path = os.getenv("CONFIG_PATH", "config/default_config.yaml")
+    config_path = os.getenv("CONFIG_PATH", DEFAULT_CONFIG_PATH)
     config = ConfigLoader.load_config(config_path)
     manager = MemoryManager(config)
     engine_config = NeuroEngineConfig(
@@ -240,7 +246,7 @@ def _ensure_runtime_state(app: FastAPI) -> None:
     ):
         return
 
-    config_path = os.getenv("CONFIG_PATH", "config/default_config.yaml")
+    config_path = os.getenv("CONFIG_PATH", DEFAULT_CONFIG_PATH)
     config = ConfigLoader.load_config(config_path)
     manager = MemoryManager(config)
     engine_config = NeuroEngineConfig(

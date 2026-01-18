@@ -22,6 +22,8 @@ Usage:
 from dataclasses import dataclass
 from typing import Any
 
+from mlsdm.config.defaults import RATE_LIMIT_REQUESTS_DEFAULT, RATE_LIMIT_WINDOW_DEFAULT
+
 # =============================================================================
 # MORAL FILTER CALIBRATION
 # =============================================================================
@@ -327,11 +329,11 @@ class RateLimitCalibration:
 
     # Default requests per window
     # Direction: ↑ more permissive, ↓ stricter
-    requests_per_window: int = 100
+    requests_per_window: int = RATE_LIMIT_REQUESTS_DEFAULT
 
     # Default window duration in seconds
     # Direction: ↑ longer window, ↓ shorter window
-    window_seconds: int = 60
+    window_seconds: int = RATE_LIMIT_WINDOW_DEFAULT
 
     # Storage cleanup interval in seconds
     # Direction: ↑ less frequent cleanup, ↓ more frequent

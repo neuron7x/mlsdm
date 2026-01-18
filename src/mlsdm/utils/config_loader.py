@@ -20,6 +20,7 @@ from typing import Any
 
 import yaml
 
+from mlsdm.config.defaults import DEFAULT_CONFIG_PATH
 from mlsdm.utils.config_schema import SystemConfig, validate_config_dict
 
 
@@ -237,7 +238,7 @@ class ConfigLoader:
         resource_config: dict[str, Any] | None = None
         resource_loaded = False
 
-        if path == "config/default_config.yaml" and not Path(path).is_file():
+        if path == DEFAULT_CONFIG_PATH and not Path(path).is_file():
             resource_config = ConfigLoader._load_yaml_resource(
                 package="mlsdm.config", resource="default_config.yaml"
             )

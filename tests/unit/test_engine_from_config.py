@@ -13,6 +13,7 @@ from pathlib import Path
 
 import pytest
 
+from mlsdm.config.defaults import DEFAULT_CONFIG_PATH
 from mlsdm.engine import NeuroCognitiveEngine
 
 
@@ -21,7 +22,7 @@ class TestFromConfig:
 
     def test_from_config_with_default_config(self) -> None:
         """Test loading from default config file."""
-        engine = NeuroCognitiveEngine.from_config("config/default_config.yaml")
+        engine = NeuroCognitiveEngine.from_config(DEFAULT_CONFIG_PATH)
 
         # Engine should be created successfully
         assert engine is not None
@@ -37,7 +38,7 @@ class TestFromConfig:
 
     def test_from_config_generates_response(self) -> None:
         """Test that engine created from config can generate responses."""
-        engine = NeuroCognitiveEngine.from_config("config/default_config.yaml")
+        engine = NeuroCognitiveEngine.from_config(DEFAULT_CONFIG_PATH)
 
         result = engine.generate(prompt="Hello, world!", max_tokens=100)
 
@@ -81,7 +82,7 @@ class TestFromConfig:
             return custom_response
 
         engine = NeuroCognitiveEngine.from_config(
-            "config/default_config.yaml",
+            DEFAULT_CONFIG_PATH,
             llm_generate_fn=custom_llm,
         )
 
@@ -98,7 +99,7 @@ class TestFromConfig:
             return np.ones(10, dtype=np.float32)
 
         engine = NeuroCognitiveEngine.from_config(
-            "config/default_config.yaml",
+            DEFAULT_CONFIG_PATH,
             embedding_fn=custom_embed,
         )
 

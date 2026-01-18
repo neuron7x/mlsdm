@@ -11,6 +11,7 @@ from typing import Any
 
 from mlsdm.adapters.llm_provider import LocalStubProvider
 from mlsdm.adapters.provider_factory import build_provider_from_env
+from mlsdm.config.defaults import DEFAULT_CONFIG_PATH
 from mlsdm.config.runtime import RuntimeMode, get_runtime_config, get_runtime_mode
 from mlsdm.security.path_utils import DEFAULT_PUBLIC_PATHS
 
@@ -143,7 +144,7 @@ def test_disable_rate_limit_inversion() -> None:
 def test_runtime_config_path_default() -> None:
     with _clear_runtime_env():
         config = get_runtime_config(mode=RuntimeMode.DEV)
-        assert config.engine.config_path == "config/default_config.yaml"
+        assert config.engine.config_path == DEFAULT_CONFIG_PATH
 
 
 def test_llm_backend_default() -> None:

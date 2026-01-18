@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 
+from mlsdm.config.defaults import DEFAULT_CONFIG_PATH
 from mlsdm.utils.config_loader import ConfigLoader
 
 
@@ -12,7 +13,7 @@ def test_default_config_resource_fallback(tmp_path: Path, monkeypatch: pytest.Mo
     monkeypatch.chdir(tmp_path)
     monkeypatch.delenv("CONFIG_PATH", raising=False)
 
-    config = ConfigLoader.load_config("config/default_config.yaml")
+    config = ConfigLoader.load_config(DEFAULT_CONFIG_PATH)
 
     assert isinstance(config, dict)
     assert "dimension" in config
@@ -40,7 +41,7 @@ def test_api_import_without_repo_files(tmp_path: Path) -> None:
 
 
 def test_packaged_default_config_matches_repo() -> None:
-    repo_config = Path(__file__).resolve().parents[2] / "config" / "default_config.yaml"
+    repo_config = Path(__file__).resolve().parents[2] / DEFAULT_CONFIG_PATH
     if not repo_config.is_file():
         pytest.skip("Repository default_config.yaml not present")
 

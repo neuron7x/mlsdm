@@ -12,6 +12,9 @@ from pathlib import Path
 
 import pytest
 
+from mlsdm.config.defaults import DEFAULT_CONFIG_PATH
+from mlsdm.utils.config_loader import ConfigLoader
+
 
 class TestPackageSmoke:
     """Smoke tests for package installation verification."""
@@ -280,9 +283,7 @@ def test_packaged_default_config_fallback(
     monkeypatch.chdir(tmp_path)
     monkeypatch.delenv("CONFIG_PATH", raising=False)
 
-    from mlsdm.utils.config_loader import ConfigLoader
-
-    config = ConfigLoader.load_config("config/default_config.yaml")
+    config = ConfigLoader.load_config(DEFAULT_CONFIG_PATH)
 
     assert isinstance(config, dict)
     assert config.get("dimension") == 10

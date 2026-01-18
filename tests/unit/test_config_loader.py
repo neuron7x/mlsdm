@@ -12,6 +12,7 @@ from pathlib import Path
 
 import pytest
 
+from mlsdm.config.defaults import DEFAULT_CONFIG_PATH
 from mlsdm.utils.config_loader import ConfigLoader
 
 
@@ -235,7 +236,7 @@ class TestDefaultConfigFiles:
 
     def test_load_default_config(self):
         """Default config file should load successfully."""
-        config_path = "config/default_config.yaml"
+        config_path = DEFAULT_CONFIG_PATH
         if Path(config_path).exists():
             config = ConfigLoader.load_config(config_path, validate=True)
             assert "dimension" in config
@@ -253,7 +254,7 @@ class TestDefaultConfigFiles:
 
         from mlsdm.utils.config_schema import validate_config_dict
 
-        config_path = Path("config/default_config.yaml")
+        config_path = Path(DEFAULT_CONFIG_PATH)
         if config_path.exists():
             with open(config_path) as f:
                 config_dict = yaml.safe_load(f)
@@ -444,7 +445,7 @@ class TestDriftLoggingEnvInjection:
         monkeypatch.setenv("MLSDM_DRIFT_LOGGING", "silent")
 
         config = ConfigLoader.load_config(
-            "config/default_config.yaml",
+            DEFAULT_CONFIG_PATH,
             validate=True,
             env_override=True
         )

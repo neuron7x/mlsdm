@@ -13,6 +13,8 @@ from collections import defaultdict
 from threading import Lock
 from typing import TYPE_CHECKING
 
+from mlsdm.config.defaults import RATE_LIMIT_REQUESTS_DEFAULT, RATE_LIMIT_WINDOW_DEFAULT
+
 if TYPE_CHECKING:
     from collections.abc import Callable
 
@@ -47,8 +49,8 @@ class RateLimiter:
 
     def __init__(
         self,
-        requests_per_window: int = 100,
-        window_seconds: int = 60,
+        requests_per_window: int = RATE_LIMIT_REQUESTS_DEFAULT,
+        window_seconds: int = RATE_LIMIT_WINDOW_DEFAULT,
         storage_cleanup_interval: int = 300,
         now: Callable[[], float] | None = None,
     ) -> None:
@@ -172,7 +174,10 @@ _global_rate_limiter: RateLimiter | None = None
 _global_limiter_lock = Lock()
 
 
-def get_rate_limiter(requests_per_window: int = 100, window_seconds: int = 60) -> RateLimiter:
+def get_rate_limiter(
+    requests_per_window: int = RATE_LIMIT_REQUESTS_DEFAULT,
+    window_seconds: int = RATE_LIMIT_WINDOW_DEFAULT,
+) -> RateLimiter:
     """Get or create the global rate limiter instance.
 
     This function is thread-safe and implements the singleton pattern.
