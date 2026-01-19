@@ -4,9 +4,20 @@ Standalone Server Load Test for MLSDM.
 This is a self-contained load test that doesn't require Locust.
 It starts the MLSDM server, runs load testing, and generates a report.
 
+Features:
+    - Auto-detects CI environment (GitHub Actions, GitLab CI, Jenkins, etc.)
+    - Applies 1.5x timeout multiplier in CI for reliability
+    - Graceful async task cancellation with proper cleanup
+    - Comprehensive error logging
+
 Usage:
+    # Local testing
     python tests/load/standalone_server_load_test.py
     python tests/load/standalone_server_load_test.py --users 50 --duration 60
+
+    # CI mode (explicit or auto-detected)
+    python tests/load/standalone_server_load_test.py --ci-mode
+    python tests/load/standalone_server_load_test.py --users 20 --duration 20 --ci-mode
 
 Requirements:
     - httpx (pip install httpx)
