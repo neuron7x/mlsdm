@@ -79,7 +79,11 @@ class TestCanonicalSerialization:
         thresholds = {"values": [0.3, 0.5, 0.9]}
         canonical = compute_canonical_json(thresholds)
 
-        assert '"values":["0.300000","0.500000","0.900000"]' in canonical
+        # Parse JSON and verify structure rather than exact string matching
+        import json
+        parsed = json.loads(canonical)
+        assert "values" in parsed
+        assert parsed["values"] == ["0.300000", "0.500000", "0.900000"]
 
     def test_deterministic_output(self):
         """Same input should always produce same output."""

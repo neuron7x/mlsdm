@@ -1,6 +1,6 @@
 # Technical Debt Ledger
 
-**Last Updated:** 2026-01-19 (Wave A hardening in progress)
+**Last Updated:** 2026-01-19 (Wave A hardening complete)
 **Related:**
 - [TECHNICAL_DEBT_REGISTER.md](TECHNICAL_DEBT_REGISTER.md) - **Єдиний реєстр технічного боргу (Unified Technical Debt Register)**
 - [ENGINEERING_DEFICIENCIES_REGISTER.md](ENGINEERING_DEFICIENCIES_REGISTER.md)
@@ -24,6 +24,23 @@ See [ENGINEERING_DEFICIENCIES_REGISTER.md](ENGINEERING_DEFICIENCIES_REGISTER.md)
 ---
 
 ## Wave A Progress (2026-01-19)
+
+### TD-001: pip CVE Remediation (EXCEPTION DOCUMENTED)
+
+- Priority: HIGH
+- Status: **Exception Documented** - Infrastructure-level mitigation
+- Issue: CVE-2025-8869 in pip 24.0 (tarfile path traversal)
+- Risk Assessment: MEDIUM (mitigated)
+  - Impact: 3 (system compromise potential)
+  - Likelihood: 2 (rare - trusted sources only)
+  - **Risk = 6 (MEDIUM)**
+- Mitigations:
+  1. All CI workflows use `pip install --upgrade pip` which gets latest pip
+  2. Only trusted package sources (PyPI, GitHub) are used
+  3. No sdist packages from untrusted sources
+  4. Python 3.12+ already implements PEP 706 safeguards
+- Remediation: See Exceptions section below
+- Owner: @devops
 
 ### TD-002: Policy Drift Guard (ENHANCED)
 
@@ -56,6 +73,39 @@ See [ENGINEERING_DEFICIENCIES_REGISTER.md](ENGINEERING_DEFICIENCIES_REGISTER.md)
   - **Section 11.3**: Backward compatibility tests present in `tests/unit/test_memory_provenance.py`
 - Tests: 22 existing tests (all passing)
 - Proof command: `pytest tests/unit/test_memory_provenance.py -v` → 22 passed
+
+### TD-005: NumPy Compatibility Decision (RESOLVED)
+
+- Priority: HIGH
+- Status: **Resolved** via ADR-0008
+- Decision: Maintain `numpy>=2.0.0` as minimum version requirement
+- Rationale:
+  - NumPy 2.0 stable for over a year
+  - All major ecosystem libraries support NumPy 2.0
+  - NumPy 2.0 type stubs essential for strict mypy
+  - No production issues reported
+- Documentation: [docs/adr/0008-numpy-version-compatibility.md](adr/0008-numpy-version-compatibility.md)
+- Owner: @engineering
+
+---
+
+## Exceptions
+
+### EXC-001: pip CVE-2025-8869
+
+- **Date UTC:** 2026-01-19T18:00:00Z
+- **Reason:** System pip 24.0 has CVE-2025-8869, but:
+  - CI automatically upgrades pip
+  - Python 3.12 implements PEP 706 safeguards
+  - Only trusted sources used
+- **Scope:** CI/CD infrastructure and local development
+- **Owner:** @devops
+- **Expiry Date:** 2026-04-19 (90 days)
+- **Removal Plan:** 
+  1. Monitor GitHub Actions runner images for pip >=25.3
+  2. Verify pip upgrade in CI logs
+  3. Close exception once system pip is >=25.3
+- **Link:** TD-001 in TECHNICAL_DEBT_REGISTER.md
 
 ---
 

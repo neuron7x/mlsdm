@@ -122,7 +122,7 @@ def compute_policy_fingerprint(
     """
     canonical_json = compute_canonical_json(thresholds)
     fingerprint_hash = compute_fingerprint_hash(canonical_json)
-    timestamp = datetime.now(timezone.utc).isoformat()
+    timestamp = datetime.now(timezone.utc).isoformat(timespec="microseconds")
 
     return PolicyFingerprint(
         fingerprint_sha256=fingerprint_hash,
