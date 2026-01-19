@@ -1,13 +1,13 @@
 # Technical Debt Ledger
 
-**Last Updated:** 2026-01-04 (main branch baseline)
+**Last Updated:** 2026-01-19 (Wave A hardening in progress)
 **Related:**
 - [TECHNICAL_DEBT_REGISTER.md](TECHNICAL_DEBT_REGISTER.md) - **Єдиний реєстр технічного боргу (Unified Technical Debt Register)**
 - [ENGINEERING_DEFICIENCIES_REGISTER.md](ENGINEERING_DEFICIENCIES_REGISTER.md)
 
 ---
 
-## Baseline Snapshot (main-only, “here and now”)
+## Baseline Snapshot (main-only, "here and now")
 
 - Scope: only `main`, last five runs per key workflow, current coverage, and active alerts/jobs.
 - Key workflows (main, last 5 runs):
@@ -20,6 +20,42 @@
 
 See [TECHNICAL_DEBT_REGISTER.md](TECHNICAL_DEBT_REGISTER.md) for the **complete unified technical debt register** with all identified issues, classifications, and remediation plans.
 See [ENGINEERING_DEFICIENCIES_REGISTER.md](ENGINEERING_DEFICIENCIES_REGISTER.md) for detailed engineering deficiency analysis.
+
+---
+
+## Wave A Progress (2026-01-19)
+
+### TD-002: Policy Drift Guard (ENHANCED)
+
+- Priority: HIGH
+- Status: **Enhanced** with structured JSON logging
+- Implementation:
+  - Added `src/mlsdm/policy/fingerprint.py` module implementing Section 10 requirements:
+    - **Section 10.1**: Canonical fingerprint algorithm (sorted keys, stable float formatting, SHA-256)
+    - **Section 10.2**: Structured JSON logging (`POLICY_FINGERPRINT` event format)
+    - **Section 10.3**: Drift detection test (fingerprint A vs B comparison)
+  - Components:
+    - `compute_canonical_json()`: Canonical serialization with stable float formatting
+    - `compute_fingerprint_hash()`: SHA-256 fingerprinting
+    - `compute_policy_fingerprint()`: Full fingerprint computation with metadata
+    - `emit_policy_fingerprint_event()`: Structured JSON event logging
+    - `detect_policy_drift()`: Fingerprint comparison for drift detection
+    - `PolicyFingerprintGuard`: Stateful guard class for baseline management
+- Tests: 24 new tests in `tests/unit/test_policy_fingerprint.py` (all passing)
+- Proof command: `pytest tests/unit/test_policy_fingerprint.py -v` → 24 passed
+- Risk: None - additive changes only
+- Owner: @copilot
+
+### TD-003: Memory Provenance (VERIFIED)
+
+- Priority: HIGH
+- Status: **Already implemented**, verification complete
+- Implementation verified in `src/mlsdm/memory/provenance.py`:
+  - **Section 11.1**: Metadata schema with `source`, `created_at`, `confidence_score`
+  - **Section 11.2**: AUTHORITATIVE_THRESHOLD = 0.70 implemented as `is_high_confidence`
+  - **Section 11.3**: Backward compatibility tests present in `tests/unit/test_memory_provenance.py`
+- Tests: 22 existing tests (all passing)
+- Proof command: `pytest tests/unit/test_memory_provenance.py -v` → 22 passed
 
 ---
 

@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import os
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from functools import lru_cache
 from pathlib import Path
 
@@ -191,5 +191,5 @@ def get_policy_snapshot(
         policy_name=status.policy_name,
         policy_hash=status.policy_hash,
         policy_contract_version=status.policy_contract_version,
-        loaded_at=datetime.utcnow(),
+        loaded_at=datetime.now(timezone.utc),
     )
