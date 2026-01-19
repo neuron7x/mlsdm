@@ -1,10 +1,22 @@
 # Status Documentation
 
-This directory previously contained readiness documentation and policy enforcement tooling.
+This directory contains readiness documentation and status tracking.
 
-The readiness gate workflow has been removed to streamline development for this solo maintainer project.
+## Contents
 
-For current project status and documentation, please refer to:
-- Project README
-- Individual component documentation in `docs/`
-- CI workflow results in GitHub Actions
+- [READINESS.md](READINESS.md) — Canonical readiness truth and validation commands
+
+## Readiness Gates
+
+Readiness is validated by CI workflows in `.github/workflows/`:
+
+- `ci-smoke.yml` — CI Smoke Tests
+- `prod-gate.yml` — Production Gate
+- `perf-resilience.yml` — Performance & Resilience Validation
+- `property-tests.yml` — Property-Based Tests
+- `sast-scan.yml` — SAST Security Scan
+- `readiness-evidence.yml` — Readiness Evidence capture
+
+For current project status:
+- [docs/index.md](../index.md) — Documentation index
+- [CI workflow results](https://github.com/neuron7x/mlsdm/actions) — GitHub Actions
