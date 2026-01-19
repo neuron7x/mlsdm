@@ -22,8 +22,13 @@ The following CI workflows form the readiness gates:
 | Performance & Resilience | `perf-resilience.yml` | Performance benchmarks and resilience tests |
 | Property-Based Tests | `property-tests.yml` | Hypothesis-based property tests |
 | SAST Security Scan | `sast-scan.yml` | Static application security testing |
-| Coverage Badge | `coverage-badge.yml` | Coverage measurement and badge generation |
-| Readiness Evidence | `readiness-evidence.yml` | Evidence snapshot capture |
+
+**Supporting Workflows:**
+
+| Workflow | Description |
+|----------|-------------|
+| `coverage-badge.yml` | Coverage measurement and badge generation |
+| `readiness-evidence.yml` | Evidence snapshot capture |
 
 ## Local Validation
 
