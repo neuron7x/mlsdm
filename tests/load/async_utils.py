@@ -31,7 +31,11 @@ def is_ci_environment() -> bool:
         "TRAVIS",
         "JENKINS_URL",
     ]
-    return any(os.getenv(indicator) == "true" or os.getenv(indicator) == "1" for indicator in ci_indicators)
+    # Check if any CI indicator exists and is truthy (handles both boolean and URL values)
+    return any(
+        os.getenv(indicator) and os.getenv(indicator).lower() not in ("false", "0", "")
+        for indicator in ci_indicators
+    )
 
 
 def get_timeout_multiplier() -> float:
@@ -55,9 +59,8 @@ def calculate_timeout(base_timeout: float, ci_mode: bool = False) -> float:
     Returns:
         Adjusted timeout in seconds
     """
-    if ci_mode or is_ci_environment():
-        return base_timeout * 1.5
-    return base_timeout
+    multiplier = get_timeout_multiplier() if (ci_mode or is_ci_environment()) else 1.0
+    return base_timeout * multiplier
 
 
 async def safe_wait_for(
