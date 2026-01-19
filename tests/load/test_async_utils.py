@@ -40,40 +40,42 @@ class TestCIDetection:
 
     def test_no_ci_environment(self):
         """Test no CI environment detected."""
-        # Clear all CI env vars
-        env_backup = os.environ.copy()
-        for key in ["CI", "GITHUB_ACTIONS", "GITLAB_CI", "CIRCLECI", "TRAVIS", "JENKINS_URL"]:
-            os.environ.pop(key, None)
-        try:
+        # Clear all CI env vars using patch.dict for safety
+        with patch.dict(
+            os.environ,
+            {},
+            clear=False,
+        ):
+            # Remove CI vars explicitly
+            for key in ["CI", "GITHUB_ACTIONS", "GITLAB_CI", "CIRCLECI", "TRAVIS", "JENKINS_URL"]:
+                os.environ.pop(key, None)
             assert is_ci_environment() is False
-        finally:
-            os.environ.update(env_backup)
 
     def test_false_ci_environment(self):
         """Test CI variable set to false is not detected."""
-        # Clear all CI env vars first
-        env_backup = os.environ.copy()
-        for key in ["CI", "GITHUB_ACTIONS", "GITLAB_CI", "CIRCLECI", "TRAVIS", "JENKINS_URL"]:
-            os.environ.pop(key, None)
-        try:
-            with patch.dict(os.environ, {"CI": "false"}, clear=False):
-                assert is_ci_environment() is False
-        finally:
-            os.environ.clear()
-            os.environ.update(env_backup)
+        # Use patch.dict for safe environment isolation
+        with patch.dict(
+            os.environ,
+            {"CI": "false"},
+            clear=False,
+        ):
+            # Remove other CI vars
+            for key in ["GITHUB_ACTIONS", "GITLAB_CI", "CIRCLECI", "TRAVIS", "JENKINS_URL"]:
+                os.environ.pop(key, None)
+            assert is_ci_environment() is False
 
     def test_zero_ci_environment(self):
         """Test CI variable set to 0 is not detected."""
-        # Clear all CI env vars first
-        env_backup = os.environ.copy()
-        for key in ["CI", "GITHUB_ACTIONS", "GITLAB_CI", "CIRCLECI", "TRAVIS", "JENKINS_URL"]:
-            os.environ.pop(key, None)
-        try:
-            with patch.dict(os.environ, {"CI": "0"}, clear=False):
-                assert is_ci_environment() is False
-        finally:
-            os.environ.clear()
-            os.environ.update(env_backup)
+        # Use patch.dict for safe environment isolation
+        with patch.dict(
+            os.environ,
+            {"CI": "0"},
+            clear=False,
+        ):
+            # Remove other CI vars
+            for key in ["GITHUB_ACTIONS", "GITLAB_CI", "CIRCLECI", "TRAVIS", "JENKINS_URL"]:
+                os.environ.pop(key, None)
+            assert is_ci_environment() is False
 
 
 class TestTimeoutCalculation:
@@ -86,23 +88,21 @@ class TestTimeoutCalculation:
 
     def test_get_timeout_multiplier_local(self):
         """Test timeout multiplier in local environment."""
-        env_backup = os.environ.copy()
-        for key in ["CI", "GITHUB_ACTIONS", "GITLAB_CI", "CIRCLECI", "TRAVIS", "JENKINS_URL"]:
-            os.environ.pop(key, None)
-        try:
+        # Use patch.dict for safe environment isolation
+        with patch.dict(os.environ, {}, clear=False):
+            # Remove CI vars explicitly
+            for key in ["CI", "GITHUB_ACTIONS", "GITLAB_CI", "CIRCLECI", "TRAVIS", "JENKINS_URL"]:
+                os.environ.pop(key, None)
             assert get_timeout_multiplier() == 1.0
-        finally:
-            os.environ.update(env_backup)
 
     def test_calculate_timeout_local(self):
         """Test timeout calculation in local environment."""
-        env_backup = os.environ.copy()
-        for key in ["CI", "GITHUB_ACTIONS", "GITLAB_CI", "CIRCLECI", "TRAVIS", "JENKINS_URL"]:
-            os.environ.pop(key, None)
-        try:
+        # Use patch.dict for safe environment isolation
+        with patch.dict(os.environ, {}, clear=False):
+            # Remove CI vars explicitly
+            for key in ["CI", "GITHUB_ACTIONS", "GITLAB_CI", "CIRCLECI", "TRAVIS", "JENKINS_URL"]:
+                os.environ.pop(key, None)
             assert calculate_timeout(10.0) == 10.0
-        finally:
-            os.environ.update(env_backup)
 
     def test_calculate_timeout_ci_detected(self):
         """Test timeout calculation with CI environment detected."""
@@ -111,13 +111,12 @@ class TestTimeoutCalculation:
 
     def test_calculate_timeout_ci_mode_explicit(self):
         """Test timeout calculation with explicit CI mode."""
-        env_backup = os.environ.copy()
-        for key in ["CI", "GITHUB_ACTIONS", "GITLAB_CI", "CIRCLECI", "TRAVIS", "JENKINS_URL"]:
-            os.environ.pop(key, None)
-        try:
+        # Use patch.dict for safe environment isolation
+        with patch.dict(os.environ, {}, clear=False):
+            # Remove CI vars explicitly
+            for key in ["CI", "GITHUB_ACTIONS", "GITLAB_CI", "CIRCLECI", "TRAVIS", "JENKINS_URL"]:
+                os.environ.pop(key, None)
             assert calculate_timeout(10.0, ci_mode=True) == 15.0
-        finally:
-            os.environ.update(env_backup)
 
 
 @pytest.mark.asyncio
