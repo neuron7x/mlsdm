@@ -4,9 +4,20 @@ Standalone Server Load Test for MLSDM.
 This is a self-contained load test that doesn't require Locust.
 It starts the MLSDM server, runs load testing, and generates a report.
 
+Features:
+    - Auto-detects CI environment (GitHub Actions, GitLab CI, Jenkins, etc.)
+    - Applies 1.5x timeout multiplier in CI for reliability
+    - Graceful async task cancellation with proper cleanup
+    - Comprehensive error logging
+
 Usage:
+    # Local testing
     python tests/load/standalone_server_load_test.py
     python tests/load/standalone_server_load_test.py --users 50 --duration 60
+
+    # CI mode (explicit or auto-detected)
+    python tests/load/standalone_server_load_test.py --ci-mode
+    python tests/load/standalone_server_load_test.py --users 20 --duration 20 --ci-mode
 
 Requirements:
     - httpx (pip install httpx)
@@ -15,6 +26,7 @@ Requirements:
 
 import asyncio
 import json
+import logging
 import os
 import signal
 import subprocess
@@ -27,6 +39,16 @@ from typing import Any
 
 # Add src to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
+
+# Import async utilities
+from async_utils import calculate_timeout, graceful_cancel_tasks, is_ci_environment
+
+# Configure logging
+logging.basicConfig(
+    level=logging.DEBUG if os.getenv("DEBUG") else logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+)
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -184,14 +206,21 @@ class StandaloneLoadTest:
         concurrent_users: int = 10,
         duration_seconds: int = 30,
         warmup_seconds: int = 5,
+        ci_mode: bool = False,
     ):
         self.host = host
         self.concurrent_users = concurrent_users
         self.duration_seconds = duration_seconds
         self.warmup_seconds = warmup_seconds
+        self.ci_mode = ci_mode or is_ci_environment()
         self.stop_event = asyncio.Event()
         # Thread-safe queue for collecting results from concurrent workers
         self._results_queue: asyncio.Queue[LoadTestResult] = asyncio.Queue()
+
+        logger.info(
+            f"Load test configuration: users={concurrent_users}, "
+            f"duration={duration_seconds}s, CI mode={'enabled' if self.ci_mode else 'disabled'}"
+        )
 
     async def make_request(self, client: Any, request_type: str) -> LoadTestResult:
         """Make a single request to the server."""
@@ -307,11 +336,18 @@ class StandaloneLoadTest:
             # Signal workers to stop
             self.stop_event.set()
 
-            # Wait for workers to finish (with timeout)
-            await asyncio.wait_for(
-                asyncio.gather(*workers, return_exceptions=True),
-                timeout=5.0,
-            )
+            # Wait for workers to finish (with CI-aware timeout)
+            # Base timeout is 10s, adjusted to 15s in CI environments
+            shutdown_timeout = calculate_timeout(10.0, self.ci_mode)
+            logger.debug(f"Waiting for {len(workers)} workers to stop (timeout={shutdown_timeout:.1f}s)")
+
+            try:
+                await graceful_cancel_tasks(workers, timeout=shutdown_timeout, ci_mode=self.ci_mode)
+            except asyncio.TimeoutError:
+                logger.warning(
+                    f"Worker shutdown timeout after {shutdown_timeout:.1f}s, "
+                    f"some workers may still be running"
+                )
 
         elapsed = time.time() - start_time
 
@@ -355,25 +391,31 @@ class StandaloneLoadTest:
         return report
 
 
-async def wait_for_server(host: str, timeout: int = 30) -> bool:
+async def wait_for_server(host: str, timeout: int = 30, ci_mode: bool = False) -> bool:
     """Wait for server to be ready."""
     import httpx
 
+    # Adjust timeout for CI environments
+    adjusted_timeout = calculate_timeout(float(timeout), ci_mode)
+
     print(f"   Waiting for server at {host}...")
+    logger.debug(f"Server readiness check timeout: {adjusted_timeout:.1f}s (base={timeout}s)")
     start = time.time()
 
-    while time.time() - start < timeout:
+    while time.time() - start < adjusted_timeout:
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.get(f"{host}/health", timeout=2.0)
                 if response.status_code == 200:
                     print("   ✅ Server is ready!")
+                    logger.info(f"Server became ready after {time.time() - start:.1f}s")
                     return True
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"Server not ready yet: {e}")
         await asyncio.sleep(1)
 
     print("   ❌ Server failed to start within timeout")
+    logger.error(f"Server failed to become ready within {adjusted_timeout:.1f}s")
     return False
 
 
@@ -417,11 +459,17 @@ async def run_standalone_test(
     duration: int = 30,
     host: str | None = None,
     start_server_flag: bool = True,
+    ci_mode: bool = False,
 ) -> LoadTestReport:
     """Run a complete standalone load test."""
     print("\n" + "=" * 70)
     print("MLSDM STANDALONE SERVER LOAD TEST")
     print("=" * 70)
+
+    # Auto-detect CI mode
+    ci_mode = ci_mode or is_ci_environment()
+    if ci_mode:
+        logger.info("CI mode enabled (detected from environment or explicit flag)")
 
     server_process = None
     test_host = host or "http://127.0.0.1:8765"
@@ -442,8 +490,9 @@ async def run_standalone_test(
                 )
                 return report
 
-            # Wait for server to be ready
-            if not await wait_for_server(test_host, timeout=30):
+            # Wait for server to be ready (with CI-aware timeout)
+            server_timeout = 60 if ci_mode else 30
+            if not await wait_for_server(test_host, timeout=server_timeout, ci_mode=ci_mode):
                 report = LoadTestReport(
                     duration_seconds=0,
                     total_requests=0,
@@ -461,19 +510,23 @@ async def run_standalone_test(
             concurrent_users=users,
             duration_seconds=duration,
             warmup_seconds=3,
+            ci_mode=ci_mode,
         )
 
         report = await load_test.run_test()
         return report
 
     finally:
-        # Stop server
+        # Stop server with appropriate timeout
         if server_process is not None:
             print("\n   Stopping server...")
             server_process.send_signal(signal.SIGTERM)
+            shutdown_timeout = 10 if ci_mode else 5
             try:
-                server_process.wait(timeout=5)
+                server_process.wait(timeout=shutdown_timeout)
+                logger.info("Server stopped gracefully")
             except subprocess.TimeoutExpired:
+                logger.warning("Server shutdown timeout, forcing kill")
                 server_process.kill()
 
 
@@ -511,6 +564,11 @@ def main() -> None:
         default=None,
         help="Output file for JSON report",
     )
+    parser.add_argument(
+        "--ci-mode",
+        action="store_true",
+        help="Enable CI mode with conservative timeouts (auto-detected from environment)",
+    )
 
     args = parser.parse_args()
 
@@ -521,6 +579,7 @@ def main() -> None:
             duration=args.duration,
             host=args.host,
             start_server_flag=not args.no_server,
+            ci_mode=args.ci_mode,
         )
     )
 
