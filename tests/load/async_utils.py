@@ -59,7 +59,8 @@ def calculate_timeout(base_timeout: float, ci_mode: bool = False) -> float:
     Returns:
         Adjusted timeout in seconds
     """
-    multiplier = get_timeout_multiplier() if (ci_mode or is_ci_environment()) else 1.0
+    # Use 1.5x multiplier if either ci_mode is explicitly True OR CI is detected
+    multiplier = 1.5 if ci_mode or is_ci_environment() else 1.0
     return base_timeout * multiplier
 
 
