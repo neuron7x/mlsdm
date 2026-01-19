@@ -8,7 +8,8 @@ graceful task cancellation, and environment-aware configuration.
 import asyncio
 import logging
 import os
-from typing import Any, Coroutine, TypeVar
+from collections.abc import Coroutine
+from typing import Any, TypeVar
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +19,7 @@ T = TypeVar("T")
 def is_ci_environment() -> bool:
     """
     Detect if running in a CI/CD environment.
-    
+
     Returns:
         True if running in CI, False otherwise
     """
@@ -36,7 +37,7 @@ def is_ci_environment() -> bool:
 def get_timeout_multiplier() -> float:
     """
     Get timeout multiplier based on environment.
-    
+
     Returns:
         Multiplier for timeouts (1.5x for CI, 1.0x for local)
     """
@@ -46,11 +47,11 @@ def get_timeout_multiplier() -> float:
 def calculate_timeout(base_timeout: float, ci_mode: bool = False) -> float:
     """
     Calculate appropriate timeout based on environment.
-    
+
     Args:
         base_timeout: Base timeout in seconds
         ci_mode: Explicit CI mode flag
-        
+
     Returns:
         Adjusted timeout in seconds
     """
@@ -67,26 +68,26 @@ async def safe_wait_for(
 ) -> T:
     """
     Safely wait for a coroutine with logging and CI-aware timeout.
-    
+
     Args:
         coro: Coroutine to execute
         timeout: Base timeout in seconds
         operation_name: Name of operation for logging
         ci_mode: Explicit CI mode flag
-        
+
     Returns:
         Result of coroutine
-        
+
     Raises:
         asyncio.TimeoutError: If operation times out
     """
     adjusted_timeout = calculate_timeout(timeout, ci_mode)
-    
+
     logger.debug(
         f"Starting {operation_name} with timeout={adjusted_timeout:.1f}s "
         f"(base={timeout:.1f}s, CI={'yes' if ci_mode or is_ci_environment() else 'no'})"
     )
-    
+
     try:
         result = await asyncio.wait_for(coro, timeout=adjusted_timeout)
         logger.debug(f"Completed {operation_name} successfully")
@@ -108,21 +109,21 @@ async def graceful_cancel_tasks(
 ) -> None:
     """
     Gracefully cancel tasks with proper cleanup.
-    
+
     Args:
         tasks: List of tasks to cancel
         timeout: Timeout for waiting on cancellation
         ci_mode: Explicit CI mode flag
     """
     adjusted_timeout = calculate_timeout(timeout, ci_mode)
-    
+
     logger.debug(f"Cancelling {len(tasks)} tasks with timeout={adjusted_timeout:.1f}s")
-    
+
     # Cancel all tasks
     for task in tasks:
         if not task.done():
             task.cancel()
-    
+
     # Wait for them to finish with timeout
     if tasks:
         try:
@@ -143,19 +144,19 @@ async def graceful_cancel_tasks(
 async def cleanup_event_loop() -> None:
     """
     Ensure event loop is properly cleaned up.
-    
+
     Cancels all pending tasks and waits for them to complete.
     """
     loop = asyncio.get_event_loop()
-    
+
     # Get all pending tasks
     pending = [task for task in asyncio.all_tasks(loop) if not task.done()]
-    
+
     if pending:
         logger.debug(f"Cleaning up {len(pending)} pending tasks")
         for task in pending:
             task.cancel()
-        
+
         # Wait for cancellation
         await asyncio.gather(*pending, return_exceptions=True)
         logger.debug("Event loop cleanup complete")

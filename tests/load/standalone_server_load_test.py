@@ -205,7 +205,7 @@ class StandaloneLoadTest:
         self.stop_event = asyncio.Event()
         # Thread-safe queue for collecting results from concurrent workers
         self._results_queue: asyncio.Queue[LoadTestResult] = asyncio.Queue()
-        
+
         logger.info(
             f"Load test configuration: users={concurrent_users}, "
             f"duration={duration_seconds}s, CI mode={'enabled' if self.ci_mode else 'disabled'}"
@@ -329,7 +329,7 @@ class StandaloneLoadTest:
             # Base timeout is 10s, adjusted to 15s in CI environments
             shutdown_timeout = calculate_timeout(10.0, self.ci_mode)
             logger.debug(f"Waiting for {len(workers)} workers to stop (timeout={shutdown_timeout:.1f}s)")
-            
+
             try:
                 await graceful_cancel_tasks(workers, timeout=shutdown_timeout, ci_mode=self.ci_mode)
             except asyncio.TimeoutError:
@@ -386,7 +386,7 @@ async def wait_for_server(host: str, timeout: int = 30, ci_mode: bool = False) -
 
     # Adjust timeout for CI environments
     adjusted_timeout = calculate_timeout(float(timeout), ci_mode)
-    
+
     print(f"   Waiting for server at {host}...")
     logger.debug(f"Server readiness check timeout: {adjusted_timeout:.1f}s (base={timeout}s)")
     start = time.time()
