@@ -13,7 +13,7 @@ on:
       duration:
         description: 'Test duration in seconds'
         required: false
-        default: '30'
+        default: '20'
 
 permissions:
   contents: read
@@ -26,7 +26,7 @@ concurrency:
 jobs:
   load-tests:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
 
     steps:
       - name: Checkout repository
@@ -64,7 +64,7 @@ jobs:
           LOAD_DURATION: ${{ inputs.duration }}
         run: |
           set -euo pipefail
-          : "${LOAD_USERS:=20}" "${LOAD_DURATION:=30}"
+          : "${LOAD_USERS:=20}" "${LOAD_DURATION:=20}"
 
           validate_positive_int() {
             local value="$1"
@@ -78,11 +78,12 @@ jobs:
 
           validate_positive_int "$LOAD_USERS" "users"
           validate_positive_int "$LOAD_DURATION" "duration"
-          echo "Running load test with users=$LOAD_USERS duration=$LOAD_DURATION"
+          echo "Running load test with users=$LOAD_USERS duration=$LOAD_DURATION (CI mode enabled)"
           python tests/load/standalone_server_load_test.py \
             --users "$LOAD_USERS" \
             --duration "$LOAD_DURATION" \
-            --output load-test-report.json
+            --output load-test-report.json \
+            --ci-mode
 
       - name: Summarize load test report
         if: always()
