@@ -9,6 +9,16 @@ from mlsdm.policy.catalog import (
     verify_policy_catalog,
     write_policy_catalog,
 )
+from mlsdm.policy.exceptions import PolicyDriftError
+from mlsdm.policy.fingerprint import (
+    PolicyFingerprint,
+    PolicyFingerprintGuard,
+    compute_canonical_json,
+    compute_fingerprint_hash,
+    compute_policy_fingerprint,
+    detect_policy_drift,
+    emit_policy_fingerprint_event,
+)
 from mlsdm.policy.loader import (
     DEFAULT_POLICY_DIR,
     POLICY_CONTRACT_VERSION,
@@ -38,7 +48,10 @@ __all__ = [
     "OPA_EXPORT_MAPPINGS",
     "POLICY_CONTRACT_VERSION",
     "PolicyBundle",
+    "PolicyDriftError",
     "PolicyExportError",
+    "PolicyFingerprint",
+    "PolicyFingerprintGuard",
     "PolicyLoadError",
     "PolicyCatalog",
     "PolicyCatalogError",
@@ -47,6 +60,11 @@ __all__ = [
     "build_policy_catalog",
     "build_policy_registry",
     "canonical_hash",
+    "compute_canonical_json",
+    "compute_fingerprint_hash",
+    "compute_policy_fingerprint",
+    "detect_policy_drift",
+    "emit_policy_fingerprint_event",
     "export_opa_policy_data",
     "load_policy_catalog",
     "load_policy_bundle",

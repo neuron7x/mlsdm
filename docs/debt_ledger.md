@@ -1,13 +1,13 @@
 # Technical Debt Ledger
 
-**Last Updated:** 2026-01-04 (main branch baseline)
+**Last Updated:** 2026-01-19 (Wave A hardening complete)
 **Related:**
 - [TECHNICAL_DEBT_REGISTER.md](TECHNICAL_DEBT_REGISTER.md) - **Єдиний реєстр технічного боргу (Unified Technical Debt Register)**
 - [ENGINEERING_DEFICIENCIES_REGISTER.md](ENGINEERING_DEFICIENCIES_REGISTER.md)
 
 ---
 
-## Baseline Snapshot (main-only, “here and now”)
+## Baseline Snapshot (main-only, "here and now")
 
 - Scope: only `main`, last five runs per key workflow, current coverage, and active alerts/jobs.
 - Key workflows (main, last 5 runs):
@@ -20,6 +20,92 @@
 
 See [TECHNICAL_DEBT_REGISTER.md](TECHNICAL_DEBT_REGISTER.md) for the **complete unified technical debt register** with all identified issues, classifications, and remediation plans.
 See [ENGINEERING_DEFICIENCIES_REGISTER.md](ENGINEERING_DEFICIENCIES_REGISTER.md) for detailed engineering deficiency analysis.
+
+---
+
+## Wave A Progress (2026-01-19)
+
+### TD-001: pip CVE Remediation (EXCEPTION DOCUMENTED)
+
+- Priority: HIGH
+- Status: **Exception Documented** - Infrastructure-level mitigation
+- Issue: CVE-2025-8869 in pip 24.0 (tarfile path traversal)
+- Risk Assessment: MEDIUM (mitigated)
+  - Impact: 3 (system compromise potential)
+  - Likelihood: 2 (rare - trusted sources only)
+  - **Risk = 6 (MEDIUM)**
+- Mitigations:
+  1. All CI workflows use `pip install --upgrade pip` which gets latest pip
+  2. Only trusted package sources (PyPI, GitHub) are used
+  3. No sdist packages from untrusted sources
+  4. Python 3.12+ already implements PEP 706 safeguards
+- Remediation: See Exceptions section below
+- Owner: @devops
+
+### TD-002: Policy Drift Guard (ENHANCED)
+
+- Priority: HIGH
+- Status: **Enhanced** with structured JSON logging
+- Implementation:
+  - Added `src/mlsdm/policy/fingerprint.py` module implementing Section 10 requirements:
+    - **Section 10.1**: Canonical fingerprint algorithm (sorted keys, stable float formatting, SHA-256)
+    - **Section 10.2**: Structured JSON logging (`POLICY_FINGERPRINT` event format)
+    - **Section 10.3**: Drift detection test (fingerprint A vs B comparison)
+  - Components:
+    - `compute_canonical_json()`: Canonical serialization with stable float formatting
+    - `compute_fingerprint_hash()`: SHA-256 fingerprinting
+    - `compute_policy_fingerprint()`: Full fingerprint computation with metadata
+    - `emit_policy_fingerprint_event()`: Structured JSON event logging
+    - `detect_policy_drift()`: Fingerprint comparison for drift detection
+    - `PolicyFingerprintGuard`: Stateful guard class for baseline management
+- Tests: 24 new tests in `tests/unit/test_policy_fingerprint.py` (all passing)
+- Proof command: `pytest tests/unit/test_policy_fingerprint.py -v` → 24 passed
+- Risk: None - additive changes only
+- Owner: @copilot
+
+### TD-003: Memory Provenance (VERIFIED)
+
+- Priority: HIGH
+- Status: **Already implemented**, verification complete
+- Implementation verified in `src/mlsdm/memory/provenance.py`:
+  - **Section 11.1**: Metadata schema with `source`, `created_at`, `confidence_score`
+  - **Section 11.2**: AUTHORITATIVE_THRESHOLD = 0.70 implemented as `is_high_confidence`
+  - **Section 11.3**: Backward compatibility tests present in `tests/unit/test_memory_provenance.py`
+- Tests: 22 existing tests (all passing)
+- Proof command: `pytest tests/unit/test_memory_provenance.py -v` → 22 passed
+
+### TD-005: NumPy Compatibility Decision (RESOLVED)
+
+- Priority: HIGH
+- Status: **Resolved** via ADR-0008
+- Decision: Maintain `numpy>=2.0.0` as minimum version requirement
+- Rationale:
+  - NumPy 2.0 stable for over a year
+  - All major ecosystem libraries support NumPy 2.0
+  - NumPy 2.0 type stubs essential for strict mypy
+  - No production issues reported
+- Documentation: [docs/adr/0008-numpy-version-compatibility.md](adr/0008-numpy-version-compatibility.md)
+- Owner: @engineering
+
+---
+
+## Exceptions
+
+### EXC-001: pip CVE-2025-8869
+
+- **Date UTC:** 2026-01-19T18:00:00Z
+- **Reason:** System pip 24.0 has CVE-2025-8869, but:
+  - CI automatically upgrades pip
+  - Python 3.12 implements PEP 706 safeguards
+  - Only trusted sources used
+- **Scope:** CI/CD infrastructure and local development
+- **Owner:** @devops
+- **Expiry Date:** 2026-04-19 (90 days)
+- **Removal Plan:** 
+  1. Monitor GitHub Actions runner images for pip >=25.3
+  2. Verify pip upgrade in CI logs
+  3. Close exception once system pip is >=25.3
+- **Link:** TD-001 in TECHNICAL_DEBT_REGISTER.md
 
 ---
 

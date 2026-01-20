@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import os
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from functools import lru_cache
 from pathlib import Path
 
@@ -13,6 +13,7 @@ from mlsdm.policy.catalog import (
     load_policy_catalog,
     verify_policy_catalog,
 )
+from mlsdm.policy.exceptions import PolicyDriftError
 from mlsdm.policy.loader import DEFAULT_POLICY_DIR, PolicyLoadError, load_policy_bundle
 from mlsdm.policy.registry import (
     REGISTRY_FILENAME,
@@ -22,10 +23,6 @@ from mlsdm.policy.registry import (
 )
 
 logger = logging.getLogger(__name__)
-
-
-class PolicyDriftError(RuntimeError):
-    """Raised when policy drift is detected or policy registry is invalid."""
 
 
 @dataclass(frozen=True)
@@ -191,5 +188,5 @@ def get_policy_snapshot(
         policy_name=status.policy_name,
         policy_hash=status.policy_hash,
         policy_contract_version=status.policy_contract_version,
-        loaded_at=datetime.utcnow(),
+        loaded_at=datetime.now(timezone.utc),
     )
