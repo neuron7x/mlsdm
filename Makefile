@@ -32,6 +32,8 @@ help:
 	@echo "  make lock           - Update uv.lock with latest compatible versions"
 	@echo "  make lock-deps      - Lock dependencies with pip-compile (generates hashed requirements)"
 	@echo "  make changelog      - Generate changelog from conventional commits"
+	@echo "  make validate-api-contract - Validate API contract against baseline"
+	@echo "  make update-api-baseline   - Update API contract baseline"
 	@echo ""
 	@echo "Docker:"
 	@echo "  make docker-build-neuro-engine  - Build neuro-engine Docker image"
@@ -216,6 +218,19 @@ changelog:
 	@echo ""
 	@echo "✓ Changelog fragment generated: CHANGELOG.fragment.md"
 	@echo "Review and prepend to CHANGELOG.md manually, or wait for automated generation on release."
+
+# API Contract Validation
+validate-api-contract:
+	@echo "Validating API contract against baseline..."
+	@DISABLE_RATE_LIMIT=1 python scripts/export_openapi.py --output /tmp/openapi-current.json
+	@python scripts/openapi_contract_check.py docs/openapi-baseline.json /tmp/openapi-current.json
+	@echo "✓ API contract validation passed"
+
+update-api-baseline:
+	@echo "Updating API contract baseline..."
+	@DISABLE_RATE_LIMIT=1 python scripts/export_openapi.py --output docs/openapi-baseline.json
+	@echo "✓ API baseline updated: docs/openapi-baseline.json"
+	@echo "Review changes and commit the updated baseline."
 
 # Docker
 DOCKER_IMAGE_NAME ?= ghcr.io/neuron7x/mlsdm-neuro-engine
