@@ -38,6 +38,7 @@ httpx>=0.28.0
 hypothesis>=6.122.0
 locust>=2.32.0
 mypy>=1.15.0
+pip-tools>=7.4.0
 pytest-asyncio>=0.24.0
 pytest-benchmark>=4.0.0
 pytest-cov>=6.0.0

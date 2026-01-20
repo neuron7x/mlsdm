@@ -768,6 +768,75 @@ cognitive_rhythm:
 strict_mode: false  # Still false for performance
 ```
 
+### Retry Configuration
+
+MLSDM provides centralized retry logic for consistent error handling across the codebase. Retry behavior can be customized via environment variables.
+
+#### Environment Variables
+
+| Variable | Purpose | Default | Notes |
+|:---------|:--------|:--------|:------|
+| `MLSDM_RETRY_ATTEMPTS` | Maximum retry attempts | `3` | Used by DEFAULT_RETRY and CRITICAL_RETRY (default 5) |
+| `MLSDM_RETRY_MIN_WAIT` | Minimum wait between retries (seconds) | `1.0` | Used by all retry policies |
+| `MLSDM_RETRY_MAX_WAIT` | Maximum wait between retries (seconds) | `10.0` | Used by most retry policies |
+
+#### Retry Policies
+
+The system provides several pre-configured retry policies:
+
+- **DEFAULT_RETRY**: Standard retry for most operations (3 attempts, exponential backoff 1-10s)
+- **CRITICAL_RETRY**: For critical operations requiring more persistence (5 attempts, exponential backoff 1-30s)
+- **FAST_RETRY**: For operations needing quick failure (2 attempts, fixed 1s delay)
+- **IO_RETRY**: Optimized for I/O operations (3 attempts, shorter backoff 0.5-10s)
+- **NETWORK_RETRY**: For network operations (3 attempts, retries on TimeoutError, ConnectionError, RuntimeError)
+
+#### Usage Example
+
+```python
+from mlsdm.utils.retry_decorator import DEFAULT_RETRY, NETWORK_RETRY
+
+@DEFAULT_RETRY
+def save_data(data: dict) -> None:
+    # Automatically retries up to 3 times with exponential backoff
+    ...
+
+@NETWORK_RETRY
+def call_external_api() -> dict:
+    # Retries only on network-related errors
+    ...
+```
+
+#### Custom Retry Policies
+
+For specialized requirements, create custom retry policies:
+
+```python
+from mlsdm.utils.retry_decorator import create_custom_retry
+
+# Create a custom policy with 10 attempts and longer waits
+custom_retry = create_custom_retry(
+    attempts=10,
+    min_wait=2.0,
+    max_wait=60.0,
+    multiplier=2.0
+)
+
+@custom_retry
+def critical_operation() -> bool:
+    ...
+```
+
+#### Configuration via Environment
+
+To increase retry attempts globally for a deployment:
+
+```bash
+export MLSDM_RETRY_ATTEMPTS=5
+export MLSDM_RETRY_MAX_WAIT=30
+```
+
+This affects all DEFAULT_RETRY, IO_RETRY, and NETWORK_RETRY policies. CRITICAL_RETRY uses its own default of 5 attempts.
+
 ## Best Practices
 
 ### Production Deployments

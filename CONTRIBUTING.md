@@ -98,6 +98,56 @@ We use the following tools (all included in dev dependencies):
 - **ruff**: Linting and formatting
 - **mypy**: Type checking
 - **httpx**: HTTP client for testing
+- **pip-tools**: Dependency locking and management
+
+### Dependency Management
+
+The project uses **pip-tools** to lock all transitive dependencies with cryptographic hashes for supply chain security and reproducible builds.
+
+#### Adding Dependencies
+
+1. Add the dependency to `pyproject.toml` in the appropriate section:
+   - `[project.dependencies]` - Core runtime dependencies
+   - `[project.optional-dependencies.dev]` - Development tools
+   - `[project.optional-dependencies.test]` - Testing dependencies
+   - Other optional groups as needed
+
+2. Regenerate locked dependencies:
+   ```bash
+   make lock-deps
+   ```
+
+   This will:
+   - Generate `requirements.txt` with all transitive dependencies pinned with SHA256 hashes
+   - Generate `requirements-dev.txt` with dev dependencies pinned with hashes
+   - Ensure reproducible builds and detect supply chain attacks
+
+3. Commit both `pyproject.toml` and the regenerated `requirements*.txt` files:
+   ```bash
+   git add pyproject.toml requirements.txt requirements-dev.txt
+   git commit -m "deps: add <package-name>"
+   ```
+
+#### Updating Dependencies
+
+To update all dependencies to their latest compatible versions:
+
+```bash
+# Update uv.lock (for uv users)
+make lock
+
+# Update pip-compile lock files
+make lock-deps
+```
+
+#### Why We Use Hashed Requirements
+
+- **Supply Chain Security**: SHA256 hashes prevent package substitution attacks
+- **Reproducibility**: Exact versions ensure builds are identical across environments
+- **Dependency Drift Prevention**: Locks transitive dependencies that would otherwise float
+- **Audit Trail**: Hash verification provides cryptographic proof of package integrity
+
+**CI Enforcement**: The `dependency-check` workflow automatically validates that `requirements.txt` matches `pyproject.toml`. PRs will fail if dependencies are out of sync.
 
 ### Canonical Development Commands
 
@@ -172,34 +222,83 @@ mypy src/
 
 ### 4. Commit Guidelines
 
-Write clear, descriptive commit messages:
+We use **Conventional Commits** format for all commit messages. This enables automatic changelog generation and semantic versioning.
+
+#### Commit Message Format
 
 ```
-<type>: <short summary>
+<type>[optional scope]: <description>
 
-<detailed description if needed>
+[optional body]
 
-<issue reference if applicable>
+[optional footer(s)]
 ```
 
-**Types:**
-- `feat`: New feature
-- `fix`: Bug fix
-- `docs`: Documentation changes
-- `test`: Adding or updating tests
-- `refactor`: Code refactoring
+**Valid Types:**
+- `feat`: A new feature
+- `fix`: A bug fix
+- `docs`: Documentation only changes
+- `style`: Code style changes (formatting, missing semicolons, etc)
+- `refactor`: Code change that neither fixes a bug nor adds a feature
 - `perf`: Performance improvements
-- `chore`: Maintenance tasks
+- `test`: Adding missing tests or correcting existing tests
+- `chore`: Changes to build process, auxiliary tools, or libraries
+- `ci`: Changes to CI configuration files and scripts
+- `security` or `sec`: Security improvements
 
-**Example:**
+#### Commit Message Rules
+
+1. **Description** should be lowercase (except for proper nouns like API, CI)
+2. **Description** should not end with a period
+3. **Description** should be at least 3 characters
+4. **Scope** is optional but recommended for better organization
+
+#### Examples
+
+**Good commit messages:**
 ```
-feat: Add adaptive batch processing to memory consolidation
-
-Implements dynamic batch sizing based on memory pressure.
-Reduces consolidation time by 30% under high load.
-
-Closes #42
+feat: add retry decorator for consistent error handling
+fix(api): resolve race condition in health check endpoint
+docs: update CONTRIBUTING.md with commit message format
+chore(deps): upgrade pytest to 8.3.0
+security: sanitize user input to prevent XSS attacks
 ```
+
+**Bad commit messages:**
+```
+Update code                    # Missing type, too vague
+feat: Add feature.            # Description ends with period
+Fix: bug                      # Type should be lowercase, description too short
+added new tests               # Missing type
+```
+
+#### Automated Validation
+
+A pre-commit hook validates commit messages. Install it:
+
+```bash
+# Install pre-commit hooks
+pre-commit install --hook-type commit-msg
+
+# Test a commit message
+echo "feat: test commit" | pre-commit run --hook-stage commit-msg
+```
+
+#### Generating Changelog
+
+To generate a changelog fragment from your commits:
+
+```bash
+# Generate changelog from last tag to HEAD
+make changelog
+
+# Generate changelog from specific tag
+PREV_TAG=v1.2.0 make changelog
+```
+
+The changelog will be automatically generated during releases based on conventional commits.
+
+**Learn more:** https://www.conventionalcommits.org/
 
 ## Coding Standards
 

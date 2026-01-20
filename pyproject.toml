@@ -79,6 +79,7 @@ dev = [
     "types-requests==2.32.4.20260107",
     "tomli>=2.0.0; python_version < '3.11'",  # TOML backport for Py3.10 compatibility
     "sentence-transformers>=3.0.0",  # Include embeddings in dev for full testing
+    "pip-tools>=7.4.0",  # For dependency locking with pip-compile
 ]
 docs = [
     "sphinx>=7.0.0",

@@ -1,7 +1,7 @@
 .PHONY: test test-fast coverage-gate verify-metrics verify-security-skip verify-docs lint type cov bench bench-drift help run-dev run-cloud-local run-agent health-check eval-moral_filter test-memory-obs \
         readiness-preview readiness-apply \
         build-package test-package docker-build-neuro-engine docker-run-neuro-engine docker-smoke-neuro-engine \
-        docker-compose-up docker-compose-down lock sync evidence iteration-metrics
+        docker-compose-up docker-compose-down lock sync lock-deps evidence iteration-metrics
 
 export PYTHONPATH := $(PYTHONPATH):$(CURDIR)/src
 ITERATION_METRICS_PATH ?= artifacts/tmp/iteration-metrics.jsonl
@@ -28,8 +28,12 @@ help:
 	@echo "  make test-package   - Test package installation in fresh venv"
 	@echo ""
 	@echo "Dependency Management:"
-	@echo "  make sync           - Install dependencies from uv.lock"
+	@echo "  make sync           - Install dependencies from uv.lock (recommended)"
 	@echo "  make lock           - Update uv.lock with latest compatible versions"
+	@echo "  make lock-deps      - Lock dependencies with pip-compile (generates hashed requirements)"
+	@echo "  make changelog      - Generate changelog from conventional commits"
+	@echo "  make validate-api-contract - Validate API contract against baseline"
+	@echo "  make update-api-baseline   - Update API contract baseline"
 	@echo ""
 	@echo "Docker:"
 	@echo "  make docker-build-neuro-engine  - Build neuro-engine Docker image"
@@ -146,6 +150,87 @@ lock:
 	@echo "Updating uv.lock with latest compatible versions..."
 	uv lock --upgrade
 	@echo "✓ uv.lock updated"
+
+lock-deps:
+	@echo "Locking dependencies with pip-compile..."
+	@echo "This will generate requirements.txt with all transitive dependencies pinned and hashed."
+	@pip-compile pyproject.toml --generate-hashes --output-file=requirements.txt --verbose
+	@echo "✓ requirements.txt generated with hashes"
+	@echo ""
+	@echo "Generating requirements-dev.txt with dev dependencies..."
+	@pip-compile pyproject.toml --extra=dev --generate-hashes --output-file=requirements-dev.txt --verbose
+	@echo "✓ requirements-dev.txt generated with hashes"
+	@echo ""
+	@echo "Dependency lock complete. Commit the updated files to git."
+
+# Changelog Generation
+changelog:
+	@echo "Generating changelog from conventional commits..."
+	@if [ -z "$(PREV_TAG)" ]; then \
+		PREV_TAG=$$(git describe --tags --abbrev=0 2>/dev/null || echo ""); \
+	fi; \
+	if [ -z "$$PREV_TAG" ]; then \
+		echo "No previous tag found, generating changelog from all commits"; \
+		RANGE="HEAD"; \
+	else \
+		echo "Generating changelog from $$PREV_TAG to HEAD"; \
+		RANGE="$$PREV_TAG..HEAD"; \
+	fi; \
+	echo "## [Unreleased] - $$(date +%Y-%m-%d)" > CHANGELOG.fragment.md; \
+	echo "" >> CHANGELOG.fragment.md; \
+	FEATURES=$$(git log $$RANGE --pretty=format:"%s" 2>/dev/null | grep -E "^feat(\(.*\))?:" | sed 's/^feat\([^:]*\): /- /' || true); \
+	if [ -n "$$FEATURES" ]; then \
+		echo "### ✨ Features" >> CHANGELOG.fragment.md; \
+		echo "$$FEATURES" >> CHANGELOG.fragment.md; \
+		echo "" >> CHANGELOG.fragment.md; \
+	fi; \
+	FIXES=$$(git log $$RANGE --pretty=format:"%s" 2>/dev/null | grep -E "^fix(\(.*\))?:" | sed 's/^fix\([^:]*\): /- /' || true); \
+	if [ -n "$$FIXES" ]; then \
+		echo "### 🐛 Bug Fixes" >> CHANGELOG.fragment.md; \
+		echo "$$FIXES" >> CHANGELOG.fragment.md; \
+		echo "" >> CHANGELOG.fragment.md; \
+	fi; \
+	DOCS=$$(git log $$RANGE --pretty=format:"%s" 2>/dev/null | grep -E "^docs(\(.*\))?:" | sed 's/^docs\([^:]*\): /- /' || true); \
+	if [ -n "$$DOCS" ]; then \
+		echo "### 📚 Documentation" >> CHANGELOG.fragment.md; \
+		echo "$$DOCS" >> CHANGELOG.fragment.md; \
+		echo "" >> CHANGELOG.fragment.md; \
+	fi; \
+	PERF=$$(git log $$RANGE --pretty=format:"%s" 2>/dev/null | grep -E "^perf(\(.*\))?:" | sed 's/^perf\([^:]*\): /- /' || true); \
+	if [ -n "$$PERF" ]; then \
+		echo "### ⚡ Performance" >> CHANGELOG.fragment.md; \
+		echo "$$PERF" >> CHANGELOG.fragment.md; \
+		echo "" >> CHANGELOG.fragment.md; \
+	fi; \
+	SECURITY=$$(git log $$RANGE --pretty=format:"%s" 2>/dev/null | grep -E "^(security|sec)(\(.*\))?:" | sed 's/^sec\(urity\)\?\([^:]*\): /- /' || true); \
+	if [ -n "$$SECURITY" ]; then \
+		echo "### 🔒 Security" >> CHANGELOG.fragment.md; \
+		echo "$$SECURITY" >> CHANGELOG.fragment.md; \
+		echo "" >> CHANGELOG.fragment.md; \
+	fi; \
+	CHORES=$$(git log $$RANGE --pretty=format:"%s" 2>/dev/null | grep -E "^chore(\(.*\))?:" | sed 's/^chore\([^:]*\): /- /' || true); \
+	if [ -n "$$CHORES" ]; then \
+		echo "### 🔧 Maintenance" >> CHANGELOG.fragment.md; \
+		echo "$$CHORES" >> CHANGELOG.fragment.md; \
+		echo "" >> CHANGELOG.fragment.md; \
+	fi; \
+	cat CHANGELOG.fragment.md
+	@echo ""
+	@echo "✓ Changelog fragment generated: CHANGELOG.fragment.md"
+	@echo "Review and prepend to CHANGELOG.md manually, or wait for automated generation on release."
+
+# API Contract Validation
+validate-api-contract:
+	@echo "Validating API contract against baseline..."
+	@DISABLE_RATE_LIMIT=1 python scripts/export_openapi.py --output /tmp/openapi-current.json
+	@python scripts/openapi_contract_check.py docs/openapi-baseline.json /tmp/openapi-current.json
+	@echo "✓ API contract validation passed"
+
+update-api-baseline:
+	@echo "Updating API contract baseline..."
+	@DISABLE_RATE_LIMIT=1 python scripts/export_openapi.py --output docs/openapi-baseline.json
+	@echo "✓ API baseline updated: docs/openapi-baseline.json"
+	@echo "Review changes and commit the updated baseline."
 
 # Docker
 DOCKER_IMAGE_NAME ?= ghcr.io/neuron7x/mlsdm-neuro-engine
