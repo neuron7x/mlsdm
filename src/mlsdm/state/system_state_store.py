@@ -12,17 +12,20 @@ Features:
 
 from __future__ import annotations
 
+import functools
 import hashlib
 import json
 import logging
 import os
+import random
 import shutil
+import time
+from collections.abc import Callable
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, TypeVar
 
 import numpy as np
 
-from ..utils.retry_decorator import IO_RETRY
 from .system_state_migrations import migrate_state
 from .system_state_schema import (
     CURRENT_SCHEMA_VERSION,
@@ -48,6 +51,84 @@ class StateCorruptionError(Exception):
 
 class StateRecoveryError(Exception):
     """Failed to recover corrupted state."""
+
+
+# Type variable for generic function decoration
+F = TypeVar("F", bound=Callable[..., Any])
+
+# Self-contained IO retry configuration (stdlib-only, no external deps)
+# Environment variable overrides with deterministic defaults
+_IO_RETRY_ATTEMPTS = int(os.getenv("MLSDM_RETRY_ATTEMPTS", "3"))
+_IO_RETRY_MIN_WAIT = float(os.getenv("MLSDM_RETRY_MIN_WAIT", "0.5"))
+_IO_RETRY_MAX_WAIT = float(os.getenv("MLSDM_RETRY_MAX_WAIT", "10.0"))
+_IO_RETRY_MAX_ELAPSED = float(os.getenv("MLSDM_RETRY_MAX_ELAPSED", "30.0"))
+_IO_RETRY_JITTER_RATIO = float(os.getenv("MLSDM_RETRY_JITTER_RATIO", "0.2"))
+
+
+def _io_retry(func: F) -> F:
+    """Self-contained IO retry decorator with exponential backoff and jitter.
+
+    This is a stdlib-only retry implementation to avoid cross-module dependencies.
+    Retries ONLY on OSError (covers PermissionError, FileNotFoundError, etc.).
+
+    Configured via environment variables:
+    - MLSDM_RETRY_ATTEMPTS: Maximum retry attempts (default: 3, 0 to disable)
+    - MLSDM_RETRY_MIN_WAIT: Minimum wait time in seconds (default: 0.5)
+    - MLSDM_RETRY_MAX_WAIT: Maximum wait time in seconds (default: 10.0)
+    - MLSDM_RETRY_MAX_ELAPSED: Maximum total elapsed time in seconds (default: 30.0)
+    - MLSDM_RETRY_JITTER_RATIO: Jitter ratio for backoff (default: 0.2)
+    """
+
+    @functools.wraps(func)
+    def wrapper(*args: Any, **kwargs: Any) -> Any:
+        # Fail-fast when retries disabled
+        if _IO_RETRY_ATTEMPTS <= 0:
+            return func(*args, **kwargs)
+
+        start_time = time.monotonic()
+        last_exception: OSError | None = None
+
+        for attempt in range(_IO_RETRY_ATTEMPTS):
+            try:
+                return func(*args, **kwargs)
+            except OSError as e:
+                last_exception = e
+                elapsed = time.monotonic() - start_time
+
+                # Check if we've exceeded max elapsed time
+                if elapsed >= _IO_RETRY_MAX_ELAPSED:
+                    break
+
+                if attempt < _IO_RETRY_ATTEMPTS - 1:
+                    # Exponential backoff with jitter
+                    base_wait = min(
+                        _IO_RETRY_MIN_WAIT * (2**attempt),
+                        _IO_RETRY_MAX_WAIT,
+                    )
+                    # Add jitter to reduce thundering herd
+                    jitter = base_wait * random.uniform(0, _IO_RETRY_JITTER_RATIO)
+                    wait_time = base_wait + jitter
+
+                    # Don't wait beyond max elapsed time
+                    remaining = _IO_RETRY_MAX_ELAPSED - elapsed
+                    if wait_time > remaining:
+                        wait_time = max(0, remaining)
+
+                    if wait_time > 0:
+                        logger.debug(
+                            "IO operation failed (attempt %d/%d), retrying in %.2fs: %s",
+                            attempt + 1,
+                            _IO_RETRY_ATTEMPTS,
+                            wait_time,
+                            e,
+                        )
+                        time.sleep(wait_time)
+
+        # Re-raise the last exception after all retries exhausted
+        assert last_exception is not None, "Retry logic error: no exception captured"
+        raise last_exception
+
+    return wrapper  # type: ignore[return-value]
 
 
 def _compute_checksum(data: bytes) -> str:
@@ -136,7 +217,7 @@ def _read_state_data(
     raise ValueError(f"Unsupported format: {file_format}")
 
 
-@IO_RETRY
+@_io_retry
 def _write_file_atomic(filepath: str, data: bytes) -> None:
     """Write data to file atomically using temporary file + rename."""
     temp_path = f"{filepath}.tmp"
