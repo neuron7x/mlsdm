@@ -2,11 +2,12 @@
 
 import sys
 from pathlib import Path
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import Mock, patch
 
 import pytest
 
-# Add scripts directory to path for importing
+# Add scripts directory to path for importing - done before importing smoke_test
+# ruff: noqa: E402
 scripts_dir = Path(__file__).parent.parent.parent / "scripts"
 sys.path.insert(0, str(scripts_dir))
 

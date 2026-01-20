@@ -54,7 +54,7 @@ def test_health_endpoints_unversioned() -> None:
 
 def test_api_endpoints_are_versioned() -> None:
     """Test that all API endpoints are available in versioned routers.
-    
+
     Note: Some endpoints may also be available at unversioned paths for
     backward compatibility, but they MUST be available in versioned routers.
     """

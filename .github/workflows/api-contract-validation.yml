@@ -50,8 +50,8 @@ jobs:
         id: check
         run: |
           python scripts/openapi_contract_check.py \
-            docs/openapi-baseline.json \
-            docs/openapi-current.json \
+            --baseline docs/openapi-baseline.json \
+            --candidate docs/openapi-current.json \
             > contract-check-output.txt 2>&1 || echo "BREAKING_CHANGES=true" >> $GITHUB_OUTPUT
           
           # Display the output

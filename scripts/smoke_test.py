@@ -17,10 +17,8 @@ Exit codes:
 """
 
 import argparse
-import json
 import sys
 import time
-from typing import Any
 from urllib.parse import urljoin
 
 try:

@@ -38,7 +38,6 @@ import re
 import sys
 from pathlib import Path
 
-
 # Conventional Commits types
 VALID_TYPES = [
     "feat",
@@ -136,7 +135,7 @@ See: https://www.conventionalcommits.org/
         return False, "Commit description is too short (minimum 3 characters)"
 
     # Description should start with lowercase (except for proper nouns)
-    if description[0].isupper() and not description.split()[0] in ["API", "CI", "CD"]:
+    if description[0].isupper() and description.split()[0] not in ["API", "CI", "CD"]:
         return (
             False,
             f"Commit description should start with lowercase: '{description[0].lower()}{description[1:]}'",
