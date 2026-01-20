@@ -1,7 +1,7 @@
 .PHONY: test test-fast coverage-gate verify-metrics verify-security-skip verify-docs lint type cov bench bench-drift help run-dev run-cloud-local run-agent health-check eval-moral_filter test-memory-obs \
         readiness-preview readiness-apply \
         build-package test-package docker-build-neuro-engine docker-run-neuro-engine docker-smoke-neuro-engine \
-        docker-compose-up docker-compose-down lock sync evidence iteration-metrics
+        docker-compose-up docker-compose-down lock sync lock-deps evidence iteration-metrics
 
 export PYTHONPATH := $(PYTHONPATH):$(CURDIR)/src
 ITERATION_METRICS_PATH ?= artifacts/tmp/iteration-metrics.jsonl
@@ -28,8 +28,9 @@ help:
 	@echo "  make test-package   - Test package installation in fresh venv"
 	@echo ""
 	@echo "Dependency Management:"
-	@echo "  make sync           - Install dependencies from uv.lock"
+	@echo "  make sync           - Install dependencies from uv.lock (recommended)"
 	@echo "  make lock           - Update uv.lock with latest compatible versions"
+	@echo "  make lock-deps      - Lock dependencies with pip-compile (generates hashed requirements)"
 	@echo ""
 	@echo "Docker:"
 	@echo "  make docker-build-neuro-engine  - Build neuro-engine Docker image"
@@ -146,6 +147,18 @@ lock:
 	@echo "Updating uv.lock with latest compatible versions..."
 	uv lock --upgrade
 	@echo "✓ uv.lock updated"
+
+lock-deps:
+	@echo "Locking dependencies with pip-compile..."
+	@echo "This will generate requirements.txt with all transitive dependencies pinned and hashed."
+	@pip-compile pyproject.toml --generate-hashes --output-file=requirements.txt --verbose
+	@echo "✓ requirements.txt generated with hashes"
+	@echo ""
+	@echo "Generating requirements-dev.txt with dev dependencies..."
+	@pip-compile pyproject.toml --extra=dev --generate-hashes --output-file=requirements-dev.txt --verbose
+	@echo "✓ requirements-dev.txt generated with hashes"
+	@echo ""
+	@echo "Dependency lock complete. Commit the updated files to git."
 
 # Docker
 DOCKER_IMAGE_NAME ?= ghcr.io/neuron7x/mlsdm-neuro-engine

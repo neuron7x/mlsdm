@@ -98,6 +98,56 @@ We use the following tools (all included in dev dependencies):
 - **ruff**: Linting and formatting
 - **mypy**: Type checking
 - **httpx**: HTTP client for testing
+- **pip-tools**: Dependency locking and management
+
+### Dependency Management
+
+The project uses **pip-tools** to lock all transitive dependencies with cryptographic hashes for supply chain security and reproducible builds.
+
+#### Adding Dependencies
+
+1. Add the dependency to `pyproject.toml` in the appropriate section:
+   - `[project.dependencies]` - Core runtime dependencies
+   - `[project.optional-dependencies.dev]` - Development tools
+   - `[project.optional-dependencies.test]` - Testing dependencies
+   - Other optional groups as needed
+
+2. Regenerate locked dependencies:
+   ```bash
+   make lock-deps
+   ```
+
+   This will:
+   - Generate `requirements.txt` with all transitive dependencies pinned with SHA256 hashes
+   - Generate `requirements-dev.txt` with dev dependencies pinned with hashes
+   - Ensure reproducible builds and detect supply chain attacks
+
+3. Commit both `pyproject.toml` and the regenerated `requirements*.txt` files:
+   ```bash
+   git add pyproject.toml requirements.txt requirements-dev.txt
+   git commit -m "deps: add <package-name>"
+   ```
+
+#### Updating Dependencies
+
+To update all dependencies to their latest compatible versions:
+
+```bash
+# Update uv.lock (for uv users)
+make lock
+
+# Update pip-compile lock files
+make lock-deps
+```
+
+#### Why We Use Hashed Requirements
+
+- **Supply Chain Security**: SHA256 hashes prevent package substitution attacks
+- **Reproducibility**: Exact versions ensure builds are identical across environments
+- **Dependency Drift Prevention**: Locks transitive dependencies that would otherwise float
+- **Audit Trail**: Hash verification provides cryptographic proof of package integrity
+
+**CI Enforcement**: The `dependency-check` workflow automatically validates that `requirements.txt` matches `pyproject.toml`. PRs will fail if dependencies are out of sync.
 
 ### Canonical Development Commands
 
