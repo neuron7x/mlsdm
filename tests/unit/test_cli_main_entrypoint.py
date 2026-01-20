@@ -12,14 +12,9 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime
-from typing import TYPE_CHECKING
 from unittest import mock
 
 import pytest
-
-if TYPE_CHECKING:
-    from _pytest.capture import CaptureFixture
 
 
 class TestJSONFormatter:
@@ -151,23 +146,25 @@ class TestMainFunction:
         mock_config = mock.MagicMock()
         mock_manager = mock.MagicMock()
 
-        with mock.patch.object(
-            cli_main_module, "ConfigLoader", autospec=True
-        ) as mock_config_loader:
-            with mock.patch.object(
+        with (
+            mock.patch.object(
+                cli_main_module, "ConfigLoader", autospec=True
+            ) as mock_config_loader,
+            mock.patch.object(
                 cli_main_module, "MemoryManager", autospec=True
-            ) as mock_memory_manager:
-                with mock.patch("sys.argv", ["mlsdm", "--config", "test.yaml", "--steps", "10"]):
-                    mock_config_loader.load_config.return_value = mock_config
-                    mock_memory_manager.return_value = mock_manager
+            ) as mock_memory_manager,
+            mock.patch("sys.argv", ["mlsdm", "--config", "test.yaml", "--steps", "10"]),
+        ):
+            mock_config_loader.load_config.return_value = mock_config
+            mock_memory_manager.return_value = mock_manager
 
-                    # Should execute without error
-                    cli_main_module.main()
+            # Should execute without error
+            cli_main_module.main()
 
-                    # Verify calls were made
-                    mock_config_loader.load_config.assert_called_once_with("test.yaml")
-                    mock_memory_manager.assert_called_once_with(mock_config)
-                    mock_manager.run_simulation.assert_called_once_with(10)
+            # Verify calls were made
+            mock_config_loader.load_config.assert_called_once_with("test.yaml")
+            mock_memory_manager.assert_called_once_with(mock_config)
+            mock_manager.run_simulation.assert_called_once_with(10)
 
     def test_main_default_config_path(self):
         """Test main() uses default config path when not specified."""
@@ -176,22 +173,24 @@ class TestMainFunction:
         mock_config = mock.MagicMock()
         mock_manager = mock.MagicMock()
 
-        with mock.patch.object(
-            cli_main_module, "ConfigLoader", autospec=True
-        ) as mock_config_loader:
-            with mock.patch.object(
+        with (
+            mock.patch.object(
+                cli_main_module, "ConfigLoader", autospec=True
+            ) as mock_config_loader,
+            mock.patch.object(
                 cli_main_module, "MemoryManager", autospec=True
-            ) as mock_memory_manager:
-                with mock.patch("sys.argv", ["mlsdm"]):
-                    mock_config_loader.load_config.return_value = mock_config
-                    mock_memory_manager.return_value = mock_manager
+            ) as mock_memory_manager,
+            mock.patch("sys.argv", ["mlsdm"]),
+        ):
+            mock_config_loader.load_config.return_value = mock_config
+            mock_memory_manager.return_value = mock_manager
 
-                    cli_main_module.main()
+            cli_main_module.main()
 
-                    # Default config path should be used
-                    mock_config_loader.load_config.assert_called_once_with(
-                        "config/default_config.yaml"
-                    )
+            # Default config path should be used
+            mock_config_loader.load_config.assert_called_once_with(
+                "config/default_config.yaml"
+            )
 
     def test_main_default_steps(self):
         """Test main() uses default steps when not specified."""
@@ -200,20 +199,22 @@ class TestMainFunction:
         mock_config = mock.MagicMock()
         mock_manager = mock.MagicMock()
 
-        with mock.patch.object(
-            cli_main_module, "ConfigLoader", autospec=True
-        ) as mock_config_loader:
-            with mock.patch.object(
+        with (
+            mock.patch.object(
+                cli_main_module, "ConfigLoader", autospec=True
+            ) as mock_config_loader,
+            mock.patch.object(
                 cli_main_module, "MemoryManager", autospec=True
-            ) as mock_memory_manager:
-                with mock.patch("sys.argv", ["mlsdm"]):
-                    mock_config_loader.load_config.return_value = mock_config
-                    mock_memory_manager.return_value = mock_manager
+            ) as mock_memory_manager,
+            mock.patch("sys.argv", ["mlsdm"]),
+        ):
+            mock_config_loader.load_config.return_value = mock_config
+            mock_memory_manager.return_value = mock_manager
 
-                    cli_main_module.main()
+            cli_main_module.main()
 
-                    # Default steps (100) should be used
-                    mock_manager.run_simulation.assert_called_once_with(100)
+            # Default steps (100) should be used
+            mock_manager.run_simulation.assert_called_once_with(100)
 
     def test_main_custom_steps(self):
         """Test main() accepts custom steps value."""
@@ -222,19 +223,21 @@ class TestMainFunction:
         mock_config = mock.MagicMock()
         mock_manager = mock.MagicMock()
 
-        with mock.patch.object(
-            cli_main_module, "ConfigLoader", autospec=True
-        ) as mock_config_loader:
-            with mock.patch.object(
+        with (
+            mock.patch.object(
+                cli_main_module, "ConfigLoader", autospec=True
+            ) as mock_config_loader,
+            mock.patch.object(
                 cli_main_module, "MemoryManager", autospec=True
-            ) as mock_memory_manager:
-                with mock.patch("sys.argv", ["mlsdm", "--steps", "500"]):
-                    mock_config_loader.load_config.return_value = mock_config
-                    mock_memory_manager.return_value = mock_manager
+            ) as mock_memory_manager,
+            mock.patch("sys.argv", ["mlsdm", "--steps", "500"]),
+        ):
+            mock_config_loader.load_config.return_value = mock_config
+            mock_memory_manager.return_value = mock_manager
 
-                    cli_main_module.main()
+            cli_main_module.main()
 
-                    mock_manager.run_simulation.assert_called_once_with(500)
+            mock_manager.run_simulation.assert_called_once_with(500)
 
     def test_main_logs_messages(self):
         """Test main() logs appropriate messages."""
@@ -243,22 +246,24 @@ class TestMainFunction:
         mock_config = mock.MagicMock()
         mock_manager = mock.MagicMock()
 
-        with mock.patch.object(
-            cli_main_module, "ConfigLoader", autospec=True
-        ) as mock_config_loader:
-            with mock.patch.object(
+        with (
+            mock.patch.object(
+                cli_main_module, "ConfigLoader", autospec=True
+            ) as mock_config_loader,
+            mock.patch.object(
                 cli_main_module, "MemoryManager", autospec=True
-            ) as mock_memory_manager:
-                with mock.patch.object(cli_main_module, "logger") as mock_logger:
-                    with mock.patch("sys.argv", ["mlsdm"]):
-                        mock_config_loader.load_config.return_value = mock_config
-                        mock_memory_manager.return_value = mock_manager
+            ) as mock_memory_manager,
+            mock.patch.object(cli_main_module, "logger") as mock_logger,
+            mock.patch("sys.argv", ["mlsdm"]),
+        ):
+            mock_config_loader.load_config.return_value = mock_config
+            mock_memory_manager.return_value = mock_manager
 
-                        cli_main_module.main()
+            cli_main_module.main()
 
-                        # Verify logging calls
-                        mock_logger.info.assert_any_call("Running simulation...")
-                        mock_logger.info.assert_any_call("Done.")
+            # Verify logging calls
+            mock_logger.info.assert_any_call("Running simulation...")
+            mock_logger.info.assert_any_call("Done.")
 
 
 class TestModuleLevelSetup:
