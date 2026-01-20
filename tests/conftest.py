@@ -585,14 +585,15 @@ def fake_clock() -> FakeClock:
 def test_client():
     """
     Provide a FastAPI TestClient for API integration tests.
-    
+
     This fixture creates a TestClient instance configured with the MLSDM API app.
     Rate limiting is disabled via environment variable set at module import time.
-    
+
     Returns:
         TestClient: Configured test client for making API requests.
     """
     from fastapi.testclient import TestClient
+
     from mlsdm.api.app import app
-    
+
     return TestClient(app)
