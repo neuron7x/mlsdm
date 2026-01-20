@@ -65,10 +65,121 @@ _POSITIVE_REGEX = re.compile(r"\b(" + "|".join(_POSITIVE_PATTERNS) + r")\b", re.
 
 
 class MoralFilterV2:
-    """Moral filter with optimized threshold adaptation.
+    """Adaptive moral threshold filter with homeostatic EMA-based control.
 
-    Optimization: Uses pure Python operations instead of numpy for
-    scalar operations which is faster for single values.
+    The MoralFilterV2 implements a self-regulating moral evaluation system that
+    maintains a stable acceptance rate through exponential moving average (EMA)
+    feedback control. The filter adapts its threshold to balance permissiveness
+    and safety, inspired by homeostatic mechanisms in biological systems.
+
+    Algorithm - EMA Threshold Adaptation:
+        The filter maintains an exponential moving average of acceptance rate:
+        
+        .. math::
+            r_t = \\alpha \\cdot a_t + (1 - \\alpha) \\cdot r_{t-1}
+        
+        Where:
+            - :math:`r_t` = EMA acceptance rate at time t
+            - :math:`a_t` ∈ {0, 1} = acceptance indicator (1 if accepted, 0 if rejected)
+            - :math:`\\alpha` = EMA_ALPHA = 0.1 (smoothing factor)
+        
+        The threshold adapts to maintain :math:`r_t \\approx 0.5` (50% acceptance):
+        
+        .. math::
+            \\theta_{t+1} = \\begin{cases}
+                \\min(\\theta_t + \\delta, \\theta_{max}) & \\text{if } r_t - 0.5 > \\epsilon \\\\
+                \\max(\\theta_t - \\delta, \\theta_{min}) & \\text{if } r_t - 0.5 < -\\epsilon \\\\
+                \\theta_t & \\text{otherwise}
+            \\end{cases}
+        
+        Where:
+            - :math:`\\theta_t` = threshold at time t
+            - :math:`\\delta` = 0.05 (adaptation step size)
+            - :math:`\\epsilon` = DEAD_BAND = 0.05 (prevents oscillation)
+            - :math:`\\theta_{min}` = 0.30, :math:`\\theta_{max}` = 0.90
+
+    Convergence Properties:
+        - **EMA Convergence**: :math:`r_t \\to \\mathbb{E}[a_t]` as :math:`t \\to \\infty`
+        - **Threshold Stability**: :math:`|\\theta_t - \\theta_{t-1}| \\leq \\delta = 0.05`
+        - **Bounded Drift**: :math:`\\theta_t \\in [0.30, 0.90]` always (INV-MORAL-01)
+        - **Dead-band Damping**: Prevents oscillation for :math:`|r_t - 0.5| < \\epsilon`
+
+    Invariants:
+        - **INV-MORAL-01**: Threshold ∈ [0.30, 0.90] always (enforced by min/max clipping)
+        - **INV-MORAL-02**: Bounded drift under adversarial input (max Δθ = 0.05 per step)
+        - **INV-MORAL-03**: EMA converges to empirical acceptance rate
+        - **INV-MORAL-04**: Dead-band prevents oscillation when near equilibrium
+        - **INV-MORAL-05**: Deterministic evaluation (same input → same output)
+        - **INV-MORAL-06**: Adaptation direction is correct (error sign matches adjustment)
+
+    Complexity Analysis:
+        - ``evaluate()``: O(1) - constant time threshold comparison
+        - ``adapt()``: O(1) - constant time EMA update and threshold adjustment
+        - ``compute_moral_value()``: O(n) where n = text length for regex matching
+
+    Performance Optimization:
+        Uses pure Python arithmetic instead of numpy for scalar operations (faster).
+        Pre-computes (1 - α) as _ONE_MINUS_ALPHA to avoid repeated subtraction.
+
+    Drift Detection & Telemetry:
+        Tracks threshold changes over time to detect anomalous drift:
+        - Logs WARNING for drift > 0.05 in single step
+        - Logs ERROR for drift > 0.10 in single step (critical)
+        - Logs ERROR for sustained drift > 0.15 over 10 steps
+        - Records Prometheus metrics for threshold changes
+
+    Example:
+        >>> # Initialize filter with default threshold 0.50
+        >>> filter = MoralFilterV2(initial_threshold=0.50, filter_id="main")
+        >>> 
+        >>> # Evaluate moral values
+        >>> assert filter.evaluate(0.8) == True   # Above threshold → accept
+        >>> assert filter.evaluate(0.3) == False  # Below threshold → reject
+        >>> 
+        >>> # Simulate high acceptance rate (should increase threshold)
+        >>> for _ in range(100):
+        ...     filter.adapt(accepted=True)
+        >>> assert filter.threshold > 0.50  # Adapted upward
+        >>> 
+        >>> # Simulate low acceptance rate (should decrease threshold)
+        >>> for _ in range(200):
+        ...     filter.adapt(accepted=False)
+        >>> assert filter.threshold < filter.MAX_THRESHOLD  # Adapted downward
+        >>> 
+        >>> # Verify invariants
+        >>> assert 0.30 <= filter.threshold <= 0.90  # INV-MORAL-01
+        >>> state = filter.get_state()
+        >>> assert 0.0 <= state['ema'] <= 1.0  # EMA in valid range
+
+    Homeostatic Control Mechanism:
+        The filter implements a negative feedback loop analogous to biological
+        homeostasis (e.g., blood glucose regulation, temperature control):
+        
+        1. **Sensor**: EMA acceptance rate :math:`r_t`
+        2. **Setpoint**: Target acceptance rate = 0.5 (50%)
+        3. **Error Signal**: :math:`e_t = r_t - 0.5`
+        4. **Actuator**: Threshold adjustment :math:`\\Delta\\theta = \\pm \\delta`
+        5. **Negative Feedback**: High acceptance → raise threshold → lower acceptance
+        
+        This creates a stable equilibrium where the system self-regulates to maintain
+        approximately 50% acceptance rate across diverse input distributions.
+
+    References:
+        - Exponential Moving Average (EMA): Widely used in signal processing and
+          control systems for smoothing noisy signals while remaining responsive.
+        - Dead-band control: Common in HVAC and industrial control to prevent
+          actuator oscillation ("hunting") near setpoint.
+        - Homeostasis: Bernard, C. (1865). Introduction à l'étude de la médecine
+          expérimentale. Concept of "milieu intérieur" (internal environment stability).
+
+    See Also:
+        - ``CognitiveController``: Integrates moral filter into cognitive pipeline
+        - ``compute_moral_value()``: Heuristic text scoring for moral evaluation
+
+    .. versionadded:: 1.0.0
+       Initial implementation with basic EMA adaptation.
+    .. versionchanged:: 1.2.0
+       Added drift detection, telemetry, and configurable dead-band.
     """
 
     # Default class-level constants (overridden by calibration if available)
@@ -120,6 +231,71 @@ class MoralFilterV2:
         )
 
     def evaluate(self, moral_value: float) -> bool:
+        """Evaluate whether a moral value meets the current adaptive threshold.
+
+        This is a deterministic function that compares the input moral value
+        against the current threshold. No side effects - use adapt() to update
+        the threshold based on feedback.
+
+        Algorithm:
+            - Fast-path for extreme values (≥ MAX_THRESHOLD → accept, < MIN_THRESHOLD → reject)
+            - Standard case: moral_value ≥ threshold → accept
+
+        Args:
+            moral_value: Moral score to evaluate. Must satisfy:
+                - Range: [0.0, 1.0] where 0.0 = maximally harmful, 1.0 = maximally beneficial
+                - Type: float or int (will be converted to float)
+                - Interpretation: Higher values are more morally acceptable
+                - Examples: 0.8 = helpful, 0.5 = neutral, 0.2 = harmful
+
+        Returns:
+            True if moral_value ≥ threshold (accepted), False otherwise (rejected).
+            
+            Boundary behavior:
+                - moral_value == threshold → True (accepted, inclusive)
+                - moral_value ≥ MAX_THRESHOLD → True (always accept, safety override)
+                - moral_value < MIN_THRESHOLD → False (always reject, safety override)
+
+        Complexity:
+            O(1) - constant time comparison with optional debug logging.
+
+        Side Effects:
+            - If DEBUG logging enabled, logs boundary cases (near min/max/threshold)
+            - No state modifications (pure function for given threshold state)
+            - Deterministic output (INV-MORAL-05)
+
+        Thread Safety:
+            This method is read-only and thread-safe without explicit locking.
+            Concurrent evaluations with concurrent adapt() may see threshold changes,
+            but each individual evaluation is atomic and consistent.
+
+        Example:
+            >>> filter = MoralFilterV2(initial_threshold=0.50)
+            >>> 
+            >>> # Standard evaluation
+            >>> assert filter.evaluate(0.75) == True   # Above threshold
+            >>> assert filter.evaluate(0.50) == True   # Equal to threshold (inclusive)
+            >>> assert filter.evaluate(0.40) == False  # Below threshold
+            >>> 
+            >>> # Boundary cases (safety overrides)
+            >>> assert filter.evaluate(0.95) == True   # ≥ MAX_THRESHOLD (0.90) → always accept
+            >>> assert filter.evaluate(0.25) == False  # < MIN_THRESHOLD (0.30) → always reject
+            >>> 
+            >>> # Verify deterministic behavior (INV-MORAL-05)
+            >>> results = [filter.evaluate(0.60) for _ in range(100)]
+            >>> assert all(r == results[0] for r in results)  # Same input → same output
+
+        See Also:
+            - ``adapt()``: Update threshold based on acceptance feedback
+            - ``compute_moral_value()``: Compute moral score from text
+
+        Notes:
+            - This method does NOT adapt the threshold. Call adapt() separately.
+            - Fast-path optimization handles extreme values without threshold check.
+            - Logging at DEBUG level for boundary cases (within 0.01 of thresholds).
+
+        .. versionadded:: 1.0.0
+        """
         if logger.isEnabledFor(logging.DEBUG):
             self._log_boundary_cases(moral_value)
 
@@ -131,7 +307,95 @@ class MoralFilterV2:
         return moral_value >= self.threshold
 
     def adapt(self, accepted: bool) -> None:
-        """Adapt threshold with drift detection."""
+        """Adapt threshold using EMA homeostatic control with drift detection.
+
+        Updates the exponential moving average (EMA) of acceptance rate and adjusts
+        the moral threshold to maintain approximately 50% acceptance rate. This
+        implements a negative feedback control loop analogous to biological homeostasis.
+
+        Algorithm:
+            1. Update EMA: :math:`r_t = \\alpha a_t + (1-\\alpha) r_{t-1}`
+            2. Compute error: :math:`e_t = r_t - 0.5` (target rate)
+            3. If :math:`|e_t| > \\epsilon` (dead-band), adjust threshold:
+               - Positive error (too many accepts) → increase threshold
+               - Negative error (too many rejects) → decrease threshold
+            4. Clip threshold to [MIN_THRESHOLD, MAX_THRESHOLD]
+            5. Record drift metrics if threshold changed
+
+        Args:
+            accepted: Whether the last event was accepted. Must be:
+                - Type: bool
+                - True: Event was morally acceptable
+                - False: Event was morally rejected
+                - Interpretation: Provides feedback for adaptive control
+
+        Complexity:
+            O(1) - constant time EMA update, threshold adjustment, and drift recording.
+
+        Side Effects:
+            - Updates self.ema_accept_rate (EMA state)
+            - May update self.threshold (if error exceeds dead-band)
+            - Records Prometheus metrics for threshold changes
+            - Logs WARNING/ERROR for significant drift (> 0.05 or > 0.10)
+            - Appends to internal drift history (max 100 entries)
+
+        Convergence:
+            - EMA converges to empirical acceptance rate: :math:`r_\\infty \\to \\mathbb{E}[a_t]`
+            - Threshold stabilizes when :math:`r_t \\approx 0.5`
+            - Dead-band prevents oscillation for :math:`|r_t - 0.5| < 0.05`
+
+        Drift Detection:
+            Monitors threshold changes to detect anomalous behavior:
+            - Single-step drift > 0.05 → WARNING (configurable via MLSDM_DRIFT_THRESHOLD)
+            - Single-step drift > 0.10 → ERROR (critical, configurable via MLSDM_DRIFT_CRITICAL_THRESHOLD)
+            - Sustained drift > 0.15 over 10 steps → ERROR (trend)
+            - Drift < 0.03 → silent (configurable via MLSDM_DRIFT_MIN_LOGGING)
+
+        Thread Safety:
+            This method modifies internal state and is NOT thread-safe on its own.
+            If calling from multiple threads, use external synchronization.
+            In CognitiveController, protected by controller's lock.
+
+        Example:
+            >>> filter = MoralFilterV2(initial_threshold=0.50)
+            >>> initial_threshold = filter.threshold
+            >>> 
+            >>> # Simulate high acceptance rate (80%)
+            >>> for _ in range(100):
+            ...     filter.adapt(accepted=True)
+            >>> # Threshold should increase to compensate
+            >>> assert filter.threshold > initial_threshold
+            >>> assert filter.ema_accept_rate > 0.50  # EMA reflects high acceptance
+            >>> 
+            >>> # Simulate low acceptance rate (20%)
+            >>> for _ in range(200):
+            ...     filter.adapt(accepted=False)
+            >>> # Threshold should decrease to compensate
+            >>> assert filter.threshold < filter.MAX_THRESHOLD
+            >>> assert filter.ema_accept_rate < 0.50  # EMA reflects low acceptance
+            >>> 
+            >>> # Verify invariants hold
+            >>> assert 0.30 <= filter.threshold <= 0.90  # INV-MORAL-01
+
+        See Also:
+            - ``evaluate()``: Evaluate moral value against current threshold
+            - ``get_drift_stats()``: Get drift statistics and history
+
+        Mathematical Proof Sketch (EMA Convergence):
+            Let :math:`a_t \\sim \\text{Bernoulli}(p)` be i.i.d. acceptance indicators.
+            Then the EMA :math:`r_t = \\alpha a_t + (1-\\alpha) r_{t-1}` satisfies:
+            
+            .. math::
+                \\mathbb{E}[r_t] \\to p \\text{ as } t \\to \\infty
+            
+            Proof: :math:`\\mathbb{E}[r_t] = \\alpha p + (1-\\alpha) \\mathbb{E}[r_{t-1}]`
+            has fixed point :math:`r^* = p`. Since :math:`|1-\\alpha| < 1`, the
+            recursion converges geometrically to :math:`p`.
+
+        .. versionadded:: 1.0.0
+        .. versionchanged:: 1.2.0
+           Added drift detection and telemetry.
+        """
         # Store old value for drift calculation
         old_threshold = self.threshold
 
