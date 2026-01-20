@@ -24,3 +24,9 @@ repos:
         entry: python scripts/check_no_unicode_controls.py
         language: system
         files: "\\.(md|svg|ya?ml|toml|py)$"
+      - id: commitlint
+        name: Conventional Commit Format
+        entry: python scripts/commitlint.py
+        language: system
+        stages: [commit-msg]
+        always_run: true
