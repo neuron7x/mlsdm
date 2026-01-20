@@ -9,6 +9,7 @@ from mlsdm.policy.catalog import (
     verify_policy_catalog,
     write_policy_catalog,
 )
+from mlsdm.policy.exceptions import PolicyDriftError
 from mlsdm.policy.fingerprint import (
     PolicyFingerprint,
     PolicyFingerprintGuard,
@@ -47,6 +48,7 @@ __all__ = [
     "OPA_EXPORT_MAPPINGS",
     "POLICY_CONTRACT_VERSION",
     "PolicyBundle",
+    "PolicyDriftError",
     "PolicyExportError",
     "PolicyFingerprint",
     "PolicyFingerprintGuard",

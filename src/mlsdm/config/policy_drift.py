@@ -13,6 +13,7 @@ from mlsdm.policy.catalog import (
     load_policy_catalog,
     verify_policy_catalog,
 )
+from mlsdm.policy.exceptions import PolicyDriftError
 from mlsdm.policy.loader import DEFAULT_POLICY_DIR, PolicyLoadError, load_policy_bundle
 from mlsdm.policy.registry import (
     REGISTRY_FILENAME,
@@ -22,10 +23,6 @@ from mlsdm.policy.registry import (
 )
 
 logger = logging.getLogger(__name__)
-
-
-class PolicyDriftError(RuntimeError):
-    """Raised when policy drift is detected or policy registry is invalid."""
 
 
 @dataclass(frozen=True)

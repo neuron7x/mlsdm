@@ -33,6 +33,8 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any
 
+from mlsdm.policy.exceptions import PolicyDriftError
+
 logger = logging.getLogger(__name__)
 
 
@@ -294,8 +296,6 @@ class PolicyFingerprintGuard:
         drift_detected, reason = detect_policy_drift(self._baseline, current)
 
         if drift_detected and enforce:
-            from mlsdm.config.policy_drift import PolicyDriftError
-
             raise PolicyDriftError(reason or "Policy drift detected")
 
         return drift_detected, current
