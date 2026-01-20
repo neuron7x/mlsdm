@@ -74,7 +74,7 @@ def _io_retry(func: F) -> F:
 
     @functools.wraps(func)
     def wrapper(*args: Any, **kwargs: Any) -> Any:
-        last_exception: Exception | None = None
+        last_exception: OSError | None = None
         for attempt in range(_IO_RETRY_ATTEMPTS):
             try:
                 return func(*args, **kwargs)
@@ -86,7 +86,7 @@ def _io_retry(func: F) -> F:
                         _IO_RETRY_MIN_WAIT * (2**attempt),
                         _IO_RETRY_MAX_WAIT,
                     )
-                    # Add small jitter (0-10% of base wait)
+                    # Add small jitter (0-10% of base wait) to reduce thundering herd
                     jitter = base_wait * random.uniform(0, 0.1)
                     wait_time = base_wait + jitter
                     logger.debug(
@@ -98,10 +98,10 @@ def _io_retry(func: F) -> F:
                     )
                     time.sleep(wait_time)
         # Re-raise the last exception after all retries exhausted
-        if last_exception is not None:
-            raise last_exception
-        # Should never reach here, but satisfy type checker
-        raise RuntimeError("Retry logic error: no exception captured")  # pragma: no cover
+        # Note: last_exception is guaranteed to be set here since we only reach
+        # this point after the loop completes, which means at least one OSError was caught
+        assert last_exception is not None, "Retry logic error: no exception captured"
+        raise last_exception
 
     return wrapper  # type: ignore[return-value]
 
