@@ -12,17 +12,19 @@ Features:
 
 from __future__ import annotations
 
+import functools
 import hashlib
 import json
 import logging
 import os
+import random
 import shutil
+import time
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Callable, TypeVar
 
 import numpy as np
 
-from ..utils.retry_decorator import IO_RETRY
 from .system_state_migrations import migrate_state
 from .system_state_schema import (
     CURRENT_SCHEMA_VERSION,
@@ -48,6 +50,60 @@ class StateCorruptionError(Exception):
 
 class StateRecoveryError(Exception):
     """Failed to recover corrupted state."""
+
+
+# Type variable for generic function decoration
+F = TypeVar("F", bound=Callable[..., Any])
+
+# Self-contained IO retry configuration (stdlib-only, no external deps)
+# Environment variable overrides with deterministic defaults
+_IO_RETRY_ATTEMPTS = int(os.getenv("MLSDM_RETRY_ATTEMPTS", "3"))
+_IO_RETRY_MIN_WAIT = float(os.getenv("MLSDM_RETRY_MIN_WAIT", "0.5"))
+_IO_RETRY_MAX_WAIT = float(os.getenv("MLSDM_RETRY_MAX_WAIT", "10.0"))
+
+
+def _io_retry(func: F) -> F:
+    """Self-contained IO retry decorator with exponential backoff and jitter.
+
+    This is a stdlib-only retry implementation to avoid cross-module dependencies.
+    Configured via environment variables:
+    - MLSDM_RETRY_ATTEMPTS: Maximum retry attempts (default: 3)
+    - MLSDM_RETRY_MIN_WAIT: Minimum wait time in seconds (default: 0.5)
+    - MLSDM_RETRY_MAX_WAIT: Maximum wait time in seconds (default: 10.0)
+    """
+
+    @functools.wraps(func)
+    def wrapper(*args: Any, **kwargs: Any) -> Any:
+        last_exception: Exception | None = None
+        for attempt in range(_IO_RETRY_ATTEMPTS):
+            try:
+                return func(*args, **kwargs)
+            except OSError as e:
+                last_exception = e
+                if attempt < _IO_RETRY_ATTEMPTS - 1:
+                    # Exponential backoff with jitter
+                    base_wait = min(
+                        _IO_RETRY_MIN_WAIT * (2**attempt),
+                        _IO_RETRY_MAX_WAIT,
+                    )
+                    # Add small jitter (0-10% of base wait)
+                    jitter = base_wait * random.uniform(0, 0.1)
+                    wait_time = base_wait + jitter
+                    logger.debug(
+                        "IO operation failed (attempt %d/%d), retrying in %.2fs: %s",
+                        attempt + 1,
+                        _IO_RETRY_ATTEMPTS,
+                        wait_time,
+                        e,
+                    )
+                    time.sleep(wait_time)
+        # Re-raise the last exception after all retries exhausted
+        if last_exception is not None:
+            raise last_exception
+        # Should never reach here, but satisfy type checker
+        raise RuntimeError("Retry logic error: no exception captured")  # pragma: no cover
+
+    return wrapper  # type: ignore[return-value]
 
 
 def _compute_checksum(data: bytes) -> str:
@@ -136,7 +192,7 @@ def _read_state_data(
     raise ValueError(f"Unsupported format: {file_format}")
 
 
-@IO_RETRY
+@_io_retry
 def _write_file_atomic(filepath: str, data: bytes) -> None:
     """Write data to file atomically using temporary file + rename."""
     temp_path = f"{filepath}.tmp"
