@@ -487,6 +487,163 @@ kubectl rollout restart deployment/mlsdm-api -n mlsdm-production
 
 ---
 
+## Deployment Rollback
+
+### Automatic Rollback
+
+The CI/CD pipeline includes automatic rollback on failed deployments. When smoke tests fail after deployment, the system automatically triggers a rollback to the previous version.
+
+**Trigger Conditions:**
+- Health endpoint returns non-200 status
+- Readiness endpoint fails after 3 retries
+- API generation test fails
+- Memory subsystem check fails
+- Metrics endpoint unavailable
+
+**Rollback Process:**
+1. Smoke tests run 2 minutes after deployment
+2. If any test fails, rollback is triggered automatically
+3. Previous container image is restored
+4. Notification sent to monitoring channels
+5. Rollback log uploaded as workflow artifact
+
+### Manual Rollback
+
+If you need to manually rollback a deployment:
+
+#### Docker/Container Rollback
+
+```bash
+# 1. Identify current and previous versions
+docker images ghcr.io/neuron7x/mlsdm-neuro-engine --format "{{.Tag}}" | head -5
+
+# 2. Stop current container
+docker stop mlsdm-api
+
+# 3. Start previous version
+docker run -d \
+  --name mlsdm-api \
+  -p 8000:8000 \
+  -e API_KEY=$API_KEY \
+  -e MLSDM_ENV=production \
+  --restart unless-stopped \
+  ghcr.io/neuron7x/mlsdm-neuro-engine:PREVIOUS_VERSION
+```
+
+#### Kubernetes Rollback
+
+```bash
+# View rollout history
+kubectl rollout history deployment/mlsdm-api -n mlsdm-production
+
+# Rollback to previous revision
+kubectl rollout undo deployment/mlsdm-api -n mlsdm-production
+
+# Rollback to specific revision
+kubectl rollout undo deployment/mlsdm-api -n mlsdm-production --to-revision=3
+
+# Monitor rollback progress
+kubectl rollout status deployment/mlsdm-api -n mlsdm-production
+
+# Verify rollback
+kubectl get pods -n mlsdm-production
+python scripts/smoke_test.py https://api.production.example.com
+```
+
+#### Git Tag Rollback
+
+```bash
+# 1. Identify the last working version
+git tag --sort=-creatordate | head -10
+
+# 2. Create new release from previous version
+git checkout v1.2.0
+git tag -a v1.2.0-hotfix -m "Rollback to v1.2.0 due to production issue"
+git push origin v1.2.0-hotfix
+
+# This will trigger the release workflow for the previous version
+```
+
+### Post-Rollback Actions
+
+After a rollback, follow these steps:
+
+1. **Verify System Health**
+   ```bash
+   # Run smoke tests
+   python scripts/smoke_test.py https://api.production.example.com
+   
+   # Check metrics
+   curl https://api.production.example.com/health/metrics
+   
+   # Monitor error rates
+   # Check Grafana dashboards
+   ```
+
+2. **Document the Incident**
+   - Create incident report in `docs/incidents/YYYY-MM-DD-incident.md`
+   - Document root cause
+   - List actions taken
+   - Identify prevention measures
+
+3. **Create Rollback Report**
+   ```markdown
+   # Rollback Report: v1.2.1 → v1.2.0
+   
+   **Date:** 2026-01-20
+   **Trigger:** Automatic (smoke test failure)
+   **Duration:** 5 minutes
+   
+   ## Issue
+   - API generation endpoint timing out
+   - Memory subsystem returning 500 errors
+   
+   ## Root Cause
+   - Breaking change in memory consolidation logic
+   - Missing backward compatibility check
+   
+   ## Resolution
+   - Automatic rollback to v1.2.0
+   - Smoke tests pass on rollback version
+   
+   ## Prevention
+   - Add integration tests for memory consolidation
+   - Enhance smoke tests to cover edge cases
+   ```
+
+4. **Fix and Re-deploy**
+   - Fix the issue in development
+   - Add tests to prevent regression
+   - Test thoroughly in staging
+   - Re-deploy with confidence
+
+### Smoke Test Command Reference
+
+```bash
+# Run all smoke tests
+python scripts/smoke_test.py http://api.example.com
+
+# Run with custom timeout
+python scripts/smoke_test.py http://api.example.com --timeout 60
+
+# Skip generation test for quick check
+python scripts/smoke_test.py http://api.example.com --skip-generation
+
+# Verbose output
+python scripts/smoke_test.py http://api.example.com --verbose
+```
+
+**Smoke Test Coverage:**
+- Health/liveness endpoint
+- Readiness endpoint
+- API generation functionality
+- Memory subsystem operational
+- Metrics endpoint availability
+
+**Expected Duration:** < 2 minutes
+
+---
+
 ## Incident Response
 
 ### Severity Levels
