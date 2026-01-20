@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, ClassVar
 
 
 class CognitiveRhythm:
@@ -181,8 +181,8 @@ class CognitiveRhythm:
     """
 
     # Phase constants for avoiding repeated string comparisons
-    _PHASE_WAKE = "wake"
-    _PHASE_SLEEP = "sleep"
+    _PHASE_WAKE: ClassVar[str] = "wake"
+    _PHASE_SLEEP: ClassVar[str] = "sleep"
 
     def __init__(self, wake_duration: int = 8, sleep_duration: int = 3) -> None:
         if wake_duration <= 0 or sleep_duration <= 0:

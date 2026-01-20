@@ -2,7 +2,7 @@ import logging
 import time
 from collections.abc import Callable
 from threading import Lock
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, Final, cast
 
 import numpy as np
 import psutil
@@ -22,8 +22,8 @@ _get_synaptic_memory_config: (
     Callable[[dict[str, Any] | None], "SynapticMemoryCalibration"] | None
 ) = None
 
-# Default max memory bytes: 1.4 GB
-_DEFAULT_MAX_MEMORY_BYTES = int(1.4 * 1024**3)
+# Default max memory bytes: 1.4 GB (constant - never modified)
+_DEFAULT_MAX_MEMORY_BYTES: Final[int] = int(1.4 * 1024**3)
 
 try:
     from mlsdm.config import (
@@ -36,24 +36,24 @@ try:
         get_synaptic_memory_config as _imported_get_config,
     )
 
-    _CC_RECOVERY_COOLDOWN_STEPS = COGNITIVE_CONTROLLER_DEFAULTS.recovery_cooldown_steps
-    _CC_RECOVERY_MEMORY_SAFETY_RATIO = COGNITIVE_CONTROLLER_DEFAULTS.recovery_memory_safety_ratio
-    _CC_RECOVERY_MAX_ATTEMPTS = COGNITIVE_CONTROLLER_DEFAULTS.recovery_max_attempts
-    _CC_MAX_MEMORY_BYTES = COGNITIVE_CONTROLLER_DEFAULTS.max_memory_bytes
-    _CC_AUTO_RECOVERY_ENABLED = COGNITIVE_CONTROLLER_DEFAULTS.auto_recovery_enabled
-    _CC_AUTO_RECOVERY_COOLDOWN_SECONDS = (
+    _CC_RECOVERY_COOLDOWN_STEPS: Final[int] = COGNITIVE_CONTROLLER_DEFAULTS.recovery_cooldown_steps
+    _CC_RECOVERY_MEMORY_SAFETY_RATIO: Final[float] = COGNITIVE_CONTROLLER_DEFAULTS.recovery_memory_safety_ratio
+    _CC_RECOVERY_MAX_ATTEMPTS: Final[int] = COGNITIVE_CONTROLLER_DEFAULTS.recovery_max_attempts
+    _CC_MAX_MEMORY_BYTES: Final[int] = COGNITIVE_CONTROLLER_DEFAULTS.max_memory_bytes
+    _CC_AUTO_RECOVERY_ENABLED: Final[bool] = COGNITIVE_CONTROLLER_DEFAULTS.auto_recovery_enabled
+    _CC_AUTO_RECOVERY_COOLDOWN_SECONDS: Final[float] = (
         COGNITIVE_CONTROLLER_DEFAULTS.auto_recovery_cooldown_seconds
     )
     _SYNAPTIC_MEMORY_DEFAULTS = _IMPORTED_DEFAULTS
     _get_synaptic_memory_config = _imported_get_config
 except ImportError:
     # Fallback defaults if calibration module is not available
-    _CC_RECOVERY_COOLDOWN_STEPS = 10
-    _CC_RECOVERY_MEMORY_SAFETY_RATIO = 0.8
-    _CC_RECOVERY_MAX_ATTEMPTS = 3
-    _CC_MAX_MEMORY_BYTES = _DEFAULT_MAX_MEMORY_BYTES
-    _CC_AUTO_RECOVERY_ENABLED = True
-    _CC_AUTO_RECOVERY_COOLDOWN_SECONDS = 60.0
+    _CC_RECOVERY_COOLDOWN_STEPS: Final[int] = 10
+    _CC_RECOVERY_MEMORY_SAFETY_RATIO: Final[float] = 0.8
+    _CC_RECOVERY_MAX_ATTEMPTS: Final[int] = 3
+    _CC_MAX_MEMORY_BYTES: Final[int] = _DEFAULT_MAX_MEMORY_BYTES
+    _CC_AUTO_RECOVERY_ENABLED: Final[bool] = True
+    _CC_AUTO_RECOVERY_COOLDOWN_SECONDS: Final[float] = 60.0
 
 logger = logging.getLogger(__name__)
 

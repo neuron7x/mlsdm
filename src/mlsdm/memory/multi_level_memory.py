@@ -1,6 +1,6 @@
 import logging
 import time
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any, ClassVar, Final, Optional
 
 import numpy as np
 

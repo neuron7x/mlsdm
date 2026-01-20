@@ -7,7 +7,7 @@ import uuid
 from dataclasses import dataclass
 from datetime import datetime
 from threading import Lock
-from typing import TYPE_CHECKING, Literal, overload
+from typing import TYPE_CHECKING, ClassVar, Literal, overload
 
 import numpy as np
 
@@ -200,11 +200,11 @@ class PhaseEntangledLatticeMemory:
     """
 
     # Default values from calibration
-    DEFAULT_CAPACITY = PELM_DEFAULTS.default_capacity if PELM_DEFAULTS else 20_000
-    MAX_CAPACITY = PELM_DEFAULTS.max_capacity if PELM_DEFAULTS else 1_000_000
-    DEFAULT_PHASE_TOLERANCE = PELM_DEFAULTS.phase_tolerance if PELM_DEFAULTS else 0.15
-    DEFAULT_TOP_K = PELM_DEFAULTS.default_top_k if PELM_DEFAULTS else 5
-    MIN_NORM_THRESHOLD = PELM_DEFAULTS.min_norm_threshold if PELM_DEFAULTS else 1e-9
+    DEFAULT_CAPACITY: ClassVar[int] = PELM_DEFAULTS.default_capacity if PELM_DEFAULTS else 20_000
+    MAX_CAPACITY: ClassVar[int] = PELM_DEFAULTS.max_capacity if PELM_DEFAULTS else 1_000_000
+    DEFAULT_PHASE_TOLERANCE: ClassVar[float] = PELM_DEFAULTS.phase_tolerance if PELM_DEFAULTS else 0.15
+    DEFAULT_TOP_K: ClassVar[int] = PELM_DEFAULTS.default_top_k if PELM_DEFAULTS else 5
+    MIN_NORM_THRESHOLD: ClassVar[float] = PELM_DEFAULTS.min_norm_threshold if PELM_DEFAULTS else 1e-9
 
     def __init__(self, dimension: int = 384, capacity: int | None = None) -> None:
         # Use calibration default if not specified

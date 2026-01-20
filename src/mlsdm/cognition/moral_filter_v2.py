@@ -4,7 +4,7 @@ import logging
 import os
 import re
 from collections import deque
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, ClassVar, Final
 
 if TYPE_CHECKING:
     from mlsdm.config import MoralFilterCalibration
@@ -25,7 +25,7 @@ except ImportError:
 
 # Pre-compiled regex patterns for word boundary matching (module-level for performance)
 # These patterns match whole words only to avoid false positives like "harm" in "pharmacy"
-_HARMFUL_PATTERNS = [
+_HARMFUL_PATTERNS: Final[list[str]] = [
     "hate",
     "violence",
     "attack",
@@ -42,7 +42,7 @@ _HARMFUL_PATTERNS = [
     "bomb",
     "murder",
 ]
-_POSITIVE_PATTERNS = [
+_POSITIVE_PATTERNS: Final[list[str]] = [
     "help",
     "support",
     "care",
@@ -60,8 +60,8 @@ _POSITIVE_PATTERNS = [
     "understanding",
 ]
 # Compile single regex patterns for O(n) matching instead of O(n*m)
-_HARMFUL_REGEX = re.compile(r"\b(" + "|".join(_HARMFUL_PATTERNS) + r")\b", re.IGNORECASE)
-_POSITIVE_REGEX = re.compile(r"\b(" + "|".join(_POSITIVE_PATTERNS) + r")\b", re.IGNORECASE)
+_HARMFUL_REGEX: Final[re.Pattern[str]] = re.compile(r"\b(" + "|".join(_HARMFUL_PATTERNS) + r")\b", re.IGNORECASE)
+_POSITIVE_REGEX: Final[re.Pattern[str]] = re.compile(r"\b(" + "|".join(_POSITIVE_PATTERNS) + r")\b", re.IGNORECASE)
 
 
 class MoralFilterV2:
@@ -183,18 +183,19 @@ class MoralFilterV2:
     """
 
     # Default class-level constants (overridden by calibration if available)
-    MIN_THRESHOLD = MORAL_FILTER_DEFAULTS.min_threshold if MORAL_FILTER_DEFAULTS else 0.30
-    MAX_THRESHOLD = MORAL_FILTER_DEFAULTS.max_threshold if MORAL_FILTER_DEFAULTS else 0.90
-    DEAD_BAND = MORAL_FILTER_DEFAULTS.dead_band if MORAL_FILTER_DEFAULTS else 0.05
-    EMA_ALPHA = MORAL_FILTER_DEFAULTS.ema_alpha if MORAL_FILTER_DEFAULTS else 0.1
+    # Using ClassVar to indicate these are class-level, not instance-level
+    MIN_THRESHOLD: ClassVar[float] = MORAL_FILTER_DEFAULTS.min_threshold if MORAL_FILTER_DEFAULTS else 0.30
+    MAX_THRESHOLD: ClassVar[float] = MORAL_FILTER_DEFAULTS.max_threshold if MORAL_FILTER_DEFAULTS else 0.90
+    DEAD_BAND: ClassVar[float] = MORAL_FILTER_DEFAULTS.dead_band if MORAL_FILTER_DEFAULTS else 0.05
+    EMA_ALPHA: ClassVar[float] = MORAL_FILTER_DEFAULTS.ema_alpha if MORAL_FILTER_DEFAULTS else 0.1
     # Pre-computed constants for optimization
-    _ONE_MINUS_ALPHA = 1.0 - EMA_ALPHA
-    _ADAPT_DELTA = 0.05
-    _BOUNDARY_EPS = 0.01
-    _DRIFT_LOGGING_MODE = os.getenv("MLSDM_DRIFT_LOGGING", "production")
-    _DRIFT_LOG_THRESHOLD = float(os.getenv("MLSDM_DRIFT_THRESHOLD", "0.05"))
-    _DRIFT_CRITICAL_THRESHOLD = float(os.getenv("MLSDM_DRIFT_CRITICAL_THRESHOLD", "0.1"))
-    _DRIFT_MIN_LOGGING = float(os.getenv("MLSDM_DRIFT_MIN_LOGGING", "0.03"))
+    _ONE_MINUS_ALPHA: ClassVar[float] = 1.0 - EMA_ALPHA
+    _ADAPT_DELTA: ClassVar[float] = 0.05
+    _BOUNDARY_EPS: ClassVar[float] = 0.01
+    _DRIFT_LOGGING_MODE: ClassVar[str] = os.getenv("MLSDM_DRIFT_LOGGING", "production")
+    _DRIFT_LOG_THRESHOLD: ClassVar[float] = float(os.getenv("MLSDM_DRIFT_THRESHOLD", "0.05"))
+    _DRIFT_CRITICAL_THRESHOLD: ClassVar[float] = float(os.getenv("MLSDM_DRIFT_CRITICAL_THRESHOLD", "0.1"))
+    _DRIFT_MIN_LOGGING: ClassVar[float] = float(os.getenv("MLSDM_DRIFT_MIN_LOGGING", "0.03"))
 
     def __init__(
         self, initial_threshold: float | None = None, filter_id: str = "default"
