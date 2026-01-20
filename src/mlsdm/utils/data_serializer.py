@@ -6,7 +6,8 @@ from pathlib import Path
 from typing import Any, cast
 
 import numpy as np
-from tenacity import retry, stop_after_attempt
+
+from .retry_decorator import IO_RETRY
 
 
 def _deserialize_npz_value(value: np.ndarray) -> Any:
@@ -51,7 +52,7 @@ def _atomic_write(path: Path, suffix: str, writer: Callable[[int, str], bool]) -
             os.unlink(temp_name)
 
 
-@retry(stop=stop_after_attempt(3))
+@IO_RETRY
 def _save_data(data: dict[str, Any], filepath: str) -> None:
     path = Path(filepath)
     ext = path.suffix.lower()
@@ -85,7 +86,7 @@ def _save_data(data: dict[str, Any], filepath: str) -> None:
         raise ValueError(f"Unsupported format: {ext}")
 
 
-@retry(stop=stop_after_attempt(3))
+@IO_RETRY
 def _load_data(filepath: str) -> dict[str, Any]:
     ext = os.path.splitext(filepath)[1].lower()
     if ext == ".json":

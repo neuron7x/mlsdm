@@ -21,8 +21,8 @@ from datetime import datetime, timezone
 from typing import Any
 
 import numpy as np
-from tenacity import retry, stop_after_attempt, wait_exponential
 
+from ..utils.retry_decorator import IO_RETRY
 from .system_state_migrations import migrate_state
 from .system_state_schema import (
     CURRENT_SCHEMA_VERSION,
@@ -136,11 +136,7 @@ def _read_state_data(
     raise ValueError(f"Unsupported format: {file_format}")
 
 
-@retry(
-    stop=stop_after_attempt(3),
-    wait=wait_exponential(multiplier=0.5, max=10),
-    reraise=True,
-)
+@IO_RETRY
 def _write_file_atomic(filepath: str, data: bytes) -> None:
     """Write data to file atomically using temporary file + rename."""
     temp_path = f"{filepath}.tmp"
