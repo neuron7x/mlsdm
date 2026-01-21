@@ -568,12 +568,11 @@ class TestPELMObservability:
         from unittest.mock import patch
 
         with patch('mlsdm.memory.phase_entangled_lattice_memory._OBSERVABILITY_AVAILABLE', True), \
-             patch('mlsdm.memory.phase_entangled_lattice_memory.record_pelm_corruption') as mock_record:
+             patch('mlsdm.memory.phase_entangled_lattice_memory.record_pelm_corruption') as mock_record, \
+             patch.object(PhaseEntangledLatticeMemory, '_auto_recover_unsafe', return_value=False):
             pelm = PhaseEntangledLatticeMemory(dimension=4, capacity=10)
             pelm.pointer = -1
-            # Make recovery fail by patching auto_recover to return False
-            with patch.object(pelm, '_auto_recover_unsafe', return_value=False), \
-                 pytest.raises(RuntimeError, match="Memory corruption detected"):
+            with pytest.raises(RuntimeError, match="Memory corruption detected"):
                 pelm.entangle([1.0, 2.0, 3.0, 4.0], phase=0.5)
             mock_record.assert_called_once()
             call_args = mock_record.call_args[1]
