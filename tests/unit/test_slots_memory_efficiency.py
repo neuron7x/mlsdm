@@ -13,7 +13,6 @@ import sys
 from datetime import datetime
 
 import numpy as np
-import pytest
 
 from mlsdm.memory.multi_level_memory import MultiLevelSynapticMemory
 from mlsdm.memory.phase_entangled_lattice_memory import (
