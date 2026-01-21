@@ -74,24 +74,24 @@ class MoralFilterV2:
 
     Algorithm - EMA Threshold Adaptation:
         The filter maintains an exponential moving average of acceptance rate:
-        
+
         .. math::
             r_t = \\alpha \\cdot a_t + (1 - \\alpha) \\cdot r_{t-1}
-        
+
         Where:
             - :math:`r_t` = EMA acceptance rate at time t
             - :math:`a_t` ∈ {0, 1} = acceptance indicator (1 if accepted, 0 if rejected)
             - :math:`\\alpha` = EMA_ALPHA = 0.1 (smoothing factor)
-        
+
         The threshold adapts to maintain :math:`r_t \\approx 0.5` (50% acceptance):
-        
+
         .. math::
             \\theta_{t+1} = \\begin{cases}
                 \\min(\\theta_t + \\delta, \\theta_{max}) & \\text{if } r_t - 0.5 > \\epsilon \\\\
                 \\max(\\theta_t - \\delta, \\theta_{min}) & \\text{if } r_t - 0.5 < -\\epsilon \\\\
                 \\theta_t & \\text{otherwise}
             \\end{cases}
-        
+
         Where:
             - :math:`\\theta_t` = threshold at time t
             - :math:`\\delta` = 0.05 (adaptation step size)
@@ -131,21 +131,21 @@ class MoralFilterV2:
     Example:
         >>> # Initialize filter with default threshold 0.50
         >>> filter = MoralFilterV2(initial_threshold=0.50, filter_id="main")
-        >>> 
+        >>>
         >>> # Evaluate moral values
         >>> assert filter.evaluate(0.8) == True   # Above threshold → accept
         >>> assert filter.evaluate(0.3) == False  # Below threshold → reject
-        >>> 
+        >>>
         >>> # Simulate high acceptance rate (should increase threshold)
         >>> for _ in range(100):
         ...     filter.adapt(accepted=True)
         >>> assert filter.threshold > 0.50  # Adapted upward
-        >>> 
+        >>>
         >>> # Simulate low acceptance rate (should decrease threshold)
         >>> for _ in range(200):
         ...     filter.adapt(accepted=False)
         >>> assert filter.threshold < filter.MAX_THRESHOLD  # Adapted downward
-        >>> 
+        >>>
         >>> # Verify invariants
         >>> assert 0.30 <= filter.threshold <= 0.90  # INV-MORAL-01
         >>> state = filter.get_state()
@@ -154,13 +154,13 @@ class MoralFilterV2:
     Homeostatic Control Mechanism:
         The filter implements a negative feedback loop analogous to biological
         homeostasis (e.g., blood glucose regulation, temperature control):
-        
+
         1. **Sensor**: EMA acceptance rate :math:`r_t`
         2. **Setpoint**: Target acceptance rate = 0.5 (50%)
         3. **Error Signal**: :math:`e_t = r_t - 0.5`
         4. **Actuator**: Threshold adjustment :math:`\\Delta\\theta = \\pm \\delta`
         5. **Negative Feedback**: High acceptance → raise threshold → lower acceptance
-        
+
         This creates a stable equilibrium where the system self-regulates to maintain
         approximately 50% acceptance rate across diverse input distributions.
 
@@ -251,7 +251,7 @@ class MoralFilterV2:
 
         Returns:
             True if moral_value ≥ threshold (accepted), False otherwise (rejected).
-            
+
             Boundary behavior:
                 - moral_value == threshold → True (accepted, inclusive)
                 - moral_value ≥ MAX_THRESHOLD → True (always accept, safety override)
@@ -272,16 +272,16 @@ class MoralFilterV2:
 
         Example:
             >>> filter = MoralFilterV2(initial_threshold=0.50)
-            >>> 
+            >>>
             >>> # Standard evaluation
             >>> assert filter.evaluate(0.75) == True   # Above threshold
             >>> assert filter.evaluate(0.50) == True   # Equal to threshold (inclusive)
             >>> assert filter.evaluate(0.40) == False  # Below threshold
-            >>> 
+            >>>
             >>> # Boundary cases (safety overrides)
             >>> assert filter.evaluate(0.95) == True   # ≥ MAX_THRESHOLD (0.90) → always accept
             >>> assert filter.evaluate(0.25) == False  # < MIN_THRESHOLD (0.30) → always reject
-            >>> 
+            >>>
             >>> # Verify deterministic behavior (INV-MORAL-05)
             >>> results = [filter.evaluate(0.60) for _ in range(100)]
             >>> assert all(r == results[0] for r in results)  # Same input → same output
@@ -360,21 +360,21 @@ class MoralFilterV2:
         Example:
             >>> filter = MoralFilterV2(initial_threshold=0.50)
             >>> initial_threshold = filter.threshold
-            >>> 
+            >>>
             >>> # Simulate high acceptance rate (80%)
             >>> for _ in range(100):
             ...     filter.adapt(accepted=True)
             >>> # Threshold should increase to compensate
             >>> assert filter.threshold > initial_threshold
             >>> assert filter.ema_accept_rate > 0.50  # EMA reflects high acceptance
-            >>> 
+            >>>
             >>> # Simulate low acceptance rate (20%)
             >>> for _ in range(200):
             ...     filter.adapt(accepted=False)
             >>> # Threshold should decrease to compensate
             >>> assert filter.threshold < filter.MAX_THRESHOLD
             >>> assert filter.ema_accept_rate < 0.50  # EMA reflects low acceptance
-            >>> 
+            >>>
             >>> # Verify invariants hold
             >>> assert 0.30 <= filter.threshold <= 0.90  # INV-MORAL-01
 
@@ -385,10 +385,10 @@ class MoralFilterV2:
         Mathematical Proof Sketch (EMA Convergence):
             Let :math:`a_t \\sim \\text{Bernoulli}(p)` be i.i.d. acceptance indicators.
             Then the EMA :math:`r_t = \\alpha a_t + (1-\\alpha) r_{t-1}` satisfies:
-            
+
             .. math::
                 \\mathbb{E}[r_t] \\to p \\text{ as } t \\to \\infty
-            
+
             Proof: :math:`\\mathbb{E}[r_t] = \\alpha p + (1-\\alpha) \\mathbb{E}[r_{t-1}]`
             has fixed point :math:`r^* = p`. Since :math:`|1-\\alpha| < 1`, the
             recursion converges geometrically to :math:`p`.
