@@ -93,14 +93,40 @@ make cov
 #### 2. **CI Smoke Tests** (`ci-smoke.yml`)
 **Purpose:** Quick sanity checks for rapid feedback
 **Triggers:** Push to main/feature branches, PRs
-**Duration:** ~5 minutes
+**Duration:** ~3-8 minutes (depending on tier)
+
+**Test Tier Budget Contract:**
+
+| Tier | Name | Target | Max | Enforcement |
+|------|------|--------|-----|-------------|
+| 1 | Smoke | 30s | 60s | `timeout-minutes: 2` + conftest budget guard |
+| 2 | Unit Fast | 3min | 6min | `timeout-minutes: 6` |
+| 3 | Full | 10min | 20min | `timeout-minutes: 20` |
+
+**Invariant**: If any tier approaches 80% of max budget, create issue to refactor.
 
 **Jobs:**
-- Quick import tests
-- Basic API health checks
-- Configuration validation
+- **smoke (Tier 1)**: True smoke tests - critical imports and basic instantiation
+  - Budget: <60s (enforced by `tests/smoke/conftest.py` budget guard)
+  - Tests: `tests/smoke/` with `-m smoke` marker
+  - Validates core functionality without heavy computation
+  
+- **unit-fast (Tier 2)**: Fast unit tests (excluding slow and comprehensive tests)
+  - Budget: <6min
+  - Tests: `tests/unit/ tests/state/` with `-m "not slow and not comprehensive"`
+  - Provides comprehensive coverage without slow integration tests
+
+**Local verification:**
+```bash
+make test-smoke              # Must complete in <60s
+make verify-smoke-budget     # Automated budget check with timeout
+make test-fast               # Must complete in <6min
+```
 
 **When to modify:**
+- Adding critical import paths (add to `tests/smoke/test_critical_imports.py`)
+- Core component changes (update `tests/smoke/test_core_instantiation.py`)
+- Test budget violations (create issue, refactor tests)
 - Adding critical smoke tests
 - Changing core dependencies
 
