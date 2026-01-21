@@ -8,9 +8,12 @@ Principal System Architect level validation.
 """
 
 import numpy as np
+import pytest
 
 from mlsdm.core.cognitive_controller import CognitiveController
 from mlsdm.utils.coherence_safety_metrics import CoherenceSafetyAnalyzer
+
+pytestmark = pytest.mark.validation
 
 
 def generate_test_vectors(n_vectors: int, dim: int = 384, n_clusters: int = 3) -> tuple:

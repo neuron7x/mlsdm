@@ -11,6 +11,8 @@ import pytest
 
 from mlsdm.extensions import AphasiaBrocaDetector
 
+pytestmark = pytest.mark.validation
+
 
 def test_aphasia_detector_initialization():
     """Test that AphasiaBrocaDetector initializes correctly."""

@@ -11,6 +11,8 @@ from hypothesis import strategies as st
 
 from mlsdm.rhythm.cognitive_rhythm import CognitiveRhythm
 
+pytestmark = pytest.mark.validation
+
 
 def test_rhythm_initial_state() -> None:
     """Test that rhythm starts in wake phase with correct counter.

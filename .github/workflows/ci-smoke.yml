@@ -51,12 +51,19 @@ jobs:
       - name: Verify security skip invariants
         run: make verify-security-skip
 
+      - name: Check validation test markers
+        run: |
+          # Ensure all validation tests have @pytest.mark.validation marker
+          # This prevents them from being included in smoke test discovery
+          python scripts/ci/check_validation_markers.py
+
       - name: Run Tier 1 smoke tests
         run: |
           mkdir -p artifacts
           # Tier 1: True smoke tests - critical imports and basic instantiation
           # Budget: <60s (enforced by conftest.py budget guard)
           # These tests validate core functionality without heavy computation
+          # Explicitly exclude validation tests to prevent budget overflow
           pytest tests/smoke/ -v -m smoke --tb=short --strict-markers \
             --junitxml=artifacts/junit-smoke.xml
         timeout-minutes: 2

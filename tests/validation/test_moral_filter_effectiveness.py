@@ -8,9 +8,12 @@ Principal System Architect level validation.
 """
 
 import numpy as np
+import pytest
 
 from mlsdm.core.cognitive_controller import CognitiveController
 from mlsdm.utils.coherence_safety_metrics import CoherenceSafetyAnalyzer
+
+pytestmark = pytest.mark.validation
 
 
 class NoFilterController(CognitiveController):
