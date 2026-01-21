@@ -218,6 +218,21 @@ class MultiLevelSynapticMemory:
         - For different vector dimensions, may need to adjust thresholds proportionally
         - Decay rates follow geometric progression: λ₁ = 5×λ₂, λ₂ = 10×λ₃
     """
+
+    __slots__ = (
+        "dim",
+        "lambda_l1",
+        "lambda_l2",
+        "lambda_l3",
+        "theta_l1",
+        "theta_l2",
+        "gating12",
+        "gating23",
+        "l1",
+        "l2",
+        "l3",
+    )
+
     def __init__(
         self,
         dimension: int = 384,

@@ -52,6 +52,8 @@ class MemoryRetrieval:
         memory_id: Unique identifier for this memory
     """
 
+    __slots__ = ("vector", "phase", "resonance", "provenance", "memory_id")
+
     vector: np.ndarray
     phase: float
     resonance: float
@@ -205,6 +207,22 @@ class PhaseEntangledLatticeMemory:
     DEFAULT_PHASE_TOLERANCE: ClassVar[float] = PELM_DEFAULTS.phase_tolerance if PELM_DEFAULTS else 0.15
     DEFAULT_TOP_K: ClassVar[int] = PELM_DEFAULTS.default_top_k if PELM_DEFAULTS else 5
     MIN_NORM_THRESHOLD: ClassVar[float] = PELM_DEFAULTS.min_norm_threshold if PELM_DEFAULTS else 1e-9
+
+    __slots__ = (
+        "dimension",
+        "capacity",
+        "pointer",
+        "size",
+        "_lock",
+        "memory_bank",
+        "phase_bank",
+        "norms",
+        "_query_buffer",
+        "_checksum",
+        "_provenance",
+        "_memory_ids",
+        "_confidence_threshold",
+    )
 
     def __init__(self, dimension: int = 384, capacity: int | None = None) -> None:
         # Use calibration default if not specified
