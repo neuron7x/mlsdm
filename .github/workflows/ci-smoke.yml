@@ -17,7 +17,11 @@ jobs:
   smoke:
     name: Smoke Tests
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    # TEMPORARY: Increased from 5 to 8 minutes to prevent race condition during pytest cleanup
+    # Currently running 2361 unit tests (excluding slow) which takes ~156s, leaving only ~24s
+    # for pytest finalization (JUnit XML write, cleanup) before the 180s step timeout
+    # TODO: Replace with proper Tier 1 smoke tests (<60s) - see Phase 2 in CI timeout fix PR
+    timeout-minutes: 8
 
     steps:
       - name: Checkout code
@@ -57,8 +61,13 @@ jobs:
           # Run all unit tests except slow ones for fast feedback
           # The 'slow' marker is already defined and used in the codebase
           # This gives us fast feedback on basic functionality
+          # TEMPORARY: Increased timeout from 3 to 5 minutes to prevent cancellation during pytest cleanup
+          # Tests complete in ~156s but need additional time for JUnit XML generation
+          # TODO: Replace with proper Tier 1 smoke tests (<60s) targeting tests/smoke/
           pytest tests/unit/ -v -m "not slow" --tb=short -q --maxfail=5 --junitxml=artifacts/junit-smoke.xml
-        timeout-minutes: 3
+        timeout-minutes: 5
+        env:
+          PYTHONHASHSEED: "0"  # Deterministic test ordering for reproducibility
 
       - name: Upload smoke junit report
         if: always()
