@@ -1,6 +1,7 @@
 """Smoke test configuration with 60-second budget enforcement."""
-import pytest
 import time
+
+import pytest
 
 _suite_start_time = None
 

@@ -21,7 +21,7 @@ class TestCoreImports:
         assert TimeoutMiddleware is not None
 
     def test_security_rbac_imports(self):
-        from mlsdm.security.rbac import RBACMiddleware, Role, RoleValidator
+        from mlsdm.security.rbac import RBACMiddleware, Role
         assert RBACMiddleware is not None
         assert Role is not None
 

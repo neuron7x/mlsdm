@@ -15,8 +15,9 @@ class TestCoreInstantiation:
 
     def test_config_loading(self):
         """Verify default configuration loads without errors."""
-        import yaml
         from pathlib import Path
+
+        import yaml
 
         config_path = Path("config/default_config.yaml")
         if config_path.exists():
