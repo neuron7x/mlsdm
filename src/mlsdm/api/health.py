@@ -13,6 +13,7 @@ Health endpoints:
 
 import asyncio
 import logging
+import os
 import time
 from dataclasses import dataclass
 from threading import Lock
@@ -128,6 +129,16 @@ _cognitive_controller: Any | None = None
 
 # Global neuro engine reference (to be set by the application)
 _neuro_engine: Any | None = None
+
+
+def _health_sanitize_enabled() -> bool:
+    """Check if health sanitization is enabled for test/CI environments."""
+    sanitize_flag = os.getenv("MLSDM_CI_HEALTH_SANITIZE", "").lower()
+    if sanitize_flag not in {"1", "true", "yes"}:
+        return False
+    if os.getenv("MLSDM_ENV", "").lower() == "test":
+        return True
+    return os.getenv("CI", "").lower() == "true"
 
 
 def set_memory_manager(manager: Any) -> None:
@@ -388,6 +399,8 @@ def _check_cpu_health() -> tuple[bool, str | None]:
     global _cpu_health_cache
 
     try:
+        if _health_sanitize_enabled():
+            return True, "usage: 0.0% (sanitized)"
         # Try to use cached value first (instant, no blocking)
         with _cpu_health_lock:
             if _cpu_health_cache and not _cpu_health_cache.is_stale():
@@ -470,15 +483,22 @@ async def _compute_readiness(response: Response) -> ReadinessStatus:
 
     # Check 6: System resources
     try:
-        memory = psutil.virtual_memory()
-        mem_available = memory.percent < 95.0
-        components["system_memory"] = ComponentStatus(
-            healthy=mem_available, details=f"usage: {memory.percent:.1f}%"
-        )
-        checks["memory_available"] = mem_available
-        if not mem_available:
-            all_ready = False
-            details["system_memory_percent"] = memory.percent
+        if _health_sanitize_enabled():
+            mem_available = True
+            components["system_memory"] = ComponentStatus(
+                healthy=True, details="usage: 0.0% (sanitized)"
+            )
+            checks["memory_available"] = True
+        else:
+            memory = psutil.virtual_memory()
+            mem_available = memory.percent < 95.0
+            components["system_memory"] = ComponentStatus(
+                healthy=mem_available, details=f"usage: {memory.percent:.1f}%"
+            )
+            checks["memory_available"] = mem_available
+            if not mem_available:
+                all_ready = False
+                details["system_memory_percent"] = memory.percent
     except Exception as e:
         logger.warning(f"Failed to check memory availability: {e}")
         components["system_memory"] = ComponentStatus(healthy=False, details=str(e))

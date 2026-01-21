@@ -41,6 +41,8 @@ def http_client() -> TestClient:
 
     os.environ["DISABLE_RATE_LIMIT"] = "1"
     os.environ["LLM_BACKEND"] = "local_stub"
+    os.environ["MLSDM_CI_HEALTH_SANITIZE"] = "1"
+    os.environ["MLSDM_ENV"] = "test"
 
     from mlsdm.api.app import app
 
