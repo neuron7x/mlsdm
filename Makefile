@@ -1,4 +1,4 @@
-.PHONY: test test-fast coverage-gate verify-metrics verify-security-skip verify-docs lint type cov bench bench-drift help run-dev run-cloud-local run-agent health-check eval-moral_filter test-memory-obs \
+.PHONY: test test-fast test-smoke verify-smoke-budget coverage-gate verify-metrics verify-security-skip verify-docs lint type cov bench bench-drift help run-dev run-cloud-local run-agent health-check eval-moral_filter test-memory-obs \
         readiness-preview readiness-apply \
         build-package test-package docker-build-neuro-engine docker-run-neuro-engine docker-smoke-neuro-engine \
         docker-compose-up docker-compose-down lock sync lock-deps evidence iteration-metrics
@@ -13,6 +13,8 @@ help:
 	@echo "Testing & Linting:"
 	@echo "  make test          - Run all tests (uses pytest.ini config)"
 	@echo "  make test-fast     - Run fast unit tests (excludes slow/comprehensive)"
+	@echo "  make test-smoke    - Run Tier 1 smoke tests (<60s budget)"
+	@echo "  make verify-smoke-budget - Verify smoke tests complete within 60s budget"
 	@echo "  make coverage-gate - Run coverage gate with threshold check"
 	@echo "  make verify-metrics - Validate latest evidence snapshot integrity"
 	@echo "  make verify-security-skip - Verify security skip path invariants and docs examples"
@@ -67,6 +69,18 @@ test:
 test-fast:
 	@echo "Running fast unit tests (excluding slow/comprehensive)..."
 	pytest tests/unit tests/state -m "not slow and not comprehensive" -q --tb=short
+
+# Tier 1: True smoke tests (<60s budget)
+test-smoke:
+	@echo "Running Tier 1 smoke tests (budget: 60s)..."
+	pytest tests/smoke/ -m smoke -q --tb=short --strict-markers
+
+# Verify smoke budget locally
+verify-smoke-budget:
+	@echo "Verifying smoke test budget compliance..."
+	@timeout 90 pytest tests/smoke/ -m smoke -q --tb=short --strict-markers || \
+		(echo "ERROR: Smoke tests exceeded 60s budget" && exit 1)
+	@echo "✓ Smoke tests within budget"
 
 coverage-gate:
 	@echo "Running coverage gate..."
