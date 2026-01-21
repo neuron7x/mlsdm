@@ -887,10 +887,9 @@ class TestPELMFallbackAndEdgeCases:
         """Test auto_recover returns False on exception."""
         from unittest.mock import patch
 
-        pelm = PhaseEntangledLatticeMemory(dimension=4, capacity=10)
-        pelm.pointer = -1
-
-        with patch.object(pelm, '_rebuild_index', side_effect=RuntimeError("Rebuild failed")):
+        with patch.object(PhaseEntangledLatticeMemory, '_rebuild_index', side_effect=RuntimeError("Rebuild failed")):
+            pelm = PhaseEntangledLatticeMemory(dimension=4, capacity=10)
+            pelm.pointer = -1
             result = pelm.auto_recover()
             assert result is False
 
