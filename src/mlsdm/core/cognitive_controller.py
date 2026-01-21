@@ -68,16 +68,16 @@ class CognitiveController:
 
     Architecture:
         The controller integrates four core subsystems via a GovernanceKernel:
-        
+
         1. **Moral Filter** (MoralFilterV2): EMA-based threshold adaptation with
            homeostatic control to maintain acceptance rates around 50%.
-        
+
         2. **Cognitive Rhythm** (CognitiveRhythm): Deterministic wake/sleep cycling
            inspired by suprachiasmatic nucleus (SCN) circadian oscillators.
-        
+
         3. **PELM** (PhaseEntangledLatticeMemory): Phase-aware vector retrieval with
            cosine similarity scoring and circular buffer eviction.
-        
+
         4. **Synaptic Memory** (MultiLevelSynapticMemory): Three-level consolidation
            cascade (L1→L2→L3) implementing Benna & Fusi (2016) cascade model.
 
@@ -101,10 +101,10 @@ class CognitiveController:
 
     Resource Bounds (CORE-04):
         The controller enforces a global memory bound across all subsystems:
-        
+
         .. math::
             M_{total} = M_{PELM} + M_{synaptic} + M_{overhead} \\leq M_{max}
-        
+
         Where:
             - :math:`M_{PELM} = capacity \\times dimension \\times 4` bytes (float32)
             - :math:`M_{synaptic} = 3 \\times dimension \\times 4` bytes (L1+L2+L3)
@@ -114,35 +114,35 @@ class CognitiveController:
     Emergency Shutdown & Recovery:
         When memory or processing time limits are exceeded, the controller enters
         emergency shutdown. Recovery is automatic after a cooldown period:
-        
+
         .. math::
             t_{recovery} = \\max(t_{step\\_cooldown}, t_{time\\_cooldown})
-        
+
         Where:
             - :math:`t_{step\\_cooldown}` = steps since emergency ≥ 10 steps
             - :math:`t_{time\\_cooldown}` = wall time since emergency ≥ 60 seconds
-        
+
         Recovery requires memory usage < 80% of threshold (safety margin).
 
     References:
         - Benna, M. K., & Fusi, S. (2016). Computational principles of synaptic
           memory consolidation. Nature Neuroscience, 19(12), 1697-1706.
           DOI: 10.1038/nn.4401
-        
+
         - Governing kernel pattern inspired by microkernel architectures ensuring
           subsystem isolation and resource enforcement.
 
     Example:
         >>> # Initialize controller with 384-dim embeddings, 20K capacity
         >>> controller = CognitiveController(dim=384, capacity=20_000)
-        >>> 
+        >>>
         >>> # Process a morally acceptable event
         >>> import numpy as np
         >>> event_vec = np.random.randn(384).astype(np.float32)
         >>> result = controller.process_event(event_vec, moral_value=0.8)
         >>> assert result['accepted'] in (True, False)
         >>> assert 0.30 <= result['moral_threshold'] <= 0.90  # INV-CC-02
-        >>> 
+        >>>
         >>> # Retrieve contextually similar memories
         >>> query_vec = np.random.randn(384).astype(np.float32)
         >>> memories = controller.retrieve_context(query_vec, top_k=5)
@@ -179,40 +179,40 @@ class CognitiveController:
             dim: Vector dimension for embeddings. Must match the embedding model's
                 output dimension (e.g., 384 for sentence-transformers/all-MiniLM-L6-v2).
                 Valid range: [1, 4096]. Default: 384.
-            
+
             memory_threshold_mb: Legacy psutil-based memory threshold in MB before
                 emergency shutdown. This monitors process RSS memory.
                 Default: 8192.0 MB (8 GB). Deprecated in favor of max_memory_bytes.
-            
+
             max_processing_time_ms: Maximum allowed processing time per event in
                 milliseconds. Events exceeding this are rejected to prevent DoS.
                 Default: 1000.0 ms (1 second).
-            
+
             max_memory_bytes: Global memory bound in bytes for cognitive circuit
                 (PELM + SynapticMemory + controller buffers). This is the hard limit
                 from CORE-04 specification enforcing INV-CC-03.
                 Default: 1.4 GB (1,468,006,400 bytes).
-            
+
             synaptic_config: Optional SynapticMemoryCalibration for synaptic memory
                 parameters (λ decay rates, θ thresholds, gating factors). If provided,
                 overrides SYNAPTIC_MEMORY_DEFAULTS. See SynapticMemoryCalibration docs.
-            
+
             yaml_config: Optional YAML config dictionary. If provided and
                 synaptic_config is None, loads synaptic memory config from
                 'multi_level_memory' section merged with SYNAPTIC_MEMORY_DEFAULTS.
                 Useful for production deployments with centralized configuration.
-            
+
             auto_recovery_enabled: Enable time-based auto-recovery after emergency
                 shutdown. When True, controller attempts recovery after cooldown period.
                 When False, only step-based recovery is available. Default: True.
-            
+
             auto_recovery_cooldown_seconds: Time in seconds to wait before attempting
                 automatic recovery after emergency shutdown. Must be ≥ 0.
                 Default: 60.0 seconds. Only applies when auto_recovery_enabled=True.
 
         Raises:
             ValueError: If dim ≤ 0 or synaptic_config parameters are invalid.
-            
+
         Complexity:
             O(d × c) where d = dimension, c = capacity for memory allocation.
             Dominated by PELM and synaptic memory numpy array initialization.
@@ -382,12 +382,12 @@ class CognitiveController:
                 - Shape: (dimension,) matching controller's dimension
                 - Dtype: Any numeric type (will be converted to float32)
                 - Values: Finite real numbers (no NaN or Inf)
-            
+
             moral_value: Moral score for this interaction. Must satisfy:
                 - Range: [0.0, 1.0] where 0.0 = maximally harmful, 1.0 = maximally beneficial
                 - Type: float or int (will be converted to float)
                 - Interpretation: Values ≥ moral.threshold are accepted
-            
+
         Returns:
             State dictionary with the following keys:
                 - ``step`` (int): Current step counter (monotonically increasing)
@@ -418,9 +418,9 @@ class CognitiveController:
                 - Memory commit is O(1) amortized (circular buffer)
                 - Moral evaluation is O(1)
                 - Rhythm step is O(1)
-            
+
             - **Space**: O(d) where d = dimension for temporary vector storage
-            
+
             - **Lock hold time**: Proportional to O(n), typically < 10ms for n=20K
 
         Side Effects:
@@ -432,12 +432,12 @@ class CognitiveController:
                 - Adapts moral threshold based on acceptance (EMA update)
                 - May enter emergency shutdown if bounds violated
                 - Invalidates internal state cache
-            
+
             On rejection:
                 - Increments step_counter
                 - Adapts moral threshold (only if morally rejected)
                 - No memory modifications
-            
+
             Observability:
                 - Emits OpenTelemetry span "cognitive_controller.process_event"
                 - Emits child spans for "moral_filter" and "memory_update"
@@ -451,18 +451,18 @@ class CognitiveController:
 
         Example:
             >>> controller = CognitiveController(dim=384)
-            >>> 
+            >>>
             >>> # Process morally acceptable event during wake phase
             >>> event = np.random.randn(384).astype(np.float32)
             >>> result = controller.process_event(event, moral_value=0.75)
-            >>> 
+            >>>
             >>> if result['accepted']:
             ...     print(f"Event accepted at step {result['step']}")
             ...     print(f"Moral threshold: {result['moral_threshold']:.3f}")
             ...     print(f"PELM size: {result['pelm_used']}")
             ... else:
             ...     print(f"Event rejected: {result['note']}")
-            >>> 
+            >>>
             >>> # Check invariants
             >>> assert 0.30 <= result['moral_threshold'] <= 0.90  # INV-CC-02
             >>> assert result['step'] >= 1  # INV-CC-05
@@ -631,7 +631,7 @@ class CognitiveController:
             3. Filter by phase proximity: |phase_stored - phase_current| ≤ tolerance
             4. Rank by cosine similarity (descending)
             5. Return top-k results with provenance metadata
-        
+
         Phase Tolerance:
             Default tolerance is 0.15, meaning:
             - If current phase is "wake" (0.1), retrieves vectors with phase ∈ [0.0, 0.25]
@@ -644,7 +644,7 @@ class CognitiveController:
                 - Dtype: Any numeric type (will be converted to float32)
                 - Values: Finite real numbers (no NaN or Inf)
                 - Semantics: Embedding of user query or context prompt
-            
+
             top_k: Maximum number of results to return. Must satisfy:
                 - Range: [1, PELM size]
                 - Default: 5
@@ -660,7 +660,7 @@ class CognitiveController:
                   (typically [0, 1] for normalized vectors)
                 - ``provenance`` (MemoryProvenance): Source, confidence, timestamp
                 - ``memory_id`` (str): UUID for this specific memory
-            
+
             Empty list if:
                 - PELM is empty (size = 0)
                 - No memories match phase filter
@@ -673,9 +673,9 @@ class CognitiveController:
                 - Uses numpy vectorized operations for O(n) similarity computation
                 - Uses argpartition for O(n + k log k) partial sort when n > 2k
                 - Uses full argsort for O(n log n) when n ≤ 2k (faster for small arrays)
-            
+
             - **Space**: O(n) for temporary similarity array
-            
+
             - **Lock hold time**: Proportional to O(n log k), typically < 5ms for n=20K
 
         Side Effects:
@@ -690,21 +690,21 @@ class CognitiveController:
 
         Example:
             >>> controller = CognitiveController(dim=384)
-            >>> 
+            >>>
             >>> # Store some memories first
             >>> for i in range(100):
             ...     vec = np.random.randn(384).astype(np.float32)
             ...     controller.process_event(vec, moral_value=0.8)
-            >>> 
+            >>>
             >>> # Retrieve contextually similar memories
             >>> query = np.random.randn(384).astype(np.float32)
             >>> results = controller.retrieve_context(query, top_k=5)
-            >>> 
+            >>>
             >>> # Examine results
             >>> for mem in results:
             ...     print(f"Resonance: {mem.resonance:.3f}, Phase: {mem.phase:.2f}")
             ...     print(f"Source: {mem.provenance.source}, Confidence: {mem.provenance.confidence}")
-            >>> 
+            >>>
             >>> # Verify ordering invariant
             >>> resonances = [m.resonance for m in results]
             >>> assert resonances == sorted(resonances, reverse=True)  # Descending order

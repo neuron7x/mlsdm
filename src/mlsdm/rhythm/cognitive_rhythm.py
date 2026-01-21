@@ -21,7 +21,7 @@ class CognitiveRhythm:
                          counter=0
 
         **State Transitions:**
-        
+
         .. math::
             s(t+1) = \\begin{cases}
                 \\text{SLEEP} & \\text{if } s(t) = \\text{WAKE} \\land c(t) = 0 \\\\
@@ -30,7 +30,7 @@ class CognitiveRhythm:
             \\end{cases}
 
         **Counter Dynamics:**
-        
+
         .. math::
             c(t+1) = \\begin{cases}
                 d_{\\text{sleep}} & \\text{if } s(t) = \\text{WAKE} \\land c(t) = 0 \\\\
@@ -47,7 +47,7 @@ class CognitiveRhythm:
     Biological Inspiration:
         The SCN in the mammalian hypothalamus generates ~24-hour circadian rhythms
         through coupled oscillator neurons. This simplified model captures:
-        
+
         - **Deterministic oscillation**: No randomness or drift (like SCN's robustness)
         - **Asymmetric periods**: Longer wake than sleep (matches mammalian diurnal cycles)
         - **Phase persistence**: State remains stable until counter expires
@@ -86,12 +86,12 @@ class CognitiveRhythm:
 
     Example:
         >>> from mlsdm.rhythm import CognitiveRhythm
-        >>> 
+        >>>
         >>> # Initialize with default 8-wake, 3-sleep cycle
         >>> rhythm = CognitiveRhythm(wake_duration=8, sleep_duration=3)
         >>> assert rhythm.is_wake()  # Starts in wake phase
         >>> assert rhythm.counter == 8  # Full wake duration remaining
-        >>> 
+        >>>
         >>> # Step through wake phase
         >>> for i in range(8):
         ...     rhythm.step()
@@ -99,14 +99,14 @@ class CognitiveRhythm:
         ...         assert rhythm.is_wake()  # Still in wake
         >>> assert rhythm.is_sleep()  # Transitioned to sleep at counter=0
         >>> assert rhythm.counter == 3  # Sleep duration loaded
-        >>> 
+        >>>
         >>> # Step through sleep phase
         >>> for i in range(3):
         ...     rhythm.step()
         ...     if i < 2:
         ...         assert rhythm.is_sleep()
         >>> assert rhythm.is_wake()  # Back to wake
-        >>> 
+        >>>
         >>> # Verify cycle periodicity
         >>> states = []
         >>> for _ in range(22):  # 2 full cycles (8+3)*2
@@ -114,7 +114,7 @@ class CognitiveRhythm:
         ...     rhythm.step()
         >>> # Pattern: WWWWWWWW SSS WWWWWWWW SSS
         >>> assert states == ['W']*8 + ['S']*3 + ['W']*8 + ['S']*3
-        >>> 
+        >>>
         >>> # Get current state as string (for logging/observability)
         >>> phase_str = rhythm.get_current_phase()
         >>> assert phase_str in ('wake', 'sleep')
@@ -146,10 +146,10 @@ class CognitiveRhythm:
 
     Usage in Cognitive Pipeline:
         The CognitiveController queries rhythm state to determine phase-dependent behavior:
-        
+
         - **Wake phase**: High learning rate, active event processing, memory encoding
         - **Sleep phase**: Memory consolidation, reduced input sensitivity, replay/pruning
-        
+
         This mirrors biological memory consolidation during sleep (hippocampal replay,
         synaptic downscaling, system consolidation).
 
@@ -158,7 +158,7 @@ class CognitiveRhythm:
           Loss of a circadian adrenal corticosterone rhythm following suprachiasmatic
           lesions in the rat. *Brain Research, 42*(1), 201-206.
           DOI: `10.1016/0006-8993(72)90054-6 <https://doi.org/10.1016/0006-8993(72)90054-6>`_
-        
+
         - **Sleep-dependent memory consolidation**: Diekelmann, S., & Born, J. (2010).
           The memory function of sleep. *Nature Reviews Neuroscience, 11*(2), 114-126.
           DOI: `10.1038/nrn2762 <https://doi.org/10.1038/nrn2762>`_
@@ -244,20 +244,20 @@ class CognitiveRhythm:
             >>> rhythm = CognitiveRhythm(wake_duration=3, sleep_duration=2)
             >>> assert rhythm.counter == 3  # Initial wake counter
             >>> assert rhythm.is_wake()
-            >>> 
+            >>>
             >>> # Step through wake phase
             >>> rhythm.step()
             >>> assert rhythm.counter == 2  # Decremented
             >>> assert rhythm.is_wake()  # Still wake
-            >>> 
+            >>>
             >>> rhythm.step()
             >>> assert rhythm.counter == 1
             >>> assert rhythm.is_wake()
-            >>> 
+            >>>
             >>> rhythm.step()  # Counter reaches 0 → transition
             >>> assert rhythm.counter == 2  # Reset to sleep_duration
             >>> assert rhythm.is_sleep()  # Transitioned to sleep
-            >>> 
+            >>>
             >>> # Verify deterministic behavior
             >>> rhythm2 = CognitiveRhythm(wake_duration=3, sleep_duration=2)
             >>> for _ in range(10):
@@ -314,20 +314,20 @@ class CognitiveRhythm:
         Performance Optimization:
             Uses pre-computed boolean flag ``_is_wake`` instead of string comparison
             (``phase == "wake"``). This is ~2-3× faster in tight loops:
-            
+
             - Boolean flag: 1 memory read
             - String comparison: memory read + strlen + memcmp
 
         Example:
             >>> rhythm = CognitiveRhythm(wake_duration=5, sleep_duration=2)
             >>> assert rhythm.is_wake()  # Starts in wake
-            >>> 
+            >>>
             >>> # Use in conditional logic
             >>> if rhythm.is_wake():
             ...     learning_rate = 0.01  # High learning during wake
             >>> else:
             ...     learning_rate = 0.001  # Low learning during sleep
-            >>> 
+            >>>
             >>> # Step to sleep phase
             >>> for _ in range(5):
             ...     rhythm.step()
@@ -366,12 +366,12 @@ class CognitiveRhythm:
         Example:
             >>> rhythm = CognitiveRhythm(wake_duration=5, sleep_duration=2)
             >>> assert not rhythm.is_sleep()  # Starts in wake (not sleep)
-            >>> 
+            >>>
             >>> # Step to sleep phase
             >>> for _ in range(5):
             ...     rhythm.step()
             >>> assert rhythm.is_sleep()  # Now in sleep
-            >>> 
+            >>>
             >>> # Use for sleep-specific logic
             >>> if rhythm.is_sleep():
             ...     # Perform memory consolidation

@@ -142,10 +142,10 @@ class PhaseEntangledLatticeMemory:
         >>> from mlsdm.memory import PhaseEntangledLatticeMemory
         >>> from mlsdm.memory.provenance import MemoryProvenance, MemorySource
         >>> from datetime import datetime
-        >>> 
+        >>>
         >>> # Initialize 384-dim memory with 1000 capacity
         >>> pelm = PhaseEntangledLatticeMemory(dimension=384, capacity=1000)
-        >>> 
+        >>>
         >>> # Store a "wake" memory with high confidence
         >>> wake_vec = np.random.randn(384).astype(np.float32).tolist()
         >>> provenance = MemoryProvenance(
@@ -155,22 +155,22 @@ class PhaseEntangledLatticeMemory:
         ... )
         >>> idx = pelm.entangle(wake_vec, phase=0.1, provenance=provenance)
         >>> assert idx >= 0  # Successfully stored
-        >>> 
+        >>>
         >>> # Store a "sleep" memory
         >>> sleep_vec = np.random.randn(384).astype(np.float32).tolist()
         >>> idx2 = pelm.entangle(sleep_vec, phase=0.9)
-        >>> 
+        >>>
         >>> # Retrieve wake-phase memories (should not return sleep memory)
         >>> query_vec = np.random.randn(384).astype(np.float32).tolist()
-        >>> results = pelm.retrieve(query_vec, current_phase=0.1, 
+        >>> results = pelm.retrieve(query_vec, current_phase=0.1,
         ...                          phase_tolerance=0.15, top_k=5)
         >>> assert all(abs(r.phase - 0.1) <= 0.15 for r in results)  # INV-PELM-02
         >>> assert all(0 <= r.resonance <= 1.0 for r in results)
-        >>> 
+        >>>
         >>> # Verify resonance ordering
         >>> resonances = [r.resonance for r in results]
         >>> assert resonances == sorted(resonances, reverse=True)  # INV-PELM-04
-        >>> 
+        >>>
         >>> # Check memory usage
         >>> mem_bytes = pelm.memory_usage_bytes()
         >>> expected = 1000 * 384 * 4 * 1.15  # capacity × dim × float32 × overhead
@@ -322,13 +322,13 @@ class PhaseEntangledLatticeMemory:
             >>> from mlsdm.memory.provenance import MemoryProvenance, MemorySource
             >>> from datetime import datetime
             >>> pelm = PhaseEntangledLatticeMemory(dimension=384, capacity=1000)
-            >>> 
+            >>>
             >>> # Store high-confidence wake memory
             >>> wake_vec = np.random.randn(384).tolist()
             >>> prov = MemoryProvenance(MemorySource.USER_INPUT, 0.9, datetime.now())
             >>> idx = pelm.entangle(wake_vec, phase=0.1, provenance=prov)
             >>> assert 0 <= idx < 1000  # Valid index
-            >>> 
+            >>>
             >>> # Low-confidence memory gets rejected
             >>> low_conf = MemoryProvenance(MemorySource.GENERATED, 0.3, datetime.now())
             >>> idx2 = pelm.entangle(wake_vec, phase=0.1, provenance=low_conf)
@@ -500,7 +500,7 @@ class PhaseEntangledLatticeMemory:
         Example:
             >>> import numpy as np
             >>> pelm = PhaseEntangledLatticeMemory(dimension=384, capacity=1000)
-            >>> 
+            >>>
             >>> # Batch store 100 wake memories
             >>> vectors = [np.random.randn(384).tolist() for _ in range(100)]
             >>> phases = [0.1] * 100  # All wake-phase
@@ -508,7 +508,7 @@ class PhaseEntangledLatticeMemory:
             >>> assert len(indices) == 100
             >>> assert all(0 <= idx < 1000 for idx in indices)  # All accepted
             >>> assert pelm.size == 100  # Size updated correctly
-            >>> 
+            >>>
             >>> # Batch with mixed confidence (some rejected)
             >>> from mlsdm.memory.provenance import MemoryProvenance, MemorySource
             >>> from datetime import datetime
@@ -739,35 +739,35 @@ class PhaseEntangledLatticeMemory:
         Example:
             >>> import numpy as np
             >>> pelm = PhaseEntangledLatticeMemory(dimension=384, capacity=1000)
-            >>> 
+            >>>
             >>> # Store some wake memories
             >>> for i in range(50):
             ...     vec = np.random.randn(384).tolist()
             ...     pelm.entangle(vec, phase=0.1)
-            >>> 
+            >>>
             >>> # Store some sleep memories
             >>> for i in range(50):
             ...     vec = np.random.randn(384).tolist()
             ...     pelm.entangle(vec, phase=0.9)
-            >>> 
+            >>>
             >>> # Retrieve wake-phase memories (strict isolation)
             >>> query = np.random.randn(384).tolist()
-            >>> results = pelm.retrieve(query, current_phase=0.1, 
+            >>> results = pelm.retrieve(query, current_phase=0.1,
             ...                          phase_tolerance=0.15, top_k=5)
             >>> assert len(results) <= 5  # At most top_k results
             >>> assert all(abs(r.phase - 0.1) <= 0.15 for r in results)  # INV-PELM-02
-            >>> 
+            >>>
             >>> # Verify resonance ordering (best matches first)
             >>> resonances = [r.resonance for r in results]
             >>> assert resonances == sorted(resonances, reverse=True)  # INV-PELM-04
-            >>> 
+            >>>
             >>> # Retrieve with indices for debugging
             >>> results, indices = pelm.retrieve(query, current_phase=0.1,
             ...                                   return_indices=True)
             >>> assert len(results) == len(indices)
             >>> for r, idx in zip(results, indices):
             ...     assert 0 <= idx < pelm.size  # Valid index
-            >>> 
+            >>>
             >>> # Cross-phase retrieval with large tolerance
             >>> all_results = pelm.retrieve(query, current_phase=0.5,
             ...                              phase_tolerance=0.5, top_k=10)

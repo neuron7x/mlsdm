@@ -1,6 +1,6 @@
 import logging
 import time
-from typing import TYPE_CHECKING, Any, ClassVar, Final, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
 import numpy as np
 
@@ -102,7 +102,7 @@ class MultiLevelSynapticMemory:
 
     Neurobiological Grounding:
         The three-level cascade mirrors synaptic plasticity mechanisms:
-        
+
         - **L1 ≈ Early-phase LTP**: Rapid but transient synaptic strengthening via
           CaMKII phosphorylation. Decays quickly without consolidation.
         - **L2 ≈ Intermediate consolidation**: Protein synthesis-dependent stabilization
@@ -144,7 +144,7 @@ class MultiLevelSynapticMemory:
         Gating factors control what fraction of a level transfers to the next:
         - **g₁₂ = 0.45**: 45% of L1 transfers to L2 (55% remains in L1)
         - **g₂₃ = 0.30**: 30% of L2 transfers to L3 (70% remains in L2)
-        
+
         This creates a "leaky bucket" cascade where not all information propagates,
         implementing a form of memory filtering and capacity control.
 
@@ -152,30 +152,30 @@ class MultiLevelSynapticMemory:
         Transfers occur when level norm exceeds threshold:
         - **L1→L2**: Triggered when :math:`\\|L_1\\| > \\theta_1 = 1.2`
         - **L2→L3**: Triggered when :math:`\\|L_2\\| > \\theta_2 = 2.5`
-        
+
         Higher thresholds for later stages implement "synaptic tagging" - only
         strong or repeated activations consolidate into long-term storage.
 
     Example:
         >>> import numpy as np
         >>> from mlsdm.memory import MultiLevelSynapticMemory
-        >>> 
+        >>>
         >>> # Initialize 384-dim synaptic memory with default decay rates
         >>> synapse = MultiLevelSynapticMemory(dimension=384)
-        >>> 
+        >>>
         >>> # Process a sequence of events (e.g., sensory inputs)
         >>> event1 = np.random.randn(384).astype(np.float32)
         >>> synapse.update(event1)
         >>> l1, l2, l3 = synapse.state()
         >>> assert np.linalg.norm(l1) > 0  # L1 contains event
         >>> assert np.linalg.norm(l2) == 0  # L2 empty (no transfer yet)
-        >>> 
+        >>>
         >>> # Repeated events trigger consolidation
         >>> for _ in range(5):
         ...     synapse.update(event1)
         >>> l1, l2, l3 = synapse.state()
         >>> # After multiple updates, L1 norm exceeds θ₁ → transfer to L2
-        >>> 
+        >>>
         >>> # Check decay over time without new events
         >>> initial_l1_norm = np.linalg.norm(l1)
         >>> for _ in range(10):
@@ -183,7 +183,7 @@ class MultiLevelSynapticMemory:
         >>> l1_after, _, _ = synapse.state()
         >>> final_l1_norm = np.linalg.norm(l1_after)
         >>> assert final_l1_norm < initial_l1_norm  # INV-ML-01: Decay reduces norm
-        >>> 
+        >>>
         >>> # Verify decay rate ordering
         >>> assert synapse.lambda_l1 > synapse.lambda_l2 > synapse.lambda_l3  # INV-ML-02
 
@@ -191,15 +191,15 @@ class MultiLevelSynapticMemory:
         - **Benna, M. K., & Fusi, S. (2016).** Computational principles of synaptic
           memory consolidation. *Nature Neuroscience, 19*(12), 1697-1706.
           DOI: `10.1038/nn.4401 <https://doi.org/10.1038/nn.4401>`_
-          
+
           Demonstrates how cascade models with multiple timescales solve the
           stability-plasticity dilemma, enabling both rapid learning and long-term
           retention without catastrophic forgetting.
-        
+
         - **Fusi, S., Drew, P. J., & Abbott, L. F. (2005).** Cascade models of
           synaptically stored memories. *Neuron, 45*(4), 599-611.
           DOI: `10.1016/j.neuron.2005.02.001 <https://doi.org/10.1016/j.neuron.2005.02.001>`_
-          
+
           Original cascade model showing how discrete-state synapses with multiple
           timescales can retain memories despite ongoing plasticity.
 
@@ -360,20 +360,20 @@ class MultiLevelSynapticMemory:
             Telemetry tracks consolidation events for observability:
             - L1→L2 consolidation: Detected when :math:`\\sum(T_{12}) > 0`
             - L2→L3 consolidation: Detected when :math:`\\sum(T_{23}) > 0`
-            
+
             These events indicate significant memory formation and can trigger
             alerts or adaptive behavior in the cognitive controller.
 
         Example:
             >>> import numpy as np
             >>> synapse = MultiLevelSynapticMemory(dimension=384)
-            >>> 
+            >>>
             >>> # Single event update
             >>> event = np.random.randn(384).astype(np.float32)
             >>> synapse.update(event)
             >>> l1, l2, l3 = synapse.state()
             >>> assert np.array_equal(l1[:5], event[:5])  # Event stored in L1
-            >>> 
+            >>>
             >>> # Repeated events trigger consolidation
             >>> strong_event = np.ones(384, dtype=np.float32) * 2.0
             >>> for i in range(10):
@@ -381,7 +381,7 @@ class MultiLevelSynapticMemory:
             >>> l1, l2, l3 = synapse.state()
             >>> # After multiple updates, L1 exceeds θ₁ → transfer to L2
             >>> assert np.linalg.norm(l2) > 0  # L2 now contains consolidated memory
-            >>> 
+            >>>
             >>> # Decay without new input
             >>> zero_event = np.zeros(384, dtype=np.float32)
             >>> synapse.update(zero_event)
