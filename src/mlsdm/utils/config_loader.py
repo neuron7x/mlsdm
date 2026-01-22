@@ -352,6 +352,11 @@ class ConfigLoader:
         except Exception as e:
             raise ValueError(f"Error reading INI file '{path}': {str(e)}") from e
 
+    _ENV_OVERRIDE_EXCLUDE = frozenset({
+        "ci_health_sanitize",
+        "env",
+    })
+
     @staticmethod
     def _apply_env_overrides(config: dict[str, Any]) -> dict[str, Any]:
         """Apply environment variable overrides to configuration.
@@ -361,6 +366,9 @@ class ConfigLoader:
         - MLSDM_DIMENSION=768
         - MLSDM_MORAL_FILTER__THRESHOLD=0.7
         - MLSDM_COGNITIVE_RHYTHM__WAKE_DURATION=10
+
+        Note: Some MLSDM_ prefixed variables are excluded from config merging
+        because they are runtime/CI flags, not configuration schema fields.
         """
         prefix = "MLSDM_"
 
@@ -374,6 +382,9 @@ class ConfigLoader:
             # Filter out empty segments (e.g., trailing '__') to avoid creating empty keys
             parts = [p for p in config_key.split("__") if p]
             if not parts:
+                continue
+
+            if parts[0] in ConfigLoader._ENV_OVERRIDE_EXCLUDE:
                 continue
 
             target = config
