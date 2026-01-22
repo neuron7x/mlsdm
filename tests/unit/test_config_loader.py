@@ -8,6 +8,7 @@ Tests cover:
 - File format support
 """
 
+import os
 from pathlib import Path
 
 import pytest
@@ -204,6 +205,32 @@ moral_filter:
 
         config = ConfigLoader.load_config(str(config_file), env_override=True)
         assert config["dimension"] == 384
+
+    def test_runtime_env_vars_excluded_from_config(self, tmp_path, monkeypatch):
+        """Runtime control env vars should not be merged into config overrides."""
+        config_file = tmp_path / "config.yaml"
+        config_file.write_text("dimension: 10")
+
+        monkeypatch.setenv("MLSDM_CI_HEALTH_SANITIZE", "1")
+        monkeypatch.setenv("MLSDM_ENV", "test")
+
+        config = ConfigLoader.load_config(str(config_file), validate=False)
+
+        assert "ci_health_sanitize" not in config
+        assert "env" not in config
+        assert os.getenv("MLSDM_CI_HEALTH_SANITIZE") == "1"
+        assert os.getenv("MLSDM_ENV") == "test"
+
+    def test_runtime_env_vars_with_validation(self, monkeypatch):
+        """Runtime env vars should not trigger validation failures."""
+        monkeypatch.setenv("MLSDM_CI_HEALTH_SANITIZE", "true")
+        monkeypatch.setenv("MLSDM_ENV", "test")
+
+        config = ConfigLoader.load_config("config/default_config.yaml", validate=True)
+
+        assert "dimension" in config
+        assert "ci_health_sanitize" not in config
+        assert "env" not in config
 
 
 class TestLoadValidatedConfig:

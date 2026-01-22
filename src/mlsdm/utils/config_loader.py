@@ -352,7 +352,19 @@ class ConfigLoader:
         except Exception as e:
             raise ValueError(f"Error reading INI file '{path}': {str(e)}") from e
 
-    _ENV_OVERRIDE_EXCLUDE = frozenset({
+    # ============================================================================
+    # RUNTIME ENVIRONMENT VARIABLE EXCLUSIONS
+    # ============================================================================
+    # These MLSDM_* prefixed environment variables are runtime control flags,
+    # not configuration schema fields. They are excluded from config override
+    # processing to prevent validation errors with extra="forbid".
+    #
+    # To add a new runtime flag:
+    # 1. Add the lowercase key (without MLSDM_ prefix) to this frozenset
+    # 2. Document the flag in docs/CONFIGURATION_GUIDE.md
+    # 3. Add a regression test in tests/unit/test_config_loader.py
+    # ============================================================================
+    _RUNTIME_ENV_EXCLUSIONS: frozenset[str] = frozenset({
         "ci_health_sanitize",
         "env",
     })
@@ -367,8 +379,9 @@ class ConfigLoader:
         - MLSDM_MORAL_FILTER__THRESHOLD=0.7
         - MLSDM_COGNITIVE_RHYTHM__WAKE_DURATION=10
 
-        Note: Some MLSDM_ prefixed variables are excluded from config merging
-        because they are runtime/CI flags, not configuration schema fields.
+        Note: Runtime control variables (e.g., MLSDM_CI_HEALTH_SANITIZE) are
+        excluded from config merging. See _RUNTIME_ENV_EXCLUSIONS for the
+        complete list of excluded variables.
         """
         prefix = "MLSDM_"
 
@@ -384,7 +397,7 @@ class ConfigLoader:
             if not parts:
                 continue
 
-            if parts[0] in ConfigLoader._ENV_OVERRIDE_EXCLUDE:
+            if parts[0] in ConfigLoader._RUNTIME_ENV_EXCLUSIONS:
                 continue
 
             target = config

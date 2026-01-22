@@ -58,6 +58,17 @@ These control cognitive engine parameters and use the `MLSDM_*` prefix:
 
 **Design Note:** The `MLSDM_*` prefix is reserved for SystemConfig overrides (cognitive engine parameters loaded from YAML files). RuntimeConfig parameters (server, security, observability) use their own variable names to maintain clear separation of concerns.
 
+#### Runtime Control Variables
+
+Some `MLSDM_*` prefixed environment variables are runtime control flags, not configuration schema fields. These are excluded from config merging and must be accessed directly via `os.getenv()`.
+
+| Variable | Purpose | Valid Values |
+|:---------|:--------|:-------------|
+| `MLSDM_CI_HEALTH_SANITIZE` | Bypass `psutil` in CI health checks | `1`, `true`, `yes` |
+| `MLSDM_ENV` | Runtime environment indicator | `test`, `production` |
+
+**Note:** These variables do NOT override YAML config fields. They control runtime behavior only when explicitly checked in application code.
+
 ### Runtime Modes
 
 Runtime modes provide pre-configured defaults for different deployment scenarios:
