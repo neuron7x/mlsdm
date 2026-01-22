@@ -10,10 +10,7 @@ coverage_start_epoch=$(date +%s)
 printf "Starting coverage run with soft limit %ss\n" "$soft_limit_seconds"
 
 if ! timeout --signal=TERM --kill-after=30s "${soft_limit_seconds}s" \
-  pytest --cov=src/mlsdm \
-    --cov-report=term \
-    --cov-report=json:coverage.json \
-    --cov-report=xml:coverage.xml \
+  coverage run --source=src/mlsdm -m pytest \
     --ignore=tests/load \
     -m "not slow and not benchmark" 2>&1 | tee artifacts/evidence/coverage.log; then
   coverage_exit=$?
@@ -24,6 +21,21 @@ fi
 
 coverage_end_epoch=$(date +%s)
 coverage_duration_seconds=$((coverage_end_epoch - coverage_start_epoch))
+
+# Generate coverage reports from .coverage database
+if [ -f .coverage ]; then
+  printf "\nGenerating coverage reports...\n"
+  coverage report --show-missing || true
+  coverage json -o coverage.json || {
+    echo "WARNING: Failed to generate coverage.json" >&2
+  }
+  coverage xml -o coverage.xml || {
+    echo "WARNING: Failed to generate coverage.xml" >&2
+  }
+else
+  echo "ERROR: .coverage file not found after test execution" >&2
+  coverage_exit=1
+fi
 
 if [ -n "${GITHUB_ENV:-}" ]; then
   echo "COVERAGE_DURATION_SECONDS=${coverage_duration_seconds}" >> "$GITHUB_ENV"
