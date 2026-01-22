@@ -15,6 +15,8 @@ from __future__ import annotations
 
 import pytest
 
+pytestmark = pytest.mark.smoke
+
 
 class TestMoralFilterEvalSmoke:
     """Smoke tests for moral filter evaluation runner."""

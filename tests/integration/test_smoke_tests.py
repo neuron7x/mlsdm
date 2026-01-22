@@ -14,6 +14,8 @@ sys.path.insert(0, str(scripts_dir))
 # Import after adding to path
 import smoke_test
 
+pytestmark = pytest.mark.smoke
+
 
 class TestSmokeTests:
     """Test smoke test functions."""

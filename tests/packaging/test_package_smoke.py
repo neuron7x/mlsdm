@@ -12,6 +12,8 @@ from pathlib import Path
 
 import pytest
 
+pytestmark = pytest.mark.smoke
+
 
 class TestPackageSmoke:
     """Smoke tests for package installation verification."""

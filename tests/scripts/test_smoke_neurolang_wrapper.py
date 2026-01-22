@@ -11,6 +11,7 @@ import pytest
 
 # Skip all tests in this module if torch is not available
 pytest.importorskip("torch")
+pytestmark = pytest.mark.smoke
 
 # Add scripts to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "scripts"))

@@ -6,10 +6,8 @@ import mimetypes
 import subprocess
 import sys
 from pathlib import Path
-from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
-    import pytest
+import pytest
 
 import scripts.evidence.capture_evidence as capture_evidence
 
@@ -45,6 +43,7 @@ def test_capture_evidence_default_mode_build(monkeypatch: pytest.MonkeyPatch) ->
     assert args.mode == "build"
 
 
+@pytest.mark.smoke
 def test_verify_snapshot_smoke(tmp_path: Path) -> None:
     evidence_dir = tmp_path / "artifacts" / "evidence" / "2026-01-01" / "deadbeef"
     coverage_dir = evidence_dir / "coverage"

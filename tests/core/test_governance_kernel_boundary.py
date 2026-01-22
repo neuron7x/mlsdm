@@ -1,4 +1,5 @@
 import numpy as np
+import pytest
 
 from mlsdm.core.cognitive_controller import CognitiveController
 from mlsdm.core.llm_wrapper import LLMWrapper
@@ -34,6 +35,7 @@ def test_wrapper_rhythm_ro_blocks_step() -> None:
     assert not hasattr(wrapper.rhythm, "step")
 
 
+@pytest.mark.smoke
 def test_wrapper_generate_smoke() -> None:
     wrapper = LLMWrapper(llm_generate_fn=_dummy_llm, embedding_fn=_dummy_embedder, dim=8)
     result = wrapper.generate(prompt="hello world", moral_value=0.8)
@@ -41,6 +43,7 @@ def test_wrapper_generate_smoke() -> None:
     assert result["response"]
 
 
+@pytest.mark.smoke
 def test_cognitive_controller_process_event_smoke() -> None:
     controller = CognitiveController(dim=8)
     vector = np.ones(8, dtype=np.float32)

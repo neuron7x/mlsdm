@@ -53,10 +53,9 @@ jobs:
       - name: Run smoke tests (fast unit tests only)
         run: |
           mkdir -p artifacts
-          # Run all unit tests except slow ones for fast feedback
-          # The 'slow' marker is already defined and used in the codebase
-          # This gives us fast feedback on basic functionality
-          pytest tests/unit/ -v -m "not slow" --tb=short -q --maxfail=5 --junitxml=artifacts/junit-smoke.xml
+          # Run only explicitly marked smoke tests for fast feedback
+          # The 'smoke' marker is defined in pytest.ini and applied to curated smoke tests
+          pytest tests/ -v -m "smoke and not slow" --tb=short -q --maxfail=5 --junitxml=artifacts/junit-smoke.xml
         timeout-minutes: 3
 
       - name: Upload smoke junit report
