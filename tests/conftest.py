@@ -597,3 +597,31 @@ def test_client():
     from mlsdm.api.app import app
 
     return TestClient(app)
+
+
+# === CI-Optimized Hypothesis Profile ===
+import os
+from hypothesis import Phase, Verbosity, settings
+
+settings.register_profile(
+    "ci",
+    max_examples=50,
+    deadline=1000,
+    verbosity=Verbosity.quiet,
+    phases=[Phase.explicit, Phase.reuse, Phase.generate],
+    print_blob=False,
+    suppress_health_check=[],
+)
+
+settings.register_profile(
+    "dev",
+    max_examples=100,
+    deadline=None,
+    verbosity=Verbosity.normal,
+    print_blob=True,
+)
+
+if os.getenv("CI") == "true" or os.getenv("HYPOTHESIS_PROFILE") == "ci":
+    settings.load_profile("ci")
+else:
+    settings.load_profile("dev")

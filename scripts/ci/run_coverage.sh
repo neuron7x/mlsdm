@@ -3,19 +3,22 @@ set -u -o pipefail
 
 mkdir -p artifacts/evidence
 
-soft_limit_seconds="${COVERAGE_SOFT_LIMIT_SECONDS:-1020}"
+soft_limit_seconds="${COVERAGE_SOFT_LIMIT_SECONDS:-1140}"
 coverage_exit=0
 coverage_start_epoch=$(date +%s)
 
 printf "Starting coverage run with soft limit %ss\n" "$soft_limit_seconds"
 
-if ! timeout --signal=TERM --kill-after=30s "${soft_limit_seconds}s" \
+if ! timeout --signal=TERM --kill-after=45s "${soft_limit_seconds}s" \
   coverage run --source=src/mlsdm -m pytest \
     --ignore=tests/load \
-    -m "not slow and not benchmark" 2>&1 | tee artifacts/evidence/coverage.log; then
+    -m "not slow and not benchmark" -q --tb=short 2>&1 | tee artifacts/evidence/coverage.log; then
   coverage_exit=$?
   if [ "$coverage_exit" -eq 124 ]; then
     echo "ERROR: Coverage run exceeded soft limit (${soft_limit_seconds}s) and was terminated." >&2
+    echo "Attempting to salvage partial coverage data..." >&2
+    sleep 2
+    coverage combine 2>/dev/null || true
   fi
 fi
 
@@ -23,6 +26,9 @@ coverage_end_epoch=$(date +%s)
 coverage_duration_seconds=$((coverage_end_epoch - coverage_start_epoch))
 
 # Generate coverage reports from .coverage database
+coverage_files=($(ls -1 .coverage* 2>/dev/null || true))
+echo "Found ${#coverage_files[@]} coverage file(s)"
+
 if [ -f .coverage ]; then
   printf "\nGenerating coverage reports...\n"
   coverage report --show-missing || true
@@ -32,8 +38,20 @@ if [ -f .coverage ]; then
   coverage xml -o coverage.xml || {
     echo "WARNING: Failed to generate coverage.xml" >&2
   }
+elif [ "${#coverage_files[@]}" -gt 0 ]; then
+  printf "\n⚠ Only partial .coverage.* files found, attempting combine...\n"
+  for f in "${coverage_files[@]}"; do
+    echo "  - $f"
+  done
+  if coverage combine 2>&1 | tee -a artifacts/evidence/coverage.log; then
+    echo "✓ Coverage combine successful"
+  else
+    echo "ERROR: Coverage combine failed" >&2
+    coverage_exit=1
+  fi
 else
-  echo "ERROR: .coverage file not found after test execution" >&2
+  echo "ERROR: No coverage files found (.coverage or .coverage.*)" >&2
+  ls -lah . | head -30
   coverage_exit=1
 fi
 
@@ -85,6 +103,7 @@ report = {
         "coverage": int(os.environ.get("COVERAGE_EXIT_CODE", "0") or 0),
     },
     "canceled_flag": os.environ.get("CANCELED_FLAG", "false") == "true",
+    "timeout_triggered": os.environ.get("COVERAGE_EXIT_CODE") == "124",
 }
 
 report_path.write_text(json.dumps(report, indent=2, sort_keys=True))

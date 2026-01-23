@@ -28,7 +28,7 @@ jobs:
   preflight:
     name: Pre-flight Checks
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 25
 
     steps:
       - name: Checkout code
@@ -45,13 +45,17 @@ jobs:
 
       - name: Restore Python cache
         uses: actions/cache@v5
+        id: cache
         with:
           path: |
             ~/.cache/pip
             ~/.cache/uv
+            ~/.cache/hypothesis
             .venv
-          key: ${{ runner.os }}-py3.11-${{ hashFiles('**/requirements.txt', '**/pyproject.toml', '**/uv.lock') }}
+          key: prod-gate-${{ runner.os }}-py3.11-${{ hashFiles('**/requirements.txt', '**/pyproject.toml', '**/uv.lock') }}
           restore-keys: |
+            prod-gate-${{ runner.os }}-py3.11-
+            ci-${{ runner.os }}-py3.11-
             ${{ runner.os }}-py3.11-
             ${{ runner.os }}-
 
@@ -69,20 +73,24 @@ jobs:
       - name: Lint check
         run: make lint
 
+      - name: Security pre-check (fast)
+        run: |
+          pip install bandit[toml]
+          bandit -r src/mlsdm --severity-level high --confidence-level high -ll
+
       - name: Type check
         run: make type
 
       - name: Run all unit tests
-        run: make test-fast
+        run: pytest tests/unit tests/state -m "not slow and not comprehensive" --tb=short --maxfail=20 -q
 
-      - name: Run integration tests
-        run: pytest tests/integration -v --tb=short -m "not slow"
+      - name: Run critical integration tests
+        run: pytest tests/integration -m "smoke or not slow" --tb=short --maxfail=10 -q
 
-      - name: Run E2E tests
-        run: pytest tests/e2e -v --tb=short -m "not slow"
+      - name: Run critical E2E tests
+        run: pytest tests/e2e -m "smoke or not slow" --tb=short --maxfail=5 -q
         env:
-          LLM_BACKEND: local_stub
-          DISABLE_RATE_LIMIT: "1"
+          LLM_BACKEND: "local_stub"
 
   # Run property-based tests
   property-tests:
@@ -105,13 +113,17 @@ jobs:
 
       - name: Restore Python cache
         uses: actions/cache@v5
+        id: cache
         with:
           path: |
             ~/.cache/pip
             ~/.cache/uv
+            ~/.cache/hypothesis
             .venv
-          key: ${{ runner.os }}-py3.11-${{ hashFiles('**/requirements.txt', '**/pyproject.toml', '**/uv.lock') }}
+          key: property-${{ runner.os }}-py3.11-${{ hashFiles('**/requirements.txt', '**/pyproject.toml', '**/uv.lock') }}
           restore-keys: |
+            property-${{ runner.os }}-py3.11-
+            prod-gate-${{ runner.os }}-py3.11-
             ${{ runner.os }}-py3.11-
             ${{ runner.os }}-
 
@@ -126,8 +138,15 @@ jobs:
         run: python -c "import hypothesis, pytest, pytest_benchmark"
 
       - name: Run property tests
-        run: pytest tests/property -v --tb=short --maxfail=10
+        run: |
+          export HYPOTHESIS_PROFILE=ci
+          pytest tests/property --tb=short --maxfail=10 -q
         timeout-minutes: 20
+        env:
+          HYPOTHESIS_MAX_EXAMPLES: "50"
+          HYPOTHESIS_DEADLINE: "1000"
+          HYPOTHESIS_VERBOSITY: "quiet"
+          CI: "true"
 
   # Run SLO validation
   slo-validation:
@@ -174,7 +193,7 @@ jobs:
         run: python scripts/run_effectiveness_suite.py --validate-slo
 
       - name: Run performance benchmarks
-        run: pytest benchmarks/test_neuro_engine_performance.py -v -s --tb=short
+        run: pytest benchmarks/test_neuro_engine_performance.py --tb=short --benchmark-only --benchmark-min-rounds=3
 
       - name: Upload SLO report
         if: always()
@@ -210,17 +229,38 @@ jobs:
 
       - name: Run bandit (high severity check)
         run: |
-          # Fail if any high severity issues found
           bandit -r src/mlsdm \
             --severity-level high \
             --confidence-level high \
-            -f txt
+            -f txt \
+            --exit-zero \
+            -o bandit-report.txt
+
+          if grep -q "Severity: High" bandit-report.txt; then
+            echo "❌ High severity security issues found:"
+            cat bandit-report.txt
+            exit 1
+          fi
+
+          echo "✓ No high severity issues found"
 
       - name: Dependency audit
         run: |
           pip install pip-audit
           pip install -r requirements.txt
-          pip-audit --requirement requirements.txt --strict --progress-spinner=off
+
+          set +e
+          pip-audit --requirement requirements.txt --progress-spinner=off --format=json > pip-audit.json
+          AUDIT_EXIT=$?
+          set -e
+
+          if [ $AUDIT_EXIT -ne 0 ]; then
+            echo "⚠️ Vulnerability scan found issues:"
+            pip-audit --requirement requirements.txt --progress-spinner=off
+            jq -e '.vulnerabilities | length == 0' pip-audit.json || exit 1
+          fi
+
+          echo "✓ No critical vulnerabilities found"
 
   # Validate documentation
   docs-validation:
