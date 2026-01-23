@@ -84,6 +84,9 @@ jobs:
       - name: Run all unit tests
         run: pytest tests/unit tests/state -m "not slow and not comprehensive" --tb=short --maxfail=20 -q
 
+      - name: Flakiness check
+        run: python scripts/ci/detect_flaky_tests.py
+
       - name: Run critical integration tests
         run: pytest tests/integration -m "smoke or not slow" --tb=short --maxfail=10 -q
 

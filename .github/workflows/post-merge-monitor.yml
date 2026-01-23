@@ -1,0 +1,28 @@
+name: Post-merge Monitoring
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check CI health
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh run list --workflow=prod-gate.yml --limit=10 --json conclusion \
+            | jq -r '.[] | .conclusion' > ci_health.txt
+
+          failures=$(grep -c "failure" ci_health.txt || true)
+
+          if [ "$failures" -gt 3 ]; then
+            echo "⚠️ CI health degraded: $failures failures in last 10 runs"
+            gh issue create \
+              --title "CI Health Alert: Prod Gate Failure Rate High" \
+              --label "ci-cd,priority-high" \
+              --body "Automated alert: $failures failures detected"
+          fi

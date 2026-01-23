@@ -27,6 +27,7 @@ set -euo pipefail
 # Current threshold set to 75% to match pyproject.toml fail_under setting
 # See TEST_STRATEGY.md for coverage model and rationale
 COVERAGE_MIN="${COVERAGE_MIN:-75}"
+COVERAGE_MIN_THRESHOLD="${COVERAGE_MIN_THRESHOLD:-86.0}"
 
 # Additional pytest arguments (can be extended via environment variable)
 PYTEST_ARGS="${PYTEST_ARGS:-}"
@@ -83,6 +84,7 @@ echo ""
     --cov=src/mlsdm \
     --cov-report=term-missing \
     --cov-report=xml:coverage.xml \
+    --cov-report=json:coverage.json \
     --cov-fail-under=0 \
     -m "not slow" \
     -q \
@@ -118,6 +120,15 @@ echo ""
 echo "Coverage: ${COVERAGE_PERCENT}%"
 echo "Threshold: ${COVERAGE_MIN}%"
 echo ""
+
+if [ -f coverage.json ]; then
+    coverage_value=$("${PYTHON_BIN}" -c "import json; print(json.load(open('coverage.json'))['totals']['percent_covered'])")
+    if (( $(echo "$coverage_value < $COVERAGE_MIN_THRESHOLD" | bc -l) )); then
+        printf "${RED}❌ Coverage %s%% < threshold %s%%%s\n" "$coverage_value" "$COVERAGE_MIN_THRESHOLD" "$NC"
+        exit 1
+    fi
+    printf "${GREEN}✓ Coverage %s%% >= threshold %s%%%s\n" "$coverage_value" "$COVERAGE_MIN_THRESHOLD" "$NC"
+fi
 
 # Compare coverage to threshold (using awk for floating point comparison)
 PASS=$(echo "$COVERAGE_PERCENT $COVERAGE_MIN" | awk '{if ($1 >= $2) print "1"; else print "0"}')
