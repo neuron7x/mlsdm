@@ -135,8 +135,8 @@ mlsdm eval      # Run evaluation scenarios
 Authoritative, evidence-backed contracts:
 
 - [docs/CONTRACTS_CRITICAL_SUBSYSTEMS.md](docs/CONTRACTS_CRITICAL_SUBSYSTEMS.md) — Critical subsystem contracts
-- [docs/CLAIM_EVIDENCE_LEDGER.md](docs/CLAIM_EVIDENCE_LEDGER.md) — Claim-to-evidence mapping
-- [docs/CLAIMS_TRACEABILITY.md](docs/CLAIMS_TRACEABILITY.md) — Claims traceability matrix
+- [docs/CLAIM_EVIDENCE_LEDGER.md](docs/CLAIM_EVIDENCE_LEDGER.md) — Configuration/security claims with enforcement status
+- [docs/CLAIMS_TRACEABILITY.md](docs/CLAIMS_TRACEABILITY.md) — Performance/effectiveness metrics with test mapping
 
 **Verification commands:**
 

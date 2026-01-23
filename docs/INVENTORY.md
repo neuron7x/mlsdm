@@ -134,6 +134,13 @@ These paths contain safety-critical code with additional invariants.
 |------|-------------|--------|
 | `tests/load/` | Load/stress tests | Excluded via `--ignore=tests/load` |
 
+> **Note:** Load tests are excluded from standard test runs because they require:
+> - A running server instance
+> - Extended execution time
+> - Specific infrastructure setup
+> 
+> The exclusion is applied via command-line flags (`--ignore=tests/load`) in the Makefile test targets rather than pytest.ini configuration to allow explicit execution when needed (e.g., `pytest tests/load` for load testing sessions).
+
 ---
 
 ## Governance Matrix

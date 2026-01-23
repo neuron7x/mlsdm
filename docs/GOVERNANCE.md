@@ -152,8 +152,10 @@ All documents in `docs/` are subject to:
 
 ### Non-Governed Documents
 
+See [INVENTORY.md](INVENTORY.md) for the authoritative list of non-governed paths. Key categories include:
 - `docs/archive/` — Historical documents (read-only)
 - `examples/` — User examples (not normative)
+- `artifacts/` — Generated artifacts (ephemeral)
 
 ---
 

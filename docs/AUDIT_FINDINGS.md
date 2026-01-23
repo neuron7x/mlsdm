@@ -20,7 +20,20 @@ This document records structural findings identified during repository architect
 
 ---
 
-## Active Findings
+## Summary
+
+| Finding | Status | Resolution |
+|---------|--------|------------|
+| FND-0001 | ✅ Resolved | Added `validation` marker to pytest.ini |
+| FND-0002 | ✅ Resolved | Created `docs/INDEX.md` navigation hub |
+| FND-0003 | ✅ Resolved | Created `docs/GOVERNANCE.md` |
+| FND-0004 | ✅ Resolved | Created `docs/INVENTORY.md` |
+| FND-0005 | ⚠️ Open | Load tests import issue (non-blocking) |
+| FND-0006 | ✅ Resolved | Updated README as system launchpad |
+
+---
+
+## Resolved Findings
 
 ### FND-0001: Missing Validation Marker in pytest.ini
 
@@ -28,16 +41,11 @@ This document records structural findings identified during repository architect
 
 **Symptom:** `pytest -m validation` collects no tests, despite `tests/validation/` containing test files.
 
-**Root Cause:** The `validation` marker is not defined in `pytest.ini`, so validation tests cannot be filtered via markers.
+**Root Cause:** The `validation` marker was not defined in `pytest.ini`, so validation tests could not be filtered via markers.
 
-**Anchors:**
-- `pytest.ini:4-15` — marker definitions
+**Resolution:** Added `validation: marks validation tests that verify documented claims` to pytest.ini markers.
 
-**Fix:** Add `validation` marker to `pytest.ini` marker list.
-
-**Acceptance Criteria:**
-- `pytest -m validation --collect-only` collects tests from `tests/validation/`
-- `pytest -m "not validation"` excludes validation tests
+**Verification:** `pytest -m validation --collect-only` now collects 33 tests from `tests/validation/`.
 
 ---
 
@@ -45,9 +53,101 @@ This document records structural findings identified during repository architect
 
 **Status:** ✅ Resolved
 
-**Symptom:** `docs/index.md` serves as documentation index but is not the canonical navigation hub with explicit governance/architecture/SSOT links.
+**Symptom:** `docs/index.md` served as documentation index but was not the canonical navigation hub with explicit governance/architecture/SSOT links.
 
-**Root Cause:** The index document evolved organically without a structured navigation contract.
+**Resolution:** Created `docs/INDEX.md` as the canonical navigation hub with structured links to all documentation categories.
+
+**Verification:** `docs/INDEX.md` exists and provides comprehensive navigation to all documentation entry points.
+
+---
+
+### FND-0003: Missing Governance Entry Point
+
+**Status:** ✅ Resolved
+
+**Symptom:** Governance rules were scattered across multiple documents without a single entry point.
+
+**Resolution:** Created `docs/GOVERNANCE.md` consolidating SSOT rules, validators, claims policies, terminology, and enforcement mechanisms.
+
+**Verification:** `docs/GOVERNANCE.md` exists and links to all validation scripts and policy documents.
+
+---
+
+### FND-0004: Missing Governed Paths Inventory
+
+**Status:** ✅ Resolved
+
+**Symptom:** No authoritative list of which paths are governed vs. non-governed.
+
+**Resolution:** Created `docs/INVENTORY.md` with explicit governance matrix, test marker documentation, and path categorization.
+
+**Verification:** `docs/INVENTORY.md` exists with comprehensive path governance documentation.
+
+---
+
+### FND-0006: Root README Not a System Launchpad
+
+**Status:** ✅ Resolved
+
+**Symptom:** Root README provided good overview but lacked explicit links to governance, SSOT gates, and validation commands.
+
+**Resolution:** Updated README with:
+- Repository map table
+- SSOT validation commands section
+- Key entry points linking to INDEX.md, ARCHITECTURE_SPEC.md, GOVERNANCE.md, INVENTORY.md
+
+**Verification:** README now serves as effective system launchpad with all required navigation.
+
+---
+
+## Open Findings
+
+### FND-0005: Load Tests Import Error
+
+**Status:** ⚠️ Open (Non-blocking)
+
+**Symptom:** `tests/load/standalone_server_load_test.py` and `tests/load/test_async_utils.py` fail to import due to missing `async_utils` module.
+
+**Root Cause:** Local module import without proper path configuration. The `async_utils.py` file exists in `tests/load/` but is imported as a top-level module.
+
+**Anchors:**
+- `tests/load/standalone_server_load_test.py:44`
+- `tests/load/test_async_utils.py:10`
+
+**Impact:** Non-blocking. Load tests are excluded from standard test runs via `--ignore=tests/load`. This only affects direct execution of load tests.
+
+**Recommended Fix:** Use relative imports or add proper `__init__.py` configuration in `tests/load/`.
+
+---
+
+## Audit Process
+
+### Finding Format
+
+```markdown
+### FND-XXXX: [Title]
+
+**Status:** [Status Badge]
+
+**Symptom:** [Observable behavior or issue]
+
+**Root Cause:** [Why this occurs]
+
+**Resolution:** [How it was fixed]
+
+**Verification:** [How fix was verified]
+```
+
+### Review Cycle
+
+- Findings are created during architecture audits
+- Findings are resolved during unification work
+- Resolved findings are archived with resolution notes
+
+---
+
+**Document Owner:** Repository Architecture
+**Review Cycle:** Per audit iteration
 
 **Anchors:**
 - `docs/index.md` — existing index file
