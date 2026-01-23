@@ -2,14 +2,21 @@
 
 **Document Version:** 1.2.0
 **Project Version:** 1.2.0
-**Last Updated:** December 2025
+**Last Updated:** January 2025
 **Total Documents:** 25+
 
 Complete documentation guide for MLSDM Governed Cognitive Memory v1.2.0. Readiness claims are centralized in [status/READINESS.md](status/READINESS.md); statements elsewhere are historical unless backed by dated evidence.
 
+## Navigation Hub
+
+For structured navigation of all documentation, see **[INDEX.md](INDEX.md)** — the canonical navigation hub.
+
 ## Quick Links
 
 - 🚀 **New Users**: Start with [README.md](../README.md) and [USAGE_GUIDE.md](USAGE_GUIDE.md)
+- 📖 **Navigation Hub**: See [INDEX.md](INDEX.md) for all documentation entry points
+- 📋 **Governance**: See [GOVERNANCE.md](GOVERNANCE.md) for validation rules and enforcement
+- 📊 **Inventory**: See [INVENTORY.md](INVENTORY.md) for governed paths list
 - ✅ **Verified Contracts**: See [CONTRACTS_CRITICAL_SUBSYSTEMS.md](CONTRACTS_CRITICAL_SUBSYSTEMS.md) and [CLAIM_EVIDENCE_LEDGER.md](CLAIM_EVIDENCE_LEDGER.md)
 - **Readiness Status**: See [status/READINESS.md](status/READINESS.md)
 - **Core Developers**: See [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md)

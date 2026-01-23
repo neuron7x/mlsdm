@@ -1,7 +1,8 @@
 .PHONY: test test-fast coverage-gate verify-metrics verify-security-skip verify-docs lint type cov bench bench-drift help run-dev run-cloud-local run-agent health-check eval-moral_filter test-memory-obs \
         readiness-preview readiness-apply \
         build-package test-package docker-build-neuro-engine docker-run-neuro-engine docker-smoke-neuro-engine \
-        docker-compose-up docker-compose-down lock sync lock-deps evidence iteration-metrics
+        docker-compose-up docker-compose-down lock sync lock-deps evidence iteration-metrics \
+        ssot test-smoke test-validation ci-local
 
 export PYTHONPATH := $(PYTHONPATH):$(CURDIR)/src
 ITERATION_METRICS_PATH ?= artifacts/tmp/iteration-metrics.jsonl
@@ -10,9 +11,15 @@ EVIDENCE_INPUTS_PATH ?= artifacts/tmp/evidence-inputs.json
 help:
 	@echo "MLSDM Governed Cognitive Memory - Development Commands"
 	@echo ""
+	@echo "SSOT & Governance:"
+	@echo "  make ssot           - Run SSOT validation (bibliography + claims)"
+	@echo "  make ci-local       - Run full local CI (ssot + smoke tests)"
+	@echo ""
 	@echo "Testing & Linting:"
 	@echo "  make test          - Run all tests (uses pytest.ini config)"
 	@echo "  make test-fast     - Run fast unit tests (excludes slow/comprehensive)"
+	@echo "  make test-smoke    - Run smoke tests (fast feedback)"
+	@echo "  make test-validation - Run validation tests"
 	@echo "  make coverage-gate - Run coverage gate with threshold check"
 	@echo "  make verify-metrics - Validate latest evidence snapshot integrity"
 	@echo "  make verify-security-skip - Verify security skip path invariants and docs examples"
@@ -303,3 +310,30 @@ evidence: iteration-metrics
 	DISABLE_UV_RUN=1 python scripts/evidence/capture_evidence.py --mode build --inputs $(EVIDENCE_INPUTS_PATH)
 	@echo "Verifying captured evidence snapshot..."
 	$(MAKE) verify-metrics
+
+# ====================================================
+# SSOT & Governance Targets
+# ====================================================
+
+ssot:
+	@echo "Running SSOT validation..."
+	@echo ""
+	@echo "=== Bibliography Validation ==="
+	python scripts/validate_bibliography.py
+	@echo ""
+	@echo "=== Claims Validation ==="
+	python scripts/verify_docs_claims_against_code.py
+	@echo ""
+	@echo "✓ SSOT validation complete"
+
+test-smoke:
+	@echo "Running smoke tests (fast feedback)..."
+	pytest tests/unit -m "not slow" -q --tb=short --maxfail=5
+
+test-validation:
+	@echo "Running validation tests..."
+	pytest tests/validation -v --tb=short
+
+ci-local: ssot test-smoke
+	@echo ""
+	@echo "✓ Local CI complete (SSOT + smoke tests passed)"
