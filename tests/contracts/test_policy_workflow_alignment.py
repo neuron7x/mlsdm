@@ -331,3 +331,47 @@ class TestPolicyWorkflowAlignment:
                 f"Job '{job_name}': Third-party action '{action}' should be pinned to SHA "
                 "for supply-chain security"
             )
+
+    def test_coverage_timeout_adequate_safety_margin(self, repo_root: Path) -> None:
+        """
+        Verify coverage timeout has sufficient buffer vs historical evidence.
+        
+        Security invariant: timeout must prevent workflow-level timeout (20min)
+        while allowing 135% of historical maximum execution time.
+        
+        Historical evidence (2026-01-24):
+        - 1020s reached 92% completion
+        - Extrapolated full run: 1109s
+        - Required safety margin: 35% (accounts for runner variance + future growth)
+        """
+        workflow_path = repo_root / ".github/workflows/coverage-badge.yml"
+        assert workflow_path.exists(), "coverage-badge.yml workflow not found"
+        
+        content = workflow_path.read_text(encoding="utf-8")
+        
+        # Extract COVERAGE_SOFT_LIMIT_SECONDS
+        match = re.search(
+            r'COVERAGE_SOFT_LIMIT_SECONDS:\s*["\']?(\d+)["\']?',
+            content
+        )
+        assert match is not None, \
+            "COVERAGE_SOFT_LIMIT_SECONDS not found in workflow"
+        
+        timeout_seconds = int(match.group(1))
+        
+        # Historical evidence-based thresholds
+        HISTORICAL_MAX_EXECUTION = 1109  # seconds (extrapolated from 92% @ 1020s)
+        SAFETY_MARGIN = 1.35  # 35% buffer
+        MIN_SAFE_TIMEOUT = int(HISTORICAL_MAX_EXECUTION * SAFETY_MARGIN)  # 1497s
+        
+        # Workflow-level constraint (job timeout in coverage-badge.yml: 30min)
+        WORKFLOW_TIMEOUT = 1800  # 30 minutes in seconds
+        MAX_SAFE_TIMEOUT = WORKFLOW_TIMEOUT - 60  # Leave 60s for cleanup
+        
+        assert timeout_seconds >= MIN_SAFE_TIMEOUT, \
+            f"Coverage timeout {timeout_seconds}s below safe minimum {MIN_SAFE_TIMEOUT}s " \
+            f"(historical max: {HISTORICAL_MAX_EXECUTION}s × {SAFETY_MARGIN} margin)"
+        
+        assert timeout_seconds <= MAX_SAFE_TIMEOUT, \
+            f"Coverage timeout {timeout_seconds}s exceeds workflow limit " \
+            f"(max: {MAX_SAFE_TIMEOUT}s for 20min workflow)"

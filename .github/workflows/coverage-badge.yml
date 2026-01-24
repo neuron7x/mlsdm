@@ -15,7 +15,7 @@ concurrency:
 jobs:
   coverage:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30  # Increased from 20min to accommodate 1500s coverage timeout + overhead
     if: github.repository_owner == 'neuron7x' && github.ref == 'refs/heads/main'
     permissions:
       contents: read
