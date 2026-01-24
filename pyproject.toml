@@ -80,6 +80,7 @@ dev = [
     "tomli>=2.0.0; python_version < '3.11'",  # TOML backport for Py3.10 compatibility
     "sentence-transformers>=3.0.0",  # Include embeddings in dev for full testing
     "pip-tools>=7.4.0",  # For dependency locking with pip-compile
+    "pytest-xdist>=3.6.1",  # Include in dev bundle
 ]
 docs = [
     "sphinx>=7.0.0",
@@ -92,6 +93,7 @@ test = [
     "pytest-benchmark>=4.0.0",
     "hypothesis>=6.122.0",
     "httpx>=0.28.0",
+    "pytest-xdist>=3.6.1",  # Parallel test execution (30-50% speedup)
 ]
 visualization = [
     "matplotlib>=3.8.4",

@@ -7,13 +7,20 @@ soft_limit_seconds="${COVERAGE_SOFT_LIMIT_SECONDS:-1020}"
 coverage_exit=0
 coverage_start_epoch=$(date +%s)
 
-printf "Starting coverage run with soft limit %ss\n" "$soft_limit_seconds"
+# Determine optimal worker count for GitHub Actions (usually 2-core runners)
+PYTEST_WORKERS="${PYTEST_WORKERS:-auto}"
+
+printf "Starting coverage run with soft limit %ss (parallelization: %s workers)\n" "$soft_limit_seconds" "$PYTEST_WORKERS"
 
 # Robust timeout handling with coverage data preservation
 if ! timeout --signal=TERM --kill-after=30s "${soft_limit_seconds}s" \
-  coverage run --source=src/mlsdm -m pytest \
+  coverage run --source=src/mlsdm --concurrency=multiprocessing -m pytest \
     --ignore=tests/load \
-    -m "not slow and not benchmark" 2>&1 | tee artifacts/evidence/coverage.log; then
+    -m "not slow and not benchmark" \
+    -n "${PYTEST_WORKERS}" \
+    --dist loadgroup \
+    --maxfail=3 \
+    2>&1 | tee artifacts/evidence/coverage.log; then
   coverage_exit=$?
   
   if [ "$coverage_exit" -eq 124 ]; then
@@ -43,6 +50,15 @@ fi
 
 coverage_end_epoch=$(date +%s)
 coverage_duration_seconds=$((coverage_end_epoch - coverage_start_epoch))
+
+# Combine coverage data from parallel workers (multiprocessing mode)
+# This is needed both for successful runs and recovery scenarios
+if [ "$coverage_exit" -eq 0 ] && compgen -G ".coverage.*" > /dev/null 2>&1; then
+  printf "\nCombining coverage data from parallel workers...\n"
+  if ! coverage combine 2>&1 | tee -a artifacts/evidence/coverage.log; then
+    echo "WARNING: Failed to combine coverage data from parallel workers" >&2
+  fi
+fi
 
 # Generate coverage reports from .coverage database
 if [ -f .coverage ]; then
