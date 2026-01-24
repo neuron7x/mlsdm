@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import os
 import re
+import threading
 from collections import deque
 from typing import TYPE_CHECKING, Any, ClassVar, Final
 
@@ -176,10 +177,19 @@ class MoralFilterV2:
         - ``CognitiveController``: Integrates moral filter into cognitive pipeline
         - ``compute_moral_value()``: Heuristic text scoring for moral evaluation
 
+    Thread Safety:
+        The filter uses internal locking to ensure thread-safe operation. All mutation
+        methods (``adapt()``) and read methods (``get_state()``, ``get_drift_stats()``,
+        ``get_current_threshold()``, ``get_ema_value()``) are protected by the same
+        lock, allowing safe concurrent access from multiple threads. The ``evaluate()``
+        method is read-only and does not require explicit locking.
+
     .. versionadded:: 1.0.0
        Initial implementation with basic EMA adaptation.
     .. versionchanged:: 1.2.0
        Added drift detection, telemetry, and configurable dead-band.
+    .. versionchanged:: 1.3.0
+       Added thread-safety with internal locking for all mutation and read operations.
     """
 
     # Default class-level constants (overridden by calibration if available)
@@ -217,6 +227,9 @@ class MoralFilterV2:
             self.MIN_THRESHOLD, min(float(initial_threshold), self.MAX_THRESHOLD)
         )
         self.ema_accept_rate = 0.5
+
+        # Thread-safety lock for adapt() operations
+        self._lock = threading.Lock()
 
         # NEW: Drift detection
         self._filter_id = filter_id
@@ -353,9 +366,8 @@ class MoralFilterV2:
             - Drift < 0.03 → silent (configurable via MLSDM_DRIFT_MIN_LOGGING)
 
         Thread Safety:
-            This method modifies internal state and is NOT thread-safe on its own.
-            If calling from multiple threads, use external synchronization.
-            In CognitiveController, protected by controller's lock.
+            This method is now thread-safe with internal locking. Multiple threads can
+            safely call adapt() concurrently.
 
         Example:
             >>> filter = MoralFilterV2(initial_threshold=0.50)
@@ -396,38 +408,42 @@ class MoralFilterV2:
         .. versionadded:: 1.0.0
         .. versionchanged:: 1.2.0
            Added drift detection and telemetry.
+        .. versionchanged:: 1.3.0
+           Added thread-safety with internal locking.
         """
-        # Store old value for drift calculation
-        old_threshold = self.threshold
+        with self._lock:
+            # Store old value for drift calculation
+            old_threshold = self.threshold
 
-        # Existing adaptation logic
-        signal = 1.0 if accepted else 0.0
-        self.ema_accept_rate = (
-            self.EMA_ALPHA * signal + self._ONE_MINUS_ALPHA * self.ema_accept_rate
-        )
-        error = self.ema_accept_rate - 0.5
+            # Existing adaptation logic
+            signal = 1.0 if accepted else 0.0
+            self.ema_accept_rate = (
+                self.EMA_ALPHA * signal + self._ONE_MINUS_ALPHA * self.ema_accept_rate
+            )
+            error = self.ema_accept_rate - 0.5
 
-        if error > self.DEAD_BAND:
-            # Positive error - increase threshold
-            new_threshold = self.threshold + self._ADAPT_DELTA
-            self.threshold = min(new_threshold, self.MAX_THRESHOLD)
-        elif error < -self.DEAD_BAND:
-            # Negative error - decrease threshold
-            new_threshold = self.threshold - self._ADAPT_DELTA
-            self.threshold = max(new_threshold, self.MIN_THRESHOLD)
+            if error > self.DEAD_BAND:
+                # Positive error - increase threshold
+                new_threshold = self.threshold + self._ADAPT_DELTA
+                self.threshold = min(new_threshold, self.MAX_THRESHOLD)
+            elif error < -self.DEAD_BAND:
+                # Negative error - decrease threshold
+                new_threshold = self.threshold - self._ADAPT_DELTA
+                self.threshold = max(new_threshold, self.MIN_THRESHOLD)
 
-        # NEW: Record drift if threshold changed
-        if self.threshold != old_threshold:
-            self._record_drift(old_threshold, self.threshold)
+            # NEW: Record drift if threshold changed
+            if self.threshold != old_threshold:
+                self._record_drift(old_threshold, self.threshold)
 
     def get_state(self) -> dict[str, float]:
-        return {
-            "threshold": float(self.threshold),
-            "ema": float(self.ema_accept_rate),
-            "min_threshold": float(self.MIN_THRESHOLD),
-            "max_threshold": float(self.MAX_THRESHOLD),
-            "dead_band": float(self.DEAD_BAND),
-        }
+        with self._lock:
+            return {
+                "threshold": float(self.threshold),
+                "ema": float(self.ema_accept_rate),
+                "min_threshold": float(self.MIN_THRESHOLD),
+                "max_threshold": float(self.MAX_THRESHOLD),
+                "dead_band": float(self.DEAD_BAND),
+            }
 
     def _log_boundary_cases(self, moral_value: float) -> None:
         """Log boundary cases for moral evaluation at DEBUG level."""
@@ -519,21 +535,22 @@ class MoralFilterV2:
             - current_threshold: Current threshold value
             - ema_acceptance: Current EMA acceptance rate
         """
-        if len(self._drift_history) < 2:
-            return {
-                "total_changes": 0,
-                "drift_range": 0.0,
-                "current_threshold": self.threshold,
-            }
+        with self._lock:
+            if len(self._drift_history) < 2:
+                return {
+                    "total_changes": 0,
+                    "drift_range": 0.0,
+                    "current_threshold": self.threshold,
+                }
 
-        return {
-            "total_changes": len(self._drift_history),
-            "drift_range": max(self._drift_history) - min(self._drift_history),
-            "min_threshold": min(self._drift_history),
-            "max_threshold": max(self._drift_history),
-            "current_threshold": self.threshold,
-            "ema_acceptance": self.ema_accept_rate,
-        }
+            return {
+                "total_changes": len(self._drift_history),
+                "drift_range": max(self._drift_history) - min(self._drift_history),
+                "min_threshold": min(self._drift_history),
+                "max_threshold": max(self._drift_history),
+                "current_threshold": self.threshold,
+                "ema_acceptance": self.ema_accept_rate,
+            }
 
     def get_current_threshold(self) -> float:
         """Get the current moral threshold value.
@@ -543,7 +560,8 @@ class MoralFilterV2:
         Returns:
             Current threshold value (0.0-1.0).
         """
-        return float(self.threshold)
+        with self._lock:
+            return float(self.threshold)
 
     def get_ema_value(self) -> float:
         """Get the current EMA (exponential moving average) of acceptance rate.
@@ -553,7 +571,8 @@ class MoralFilterV2:
         Returns:
             Current EMA value (0.0-1.0).
         """
-        return float(self.ema_accept_rate)
+        with self._lock:
+            return float(self.ema_accept_rate)
 
     def compute_moral_value(
         self,
