@@ -177,10 +177,19 @@ class MoralFilterV2:
         - ``CognitiveController``: Integrates moral filter into cognitive pipeline
         - ``compute_moral_value()``: Heuristic text scoring for moral evaluation
 
+    Thread Safety:
+        The filter uses internal locking to ensure thread-safe operation. All mutation
+        methods (``adapt()``) and read methods (``get_state()``, ``get_drift_stats()``,
+        ``get_current_threshold()``, ``get_ema_value()``) are protected by the same
+        lock, allowing safe concurrent access from multiple threads. The ``evaluate()``
+        method is read-only and does not require explicit locking.
+
     .. versionadded:: 1.0.0
        Initial implementation with basic EMA adaptation.
     .. versionchanged:: 1.2.0
        Added drift detection, telemetry, and configurable dead-band.
+    .. versionchanged:: 1.3.0
+       Added thread-safety with internal locking for all mutation and read operations.
     """
 
     # Default class-level constants (overridden by calibration if available)
