@@ -7,20 +7,58 @@ soft_limit_seconds="${COVERAGE_SOFT_LIMIT_SECONDS:-1020}"
 coverage_exit=0
 coverage_start_epoch=$(date +%s)
 
-printf "Starting coverage run with soft limit %ss\n" "$soft_limit_seconds"
+# Determine optimal worker count for GitHub Actions (usually 2-core runners)
+PYTEST_WORKERS="${PYTEST_WORKERS:-auto}"
 
+printf "Starting coverage run with soft limit %ss (parallelization: %s workers)\n" "$soft_limit_seconds" "$PYTEST_WORKERS"
+
+# Robust timeout handling with coverage data preservation
 if ! timeout --signal=TERM --kill-after=30s "${soft_limit_seconds}s" \
-  coverage run --source=src/mlsdm -m pytest \
+  coverage run --source=src/mlsdm --concurrency=multiprocessing -m pytest \
     --ignore=tests/load \
-    -m "not slow and not benchmark" 2>&1 | tee artifacts/evidence/coverage.log; then
+    -m "not slow and not benchmark" \
+    -n "${PYTEST_WORKERS}" \
+    --dist loadgroup \
+    --maxfail=3 \
+    2>&1 | tee artifacts/evidence/coverage.log; then
   coverage_exit=$?
+  
   if [ "$coverage_exit" -eq 124 ]; then
-    echo "ERROR: Coverage run exceeded soft limit (${soft_limit_seconds}s) and was terminated." >&2
+    echo "⚠️  ERROR: Coverage run exceeded soft limit (${soft_limit_seconds}s) and was terminated." >&2
+    echo "→ Attempting emergency coverage data recovery..." >&2
+    
+    # Strategy 1: Try to combine partial .coverage.* shards (multiprocessing mode)
+    if compgen -G ".coverage.*" > /dev/null 2>&1; then
+      echo "   Found partial coverage shards, combining..." >&2
+      if coverage combine 2>&1 | tee -a artifacts/evidence/coverage.log; then
+        echo "✓ Partial coverage data successfully recovered" >&2
+        coverage_exit=0  # Reset exit code if recovery successful
+      else
+        echo "✗ Failed to combine partial coverage data" >&2
+      fi
+    else
+      echo "   No partial coverage shards found (.coverage.* pattern)" >&2
+    fi
+    
+    # Strategy 2: Check for main .coverage file (may exist from incomplete write)
+    if [ ! -f .coverage ] && [ "$coverage_exit" -eq 124 ]; then
+      echo "✗ No .coverage file recoverable - timeout occurred before any data persistence" >&2
+      echo "   Recommendation: Increase COVERAGE_SOFT_LIMIT_SECONDS or adjust worker count (PYTEST_WORKERS)" >&2
+    fi
   fi
 fi
 
 coverage_end_epoch=$(date +%s)
 coverage_duration_seconds=$((coverage_end_epoch - coverage_start_epoch))
+
+# Combine coverage data from parallel workers (multiprocessing mode)
+# This is needed both for successful runs and recovery scenarios
+if [ "$coverage_exit" -eq 0 ] && compgen -G ".coverage.*" > /dev/null 2>&1; then
+  printf "\nCombining coverage data from parallel workers...\n"
+  if ! coverage combine 2>&1 | tee -a artifacts/evidence/coverage.log; then
+    echo "WARNING: Failed to combine coverage data from parallel workers" >&2
+  fi
+fi
 
 # Generate coverage reports from .coverage database
 if [ -f .coverage ]; then

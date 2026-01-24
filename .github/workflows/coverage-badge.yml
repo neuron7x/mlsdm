@@ -15,7 +15,7 @@ concurrency:
 jobs:
   coverage:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30  # Increased from 20min to accommodate 1500s coverage timeout + overhead
     if: github.repository_owner == 'neuron7x' && github.ref == 'refs/heads/main'
     permissions:
       contents: read
@@ -25,7 +25,7 @@ jobs:
       PYTHONIOENCODING: "utf-8"
       DISABLE_RATE_LIMIT: "1"
       LLM_BACKEND: "local_stub"
-      COVERAGE_SOFT_LIMIT_SECONDS: "1020"
+      COVERAGE_SOFT_LIMIT_SECONDS: "1500"  # Increased from 1020s to provide 35% safety buffer (historical: 1109s needed)
 
     steps:
       - name: Checkout
@@ -76,6 +76,64 @@ jobs:
 
       - name: Run coverage
         run: scripts/ci/run_coverage.sh
+
+      - name: Analyze test performance
+        if: always()
+        run: |
+          python <<'EOF'
+          import re
+          import json
+          from pathlib import Path
+          from datetime import datetime
+          
+          log_path = Path("artifacts/evidence/coverage.log")
+          if not log_path.exists():
+              print("⚠️  Coverage log not found, skipping analysis")
+              exit(0)
+          
+          log_content = log_path.read_text()
+          
+          # Extract test durations (pytest format: "test_name.py::test_func PASSED [XXs]")
+          test_pattern = r'(test_\S+\.py::\S+)\s+\w+\s+\[[^]]+\]'
+          matches = re.findall(test_pattern, log_content)
+          
+          print(f"📊 Test Execution Summary")
+          print(f"   Total tests matched: {len(matches)}")
+          
+          # Write summary for artifacts
+          summary = {
+              "total_tests": len(matches),
+              "log_file": str(log_path),
+              "timestamp": datetime.utcnow().isoformat(),
+          }
+          
+          Path("artifacts/evidence/test_performance.json").write_text(
+              json.dumps(summary, indent=2)
+          )
+          EOF
+
+      - name: Record workflow metrics
+        if: always()
+        run: |
+          echo "WORKFLOW_DURATION_SECONDS=$SECONDS" >> "$GITHUB_ENV"
+          
+          python <<'EOF'
+          import json
+          import os
+          from pathlib import Path
+          from datetime import datetime
+          
+          metrics = {
+              "workflow_duration_seconds": int(os.environ.get("WORKFLOW_DURATION_SECONDS", 0)),
+              "coverage_duration_seconds": int(os.environ.get("COVERAGE_DURATION_SECONDS", 0)),
+              "timestamp": datetime.utcnow().isoformat(),
+              "run_id": os.environ.get("GITHUB_RUN_ID", "unknown"),
+          }
+          
+          Path("artifacts/evidence/workflow_metrics.json").write_text(
+              json.dumps(metrics, indent=2)
+          )
+          EOF
 
       - name: Generate badge
         if: success()
