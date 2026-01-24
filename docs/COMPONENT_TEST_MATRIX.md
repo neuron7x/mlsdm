@@ -880,13 +880,11 @@ pytest tests/validation/ -v
 - `tests/extensions/test_aphasia_speech_governor.py`: Aphasia component tests (27+ edge cases)
 - `tests/extensions/test_neurolang_aphasia_pipeline_integration.py`: Pipeline integration
 - `tests/integration/test_neurolang_wrapper.py`: NeuroLang wrapper integration
-- `scripts/smoke_neurolang_wrapper.py`: Quick validation script
 
 **Test Commands:**
 ```bash
 pytest tests/extensions/ -v
 pytest tests/integration/test_neurolang_wrapper.py -v
-python scripts/smoke_neurolang_wrapper.py
 ```
 
 ---

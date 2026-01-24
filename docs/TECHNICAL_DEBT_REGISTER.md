@@ -222,10 +222,11 @@ Python matrix: 3.10, 3.11, 3.12 ✓
 | **Ідентифікатор** | TD-006 |
 | **Категорія** | CI/CD |
 | **Критичність** | ~~Середній~~ Вирішено |
-| **Локація** | `.github/workflows/release.yml`, `scripts/smoke_test.py`, `docs/RUNBOOK.md` |
-| **Рішення** | Створено comprehensive smoke test script для post-deployment validation, оновлено RUNBOOK з детальними rollback процедурами, додано тести (15 tests) |
-| **Доказ закриття** | Release workflow має автоматичний rollback mechanism, smoke tests виконуються post-deploy, повна документація rollback процедур |
+| **Локація** | `.github/workflows/release.yml`, `Makefile` (docker-smoke-neuro-engine), `docs/RUNBOOK.md` |
+| **Рішення** | Створено comprehensive smoke test capabilities для post-deployment validation, оновлено RUNBOOK з детальними rollback процедурами, додано тести (15 tests) |
+| **Доказ закриття** | Release workflow має автоматичний rollback mechanism, smoke tests виконуються post-deploy через Makefile, повна документація rollback процедур |
 | **Закрито** | Січень 2026 |
+| **Примітка** | Початкові standalone smoke scripts (smoke_test.py) були консолідовані та інтегровані в Makefile targets для зменшення дублювання |
 
 ---
 

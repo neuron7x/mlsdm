@@ -38,10 +38,6 @@ evals/
 ├── moral_filter_runner.py         # Evaluation execution engine
 └── moral_filter_report.json       # Generated after run (not committed)
 
-tests/evals/
-├── __init__.py
-└── test_moral_filter_eval_smoke.py  # Smoke tests for eval runner
-
 docs/
 └── EVAL_moral_filter.md           # This documentation
 ```
@@ -93,16 +89,6 @@ make eval-moral_filter
 
 # Run as module
 python -m evals.moral_filter_runner
-```
-
-### Running Smoke Tests
-
-```bash
-# Run smoke tests only
-pytest tests/evals/test_moral_filter_eval_smoke.py -v
-
-# Run with specific test
-pytest tests/evals/test_moral_filter_eval_smoke.py::TestMoralFilterEvalSmoke::test_threshold_bounds_scenarios_pass -v
 ```
 
 ---
@@ -268,19 +254,11 @@ Groups results by test category:
 
 ## Integration with CI
 
-The smoke tests can be integrated into CI pipelines:
+The evaluation can be integrated into CI pipelines:
 
 ```yaml
 # Example GitHub Actions step
-- name: Run Moral Filter Eval
-  run: |
-    pytest tests/evals/test_moral_filter_eval_smoke.py -v
-```
-
-For full evaluation in CI:
-
-```yaml
-- name: Full Moral Filter Evaluation
+- name: Run Moral Filter Evaluation
   run: |
     python -m evals.moral_filter_runner
 ```

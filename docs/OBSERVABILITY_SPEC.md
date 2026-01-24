@@ -273,7 +273,7 @@ This checklist tracks the implementation status of observability components as s
 | Test Category | Required | Status | Location |
 |---------------|----------|--------|----------|
 | Metrics export | Yes | ✅ Implemented | `tests/observability/test_metrics_basic.py` |
-| Tracing spans | Yes | ✅ Implemented | `tests/observability/test_tracing_smoke.py` |
+| Tracing spans | Yes | ✅ Implemented | `tests/observability/test_tracing_integration.py` |
 | Log structure | Yes | ✅ Implemented | `tests/observability/test_trace_context_logging.py` |
 | Integration | Yes | ✅ Implemented | `tests/observability/test_metrics_and_tracing_integration.py` |
 

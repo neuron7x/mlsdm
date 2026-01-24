@@ -137,7 +137,7 @@ test-package:
 	python -m venv /tmp/mlsdm-test-venv
 	/tmp/mlsdm-test-venv/bin/pip install --upgrade pip -q
 	/tmp/mlsdm-test-venv/bin/pip install dist/*.whl -q
-	/tmp/mlsdm-test-venv/bin/python scripts/test_package_install.py
+	/tmp/mlsdm-test-venv/bin/python -c "from mlsdm import __version__, create_llm_wrapper; print(f'MLSDM v{__version__} installed OK')"
 	rm -rf /tmp/mlsdm-test-venv
 	@echo "✓ Package test passed"
 
