@@ -126,13 +126,15 @@ class TestMemoryOverheadCalculation:
 
     def test_memory_overhead_multiplier(self):
         """Test that memory overhead multiplier is correctly applied."""
-        synapse = MultiLevelSynapticMemory(dimension=384)
+        dimension = 384
+        synapse = MultiLevelSynapticMemory(dimension=dimension)
 
-        # Calculate expected size
-        # Each array: 384 * 4 bytes (float32) = 1536 bytes
-        # Three arrays: 1536 * 3 = 4608 bytes
-        # Metadata: ~512 bytes
-        # Total: (4608 + 512) * 1.4 = 7168 bytes
+        # Calculate expected size using the same constants as the implementation
+        FLOAT32_BYTES = 4
+        NUM_ARRAYS = 3  # L1, L2, L3
+        METADATA_OVERHEAD = 512  # From implementation
+        OLD_MULTIPLIER = 1.15
+        NEW_MULTIPLIER = 1.4
 
         memory_bytes = synapse.memory_usage_bytes()
 
@@ -143,9 +145,9 @@ class TestMemoryOverheadCalculation:
         assert memory_bytes < 10000
 
         # Should reflect 1.4x multiplier (not old 1.15x)
-        raw_array_bytes = 384 * 4 * 3  # 4608
-        expected_with_old_multiplier = int((raw_array_bytes + 512) * 1.15)  # ~5888
-        expected_with_new_multiplier = int((raw_array_bytes + 512) * 1.4)   # ~7168
+        raw_array_bytes = dimension * FLOAT32_BYTES * NUM_ARRAYS
+        expected_with_old_multiplier = int((raw_array_bytes + METADATA_OVERHEAD) * OLD_MULTIPLIER)
+        expected_with_new_multiplier = int((raw_array_bytes + METADATA_OVERHEAD) * NEW_MULTIPLIER)
 
         # Should be closer to new multiplier than old
         diff_to_new = abs(memory_bytes - expected_with_new_multiplier)
@@ -160,6 +162,11 @@ class TestMemoryOverheadCalculation:
 
 class TestMoralRejectionDoesNotStore:
     """Test that morally rejected events don't update memory (Bug #1 verification)."""
+
+    # Tolerance for L1 norm change due to natural decay between process_event calls.
+    # This accounts for the decay factor applied during event processing even when
+    # the event is rejected (step counter increments, causing internal state updates).
+    L1_DECAY_TOLERANCE = 0.1
 
     def test_moral_rejection_no_memory_update(self):
         """Verify that rejected events don't update synaptic memory."""
@@ -184,8 +191,8 @@ class TestMoralRejectionDoesNotStore:
         new_pelm_used = controller.pelm.get_state_stats()["used"]
 
         # Memory should not have changed (except for natural decay)
-        # L1 norm should be same or less (due to decay), not increased
-        assert new_l1_norm <= initial_l1_norm + 0.1, (
+        # L1 norm should be same or less (due to decay), not increased significantly
+        assert new_l1_norm <= initial_l1_norm + self.L1_DECAY_TOLERANCE, (
             f"L1 norm increased after moral rejection: "
             f"{initial_l1_norm} -> {new_l1_norm}"
         )
