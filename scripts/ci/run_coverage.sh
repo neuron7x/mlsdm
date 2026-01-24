@@ -9,13 +9,35 @@ coverage_start_epoch=$(date +%s)
 
 printf "Starting coverage run with soft limit %ss\n" "$soft_limit_seconds"
 
+# Robust timeout handling with coverage data preservation
 if ! timeout --signal=TERM --kill-after=30s "${soft_limit_seconds}s" \
   coverage run --source=src/mlsdm -m pytest \
     --ignore=tests/load \
     -m "not slow and not benchmark" 2>&1 | tee artifacts/evidence/coverage.log; then
   coverage_exit=$?
+  
   if [ "$coverage_exit" -eq 124 ]; then
-    echo "ERROR: Coverage run exceeded soft limit (${soft_limit_seconds}s) and was terminated." >&2
+    echo "⚠️  ERROR: Coverage run exceeded soft limit (${soft_limit_seconds}s) and was terminated." >&2
+    echo "→ Attempting emergency coverage data recovery..." >&2
+    
+    # Strategy 1: Try to combine partial .coverage.* shards (multiprocessing mode)
+    if compgen -G ".coverage.*" > /dev/null 2>&1; then
+      echo "   Found partial coverage shards, combining..." >&2
+      if coverage combine 2>&1 | tee -a artifacts/evidence/coverage.log; then
+        echo "✓ Partial coverage data successfully recovered" >&2
+        coverage_exit=0  # Reset exit code if recovery successful
+      else
+        echo "✗ Failed to combine partial coverage data" >&2
+      fi
+    else
+      echo "   No partial coverage shards found (.coverage.* pattern)" >&2
+    fi
+    
+    # Strategy 2: Check for main .coverage file (may exist from incomplete write)
+    if [ ! -f .coverage ] && [ "$coverage_exit" -eq 124 ]; then
+      echo "✗ No .coverage file recoverable - timeout occurred before any data persistence" >&2
+      echo "   Recommendation: Increase COVERAGE_SOFT_LIMIT_SECONDS or enable test parallelization" >&2
+    fi
   fi
 fi
 

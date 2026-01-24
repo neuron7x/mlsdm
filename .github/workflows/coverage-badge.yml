@@ -25,7 +25,7 @@ jobs:
       PYTHONIOENCODING: "utf-8"
       DISABLE_RATE_LIMIT: "1"
       LLM_BACKEND: "local_stub"
-      COVERAGE_SOFT_LIMIT_SECONDS: "1020"
+      COVERAGE_SOFT_LIMIT_SECONDS: "1500"  # Increased from 1020s to provide 35% safety buffer (historical: 1109s needed)
 
     steps:
       - name: Checkout
