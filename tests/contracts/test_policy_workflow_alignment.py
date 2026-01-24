@@ -374,4 +374,4 @@ class TestPolicyWorkflowAlignment:
         
         assert timeout_seconds <= MAX_SAFE_TIMEOUT, \
             f"Coverage timeout {timeout_seconds}s exceeds workflow limit " \
-            f"(max: {MAX_SAFE_TIMEOUT}s for 20min workflow)"
+            f"(max: {MAX_SAFE_TIMEOUT}s for 30min workflow)"

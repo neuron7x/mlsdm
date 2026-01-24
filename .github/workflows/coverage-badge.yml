@@ -93,8 +93,8 @@ jobs:
           
           log_content = log_path.read_text()
           
-          # Extract test durations (pytest format: "test_name.py::test_func PASSED [XX%]")
-          test_pattern = r'(test_\S+\.py::\S+)\s+\w+\s+\[[\d.]+s\]'
+          # Extract test durations (pytest format: "test_name.py::test_func PASSED [XXs]")
+          test_pattern = r'(test_\S+\.py::\S+)\s+\w+\s+\[[^]]+\]'
           matches = re.findall(test_pattern, log_content)
           
           print(f"📊 Test Execution Summary")

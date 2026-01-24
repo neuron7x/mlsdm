@@ -43,7 +43,7 @@ if ! timeout --signal=TERM --kill-after=30s "${soft_limit_seconds}s" \
     # Strategy 2: Check for main .coverage file (may exist from incomplete write)
     if [ ! -f .coverage ] && [ "$coverage_exit" -eq 124 ]; then
       echo "✗ No .coverage file recoverable - timeout occurred before any data persistence" >&2
-      echo "   Recommendation: Increase COVERAGE_SOFT_LIMIT_SECONDS or enable test parallelization" >&2
+      echo "   Recommendation: Increase COVERAGE_SOFT_LIMIT_SECONDS or adjust worker count (PYTEST_WORKERS)" >&2
     fi
   fi
 fi
