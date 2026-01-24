@@ -416,7 +416,7 @@ pytest tests/observability/ -v
 # Run specific test categories
 pytest tests/observability/test_metrics_basic.py -v        # Basic metrics
 pytest tests/observability/test_enhanced_metrics.py -v     # New OBS-001 metrics
-pytest tests/observability/test_tracing_smoke.py -v        # Tracing smoke tests
+pytest tests/observability/test_tracing_integration.py -v  # Tracing integration tests
 pytest tests/observability/test_trace_context_logging.py -v # Log correlation
 ```
 

@@ -547,7 +547,9 @@ kubectl rollout status deployment/mlsdm-api -n mlsdm-production
 
 # Verify rollback
 kubectl get pods -n mlsdm-production
-python scripts/smoke_test.py https://api.production.example.com
+# Run basic health checks
+curl https://api.production.example.com/health
+curl https://api.production.example.com/health/ready
 ```
 
 #### Git Tag Rollback
@@ -570,8 +572,9 @@ After a rollback, follow these steps:
 
 1. **Verify System Health**
    ```bash
-   # Run smoke tests
-   python scripts/smoke_test.py https://api.production.example.com
+   # Run health checks
+   curl https://api.production.example.com/health
+   curl https://api.production.example.com/health/ready
    
    # Check metrics
    curl https://api.production.example.com/health/metrics
@@ -617,23 +620,25 @@ After a rollback, follow these steps:
    - Test thoroughly in staging
    - Re-deploy with confidence
 
-### Smoke Test Command Reference
+### Health Check Command Reference
 
 ```bash
-# Run all smoke tests
-python scripts/smoke_test.py http://api.example.com
+# Run health check
+curl http://api.example.com/health
 
-# Run with custom timeout
-python scripts/smoke_test.py http://api.example.com --timeout 60
+# Run readiness check
+curl http://api.example.com/health/ready
 
-# Skip generation test for quick check
-python scripts/smoke_test.py http://api.example.com --skip-generation
+# Run Docker container smoke tests (for local validation)
+make docker-smoke-neuro-engine
 
-# Verbose output
-python scripts/smoke_test.py http://api.example.com --verbose
+# Test API generation endpoint
+curl -X POST http://api.example.com/generate \
+  -H "Content-Type: application/json" \
+  -d '{"prompt": "Hello"}'
 ```
 
-**Smoke Test Coverage:**
+**Health Check Coverage:**
 - Health/liveness endpoint
 - Readiness endpoint
 - API generation functionality

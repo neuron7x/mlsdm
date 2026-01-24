@@ -279,7 +279,6 @@ MLSDM is a multi-layered system spanning from low-level cognitive primitives to 
     - **NeuroLang Training** (`train_neurolang_grammar.py`): Grammar model training
     - **Core Verification** (`verify_core_implementation.sh`): Implementation validation
     - **Security Features Test** (`test_security_features.py`): Security integration tests
-    - **NeuroLang Smoke Test** (`smoke_neurolang_wrapper.py`): Quick validation
 
 15. **CI/CD Infrastructure** (`.github/workflows/`)
     - **Neuro Cognitive Engine CI** (`ci-neuro-cognitive-engine.yml`): Core test suite

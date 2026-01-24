@@ -59,7 +59,6 @@ jobs:
             tests/security/test_neurolang_checkpoint_security.py \
             tests/packaging/test_neurolang_optional_dependency.py \
             tests/scripts/test_run_aphasia_eval.py \
-            tests/scripts/test_smoke_neurolang_wrapper.py \
             tests/scripts/test_train_neurolang_grammar.py \
             -q
 

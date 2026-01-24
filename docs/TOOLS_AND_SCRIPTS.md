@@ -137,22 +137,6 @@ python scripts/run_aphasia_eval.py --fail-on-low-metrics
 
 ---
 
-### `scripts/smoke_neurolang_wrapper.py`
-
-Quick smoke test for the NeuroLangWrapper component.
-
-**Usage:**
-```bash
-python scripts/smoke_neurolang_wrapper.py [--prompt PROMPT]
-```
-
-**Example:**
-```bash
-python scripts/smoke_neurolang_wrapper.py --prompt "Test the wrapper"
-```
-
----
-
 ### `scripts/train_neurolang_grammar.py`
 
 Train NeuroLang grammar models offline. Creates checkpoint files for production use.
