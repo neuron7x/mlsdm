@@ -499,8 +499,10 @@ class MultiLevelSynapticMemory:
         # Includes: dim, lambda_l1/l2/l3, theta_l1/l2, gating12/23, Python object headers
         metadata_overhead = 512  # ~0.5KB for metadata and object overhead
 
-        # Conservative 15% overhead for Python object structures
-        conservative_multiplier = 1.15
+        # Conservative 40% overhead for Python object structures
+        # Python objects have significant overhead from reference counting, type info,
+        # and memory allocator rounding. 1.4x multiplier ensures we never underestimate.
+        conservative_multiplier = 1.4
 
         total_bytes = int((array_bytes + metadata_overhead) * conservative_multiplier)
         return total_bytes

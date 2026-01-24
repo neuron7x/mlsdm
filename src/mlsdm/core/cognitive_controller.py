@@ -535,6 +535,18 @@ class CognitiveController:
                 # Optimization: Invalidate state cache when processing
                 self._state_cache_valid = False
 
+                # Validate moral_value range
+                if not (0.0 <= moral_value <= 1.0):
+                    event_span.set_attribute("mlsdm.rejected", True)
+                    event_span.set_attribute("mlsdm.rejected_reason", "invalid_moral_value")
+                    logger.warning(
+                        f"Invalid moral_value: {moral_value}. Must be in [0.0, 1.0]. Rejecting event."
+                    )
+                    return self._build_state(
+                        rejected=True,
+                        note=f"invalid moral_value: {moral_value} (must be in [0.0, 1.0])"
+                    )
+
                 # Check memory usage before processing (psutil-based, legacy)
                 memory_mb = self._check_memory_usage()
                 if memory_mb > self.memory_threshold_mb:
