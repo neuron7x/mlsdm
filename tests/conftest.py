@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import builtins
 import contextlib
+import hashlib
 import importlib
 import importlib.util
 import os
@@ -42,9 +43,12 @@ def pytest_configure(config: Any) -> None:
     config.addinivalue_line(
         "markers", "slow: marks tests as slow (deselect with '-m \"not slow\"')"
     )
+    config.addinivalue_line("markers", "smoke: marks tests as smoke tests")
+    config.addinivalue_line("markers", "validation: marks tests as validation tests")
     config.addinivalue_line("markers", "integration: marks tests as integration tests")
     config.addinivalue_line("markers", "unit: marks tests as unit tests")
     config.addinivalue_line("markers", "property: marks property-based tests")
+    config.addinivalue_line("markers", "chaos: marks tests as chaos tests")
     config.addinivalue_line("markers", "security: marks security-related tests")
     config.addinivalue_line("markers", "benchmark: marks performance benchmark tests")
     config.addinivalue_line("markers", "safety: marks AI safety tests")
@@ -98,6 +102,12 @@ def _set_random_seeds(seed: int) -> None:
         torch.manual_seed(seed)
         if torch.cuda.is_available():
             torch.cuda.manual_seed_all(seed)
+
+
+def _stable_text_seed(text: str) -> int:
+    """Return a deterministic 32-bit seed derived from text."""
+    digest = hashlib.sha256(text.encode("utf-8")).digest()
+    return int.from_bytes(digest[:4], byteorder="little", signed=False)
 
 
 # Default seed value for deterministic tests
@@ -241,9 +251,10 @@ def mock_embedder() -> Callable[[str], np.ndarray]:
     """
 
     def _embed(text: str) -> np.ndarray:
-        # Generate deterministic embedding based on text hash
-        np.random.seed(hash(text) % (2**32))
-        vec = np.random.randn(384).astype(np.float32)
+        # Generate deterministic embedding based on stable text hash
+        seed = _stable_text_seed(text)
+        rng = np.random.default_rng(seed)
+        vec = rng.standard_normal(384).astype(np.float32)
         return vec / np.linalg.norm(vec)
 
     return _embed
@@ -260,8 +271,9 @@ def mock_embedder_dim() -> Callable[[int], Callable[[str], np.ndarray]]:
 
     def _create_embedder(dim: int) -> Callable[[str], np.ndarray]:
         def _embed(text: str) -> np.ndarray:
-            np.random.seed(hash(text) % (2**32))
-            vec = np.random.randn(dim).astype(np.float32)
+            seed = _stable_text_seed(text)
+            rng = np.random.default_rng(seed)
+            vec = rng.standard_normal(dim).astype(np.float32)
             return vec / np.linalg.norm(vec)
 
         return _embed
